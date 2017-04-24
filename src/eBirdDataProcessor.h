@@ -51,6 +51,9 @@ private:
 	static bool ParseToken(std::istringstream& lineStream, const std::string& fieldName, T& target);
 	static bool ParseCountToken(std::istringstream& lineStream, const std::string& fieldName, int& target);
 	static std::string Sanitize(const std::string& line);
+	static std::string Desanitize(const std::string& token);
+
+	static const std::string commaPlaceholder;
 };
 
 template<typename T>
@@ -74,7 +77,7 @@ bool EBirdDataProcessor::ParseToken(std::istringstream& lineStream, const std::s
 		return true;
 	}
 
-	tokenStream.str(token);
+	tokenStream.str(Desanitize(token));
 	if ((tokenStream >> target).fail())
 	{
 		std::cerr << "Failed to interpret token for " << fieldName << '\n';

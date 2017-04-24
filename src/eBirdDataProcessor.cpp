@@ -14,6 +14,7 @@ const std::string EBirdDataProcessor::headerLine("Submission ID,Common Name,Scie
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
 	"Protocol,Duration (Min),All Obs Reported,Distance Traveled (km),Area Covered (ha),"
 	"Number of Observers,Breeding Code,Species Comments,Checklist Comments");
+const std::string EBirdDataProcessor::commaPlaceholder("%&!COMMA!&%");
 
 bool EBirdDataProcessor::Parse(const std::string& dataFile)
 {
@@ -51,15 +52,39 @@ bool EBirdDataProcessor::Parse(const std::string& dataFile)
 		++lineCount;
 	}
 
-	std::cout << "Parsed " << data.size() << " entries" << std::endl;
+	std::cout << "Parsed " << data.size() << " entries" << std::endl;// TODO:  Count seems to be too big?
 	return true;
 }
 
 std::string EBirdDataProcessor::Sanitize(const std::string& line)
 {
-	// TODO:  Implement
-	// Find commas that are within parentheses and replace them with something else
-	return line;
+	std::string s(line);
+	std::string::size_type nextQuote(0);
+	while (nextQuote = s.find('"', nextQuote + 1), nextQuote != std::string::npos)
+	{
+		const std::string::size_type endQuote(s.find('"', nextQuote + 1));
+		if (endQuote != std::string::npos)
+		{
+			std::string::size_type nextComma(nextQuote);
+			while (nextComma = s.find(',', nextComma + 1), nextComma != std::string::npos && nextComma < endQuote)
+				s.replace(nextComma, 1, commaPlaceholder);
+		}
+		nextQuote = endQuote;
+
+		// TODO:  Could also remove quotation marks then
+	}
+
+	return s;
+}
+
+std::string EBirdDataProcessor::Desanitize(const std::string& token)
+{
+	std::string s(token);
+	std::string::size_type nextPlaceholder(0);
+	while (nextPlaceholder = s.find(commaPlaceholder, nextPlaceholder + 1), nextPlaceholder != std::string::npos)
+		s.replace(nextPlaceholder, commaPlaceholder.length(), ",");
+
+	return s;
 }
 
 bool EBirdDataProcessor::ParseLine(const std::string& line, Entry& entry)
