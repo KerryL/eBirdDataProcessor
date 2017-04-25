@@ -11,6 +11,7 @@
 #include <iostream>
 #include <algorithm>
 #include <iomanip>
+#include <cassert>
 
 const std::string EBirdDataProcessor::headerLine("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
@@ -171,6 +172,13 @@ bool EBirdDataProcessor::ParseDateTimeToken(std::istringstream& lineStream, cons
 	return true;
 }
 
+bool EBirdDataProcessor::InterpretToken(std::istringstream& tokenStream,
+	const std::string& /*fieldName*/, std::string& target)
+{
+	target = tokenStream.str();
+	return true;
+}
+
 void EBirdDataProcessor::FilterLocation(const std::string& location, const std::string& county,
 	const std::string& state, const std::string& country)
 {
@@ -251,8 +259,45 @@ void EBirdDataProcessor::FilterDay(const unsigned int& day)
 	}), data.end());
 }
 
+void EBirdDataProcessor::DoSort(const SortBy& sortBy)
+{
+	if (sortBy == SortBy::None)
+		return;
+
+	std::sort(data.begin(), data.end(), [sortBy](const Entry& a, const Entry& b)
+	{
+		switch (sortBy)
+		{
+		case SortBy::Date:
+			return difftime(time_t(&a.dateTime), time_t(&b.dateTime)) < 0.0;
+
+		case SortBy::CommonName:
+			return a.commonName.compare(b.commonName) < 0;
+
+		case SortBy::ScientificName:
+			return a.scientificName.compare(b.scientificName) < 0;
+
+		case SortBy::TaxonomicOrder:
+			return a.taxonomicOrder < b.taxonomicOrder;
+		}
+
+		assert(false);
+		return true;
+	});
+}
+
+void EBirdDataProcessor::SortData(const SortBy& primarySort, const SortBy& secondarySort)
+{
+	DoSort(secondarySort);
+	DoSort(primarySort);
+}
+
 std::string EBirdDataProcessor::GenerateList() const
 {
-	// TODO:  Implement
-	return "";
+	std::ostringstream ss;
+
+	for (const auto& entry : data)
+		ss << std::put_time(&entry.dateTime, "%D") << ", " << entry.commonName << ", '" << entry.location << "', " << entry.count << "\n";
+
+	return ss.str();
 }

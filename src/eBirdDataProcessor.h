@@ -28,6 +28,17 @@ public:
 	void FilterWeek(const unsigned int& week);
 	void FilterDay(const unsigned int& day);
 
+	enum class SortBy : int
+	{
+		None = 0,
+		Date,
+		CommonName,
+		ScientificName,
+		TaxonomicOrder
+	};
+
+	void SortData(const SortBy& primarySort, const SortBy& secondarySort);
+
 	std::string GenerateList() const;
 
 private:
@@ -59,10 +70,15 @@ private:
 
 	std::vector<Entry> data;
 
+	void DoSort(const SortBy& sortBy);
+
 	static bool ParseLine(const std::string& line, Entry& entry);
 
 	template<typename T>
 	static bool ParseToken(std::istringstream& lineStream, const std::string& fieldName, T& target);
+	template<typename T>
+	static bool InterpretToken(std::istringstream& tokenStream, const std::string& fieldName, T& target);
+	static bool InterpretToken(std::istringstream& tokenStream, const std::string& fieldName, std::string& target);
 	static bool ParseCountToken(std::istringstream& lineStream, const std::string& fieldName, int& target);
 	static bool ParseDateTimeToken(std::istringstream& lineStream, const std::string& fieldName,
 		std::tm& target, const std::string& format);
@@ -94,6 +110,12 @@ bool EBirdDataProcessor::ParseToken(std::istringstream& lineStream, const std::s
 	}
 
 	tokenStream.str(Desanitize(token));
+	return InterpretToken(tokenStream, fieldName, target);
+}
+
+template<typename T>
+bool EBirdDataProcessor::InterpretToken(std::istringstream& tokenStream, const std::string& fieldName, T& target)
+{
 	if ((tokenStream >> target).fail())
 	{
 		std::cerr << "Failed to interpret token for " << fieldName << '\n';

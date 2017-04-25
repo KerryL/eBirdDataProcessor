@@ -70,12 +70,16 @@ private:
 
 		unsigned int listType;// 0 - life, 1 - year, 2 - month, 3 - week, 4 - day
 
+		bool allSightings;// i.e. not like a life/year list, which only shows first observation
 		bool totalsOnly;
 
 		unsigned int yearFilter;
 		unsigned int monthFilter;
 		unsigned int weekFilter;
 		unsigned int dayFilter;
+
+		unsigned int primarySort;// 0 - none, 1 - date, 2 - common name, 3 - scientific name, 4 - taxonomic order
+		unsigned int secondarySort;// 0 - none, 1 - date, 2 - common name, 3 - scientific name, 4 - taxonomic order
 	};
 
 	static Options specifiedOptions;

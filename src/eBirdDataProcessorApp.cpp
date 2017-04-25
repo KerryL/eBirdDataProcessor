@@ -122,11 +122,14 @@ const std::vector<CommandLineOption> EBirdDataProcessorApp::availableOptions({
 	CommandLineOption("county", "C", specifiedOptions.countyFilter, ""),
 	CommandLineOption("location", "l", specifiedOptions.locationFilter, ""),
 	CommandLineOption("listType", "t", specifiedOptions.listType, 0),
-	CommandLineOption("totalsOnly", "A", specifiedOptions.totalsOnly, false),
+	CommandLineOption("totalsOnly", "T", specifiedOptions.totalsOnly, false),
+	CommandLineOption("allSightings", "A", specifiedOptions.allSightings, false),
 	CommandLineOption("year", "y", specifiedOptions.listType, 0),
 	CommandLineOption("month", "m", specifiedOptions.listType, 0),
 	CommandLineOption("week", "w", specifiedOptions.listType, 0),
-	CommandLineOption("day", "d", specifiedOptions.listType, 0)
+	CommandLineOption("day", "d", specifiedOptions.listType, 0),
+	CommandLineOption("sortBy", "1", specifiedOptions.primarySort, 0),
+	CommandLineOption("thenBy", "2", specifiedOptions.secondarySort, 0)
 });
 
 std::string EBirdDataProcessorApp::GetLongFormArgument(const void* const target)
@@ -178,6 +181,12 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	if (specifiedOptions.dayFilter > 0)
 		processor.FilterDay(specifiedOptions.dayFilter);
+
+
+	// TODO:  Totals option? all sightings?
+
+	processor.SortData(static_cast<EBirdDataProcessor::SortBy>(specifiedOptions.primarySort),
+		static_cast<EBirdDataProcessor::SortBy>(specifiedOptions.secondarySort));
 
 	const std::string list(processor.GenerateList());
 	std::cout << list << std::endl;
