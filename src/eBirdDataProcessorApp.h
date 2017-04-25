@@ -68,10 +68,9 @@ private:
 		std::string countyFilter;
 		std::string locationFilter;
 
-		unsigned int listType;// 0 - life, 1 - year, 2 - month, 3 - week, 4 - day
+		unsigned int listType;// 0 - life, 1 - year, 2 - month, 3 - week, 4 - day, 5 - separate all observations
 
-		bool allSightings;// i.e. not like a life/year list, which only shows first observation
-		bool totalsOnly;
+		bool speciesCountOnly;// Primarily for plotting
 
 		unsigned int yearFilter;
 		unsigned int monthFilter;

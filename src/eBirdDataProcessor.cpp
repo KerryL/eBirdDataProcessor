@@ -292,12 +292,71 @@ void EBirdDataProcessor::SortData(const SortBy& primarySort, const SortBy& secon
 	DoSort(primarySort);
 }
 
-std::string EBirdDataProcessor::GenerateList() const
+std::string EBirdDataProcessor::GenerateList(const ListType& type) const
 {
-	std::ostringstream ss;
+	std::vector<Entry> consolidatedList;
+	switch (type)
+	{
+	case ListType::Life:
+		consolidatedList = ConsolidateByLife();
+		break;
 
-	for (const auto& entry : data)
-		ss << std::put_time(&entry.dateTime, "%D") << ", " << entry.commonName << ", '" << entry.location << "', " << entry.count << "\n";
+	case ListType::Year:
+		consolidatedList = ConsolidateByYear();
+		break;
+
+	case ListType::Month:
+		consolidatedList = ConsolidateByMonth();
+		break;
+
+	case ListType::Week:
+		consolidatedList = ConsolidateByWeek();
+		break;
+
+	case ListType::Day:
+		consolidatedList = ConsolidateByDay();
+		break;
+
+	default:
+	case ListType::SeparateAllObservations:
+		consolidatedList = data;
+	}
+
+	std::ostringstream ss;
+	unsigned int count(1);
+	for (const auto& entry : consolidatedList)
+		ss << count << ", " << std::put_time(&entry.dateTime, "%D") << ", "
+		<< entry.commonName << ", '" << entry.location << "', " << entry.count << "\n";
 
 	return ss.str();
+}
+
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByLife() const
+{
+	// TODO:  Implement
+	return data;
+}
+
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByYear() const
+{
+	// TODO:  Implement
+	return data;
+}
+
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByMonth() const
+{
+	// TODO:  Implement
+	return data;
+}
+
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByWeek() const
+{
+	// TODO:  Implement
+	return data;
+}
+
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() const
+{
+	// TODO:  Implement
+	return data;
 }

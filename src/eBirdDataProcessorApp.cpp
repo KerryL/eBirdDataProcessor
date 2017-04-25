@@ -122,8 +122,7 @@ const std::vector<CommandLineOption> EBirdDataProcessorApp::availableOptions({
 	CommandLineOption("county", "C", specifiedOptions.countyFilter, ""),
 	CommandLineOption("location", "l", specifiedOptions.locationFilter, ""),
 	CommandLineOption("listType", "t", specifiedOptions.listType, 0),
-	CommandLineOption("totalsOnly", "T", specifiedOptions.totalsOnly, false),
-	CommandLineOption("allSightings", "A", specifiedOptions.allSightings, false),
+	CommandLineOption("speciesCountOnly", "T", specifiedOptions.speciesCountOnly, false),
 	CommandLineOption("year", "y", specifiedOptions.listType, 0),
 	CommandLineOption("month", "m", specifiedOptions.listType, 0),
 	CommandLineOption("week", "w", specifiedOptions.listType, 0),
@@ -183,12 +182,13 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		processor.FilterDay(specifiedOptions.dayFilter);
 
 
-	// TODO:  Totals option? all sightings?
+	// TODO:  species count only?
 
 	processor.SortData(static_cast<EBirdDataProcessor::SortBy>(specifiedOptions.primarySort),
 		static_cast<EBirdDataProcessor::SortBy>(specifiedOptions.secondarySort));
 
-	const std::string list(processor.GenerateList());
+	const std::string list(processor.GenerateList(
+		static_cast<EBirdDataProcessor::ListType>(specifiedOptions.listType)));
 	std::cout << list << std::endl;
 
 	if (!specifiedOptions.outputFileName.empty())

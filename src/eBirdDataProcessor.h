@@ -39,7 +39,17 @@ public:
 
 	void SortData(const SortBy& primarySort, const SortBy& secondarySort);
 
-	std::string GenerateList() const;
+	enum class ListType : int
+	{
+		Life = 0,
+		Year,
+		Month,
+		Week,
+		Day,
+		SeparateAllObservations
+	};
+
+	std::string GenerateList(const ListType& type) const;
 
 private:
 	static const std::string headerLine;
@@ -71,6 +81,11 @@ private:
 	std::vector<Entry> data;
 
 	void DoSort(const SortBy& sortBy);
+	std::vector<Entry> ConsolidateByLife() const;
+	std::vector<Entry> ConsolidateByYear() const;
+	std::vector<Entry> ConsolidateByMonth() const;
+	std::vector<Entry> ConsolidateByWeek() const;
+	std::vector<Entry> ConsolidateByDay() const;
 
 	static bool ParseLine(const std::string& line, Entry& entry);
 
