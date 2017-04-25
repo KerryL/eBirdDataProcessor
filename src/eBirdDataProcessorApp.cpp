@@ -60,8 +60,12 @@ CommandLineOption::CommandLineOption(const std::string& longForm,
 
 bool CommandLineOption::Matches(const std::string& argument) const
 {
-	if (longForm.empty() && shortForm.empty())
+	if (longForm.empty() && shortForm.empty() && argument[0] != '-')
+	{
+		if (type == Type::String)
+			return static_cast<std::string*>(target)->empty();
 		return true;
+	}
 
 	if (argument.length() < 2 || argument[0] != '-')
 		return false;
@@ -97,13 +101,13 @@ bool CommandLineOption::Read(const std::string& argument, bool& consumeNext) con
 		return true;
 
 	case Type::SignedInteger:
-		return (ss >> *static_cast<int*>(target)).good();
+		return !(ss >> *static_cast<int*>(target)).fail();
 
 	case Type::UnsignedInteger:
-		return (ss >> *static_cast<unsigned int*>(target)).good();
+		return !(ss >> *static_cast<unsigned int*>(target)).fail();
 
 	case Type::Double:
-		return (ss >> *static_cast<double*>(target)).good();
+		return !(ss >> *static_cast<double*>(target)).fail();
 
 	case Type::Boolean:// Should never get here
 	default:
@@ -115,7 +119,6 @@ bool CommandLineOption::Read(const std::string& argument, bool& consumeNext) con
 
 EBirdDataProcessorApp::Options EBirdDataProcessorApp::specifiedOptions;
 const std::vector<CommandLineOption> EBirdDataProcessorApp::availableOptions({
-	CommandLineOption("", "", specifiedOptions.dataFileName, ""),
 	CommandLineOption("output", "o", specifiedOptions.dataFileName, ""),
 	CommandLineOption("country", "c", specifiedOptions.countryFilter, ""),
 	CommandLineOption("state", "s", specifiedOptions.stateFilter, ""),
@@ -123,12 +126,15 @@ const std::vector<CommandLineOption> EBirdDataProcessorApp::availableOptions({
 	CommandLineOption("location", "l", specifiedOptions.locationFilter, ""),
 	CommandLineOption("listType", "t", specifiedOptions.listType, 0),
 	CommandLineOption("speciesCountOnly", "T", specifiedOptions.speciesCountOnly, false),
+	CommandLineOption("partialIDs", "A", specifiedOptions.includePartialIDs, false),
 	CommandLineOption("year", "y", specifiedOptions.listType, 0),
 	CommandLineOption("month", "m", specifiedOptions.listType, 0),
 	CommandLineOption("week", "w", specifiedOptions.listType, 0),
 	CommandLineOption("day", "d", specifiedOptions.listType, 0),
 	CommandLineOption("sortBy", "1", specifiedOptions.primarySort, 0),
-	CommandLineOption("thenBy", "2", specifiedOptions.secondarySort, 0)
+	CommandLineOption("thenBy", "2", specifiedOptions.secondarySort, 0),
+	CommandLineOption("", "", specifiedOptions.executableName, ""),
+	CommandLineOption("", "", specifiedOptions.dataFileName, "")
 });
 
 std::string EBirdDataProcessorApp::GetLongFormArgument(const void* const target)
@@ -181,6 +187,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (specifiedOptions.dayFilter > 0)
 		processor.FilterDay(specifiedOptions.dayFilter);
 
+	if (!specifiedOptions.includePartialIDs)
+		processor.FilterPartialIDs();
 
 	// TODO:  species count only?
 
@@ -207,15 +215,20 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 }
 bool EBirdDataProcessorApp::ParseArguments(const std::vector<std::string>& arguments)
 {
+	std::vector<const std::string*> consumedArguments;
 	for (const auto& option : availableOptions)
 	{
 		bool consumeNext(false);
 		for (const auto& argument : arguments)
 		{
+			if (std::find(consumedArguments.begin(), consumedArguments.end(), &argument) != consumedArguments.end())
+				continue;
+
 			if (consumeNext || option.Matches(argument))
 			{
 				if (!option.Read(argument, consumeNext))
 					return false;
+				consumedArguments.push_back(&argument);
 			}
 		}
 	}

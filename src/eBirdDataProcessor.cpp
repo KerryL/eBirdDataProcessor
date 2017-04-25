@@ -12,6 +12,9 @@
 #include <algorithm>
 #include <iomanip>
 #include <cassert>
+#include <locale>
+#include <cctype>
+#include <functional>
 
 const std::string EBirdDataProcessor::headerLine("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
@@ -259,37 +262,46 @@ void EBirdDataProcessor::FilterDay(const unsigned int& day)
 	}), data.end());
 }
 
-void EBirdDataProcessor::DoSort(const SortBy& sortBy)
+void EBirdDataProcessor::FilterPartialIDs()
+{
+	data.erase(std::remove_if(data.begin(), data.end(), [](const Entry& entry)
+	{
+		return (entry.commonName.substr(entry.commonName.length() - 4).compare(" sp.") == 0) ||// Eliminate Spuhs
+			(entry.commonName.find('/') != std::string::npos);// Eliminate species1/species2 type entries
+	}), data.end());
+}
+
+int EBirdDataProcessor::DoComparison(const Entry& a, const Entry& b, const SortBy& sortBy)
 {
 	if (sortBy == SortBy::None)
-		return;
+		return 0;
 
-	std::sort(data.begin(), data.end(), [sortBy](const Entry& a, const Entry& b)
-	{
-		switch (sortBy)
-		{
-		case SortBy::Date:
-			return difftime(time_t(&a.dateTime), time_t(&b.dateTime)) < 0.0;
+	if (sortBy == SortBy::Date)
+		return static_cast<int>(difftime(time_t(&a.dateTime), time_t(&b.dateTime)));
+	else if (sortBy == SortBy::CommonName)
+		return a.commonName.compare(b.commonName);
+	else if (sortBy == SortBy::ScientificName)
+		return a.scientificName.compare(b.scientificName);
+	else if (sortBy == SortBy::TaxonomicOrder)
+		return a.taxonomicOrder - b.taxonomicOrder;
 
-		case SortBy::CommonName:
-			return a.commonName.compare(b.commonName) < 0;
-
-		case SortBy::ScientificName:
-			return a.scientificName.compare(b.scientificName) < 0;
-
-		case SortBy::TaxonomicOrder:
-			return a.taxonomicOrder < b.taxonomicOrder;
-		}
-
-		assert(false);
-		return true;
-	});
+	assert(false);
+	return 0;
 }
 
 void EBirdDataProcessor::SortData(const SortBy& primarySort, const SortBy& secondarySort)
 {
-	DoSort(secondarySort);
-	DoSort(primarySort);
+	if (primarySort == SortBy::None && secondarySort == SortBy::None)
+		return;
+
+	std::sort(data.begin(), data.end(), [primarySort, secondarySort](const Entry& a, const Entry& b)
+	{
+		int result(DoComparison(a, b, primarySort));
+		if (result == 0)
+			return DoComparison(a, b, secondarySort) < 0;
+
+		return result < 0;
+	});
 }
 
 std::string EBirdDataProcessor::GenerateList(const ListType& type) const
@@ -325,38 +337,109 @@ std::string EBirdDataProcessor::GenerateList(const ListType& type) const
 	std::ostringstream ss;
 	unsigned int count(1);
 	for (const auto& entry : consolidatedList)
-		ss << count << ", " << std::put_time(&entry.dateTime, "%D") << ", "
+		ss << count++ << ", " << std::put_time(&entry.dateTime, "%D") << ", "
 		<< entry.commonName << ", '" << entry.location << "', " << entry.count << "\n";
 
 	return ss.str();
 }
 
+bool EBirdDataProcessor::CommonNamesMatch(std::string a, std::string b)
+{
+	return Trim(StripParentheses(a)).compare(Trim(StripParentheses(b))) == 0;
+}
+
+std::string EBirdDataProcessor::StripParentheses(std::string s)
+{
+	std::string::size_type openParen;
+	while (openParen = s.find('('), openParen != std::string::npos)
+	{
+		std::string::size_type closeParen(s.find(')', openParen));
+		if (closeParen != std::string::npos)
+			s.erase(s.begin() + openParen, s.begin() + closeParen + 1);
+	}
+
+	return s;
+}
+
+std::string EBirdDataProcessor::Trim(std::string s)
+{
+	s.erase(s.begin(), std::find_if(s.begin(), s.end(),
+		std::not1(std::ptr_fun<int, int>(std::isspace))));
+
+    s.erase(std::find_if(s.rbegin(), s.rend(),
+		std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
+
+	return s;
+}
+
 std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByLife() const
 {
-	// TODO:  Implement
-	return data;
+	std::vector<Entry> consolidatedList(data);
+	consolidatedList.erase(UnsortedUnique(consolidatedList.begin(), consolidatedList.end(), [](const Entry& a, const Entry& b)
+	{
+		return CommonNamesMatch(a.commonName, b.commonName);
+	}), consolidatedList.end());
+
+	return consolidatedList;
 }
 
 std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByYear() const
 {
-	// TODO:  Implement
-	return data;
+	std::vector<Entry> consolidatedList(data);
+	consolidatedList.erase(UnsortedUnique(consolidatedList.begin(), consolidatedList.end(), [](const Entry& a, const Entry& b)
+	{
+		return CommonNamesMatch(a.commonName, b.commonName) &&
+			a.dateTime.tm_year == b.dateTime.tm_year;
+	}), consolidatedList.end());
+
+	return consolidatedList;
 }
 
 std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByMonth() const
 {
-	// TODO:  Implement
-	return data;
+	std::vector<Entry> consolidatedList(data);
+	consolidatedList.erase(UnsortedUnique(consolidatedList.begin(), consolidatedList.end(), [](const Entry& a, const Entry& b)
+	{
+		return CommonNamesMatch(a.commonName, b.commonName) &&
+			a.dateTime.tm_year == b.dateTime.tm_year &&
+			a.dateTime.tm_mon == b.dateTime.tm_mon;
+	}), consolidatedList.end());
+
+	return consolidatedList;
 }
 
 std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByWeek() const
 {
-	// TODO:  Implement
-	return data;
+	std::vector<Entry> consolidatedList(data);
+	consolidatedList.erase(UnsortedUnique(consolidatedList.begin(), consolidatedList.end(), [](const Entry& a, const Entry& b)
+	{
+		unsigned int aWeek, bWeek;
+		std::stringstream ss;
+		ss << std::put_time(&a.dateTime, "%U");
+		ss >> aWeek;
+		ss.clear();
+		ss.str("");
+		ss << std::put_time(&b.dateTime, "%U");
+		ss >> bWeek;
+
+		return CommonNamesMatch(a.commonName, b.commonName) &&
+			a.dateTime.tm_year == b.dateTime.tm_year &&
+			aWeek == bWeek;
+	}), consolidatedList.end());
+
+	return consolidatedList;
 }
 
 std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() const
 {
-	// TODO:  Implement
-	return data;
+	std::vector<Entry> consolidatedList(data);
+	consolidatedList.erase(UnsortedUnique(consolidatedList.begin(), consolidatedList.end(), [](const Entry& a, const Entry& b)
+	{
+		return CommonNamesMatch(a.commonName, b.commonName) &&
+			a.dateTime.tm_year == b.dateTime.tm_year &&
+			a.dateTime.tm_mon == b.dateTime.tm_mon &&
+			a.dateTime.tm_mday == b.dateTime.tm_mday;
+	}), consolidatedList.end());
+
+	return consolidatedList;
 }

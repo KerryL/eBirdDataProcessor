@@ -28,6 +28,8 @@ public:
 	void FilterWeek(const unsigned int& week);
 	void FilterDay(const unsigned int& day);
 
+	void FilterPartialIDs();
+
 	enum class SortBy : int
 	{
 		None = 0,
@@ -80,7 +82,6 @@ private:
 
 	std::vector<Entry> data;
 
-	void DoSort(const SortBy& sortBy);
 	std::vector<Entry> ConsolidateByLife() const;
 	std::vector<Entry> ConsolidateByYear() const;
 	std::vector<Entry> ConsolidateByMonth() const;
@@ -88,6 +89,8 @@ private:
 	std::vector<Entry> ConsolidateByDay() const;
 
 	static bool ParseLine(const std::string& line, Entry& entry);
+
+	static int DoComparison(const Entry& a, const Entry& b, const SortBy& sortBy);
 
 	template<typename T>
 	static bool ParseToken(std::istringstream& lineStream, const std::string& fieldName, T& target);
@@ -97,8 +100,16 @@ private:
 	static bool ParseCountToken(std::istringstream& lineStream, const std::string& fieldName, int& target);
 	static bool ParseDateTimeToken(std::istringstream& lineStream, const std::string& fieldName,
 		std::tm& target, const std::string& format);
+
 	static std::string Sanitize(const std::string& line);
 	static std::string Desanitize(const std::string& token);
+
+	template<typename BinaryPredicate>
+	static std::vector<Entry>::iterator UnsortedUnique(std::vector<Entry>::iterator first,
+		std::vector<Entry>::iterator last, BinaryPredicate p);
+	static bool CommonNamesMatch(std::string a, std::string b);
+	static std::string StripParentheses(std::string s);
+	static std::string Trim(std::string s);
 
 	static const std::string commaPlaceholder;
 };
@@ -138,6 +149,35 @@ bool EBirdDataProcessor::InterpretToken(std::istringstream& tokenStream, const s
 	}
 
 	return true;
+}
+
+// Uniqueness if achieved by:
+// 1.  Moving unique elements to the front of the vector
+// 2.  Returning an iterator pointing to the new end of the vector
+// So elements occurring between (and including) the returned iterator and the
+// end of the original vector can safely be erased.
+template<typename BinaryPredicate>
+std::vector<EBirdDataProcessor::Entry>::iterator EBirdDataProcessor::UnsortedUnique(
+	std::vector<Entry>::iterator first, std::vector<Entry>::iterator last, BinaryPredicate p)
+{
+	std::vector<Entry>::iterator newLast(last);
+	while (first != newLast)
+	{
+		std::vector<Entry>::iterator next(std::next(first));
+		while (next != newLast)
+		{
+			if (p(*first, *next))
+			{
+				--newLast;
+				std::rotate(next, next + 1, last);
+			}
+			else
+				++next;
+		}
+		++first;
+	}
+
+	return newLast;
 }
 
 #endif// EBIRD_DATA_PROCESSOR_H_

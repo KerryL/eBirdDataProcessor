@@ -60,6 +60,7 @@ private:
 
 	struct Options
 	{
+		std::string executableName;
 		std::string dataFileName;
 		std::string outputFileName;
 
@@ -71,6 +72,7 @@ private:
 		unsigned int listType;// 0 - life, 1 - year, 2 - month, 3 - week, 4 - day, 5 - separate all observations
 
 		bool speciesCountOnly;// Primarily for plotting
+		bool includePartialIDs;
 
 		unsigned int yearFilter;
 		unsigned int monthFilter;
