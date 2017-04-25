@@ -11,6 +11,7 @@
 #include <sstream>
 #include <iostream>
 #include <cassert>
+#include <fstream>
 
 int main(int argc, char *argv[])
 {
@@ -115,12 +116,17 @@ bool CommandLineOption::Read(const std::string& argument, bool& consumeNext) con
 EBirdDataProcessorApp::Options EBirdDataProcessorApp::specifiedOptions;
 const std::vector<CommandLineOption> EBirdDataProcessorApp::availableOptions({
 	CommandLineOption("", "", specifiedOptions.dataFileName, ""),
+	CommandLineOption("output", "o", specifiedOptions.dataFileName, ""),
 	CommandLineOption("country", "c", specifiedOptions.countryFilter, ""),
 	CommandLineOption("state", "s", specifiedOptions.stateFilter, ""),
 	CommandLineOption("county", "C", specifiedOptions.countyFilter, ""),
 	CommandLineOption("location", "l", specifiedOptions.locationFilter, ""),
 	CommandLineOption("listType", "t", specifiedOptions.listType, 0),
-	CommandLineOption("totalsOnly", "o", specifiedOptions.totalsOnly, false)
+	CommandLineOption("totalsOnly", "A", specifiedOptions.totalsOnly, false),
+	CommandLineOption("year", "y", specifiedOptions.listType, 0),
+	CommandLineOption("month", "m", specifiedOptions.listType, 0),
+	CommandLineOption("week", "w", specifiedOptions.listType, 0),
+	CommandLineOption("day", "d", specifiedOptions.listType, 0)
 });
 
 std::string EBirdDataProcessorApp::GetLongFormArgument(const void* const target)
@@ -148,7 +154,46 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!processor.Parse(specifiedOptions.dataFileName))
 		return 1;
 
-	// TODO:  Implement
+	// Remove entires that don't fall withing the specified locations
+	if (!specifiedOptions.locationFilter.empty())
+		processor.FilterLocation(specifiedOptions.locationFilter, specifiedOptions.countyFilter,
+			specifiedOptions.stateFilter, specifiedOptions.countryFilter);
+	else if (!specifiedOptions.countyFilter.empty())
+		processor.FilterCounty(specifiedOptions.countyFilter, specifiedOptions.stateFilter,
+			specifiedOptions.countryFilter);
+	else if (!specifiedOptions.stateFilter.empty())
+		processor.FilterState(specifiedOptions.stateFilter, specifiedOptions.countryFilter);
+	else if (!specifiedOptions.countryFilter.empty())
+		processor.FilterCountry(specifiedOptions.countryFilter);
+
+	// Remove entries that don't fall within the specified dates
+	if (specifiedOptions.yearFilter > 0)
+		processor.FilterYear(specifiedOptions.yearFilter);
+
+	if (specifiedOptions.monthFilter > 0)
+		processor.FilterMonth(specifiedOptions.monthFilter);
+
+	if (specifiedOptions.weekFilter > 0)
+		processor.FilterWeek(specifiedOptions.weekFilter);
+
+	if (specifiedOptions.dayFilter > 0)
+		processor.FilterDay(specifiedOptions.dayFilter);
+
+	const std::string list(processor.GenerateList());
+	std::cout << list << std::endl;
+
+	if (!specifiedOptions.outputFileName.empty())
+	{
+		std::ofstream outFile(specifiedOptions.outputFileName.c_str());
+		if (!outFile.is_open() || !outFile.good())
+		{
+			std::cerr << "Failed to open '" << specifiedOptions.outputFileName << "' for output\n";
+			return 1;
+		}
+
+		outFile << list << std::endl;
+	}
+
 	return 0;
 }
 bool EBirdDataProcessorApp::ParseArguments(const std::vector<std::string>& arguments)
@@ -176,6 +221,44 @@ bool EBirdDataProcessorApp::ValidateOptions() const
 	{
 		std::cerr << "Must specify argument '" << GetLongFormArgument(
 			static_cast<void*>(&specifiedOptions.dataFileName)) << '\n';
+		configurationOK = false;
+	}
+
+	if (!specifiedOptions.countryFilter.empty() &&
+		specifiedOptions.countryFilter.length() != 2)
+	{
+		std::cerr << "Country must be specified using 2-digit abbreviation\n";
+		configurationOK = false;
+	}
+
+	if (!specifiedOptions.stateFilter.empty() &&
+		specifiedOptions.stateFilter.length() != 2)
+	{
+		std::cerr << "State/providence must be specified using 2-digit abbreviation\n";
+		configurationOK = false;
+	}
+
+	if (specifiedOptions.dayFilter > 31)
+	{
+		std::cerr << "Day argument must be in the range 0 - 31\n";
+		configurationOK = false;
+	}
+
+	if (specifiedOptions.monthFilter > 12)
+	{
+		std::cerr << "Month argument must be in the range 0 - 12\n";
+		configurationOK = false;
+	}
+
+	if (specifiedOptions.weekFilter > 53)
+	{
+		std::cerr << "Week argument must be in the range 0 - 53\n";
+		configurationOK = false;
+	}
+
+	if (specifiedOptions.listType > 4)
+	{
+		std::cerr << "List type argument must be in the range 0 - 4\n";
 		configurationOK = false;
 	}
 

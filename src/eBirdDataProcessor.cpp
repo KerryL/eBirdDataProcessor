@@ -9,6 +9,8 @@
 // Standard C++ headers
 #include <fstream>
 #include <iostream>
+#include <algorithm>
+#include <iomanip>
 
 const std::string EBirdDataProcessor::headerLine("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
@@ -52,7 +54,7 @@ bool EBirdDataProcessor::Parse(const std::string& dataFile)
 		++lineCount;
 	}
 
-	std::cout << "Parsed " << data.size() << " entries" << std::endl;// TODO:  Count seems to be too big?
+	std::cout << "Parsed " << data.size() << " entries" << std::endl;
 	return true;
 }
 
@@ -60,9 +62,11 @@ std::string EBirdDataProcessor::Sanitize(const std::string& line)
 {
 	std::string s(line);
 	std::string::size_type nextQuote(0);
-	while (nextQuote = s.find('"', nextQuote + 1), nextQuote != std::string::npos)
+	while (nextQuote = s.find('"', nextQuote), nextQuote != std::string::npos)
 	{
-		const std::string::size_type endQuote(s.find('"', nextQuote + 1));
+		s.erase(nextQuote, 1);
+		const std::string::size_type endQuote(s.find('"', nextQuote));
+		s.erase(endQuote, 1);
 		if (endQuote != std::string::npos)
 		{
 			std::string::size_type nextComma(nextQuote);
@@ -70,8 +74,6 @@ std::string EBirdDataProcessor::Sanitize(const std::string& line)
 				s.replace(nextComma, 1, commaPlaceholder);
 		}
 		nextQuote = endQuote;
-
-		// TODO:  Could also remove quotation marks then
 	}
 
 	return s;
@@ -111,9 +113,9 @@ bool EBirdDataProcessor::ParseLine(const std::string& line, Entry& entry)
 		return false;
 	if (!ParseToken(lineStream, "Longitude", entry.longitude))
 		return false;
-	if (!ParseToken(lineStream, "Date", entry.dateTime))
+	if (!ParseDateTimeToken(lineStream, "Date", entry.dateTime, "%m-%d-%Y"))
 		return false;
-	if (!ParseToken(lineStream, "Time", entry.dateTime))
+	if (!ParseDateTimeToken(lineStream, "Time", entry.dateTime, "%I:%M %p"))
 		return false;
 	if (!ParseToken(lineStream, "Protocol", entry.protocol))
 		return false;
@@ -143,9 +145,114 @@ bool EBirdDataProcessor::ParseCountToken(std::istringstream& lineStream, const s
 	{
 		target = 1;
 		std::string token;
-		std::getline(lineStream, token, ',');// This is just to advance the stream pointer
-		return true;
+		return std::getline(lineStream, token, ',').good();// This is just to advance the stream pointer
 	}
 
 	return ParseToken(lineStream, fieldName, target);
+}
+
+bool EBirdDataProcessor::ParseDateTimeToken(std::istringstream& lineStream, const std::string& fieldName,
+	std::tm& target, const std::string& format)
+{
+	std::string token;
+	if (!std::getline(lineStream, token, ','))// This advances the stream pointer
+	{
+		std::cerr << "Failed to read token for " << fieldName << '\n';
+		return false;
+	}
+
+	std::istringstream ss(token);
+	if ((ss >> std::get_time(&target, format.c_str())).fail())
+	{
+		std::cerr << "Failed to interpret token for " << fieldName << '\n';
+		return false;
+	}
+
+	return true;
+}
+
+void EBirdDataProcessor::FilterLocation(const std::string& location, const std::string& county,
+	const std::string& state, const std::string& country)
+{
+	if (!county.empty() || !state.empty() || !country.empty())
+		FilterCounty(county, state, country);
+
+	data.erase(std::remove_if(data.begin(), data.end(), [location](const Entry& entry)
+	{
+		return entry.location.compare(location) != 0;
+	}), data.end());
+}
+
+void EBirdDataProcessor::FilterCounty(const std::string& county,
+	const std::string& state, const std::string& country)
+{
+	if (!state.empty() || !country.empty())
+		FilterState(state, country);
+
+	data.erase(std::remove_if(data.begin(), data.end(), [county](const Entry& entry)
+	{
+		return entry.county.compare(county) != 0;
+	}), data.end());
+}
+
+void EBirdDataProcessor::FilterState(const std::string& state, const std::string& country)
+{
+	if (!country.empty())
+		FilterCountry(country);
+
+	data.erase(std::remove_if(data.begin(), data.end(), [state](const Entry& entry)
+	{
+		return entry.stateProvidence.substr(3).compare(state) != 0;
+	}), data.end());
+}
+
+void EBirdDataProcessor::FilterCountry(const std::string& country)
+{
+	data.erase(std::remove_if(data.begin(), data.end(), [country](const Entry& entry)
+	{
+		return entry.stateProvidence.substr(0, 2).compare(country) != 0;
+	}), data.end());
+}
+
+void EBirdDataProcessor::FilterYear(const unsigned int& year)
+{
+	data.erase(std::remove_if(data.begin(), data.end(), [year](const Entry& entry)
+	{
+		return static_cast<unsigned int>(entry.dateTime.tm_year) + 1900U != year;
+	}), data.end());
+}
+
+void EBirdDataProcessor::FilterMonth(const unsigned int& month)
+{
+	data.erase(std::remove_if(data.begin(), data.end(), [month](const Entry& entry)
+	{
+		return static_cast<unsigned int>(entry.dateTime.tm_mon) + 1U != month;
+	}), data.end());
+}
+
+void EBirdDataProcessor::FilterWeek(const unsigned int& week)
+{
+	data.erase(std::remove_if(data.begin(), data.end(), [week](const Entry& entry)
+	{
+		std::stringstream ss;
+		ss << std::put_time(&entry.dateTime, "%U");
+		unsigned int entryWeek;
+		ss >> entryWeek;
+		++entryWeek;
+		return entryWeek != week;
+	}), data.end());
+}
+
+void EBirdDataProcessor::FilterDay(const unsigned int& day)
+{
+	data.erase(std::remove_if(data.begin(), data.end(), [day](const Entry& entry)
+	{
+		return static_cast<unsigned int>(entry.dateTime.tm_mday) != day;
+	}), data.end());
+}
+
+std::string EBirdDataProcessor::GenerateList() const
+{
+	// TODO:  Implement
+	return "";
 }

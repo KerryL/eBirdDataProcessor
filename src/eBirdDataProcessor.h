@@ -16,6 +16,20 @@ class EBirdDataProcessor
 public:
 	bool Parse(const std::string& dataFile);
 
+	void FilterLocation(const std::string& location, const std::string& county,
+		const std::string& state, const std::string& country);
+	void FilterCounty(const std::string& county, const std::string& state,
+		const std::string& country);
+	void FilterState(const std::string& state, const std::string& country);
+	void FilterCountry(const std::string& country);
+
+	void FilterYear(const unsigned int& year);
+	void FilterMonth(const unsigned int& month);
+	void FilterWeek(const unsigned int& week);
+	void FilterDay(const unsigned int& day);
+
+	std::string GenerateList() const;
+
 private:
 	static const std::string headerLine;
 
@@ -31,7 +45,7 @@ private:
 		std::string location;
 		double latitude;// [deg]
 		double longitude;// [deg]
-		std::time_t dateTime;
+		std::tm dateTime;
 		std::string protocol;
 		int duration;// [min]
 		bool allObsReported;
@@ -50,6 +64,8 @@ private:
 	template<typename T>
 	static bool ParseToken(std::istringstream& lineStream, const std::string& fieldName, T& target);
 	static bool ParseCountToken(std::istringstream& lineStream, const std::string& fieldName, int& target);
+	static bool ParseDateTimeToken(std::istringstream& lineStream, const std::string& fieldName,
+		std::tm& target, const std::string& format);
 	static std::string Sanitize(const std::string& line);
 	static std::string Desanitize(const std::string& token);
 

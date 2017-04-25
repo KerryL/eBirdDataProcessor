@@ -61,15 +61,21 @@ private:
 	struct Options
 	{
 		std::string dataFileName;
+		std::string outputFileName;
 
 		std::string countryFilter;
 		std::string stateFilter;
 		std::string countyFilter;
 		std::string locationFilter;
 
-		unsigned int listType;// 0 - life, 1 - year, 2 - month, 3 - day
+		unsigned int listType;// 0 - life, 1 - year, 2 - month, 3 - week, 4 - day
 
 		bool totalsOnly;
+
+		unsigned int yearFilter;
+		unsigned int monthFilter;
+		unsigned int weekFilter;
+		unsigned int dayFilter;
 	};
 
 	static Options specifiedOptions;
