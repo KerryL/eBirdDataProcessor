@@ -282,9 +282,9 @@ bool EBirdDataProcessorApp::ValidateOptions() const
 		configurationOK = false;
 	}
 
-	if (specifiedOptions.listType > 4)
+	if (specifiedOptions.listType > 5)
 	{
-		std::cerr << "List type argument must be in the range 0 - 4\n";
+		std::cerr << "List type argument must be in the range 0 - 5\n";
 		configurationOK = false;
 	}
 
