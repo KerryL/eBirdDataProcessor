@@ -119,7 +119,7 @@ bool CommandLineOption::Read(const std::string& argument, bool& consumeNext) con
 
 EBirdDataProcessorApp::Options EBirdDataProcessorApp::specifiedOptions;
 const std::vector<CommandLineOption> EBirdDataProcessorApp::availableOptions({
-	CommandLineOption("output", "o", specifiedOptions.dataFileName, ""),
+	CommandLineOption("output", "o", specifiedOptions.outputFileName, ""),
 	CommandLineOption("country", "c", specifiedOptions.countryFilter, ""),
 	CommandLineOption("state", "s", specifiedOptions.stateFilter, ""),
 	CommandLineOption("county", "C", specifiedOptions.countyFilter, ""),
@@ -127,10 +127,10 @@ const std::vector<CommandLineOption> EBirdDataProcessorApp::availableOptions({
 	CommandLineOption("listType", "t", specifiedOptions.listType, 0),
 	CommandLineOption("speciesCountOnly", "T", specifiedOptions.speciesCountOnly, false),
 	CommandLineOption("partialIDs", "A", specifiedOptions.includePartialIDs, false),
-	CommandLineOption("year", "y", specifiedOptions.listType, 0),
-	CommandLineOption("month", "m", specifiedOptions.listType, 0),
-	CommandLineOption("week", "w", specifiedOptions.listType, 0),
-	CommandLineOption("day", "d", specifiedOptions.listType, 0),
+	CommandLineOption("year", "y", specifiedOptions.yearFilter, 0),
+	CommandLineOption("month", "m", specifiedOptions.monthFilter, 0),
+	CommandLineOption("week", "w", specifiedOptions.weekFilter, 0),
+	CommandLineOption("day", "d", specifiedOptions.dayFilter, 0),
 	CommandLineOption("sortBy", "1", specifiedOptions.primarySort, 0),
 	CommandLineOption("thenBy", "2", specifiedOptions.secondarySort, 0),
 	CommandLineOption("", "", specifiedOptions.executableName, ""),
@@ -213,6 +213,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	return 0;
 }
+
 bool EBirdDataProcessorApp::ParseArguments(const std::vector<std::string>& arguments)
 {
 	std::vector<const std::string*> consumedArguments;
@@ -229,6 +230,9 @@ bool EBirdDataProcessorApp::ParseArguments(const std::vector<std::string>& argum
 				if (!option.Read(argument, consumeNext))
 					return false;
 				consumedArguments.push_back(&argument);
+
+				if (!consumeNext)
+					break;
 			}
 		}
 	}
@@ -242,7 +246,7 @@ bool EBirdDataProcessorApp::ValidateOptions() const
 	if (specifiedOptions.dataFileName.empty())
 	{
 		std::cerr << "Must specify argument '" << GetLongFormArgument(
-			static_cast<void*>(&specifiedOptions.dataFileName)) << '\n';
+			static_cast<void*>(&specifiedOptions.dataFileName)) << "'\n";
 		configurationOK = false;
 	}
 
