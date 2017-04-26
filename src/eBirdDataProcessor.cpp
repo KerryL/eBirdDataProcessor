@@ -140,6 +140,8 @@ bool EBirdDataProcessor::ParseLine(const std::string& line, Entry& entry)
 	if (!ParseToken(lineStream, "Checklist Comments", entry.checklistComments))
 		return false;
 
+	// Make sure the data stored in the tm structure is consistent
+	mktime(&entry.dateTime);
 	return true;
 }
 
@@ -277,7 +279,11 @@ int EBirdDataProcessor::DoComparison(const Entry& a, const Entry& b, const SortB
 		return 0;
 
 	if (sortBy == SortBy::Date)
-		return static_cast<int>(difftime(time_t(&a.dateTime), time_t(&b.dateTime)));
+	{
+		std::tm aTime(a.dateTime);
+		std::tm bTime(b.dateTime);
+		return static_cast<int>(difftime(mktime(&aTime), mktime(&bTime)));
+	}
 	else if (sortBy == SortBy::CommonName)
 		return a.commonName.compare(b.commonName);
 	else if (sortBy == SortBy::ScientificName)
