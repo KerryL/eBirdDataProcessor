@@ -460,6 +460,16 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 
 	EliminateObservedSpecies(frequencyData);
 
+	for (auto& month : frequencyData)
+	{
+		std::sort(month.begin(), month.end(), [](const FrequencyInfo& a, const FrequencyInfo& b)
+		{
+			if (a.frequency > b.frequency)// Most frequent birds first
+				return true;
+			return false;
+		});
+	}
+
 	std::ofstream outFile(outputFileName.c_str());
 	if (!outFile.good() || !outFile.is_open())
 	{
@@ -501,7 +511,17 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 
 void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyData) const
 {
-	// TODO:  Implement
+	for (auto& month : frequencyData)
+	{
+		month.erase(std::remove_if(month.begin(), month.end(), [this](const FrequencyInfo& f)
+		{
+			const auto& speciesIterator(std::find_if(data.begin(), data.end(), [f](const Entry& e)
+			{
+				return Trim(StripParentheses(f.species)).compare(Trim(StripParentheses(e.commonName))) == 0;
+			}));
+			return speciesIterator != data.end();
+		}), month.end());
+	}
 }
 
 bool EBirdDataProcessor::ParseFrequencyFile(const std::string& fileName,
@@ -535,16 +555,6 @@ bool EBirdDataProcessor::ParseFrequencyFile(const std::string& fileName,
 	{
 		if (!ParseFrequencyLine(line, frequencyData))
 			return false;
-	}
-
-	for (auto& month : frequencyData)
-	{
-		std::sort(month.begin(), month.end(), [](const FrequencyInfo& a, const FrequencyInfo& b)
-		{
-			if (a.frequency < b.frequency)// Most frequent birds first
-				return true;
-			return false;
-		});
 	}
 
 	return true;

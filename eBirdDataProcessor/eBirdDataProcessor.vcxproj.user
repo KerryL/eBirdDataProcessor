@@ -5,7 +5,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LocalDebuggerCommandArguments>-1 4 -2 1 MyEBirdData.csv</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>-c US -s PA -C Bucks --targetCalendar --topCount 20 --frequencyFile BucksFrequencyData.csv -o targetCalendar.csv MyEBirdData.csv</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
 </Project>
