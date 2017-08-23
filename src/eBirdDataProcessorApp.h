@@ -81,6 +81,10 @@ private:
 
 		unsigned int primarySort;// 0 - none, 1 - date, 2 - common name, 3 - scientific name, 4 - taxonomic order
 		unsigned int secondarySort;// 0 - none, 1 - date, 2 - common name, 3 - scientific name, 4 - taxonomic order
+
+		bool generateTargetCalendar;
+		unsigned int topBirdCount;
+		std::string frequencyFileName;
 	};
 
 	static Options specifiedOptions;

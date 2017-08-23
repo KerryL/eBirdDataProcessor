@@ -449,3 +449,144 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() co
 
 	return consolidatedList;
 }
+
+bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount,
+	const std::string& outputFileName, const std::string& frequencyFileName) const
+{
+	FrequencyDataYear frequencyData;
+	DoubleYear checklistCounts;
+	if (!ParseFrequencyFile(frequencyFileName, frequencyData, checklistCounts))
+		return false;
+
+	EliminateObservedSpecies(frequencyData);
+
+	std::ofstream outFile(outputFileName.c_str());
+	if (!outFile.good() || !outFile.is_open())
+	{
+		std::cerr << "Failed to open '" << outputFileName << "' for output\n";
+		return false;
+	}
+
+	outFile << "January (" << checklistCounts[0] << " checklists),"
+		<< "February (" << checklistCounts[1] << " checklists),"
+		<< "March (" << checklistCounts[2] << " checklists),"
+		<< "April (" << checklistCounts[3] << " checklists),"
+		<< "May (" << checklistCounts[4] << " checklists),"
+		<< "June (" << checklistCounts[5] << " checklists),"
+		<< "July (" << checklistCounts[6] << " checklists),"
+		<< "August (" << checklistCounts[7] << " checklists),"
+		<< "September (" << checklistCounts[8] << " checklists),"
+		<< "October (" << checklistCounts[9] << " checklists),"
+		<< "November (" << checklistCounts[10] << " checklists),"
+		<< "December (" << checklistCounts[11] << " checklists),";
+	outFile << std::endl;
+
+	unsigned int i;
+	for (i = 0; i < topBirdCount; ++i)
+	{
+		for (const auto& month : frequencyData)
+		{
+			if (i < month.size())
+				outFile << month[i].species << " (" << month[i].frequency << " %)";
+
+			outFile << ',';
+		}
+		outFile << std::endl;
+	}
+
+	// TODO:  Include best hotspots in the area for that month and species (with freq and number of checklists for hotspots)
+
+	return true;
+}
+
+void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyData) const
+{
+	// TODO:  Implement
+}
+
+bool EBirdDataProcessor::ParseFrequencyFile(const std::string& fileName,
+	FrequencyDataYear& frequencyData, DoubleYear& checklistCounts)
+{
+	std::cout << "Readying frequency information from '" << fileName << "'.\n";
+	std::ifstream frequencyFile(fileName.c_str());
+	if (!frequencyFile.good() || !frequencyFile.is_open())
+	{
+		std::cerr << "Failed to open '" << fileName << "' for input.\n";
+		return false;
+	}
+
+	std::string line;
+	if (!std::getline(frequencyFile, line))
+	{
+		std::cerr << "Failed to read header line\n";
+		return false;
+	}
+
+	if (!ParseFrequencyHeaderLine(line, checklistCounts))
+		return false;
+
+	if (!std::getline(frequencyFile, line))
+	{
+		std::cerr << "Failed to read second header line\n";
+		return false;
+	}
+	
+	while (std::getline(frequencyFile, line))
+	{
+		if (!ParseFrequencyLine(line, frequencyData))
+			return false;
+	}
+
+	for (auto& month : frequencyData)
+	{
+		std::sort(month.begin(), month.end(), [](const FrequencyInfo& a, const FrequencyInfo& b)
+		{
+			if (a.frequency < b.frequency)// Most frequent birds first
+				return true;
+			return false;
+		});
+	}
+
+	return true;
+}
+
+bool EBirdDataProcessor::ParseFrequencyHeaderLine(const std::string& line, DoubleYear& checklistCounts)
+{
+	std::istringstream ss(line);
+	for (auto& count : checklistCounts)
+	{
+		std::string monthUnused;
+		if (!ParseToken(ss, "Checklist Month", monthUnused))
+			return false;
+		if (!ParseToken(ss, "Checklist Count", count))
+			return false;
+	}
+
+	return true;
+}
+
+bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDataYear& frequencyData)
+{
+	std::istringstream ss(line);
+	for (auto& month : frequencyData)
+	{
+		std::string species;
+		double frequency;
+		if (!ParseToken(ss, "Species", species))
+			return false;
+		if (!ParseToken(ss, "Frequency", frequency))
+			return false;
+		if (!species.empty())
+		{
+			if (frequency < 0.0)
+			{
+				std::cerr << "Unexpected frequency data\n";
+				return false;
+			}
+
+			month.push_back(FrequencyInfo(species, frequency));
+		}
+	}
+
+	return true;
+}

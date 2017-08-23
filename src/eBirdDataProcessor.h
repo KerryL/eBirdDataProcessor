@@ -10,6 +10,7 @@
 #include <vector>
 #include <ctime>
 #include <sstream>
+#include <array>
 
 class EBirdDataProcessor
 {
@@ -52,6 +53,9 @@ public:
 	};
 
 	std::string GenerateList(const ListType& type) const;
+
+	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
+		const std::string& outputFileName, const std::string& frequencyFileName) const;
 
 private:
 	static const std::string headerLine;
@@ -112,6 +116,22 @@ private:
 	static std::string Trim(std::string s);
 
 	static const std::string commaPlaceholder;
+
+	struct FrequencyInfo
+	{
+		std::string species;
+		double frequency;
+
+		FrequencyInfo(const std::string& species, const double& frequency) : species(species), frequency(frequency) {}
+	};
+	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
+	typedef std::array<double, 12> DoubleYear;
+
+	static bool ParseFrequencyFile(const std::string& fileName,
+		FrequencyDataYear& frequencyData, DoubleYear& checklistCounts);
+	static bool ParseFrequencyHeaderLine(const std::string& line, DoubleYear& checklistCounts);
+	static bool ParseFrequencyLine(const std::string& line, FrequencyDataYear& frequencyData);
+	void EliminateObservedSpecies(FrequencyDataYear& frequencyData) const;
 };
 
 template<typename T>

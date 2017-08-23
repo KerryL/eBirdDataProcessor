@@ -133,6 +133,9 @@ const std::vector<CommandLineOption> EBirdDataProcessorApp::availableOptions({
 	CommandLineOption("day", "d", specifiedOptions.dayFilter, 0),
 	CommandLineOption("sortBy", "1", specifiedOptions.primarySort, 0),
 	CommandLineOption("thenBy", "2", specifiedOptions.secondarySort, 0),
+	CommandLineOption("targetCalendar", "L", specifiedOptions.generateTargetCalendar, false),
+	CommandLineOption("frequencyFile", "F", specifiedOptions.frequencyFileName, ""),
+	CommandLineOption("topCount", "P", specifiedOptions.topBirdCount, 10),
 	CommandLineOption("", "", specifiedOptions.executableName, ""),
 	CommandLineOption("", "", specifiedOptions.dataFileName, "")
 });
@@ -209,6 +212,18 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		}
 
 		outFile << list << std::endl;
+	}
+
+	if (specifiedOptions.generateTargetCalendar)
+	{
+		if (specifiedOptions.topBirdCount == 0)
+		{
+			std::cerr << "Attempting to generate target calendar, but top bird count == 0\n";
+			return 1;
+		}
+
+		processor.GenerateTargetCalendar(specifiedOptions.topBirdCount,
+			specifiedOptions.outputFileName, specifiedOptions.frequencyFileName);
 	}
 
 	return 0;

@@ -112,10 +112,12 @@
   <ItemGroup>
     <ClCompile Include="..\src\eBirdDataProcessor.cpp" />
     <ClCompile Include="..\src\eBirdDataProcessorApp.cpp" />
+    <ClCompile Include="..\src\eBirdInterface.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h" />
     <ClInclude Include="..\src\eBirdDataProcessorApp.h" />
+    <ClInclude Include="..\src\eBirdInterface.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

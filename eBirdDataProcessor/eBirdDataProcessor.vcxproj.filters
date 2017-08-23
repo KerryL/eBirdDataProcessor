@@ -21,12 +21,18 @@
     <ClCompile Include="..\src\eBirdDataProcessorApp.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\eBirdInterface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\eBirdDataProcessorApp.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\eBirdInterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
