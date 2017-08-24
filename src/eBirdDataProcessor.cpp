@@ -458,6 +458,8 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	if (!ParseFrequencyFile(frequencyFileName, frequencyData, checklistCounts))
 		return false;
 
+	//GuessChecklistCounts(frequencyData, checklistCounts);
+
 	EliminateObservedSpecies(frequencyData);
 
 	for (auto& month : frequencyData)
@@ -507,6 +509,53 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	// TODO:  Include best hotspots in the area for that month and species (with freq and number of checklists for hotspots)
 
 	return true;
+}
+
+#include <numeric>
+void EBirdDataProcessor::GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts)
+{
+	DoubleYear guessedCounts;
+	unsigned int i;
+	for (i = 0; i < frequencyData.size(); ++i)
+	{
+		guessedCounts[i] = [frequencyData, i]()
+		{
+			auto it(frequencyData[i].crbegin());
+			for (; it != frequencyData[i].crend(); ++it)
+			{
+				if (it->frequency > 0.0)
+					return 100.0 / it->frequency;
+			}
+			return 0.0;
+		}();
+	}
+
+	for (i = 0; i < frequencyData.size(); ++i)
+	{
+		std::vector<double> deltas;
+		deltas.resize(frequencyData[i].size() - 1);
+		unsigned int j;
+		for (j = 1; j < frequencyData[i].size(); ++j)
+			deltas[j - 1] = frequencyData[i][j - 1].frequency - frequencyData[i][j].frequency;
+
+		std::sort(deltas.begin(), deltas.end());
+		for (const auto & d : deltas)
+		{
+			if (d > 0.0)
+			{
+				if (d < guessedCounts[i])
+					guessedCounts[i] = deltas.front();
+			}
+
+			break;
+		}
+	}
+
+	std::cout << "Estimated\tActual\n";
+	for (i = 0; i < checklistCounts.size(); ++i)
+		std::cout << static_cast<int>(guessedCounts[i] + 0.5) << "\t\t" << checklistCounts[i] << '\n';
+
+	std::cout << std::endl;
 }
 
 void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyData) const

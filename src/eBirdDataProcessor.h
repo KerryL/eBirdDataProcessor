@@ -132,6 +132,8 @@ private:
 	static bool ParseFrequencyHeaderLine(const std::string& line, DoubleYear& checklistCounts);
 	static bool ParseFrequencyLine(const std::string& line, FrequencyDataYear& frequencyData);
 	void EliminateObservedSpecies(FrequencyDataYear& frequencyData) const;
+
+	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 };
 
 template<typename T>
