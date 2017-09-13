@@ -5,6 +5,7 @@
 
 // Local headers
 #include "eBirdDataProcessor.h"
+#include "eBirdInterface.h"
 
 // Standard C++ headers
 #include <fstream>
@@ -506,12 +507,11 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		outFile << std::endl;
 	}
 
-	// TODO:  Include best hotspots in the area for that month and species (with freq and number of checklists for hotspots)
+	RecommendHotspots();
 
 	return true;
 }
 
-#include <numeric>
 void EBirdDataProcessor::GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts)
 {
 	DoubleYear guessedCounts;
@@ -599,7 +599,7 @@ bool EBirdDataProcessor::ParseFrequencyFile(const std::string& fileName,
 		std::cerr << "Failed to read second header line\n";
 		return false;
 	}
-	
+
 	while (std::getline(frequencyFile, line))
 	{
 		if (!ParseFrequencyLine(line, frequencyData))
@@ -648,4 +648,10 @@ bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDa
 	}
 
 	return true;
+}
+
+void EBirdDataProcessor::RecommendHotspots() const
+{
+	EBirdInterface e;
+	std::cout << "scientific name = " << e.GetScientificNameFromCommonName("American Robin");
 }

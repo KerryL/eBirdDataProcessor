@@ -136,6 +136,8 @@ private:
 	void EliminateObservedSpecies(FrequencyDataYear& frequencyData) const;
 
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
+
+	void RecommendHotspots() const;
 };
 
 template<typename T>
