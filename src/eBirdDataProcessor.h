@@ -11,6 +11,8 @@
 #include <ctime>
 #include <sstream>
 #include <array>
+#include <iostream>
+#include <algorithm>
 
 class EBirdDataProcessor
 {
@@ -134,6 +136,8 @@ private:
 	void EliminateObservedSpecies(FrequencyDataYear& frequencyData) const;
 
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
+
+	void RecommendHotspots(const FrequencyDataYear& frequencyData, const unsigned int& topCount) const;
 };
 
 template<typename T>
