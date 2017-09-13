@@ -223,7 +223,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		}
 
 		processor.GenerateTargetCalendar(specifiedOptions.topBirdCount,
-			specifiedOptions.outputFileName, specifiedOptions.frequencyFileName);
+			specifiedOptions.outputFileName, specifiedOptions.frequencyFileName,
+			specifiedOptions.countryFilter, specifiedOptions.stateFilter, specifiedOptions.countyFilter);
 	}
 
 	return 0;

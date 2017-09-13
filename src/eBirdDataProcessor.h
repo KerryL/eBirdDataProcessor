@@ -57,7 +57,8 @@ public:
 	std::string GenerateList(const ListType& type) const;
 
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
-		const std::string& outputFileName, const std::string& frequencyFileName) const;
+		const std::string& outputFileName, const std::string& frequencyFileName,
+		const std::string& country, const std::string& state, const std::string& county) const;
 
 private:
 	static const std::string headerLine;
@@ -137,7 +138,8 @@ private:
 
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
-	void RecommendHotspots(const FrequencyDataYear& frequencyData, const unsigned int& topCount) const;
+	void RecommendHotspots(const FrequencyDataYear& frequencyData, const unsigned int& topCount,
+		const std::string& country, const std::string& state, const std::string& county) const;
 };
 
 template<typename T>

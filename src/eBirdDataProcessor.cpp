@@ -169,12 +169,12 @@ bool EBirdDataProcessor::ParseDateTimeToken(std::istringstream& lineStream, cons
 		return false;
 	}
 
-	/*std::istringstream ss(token);
+	std::istringstream ss(token);
 	if ((ss >> std::get_time(&target, format.c_str())).fail())
 	{
 		std::cerr << "Failed to interpret token for " << fieldName << '\n';
 		return false;
-	}*/
+	}
 
 	return true;
 }
@@ -453,7 +453,8 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() co
 }
 
 bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount,
-	const std::string& outputFileName, const std::string& frequencyFileName) const
+	const std::string& outputFileName, const std::string& frequencyFileName,
+	const std::string& country, const std::string& state, const std::string& county) const
 {
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
@@ -473,6 +474,8 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 			return false;
 		});
 	}
+
+	std::cout << "Writing calendar data to " << outputFileName.c_str() << std::endl;
 
 	std::ofstream outFile(outputFileName.c_str());
 	if (!outFile.good() || !outFile.is_open())
@@ -508,7 +511,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		outFile << std::endl;
 	}
 
-	RecommendHotspots(frequencyData, topBirdCount);
+	RecommendHotspots(frequencyData, topBirdCount, country, state, county);
 
 	return true;
 }
@@ -546,9 +549,8 @@ void EBirdDataProcessor::GuessChecklistCounts(const FrequencyDataYear& frequency
 			{
 				if (d < guessedCounts[i])
 					guessedCounts[i] = deltas.front();
+				break;
 			}
-
-			break;
 		}
 	}
 
@@ -651,10 +653,15 @@ bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDa
 	return true;
 }
 
-void EBirdDataProcessor::RecommendHotspots(const FrequencyDataYear& frequencyData, const unsigned int& topCount) const
+void EBirdDataProcessor::RecommendHotspots(const FrequencyDataYear& frequencyData,const unsigned int& topCount,
+	const std::string& country, const std::string& state, const std::string& county) const
 {
-	std::map<std::string, unsigned int> hotspotScores;
+	std::cout << "Check eBird for recent sightings..." << std::endl;
+
 	EBirdInterface e;
+	const std::string region(e.GetRegionCode(country, state, county));
+
+	std::map<std::string, unsigned int> hotspotScores;
 	unsigned int i;
 	for (i = 0; i < topCount; ++i)
 	{
@@ -663,7 +670,6 @@ void EBirdDataProcessor::RecommendHotspots(const FrequencyDataYear& frequencyDat
 			if (i < month.size())
 			{
 				const std::string scientificName(e.GetScientificNameFromCommonName(month[i].species));
-				const std::string region("US-PA-017");
 				const std::vector<std::string> hotspots(e.GetHotspotsWithRecentObservationsOf(scientificName, region));
 				for (const auto& spot : hotspots)
 				{
