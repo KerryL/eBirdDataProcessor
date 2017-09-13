@@ -11,6 +11,8 @@
 #include <ctime>
 #include <sstream>
 #include <array>
+#include <iostream>
+#include <algorithm>
 
 class EBirdDataProcessor
 {
