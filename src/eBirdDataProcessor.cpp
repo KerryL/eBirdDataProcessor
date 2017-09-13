@@ -16,6 +16,7 @@
 #include <locale>
 #include <cctype>
 #include <functional>
+#include <map>
 
 const std::string EBirdDataProcessor::headerLine("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
@@ -168,12 +169,12 @@ bool EBirdDataProcessor::ParseDateTimeToken(std::istringstream& lineStream, cons
 		return false;
 	}
 
-	std::istringstream ss(token);
+	/*std::istringstream ss(token);
 	if ((ss >> std::get_time(&target, format.c_str())).fail())
 	{
 		std::cerr << "Failed to interpret token for " << fieldName << '\n';
 		return false;
-	}
+	}*/
 
 	return true;
 }
@@ -507,7 +508,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		outFile << std::endl;
 	}
 
-	RecommendHotspots();
+	RecommendHotspots(frequencyData, topBirdCount);
 
 	return true;
 }
@@ -650,8 +651,42 @@ bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDa
 	return true;
 }
 
-void EBirdDataProcessor::RecommendHotspots() const
+void EBirdDataProcessor::RecommendHotspots(const FrequencyDataYear& frequencyData, const unsigned int& topCount) const
 {
+	std::map<std::string, unsigned int> hotspotScores;
 	EBirdInterface e;
-	std::cout << "scientific name = " << e.GetScientificNameFromCommonName("American Robin");
+	unsigned int i;
+	for (i = 0; i < topCount; ++i)
+	{
+		for (const auto& month : frequencyData)
+		{
+			if (i < month.size())
+			{
+				const std::string scientificName(e.GetScientificNameFromCommonName(month[i].species));
+				const std::string region("US-PA-017");
+				const std::vector<std::string> hotspots(e.GetHotspotsWithRecentObservationsOf(scientificName, region));
+				for (const auto& spot : hotspots)
+				{
+					if (hotspotScores.find(spot) == hotspotScores.end())
+						hotspotScores[spot] = 1;
+					else
+						++hotspotScores[spot];
+				}
+			}
+		}
+	}
+
+	std::vector<std::pair<unsigned int, std::string>> sortedHotspots;
+	for (const auto& h : hotspotScores)
+		sortedHotspots.push_back(std::make_pair(h.second, h.first));
+	std::sort(sortedHotspots.begin(), sortedHotspots.end(), [](const std::pair<unsigned int, std::string>& a, const std::pair<unsigned int, std::string>& b)
+	{
+		if (a.first > b.first)
+			return true;
+		return false;
+	});
+
+	std::cout << "\nRecommended hotspots for observing needed species:\n";
+	for (i = 0; i < topCount; ++i)
+		std::cout << "  " << sortedHotspots[i].second << std::endl;
 }
