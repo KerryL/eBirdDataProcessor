@@ -166,7 +166,7 @@ std::string EBirdInterface::GetRegionCode(const std::string& country,
 	std::string countryCode(GetCountryCode(country));
 	if (countryCode.empty())
 		return std::string();
-	
+
 	if (!state.empty())
 	{
 		std::string stateCode(GetStateCode(countryCode, state));
@@ -216,14 +216,14 @@ std::string EBirdInterface::GetCountryCode(const std::string& country)
 		BuildCountryInfo();
 
 	std::string lowerCaseCountry(country);
-	std::transform(lowerCaseCountry.begin(), lowerCaseCountry.end(), lowerCaseCountry.begin(), std::tolower);
+	std::transform(lowerCaseCountry.begin(), lowerCaseCountry.end(), lowerCaseCountry.begin(), ::tolower);
 	for (const auto& c : countryInfo)
 	{
 		CountryInfo lowerCaseInfo(c);
-		std::transform(lowerCaseInfo.code.begin(), lowerCaseInfo.code.end(), lowerCaseInfo.code.begin(), std::tolower);
-		std::transform(lowerCaseInfo.name.begin(), lowerCaseInfo.name.end(), lowerCaseInfo.name.begin(), std::tolower);
-		std::transform(lowerCaseInfo.longName.begin(), lowerCaseInfo.longName.end(), lowerCaseInfo.longName.begin(), std::tolower);
-		std::transform(lowerCaseInfo.localAbbreviation.begin(), lowerCaseInfo.localAbbreviation.end(), lowerCaseInfo.localAbbreviation.begin(), std::tolower);
+		std::transform(lowerCaseInfo.code.begin(), lowerCaseInfo.code.end(), lowerCaseInfo.code.begin(), ::tolower);
+		std::transform(lowerCaseInfo.name.begin(), lowerCaseInfo.name.end(), lowerCaseInfo.name.begin(), ::tolower);
+		std::transform(lowerCaseInfo.longName.begin(), lowerCaseInfo.longName.end(), lowerCaseInfo.longName.begin(), ::tolower);
+		std::transform(lowerCaseInfo.localAbbreviation.begin(), lowerCaseInfo.localAbbreviation.end(), lowerCaseInfo.localAbbreviation.begin(), ::tolower);
 
 		if (lowerCaseInfo.code.compare(lowerCaseCountry) == 0 ||
 			lowerCaseInfo.name.compare(lowerCaseCountry) == 0 ||
@@ -251,13 +251,13 @@ std::string EBirdInterface::GetStateCode(const std::string& countryCode,
 	std::vector<StateInfo> stateInfo(BuildStateInfo(countryCode));
 
 	std::string lowerCaseState(state);
-	std::transform(lowerCaseState.begin(), lowerCaseState.end(), lowerCaseState.begin(), std::tolower);
+	std::transform(lowerCaseState.begin(), lowerCaseState.end(), lowerCaseState.begin(), ::tolower);
 	for (const auto& s : stateInfo)
 	{
 		StateInfo lowerCaseInfo(s);
-		std::transform(lowerCaseInfo.code.begin(), lowerCaseInfo.code.end(), lowerCaseInfo.code.begin(), std::tolower);
-		std::transform(lowerCaseInfo.name.begin(), lowerCaseInfo.name.end(), lowerCaseInfo.name.begin(), std::tolower);
-		std::transform(lowerCaseInfo.localAbbreviation.begin(), lowerCaseInfo.localAbbreviation.end(), lowerCaseInfo.localAbbreviation.begin(), std::tolower);
+		std::transform(lowerCaseInfo.code.begin(), lowerCaseInfo.code.end(), lowerCaseInfo.code.begin(), ::tolower);
+		std::transform(lowerCaseInfo.name.begin(), lowerCaseInfo.name.end(), lowerCaseInfo.name.begin(), ::tolower);
+		std::transform(lowerCaseInfo.localAbbreviation.begin(), lowerCaseInfo.localAbbreviation.end(), lowerCaseInfo.localAbbreviation.begin(), ::tolower);
 
 		if (lowerCaseInfo.code.compare(lowerCaseState) == 0 ||
 			lowerCaseInfo.name.compare(lowerCaseState) == 0 ||
@@ -279,7 +279,7 @@ std::string EBirdInterface::GetStateCode(const std::string& countryCode,
 	std::string line;
 	std::getline(ss, line);
 	assert(stateInfoListHeading.compare(line) == 0);
-	
+
 	std::vector<StateInfo> matchStateInfo;
 	while (std::getline(ss, line))
 		matchStateInfo.push_back(ParseStateInfoLine(line));
@@ -301,12 +301,12 @@ std::string EBirdInterface::GetCountyCode(const std::string& stateCode, const st
 	std::vector<CountyInfo> countyInfo(BuildCountyInfo(stateCode));
 
 	std::string lowerCaseCounty(county);
-	std::transform(lowerCaseCounty.begin(), lowerCaseCounty.end(), lowerCaseCounty.begin(), std::tolower);
+	std::transform(lowerCaseCounty.begin(), lowerCaseCounty.end(), lowerCaseCounty.begin(), ::tolower);
 	for (const auto& c : countyInfo)
 	{
 		CountyInfo lowerCaseInfo(c);
-		std::transform(lowerCaseInfo.code.begin(), lowerCaseInfo.code.end(), lowerCaseInfo.code.begin(), std::tolower);
-		std::transform(lowerCaseInfo.name.begin(), lowerCaseInfo.name.end(), lowerCaseInfo.name.begin(), std::tolower);
+		std::transform(lowerCaseInfo.code.begin(), lowerCaseInfo.code.end(), lowerCaseInfo.code.begin(), ::tolower);
+		std::transform(lowerCaseInfo.name.begin(), lowerCaseInfo.name.end(), lowerCaseInfo.name.begin(), ::tolower);
 
 		if (lowerCaseInfo.code.compare(lowerCaseCounty) == 0 ||
 			lowerCaseInfo.name.compare(lowerCaseCounty) == 0)
@@ -327,7 +327,7 @@ std::string EBirdInterface::GetCountyCode(const std::string& stateCode, const st
 	std::string line;
 	std::getline(ss, line);
 	assert(countyInfoListHeading.compare(line) == 0);
-	
+
 	std::vector<CountyInfo> matchCountyInfo;
 	while (std::getline(ss, line))
 		matchCountyInfo.push_back(ParseCountyInfoLine(line));
@@ -357,7 +357,7 @@ void EBirdInterface::BuildCountryInfo()
 	std::string line;
 	std::getline(ss, line);
 	assert(countryInfoListHeading.compare(line) == 0);
-	
+
 	while (std::getline(ss, line))
 		countryInfo.push_back(ParseCountryInfoLine(line));
 }
@@ -375,7 +375,7 @@ std::vector<EBirdInterface::StateInfo> EBirdInterface::BuildStateInfo(const std:
 	std::string line;
 	std::getline(ss, line);
 	assert(stateInfoListHeading.compare(line) == 0);
-	
+
 	std::vector<StateInfo> stateInfo;
 	while (std::getline(ss, line))
 		stateInfo.push_back(ParseStateInfoLine(line));
@@ -396,7 +396,7 @@ std::vector<EBirdInterface::CountyInfo> EBirdInterface::BuildCountyInfo(const st
 	std::string line;
 	std::getline(ss, line);
 	assert(countyInfoListHeading.compare(line) == 0);
-	
+
 	std::vector<CountyInfo> countyInfo;
 	while (std::getline(ss, line))
 		countyInfo.push_back(ParseCountyInfoLine(line));
