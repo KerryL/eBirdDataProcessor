@@ -515,7 +515,51 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		outFile << std::endl;
 	}
 
-	RecommendHotspots(frequencyData, topBirdCount, country, state, county);
+	std::set<std::string> consolidatedSpeciesList;
+	std::map<std::string, double> speciesFrequencyMap;
+	for (i = 0; i < topBirdCount; ++i)
+	{
+		for (const auto& month : frequencyData)
+		{
+			consolidatedSpeciesList.insert(month[i].species);
+			if (speciesFrequencyMap.find(month[i].species) == speciesFrequencyMap.end())
+				speciesFrequencyMap[month[i].species] = month[i].frequency;
+			else
+				speciesFrequencyMap[month[i].species] = std::max(month[i].frequency, speciesFrequencyMap[month[i].species]);
+		}
+	}
+
+	std::cout << topBirdCount << " most common species needed for each month of the year includes "
+		<< consolidatedSpeciesList.size() << " species" << std::endl;
+
+	std::array<std::pair<double, unsigned int>, 6> bracketCounts;
+	bracketCounts[0] = std::make_pair(50.0, 0U);
+	bracketCounts[1] = std::make_pair(40.0, 0U);
+	bracketCounts[2] = std::make_pair(30.0, 0U);
+	bracketCounts[3] = std::make_pair(20.0, 0U);
+	bracketCounts[4] = std::make_pair(10.0, 0U);
+	bracketCounts[5] = std::make_pair(5.0, 0U);
+
+	for (const auto& species : speciesFrequencyMap)
+	{
+		for (auto& count : bracketCounts)
+		{
+			if (species.second > count.first)
+			{
+				++count.second;
+				break;
+			}
+		}
+	}
+
+	for (auto& count : bracketCounts)
+	{
+		if (count.second > 0)
+			std::cout << count.second << " species with frequency > " << count.first << '%' << std::endl;
+	}
+	std::cout << endl;
+
+	RecommendHotspots(consolidatedSpeciesList, country, state, county);
 
 	return true;
 }
@@ -657,7 +701,7 @@ bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDa
 	return true;
 }
 
-void EBirdDataProcessor::RecommendHotspots(const FrequencyDataYear& frequencyData,const unsigned int& topCount,
+void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolidatedSpeciesList,
 	const std::string& country, const std::string& state, const std::string& county) const
 {
 	std::cout << "Check eBird for recent sightings..." << std::endl;
@@ -666,23 +710,16 @@ void EBirdDataProcessor::RecommendHotspots(const FrequencyDataYear& frequencyDat
 	const std::string region(e.GetRegionCode(country, state, county));
 
 	std::map<std::string, unsigned int> hotspotScores;
-	unsigned int i;
-	for (i = 0; i < topCount; ++i)
+	for (const auto& species : consolidatedSpeciesList)
 	{
-		for (const auto& month : frequencyData)
+		const std::string scientificName(e.GetScientificNameFromCommonName(species));
+		const std::vector<std::string> hotspots(e.GetHotspotsWithRecentObservationsOf(scientificName, region));
+		for (const auto& spot : hotspots)
 		{
-			if (i < month.size())
-			{
-				const std::string scientificName(e.GetScientificNameFromCommonName(month[i].species));
-				const std::vector<std::string> hotspots(e.GetHotspotsWithRecentObservationsOf(scientificName, region));
-				for (const auto& spot : hotspots)
-				{
-					if (hotspotScores.find(spot) == hotspotScores.end())
-						hotspotScores[spot] = 1;
-					else
-						++hotspotScores[spot];
-				}
-			}
+			if (hotspotScores.find(spot) == hotspotScores.end())
+				hotspotScores[spot] = 1;
+			else
+				++hotspotScores[spot];
 		}
 	}
 
@@ -697,6 +734,6 @@ void EBirdDataProcessor::RecommendHotspots(const FrequencyDataYear& frequencyDat
 	});
 
 	std::cout << "\nRecommended hotspots for observing needed species:\n";
-	for (i = 0; i < topCount; ++i)
-		std::cout << "  " << sortedHotspots[i].second << std::endl;
+	for (const auto& hotspot : sortedHotspots)
+		std::cout << "  " << hotspot.second << " (" << hotspot.first << " species)" << std::endl;
 }

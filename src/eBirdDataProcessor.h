@@ -13,6 +13,7 @@
 #include <array>
 #include <iostream>
 #include <algorithm>
+#include <set>
 
 class EBirdDataProcessor
 {
@@ -138,7 +139,7 @@ private:
 
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
-	void RecommendHotspots(const FrequencyDataYear& frequencyData, const unsigned int& topCount,
+	void RecommendHotspots(const std::set<std::string>& consolidatedSpeciesList,
 		const std::string& country, const std::string& state, const std::string& county) const;
 };
 
