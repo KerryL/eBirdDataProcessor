@@ -557,7 +557,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		if (count.second > 0)
 			std::cout << count.second << " species with frequency > " << count.first << '%' << std::endl;
 	}
-	std::cout << endl;
+	std::cout << std::endl;
 
 	RecommendHotspots(consolidatedSpeciesList, country, state, county);
 
@@ -734,6 +734,16 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 	});
 
 	std::cout << "\nRecommended hotspots for observing needed species:\n";
+	const unsigned int minimumHotspotCount(10);
+	unsigned int hotspotCount(0);
+	unsigned int lastHotspotSpeciesCount(0);
 	for (const auto& hotspot : sortedHotspots)
+	{
+		if (hotspotCount >= minimumHotspotCount && hotspot.first < lastHotspotSpeciesCount)
+			break;
+
 		std::cout << "  " << hotspot.second << " (" << hotspot.first << " species)" << std::endl;
+		++hotspotCount;
+		lastHotspotSpeciesCount = hotspot.first;
+	}
 }
