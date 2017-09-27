@@ -19,6 +19,12 @@
     <Filter Include="Header Files\email">
       <UniqueIdentifier>{597a34be-980f-45b6-bf94-28da9e181ffc}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Source Files\utilities">
+      <UniqueIdentifier>{b3a7ebd8-878c-4aec-a11f-a7a241b1f238}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\utilities">
+      <UniqueIdentifier>{f618638e-de84-4916-b574-9b3d37952a61}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\eBirdDataProcessor.cpp">
@@ -39,6 +45,15 @@
     <ClCompile Include="..\src\email\oAuth2Interface.cpp">
       <Filter>Source Files\email</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\googleMapsInterface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\utilities\configFile.cpp">
+      <Filter>Source Files\utilities</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\ebdpConfigFile.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
@@ -58,6 +73,18 @@
     </ClInclude>
     <ClInclude Include="..\src\email\oAuth2Interface.h">
       <Filter>Header Files\email</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\googleMapsInterface.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utilities\configFile.h">
+      <Filter>Header Files\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ebdpConfig.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\ebdpConfigFile.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

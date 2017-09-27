@@ -1,3 +1,6 @@
 [submodule "src/email"]
 	path = src/email
 	url = https://github.com/KerryL/email.git
+[submodule "src/utilities"]
+	path = src/utilities
+	url = https://github.com/KerryL/utilities.git

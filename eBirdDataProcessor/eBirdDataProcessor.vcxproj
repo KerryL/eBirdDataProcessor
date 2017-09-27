@@ -121,20 +121,27 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\ebdpConfigFile.cpp" />
     <ClCompile Include="..\src\eBirdDataProcessor.cpp" />
     <ClCompile Include="..\src\eBirdDataProcessorApp.cpp" />
     <ClCompile Include="..\src\eBirdInterface.cpp" />
     <ClCompile Include="..\src\email\cJSON.cpp" />
     <ClCompile Include="..\src\email\jsonInterface.cpp" />
     <ClCompile Include="..\src\email\oAuth2Interface.cpp" />
+    <ClCompile Include="..\src\googleMapsInterface.cpp" />
+    <ClCompile Include="..\src\utilities\configFile.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\ebdpConfig.h" />
+    <ClInclude Include="..\src\ebdpConfigFile.h" />
     <ClInclude Include="..\src\eBirdDataProcessor.h" />
     <ClInclude Include="..\src\eBirdDataProcessorApp.h" />
     <ClInclude Include="..\src\eBirdInterface.h" />
     <ClInclude Include="..\src\email\cJSON.h" />
     <ClInclude Include="..\src\email\jsonInterface.h" />
     <ClInclude Include="..\src\email\oAuth2Interface.h" />
+    <ClInclude Include="..\src\googleMapsInterface.h" />
+    <ClInclude Include="..\src\utilities\configFile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

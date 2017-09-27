@@ -9,85 +9,10 @@
 #include <vector>
 #include <string>
 
-class CommandLineOption
-{
-public:
-	CommandLineOption(const std::string& longForm, const std::string& shortForm,
-		std::string& target, const std::string& defaultValue);
-	CommandLineOption(const std::string& longForm, const std::string& shortForm,
-		int& target, const int& defaultValue);
-	CommandLineOption(const std::string& longForm, const std::string& shortForm,
-		unsigned int& target, const unsigned int& defaultValue);
-	CommandLineOption(const std::string& longForm, const std::string& shortForm,
-		double& target, const double& defaultValue);
-	CommandLineOption(const std::string& longForm, const std::string& shortForm,
-		bool& target, const bool& defaultValue);
-
-	bool Matches(const std::string& argument) const;
-	bool Read(const std::string& argument, bool& consumeNext) const;
-	bool IsTarget(const void* const check) const { return check == target; }
-
-	std::string GetLongFormArgument() const { return longForm; }
-
-private:
-	const std::string longForm;
-	const std::string shortForm;
-	void* target;
-
-	enum class Type
-	{
-		String,
-		SignedInteger,
-		UnsignedInteger,
-		Double,
-		Boolean
-	};
-
-	const Type type;
-};
-
 class EBirdDataProcessorApp
 {
 public:
 	int Run(int argc, char *argv[]);
-
-private:
-	static const std::vector<CommandLineOption> availableOptions;
-	static std::string GetLongFormArgument(const void* const target);
-
-	bool ParseArguments(const std::vector<std::string>& arguments);
-	bool ValidateOptions() const;
-
-	struct Options
-	{
-		std::string executableName;
-		std::string dataFileName;
-		std::string outputFileName;
-
-		std::string countryFilter;
-		std::string stateFilter;
-		std::string countyFilter;
-		std::string locationFilter;
-
-		unsigned int listType;// 0 - life, 1 - year, 2 - month, 3 - week, 4 - day, 5 - separate all observations
-
-		bool speciesCountOnly;// Primarily for plotting
-		bool includePartialIDs;
-
-		unsigned int yearFilter;
-		unsigned int monthFilter;
-		unsigned int weekFilter;
-		unsigned int dayFilter;
-
-		unsigned int primarySort;// 0 - none, 1 - date, 2 - common name, 3 - scientific name, 4 - taxonomic order
-		unsigned int secondarySort;// 0 - none, 1 - date, 2 - common name, 3 - scientific name, 4 - taxonomic order
-
-		bool generateTargetCalendar;
-		unsigned int topBirdCount;
-		std::string frequencyFileName;
-	};
-
-	static Options specifiedOptions;
 };
 
 #endif// EBIRD_DATA_PROCESSOR_APP_H_
