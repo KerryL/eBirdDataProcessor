@@ -6,7 +6,7 @@
 #ifndef EBIRD_INTERFACE_H_
 
 // Local headers
-#include "jsonInterface.h"
+#include "email/jsonInterface.h"
 
 // Standard C++ headers
 #include <string>

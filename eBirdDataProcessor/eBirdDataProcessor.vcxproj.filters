@@ -13,6 +13,12 @@
       <UniqueIdentifier>{67DA6AB6-F800-4c08-8B7A-83BB121AAD01}</UniqueIdentifier>
       <Extensions>rc;ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe;resx;tiff;tif;png;wav;mfcribbon-ms</Extensions>
     </Filter>
+    <Filter Include="Source Files\email">
+      <UniqueIdentifier>{a2519fa5-a91e-41c1-a86a-9a39bd2ec772}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Header Files\email">
+      <UniqueIdentifier>{597a34be-980f-45b6-bf94-28da9e181ffc}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\eBirdDataProcessor.cpp">
@@ -24,11 +30,14 @@
     <ClCompile Include="..\src\eBirdInterface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\cJSON.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\src\email\cJSON.cpp">
+      <Filter>Source Files\email</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\jsonInterface.cpp">
-      <Filter>Source Files</Filter>
+    <ClCompile Include="..\src\email\jsonInterface.cpp">
+      <Filter>Source Files\email</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\email\oAuth2Interface.cpp">
+      <Filter>Source Files\email</Filter>
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
@@ -41,11 +50,14 @@
     <ClInclude Include="..\src\eBirdInterface.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\cJSON.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\src\email\cJSON.h">
+      <Filter>Header Files\email</Filter>
     </ClInclude>
-    <ClInclude Include="..\src\jsonInterface.h">
-      <Filter>Header Files</Filter>
+    <ClInclude Include="..\src\email\jsonInterface.h">
+      <Filter>Header Files\email</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\email\oAuth2Interface.h">
+      <Filter>Header Files\email</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

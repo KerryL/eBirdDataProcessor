@@ -121,18 +121,20 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
-    <ClCompile Include="..\src\cJSON.cpp" />
     <ClCompile Include="..\src\eBirdDataProcessor.cpp" />
     <ClCompile Include="..\src\eBirdDataProcessorApp.cpp" />
     <ClCompile Include="..\src\eBirdInterface.cpp" />
-    <ClCompile Include="..\src\jsonInterface.cpp" />
+    <ClCompile Include="..\src\email\cJSON.cpp" />
+    <ClCompile Include="..\src\email\jsonInterface.cpp" />
+    <ClCompile Include="..\src\email\oAuth2Interface.cpp" />
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="..\src\cJSON.h" />
     <ClInclude Include="..\src\eBirdDataProcessor.h" />
     <ClInclude Include="..\src\eBirdDataProcessorApp.h" />
     <ClInclude Include="..\src\eBirdInterface.h" />
-    <ClInclude Include="..\src\jsonInterface.h" />
+    <ClInclude Include="..\src\email\cJSON.h" />
+    <ClInclude Include="..\src\email\jsonInterface.h" />
+    <ClInclude Include="..\src\email\oAuth2Interface.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

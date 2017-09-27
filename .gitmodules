@@ -1,0 +1,3 @@
+[submodule "src/email"]
+	path = src/email
+	url = https://github.com/KerryL/email.git

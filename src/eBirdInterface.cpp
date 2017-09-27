@@ -5,7 +5,7 @@
 
 // Local headers
 #include "eBirdInterface.h"
-#include "cJSON.h"
+#include "email/cJSON.h"
 
 // Standard C++ headers
 #include <sstream>
