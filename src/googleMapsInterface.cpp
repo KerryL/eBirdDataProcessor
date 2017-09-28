@@ -138,11 +138,7 @@ bool GoogleMapsInterface::ProcessRoute(cJSON* route, Directions& d) const
 		return false;
 	}
 
-	if (!ReadJSON(route, warningsKey, d.warnings))
-	{
-		std::cerr << "Failed to read warnings\n";
-		return false;
-	}
+	ReadJSON(route, warningsKey, d.warnings);// Not required - don't fail if none are present
 
 	cJSON *legs(cJSON_GetObjectItem(route, legsKey.c_str()));
 	if (!legs)
