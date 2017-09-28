@@ -35,6 +35,7 @@ struct EBDPConfig
 	std::string targetInfoFileName;
 
 	std::string googleMapsAPIKey;
+	std::string homeLocation;
 };
 
 #endif// EBDP_CONFIG_H_

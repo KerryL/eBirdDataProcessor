@@ -46,7 +46,6 @@ private:
 	static std::unordered_map<std::string, std::string> commonToScientificMap;
 	static std::unordered_map<std::string, std::string> scientificToCommonMap;
 
-	static std::string UrlEncode(const std::string& s);
 	static std::string GetUserInputOnResponse(const std::string& s, const std::string& field);
 
 	struct CountryInfo

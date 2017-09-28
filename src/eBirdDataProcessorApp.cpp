@@ -7,6 +7,7 @@
 #include "eBirdDataProcessorApp.h"
 #include "eBirdDataProcessor.h"
 #include "ebdpConfigFile.h"
+#include "email/oAuth2Interface.h"
 
 // Standard C++ headers
 #include <sstream>

@@ -32,9 +32,10 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("CALENDAR", config.generateTargetCalendar);
 	AddConfigItem("TOP_COUNT", config.topBirdCount);
 	AddConfigItem("FREQUENCY_FILE", config.frequencyFileName);
-	AddConfigItem("GENERATE_TARGET_INFO", config.targetInfoFileName);
+	AddConfigItem("TARGET_INFO_FILE_NAME", config.targetInfoFileName);
 
 	AddConfigItem("GOOGLE_MAPS_KEY", config.googleMapsAPIKey);
+	AddConfigItem("HOME_LOCATION", config.homeLocation);
 }
 
 void EBDPConfigFile::AssignDefaults()
@@ -99,6 +100,12 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (config.listType > 5)
 	{
 		std::cerr << "List type (" << GetKey(config.listType) << ") must be in the range 0 - 5\n";
+		configurationOK = false;
+	}
+
+	if (!config.googleMapsAPIKey.empty() && config.homeLocation.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.homeLocation) << " when using " << GetKey(config.googleMapsAPIKey) << '\n';
 		configurationOK = false;
 	}
 

@@ -59,33 +59,20 @@ std::vector<std::string> EBirdInterface::GetHotspotsWithRecentObservationsOf(
 		request << "false";
 
 	std::string response;
-	if (!DoCURLGet(UrlEncode(request.str()), response))
+	if (!DoCURLGet(URLEncode(request.str()), response))
 		return std::vector<std::string>();
 
 	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse returned string (GetHotspotsWithRecentObservationsOf())" << std::endl;
-		std::cerr << response << std::endl;
+		std::cerr << "Failed to parse returned string (GetHotspotsWithRecentObservationsOf())\n";
+		std::cerr << response << '\n';
 		return std::vector<std::string>();
 	}
 
 	std::vector<std::string> hotspots;
-	const unsigned int arraySize(cJSON_GetArraySize(root));
-	unsigned int i;
-	for (i = 0; i < arraySize; ++i)
-	{
-		cJSON* hotspotInfo(cJSON_GetArrayItem(root, i));
-
-		std::string locationName;
-		if (!ReadJSON(hotspotInfo, locationNameTag, locationName))
-		{
-			std::cerr << "Failed to read location name tag\n";
-			continue;
-		}
-
-		hotspots.push_back(locationName);
-	}
+	if (!ReadJSON(root, locationNameTag, hotspots))
+		std::cerr << "Failed to read hotspot data\n";
 
 	cJSON_Delete(root);
 	return hotspots;
@@ -107,8 +94,8 @@ std::string EBirdInterface::GetScientificNameFromCommonName(const std::string& c
 		cJSON *root(cJSON_Parse(response.c_str()));
 		if (!root)
 		{
-			std::cerr << "Failed to parse returned string (GetScientificNameFromCommonName())" << std::endl;
-			std::cerr << response << std::endl;
+			std::cerr << "Failed to parse returned string (GetScientificNameFromCommonName())\n";
+			std::cerr << response << '\n';
 			return std::string();
 		}
 
@@ -144,20 +131,6 @@ void EBirdInterface::BuildNameMaps(cJSON* root)
 		commonToScientificMap[commonName] = scientificName;
 		scientificToCommonMap[scientificName] = commonName;
 	}
-}
-
-std::string EBirdInterface::UrlEncode(const std::string& s)
-{
-	std::string encoded;
-	for (const auto& c : s)
-	{
-		if (c == ' ')
-			encoded.append("%20");
-		else
-			encoded.append(std::string(&c, 1));
-	}
-
-	return encoded;
 }
 
 std::string EBirdInterface::GetRegionCode(const std::string& country,
@@ -236,7 +209,7 @@ std::string EBirdInterface::GetCountryCode(const std::string& country)
 	request << apiRoot << locationFindURL << "?rtype=country&fmt=csv&match=" << country;
 
 	std::string response;
-	if (!DoCURLGet(UrlEncode(request.str()), response))
+	if (!DoCURLGet(URLEncode(request.str()), response))
 		return std::string();
 
 	if (response.length() == 2)
@@ -269,7 +242,7 @@ std::string EBirdInterface::GetStateCode(const std::string& countryCode,
 	request << apiRoot << locationFindURL << "?rtype=subnational1&fmt=csv&match=" << state;
 
 	std::string response;
-	if (!DoCURLGet(UrlEncode(request.str()), response))
+	if (!DoCURLGet(URLEncode(request.str()), response))
 		return std::string();
 
 	if (response.length() == 2)
@@ -317,7 +290,7 @@ std::string EBirdInterface::GetCountyCode(const std::string& stateCode, const st
 	request << apiRoot << locationFindURL << "?rtype=subnational2&fmt=csv&match=" << county;
 
 	std::string response;
-	if (!DoCURLGet(UrlEncode(request.str()), response))
+	if (!DoCURLGet(URLEncode(request.str()), response))
 		return std::string();
 
 	if (response.length() == 2)
@@ -350,7 +323,7 @@ void EBirdInterface::BuildCountryInfo()
 	request << apiRoot << locationListURL << "?rtype=country&fmt=csv";
 
 	std::string response;
-	if (!DoCURLGet(UrlEncode(request.str()), response))
+	if (!DoCURLGet(URLEncode(request.str()), response))
 		return;
 
 	std::istringstream ss(response);
@@ -368,7 +341,7 @@ std::vector<EBirdInterface::StateInfo> EBirdInterface::BuildStateInfo(const std:
 	request << apiRoot << locationListURL << "?rtype=subnational1&fmt=csv&countryCode=" << countryCode;
 
 	std::string response;
-	if (!DoCURLGet(UrlEncode(request.str()), response))
+	if (!DoCURLGet(URLEncode(request.str()), response))
 		return std::vector<StateInfo>();
 
 	std::istringstream ss(response);
@@ -389,7 +362,7 @@ std::vector<EBirdInterface::CountyInfo> EBirdInterface::BuildCountyInfo(const st
 	request << apiRoot << locationListURL << "?rtype=subnational2&fmt=csv&subnational1Code=" << stateCode;
 
 	std::string response;
-	if (!DoCURLGet(UrlEncode(request.str()), response))
+	if (!DoCURLGet(URLEncode(request.str()), response))
 		return std::vector<CountyInfo>();
 
 	std::istringstream ss(response);

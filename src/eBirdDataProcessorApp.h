@@ -6,7 +6,6 @@
 #ifndef EBIRD_DATA_PROCESSOR_APP_H_
 
 // Standard C++ headers
-#include <vector>
 #include <string>
 
 class EBirdDataProcessorApp
