@@ -5,6 +5,9 @@
 
 #ifndef EBIRD_DATA_PROCESSOR_H_
 
+// Local headers
+#include "eBirdInterface.h"
+
 // Standard C++ headers
 #include <string>
 #include <vector>
@@ -59,7 +62,9 @@ public:
 
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
 		const std::string& outputFileName, const std::string& frequencyFileName,
-		const std::string& country, const std::string& state, const std::string& county) const;
+		const std::string& country, const std::string& state, const std::string& county,
+		const std::string& hotspotInfoFileName, const std::string& homeLocation,
+		const std::string& mapApiKey) const;
 
 private:
 	static const std::string headerLine;
@@ -140,7 +145,16 @@ private:
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
 	void RecommendHotspots(const std::set<std::string>& consolidatedSpeciesList,
-		const std::string& country, const std::string& state, const std::string& county) const;
+		const std::string& country, const std::string& state, const std::string& county,
+		const std::string& hotspotInfoFileName, const std::string& homeLocation,
+		const std::string& mapApiKey) const;
+	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>, EBirdInterface::HotspotInfo>>& hotspots,
+		const std::string& hotspotInfoFileName, const std::string& homeLocation, const std::string& mapApiKey) const;
+
+	struct HotspotInfoComparer
+	{
+		bool operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const;
+	};
 };
 
 template<typename T>

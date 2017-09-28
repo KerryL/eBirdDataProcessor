@@ -16,7 +16,14 @@
 class EBirdInterface : public JSONInterface
 {
 public:
-	std::vector<std::string> GetHotspotsWithRecentObservationsOf(
+	struct HotspotInfo
+	{
+		std::string name;
+		double latitude;
+		double longitude;
+	};
+
+	std::vector<HotspotInfo> GetHotspotsWithRecentObservationsOf(
 		const std::string& scientificName, const std::string& region);
 
 	std::string GetScientificNameFromCommonName(const std::string& commonName);
@@ -37,6 +44,8 @@ private:
 	static const std::string commonNameTag;
 	static const std::string scientificNameTag;
 	static const std::string locationNameTag;
+	static const std::string latitudeTag;
+	static const std::string longitudeTag;
 
 	static const std::string countryInfoListHeading;
 	static const std::string stateInfoListHeading;

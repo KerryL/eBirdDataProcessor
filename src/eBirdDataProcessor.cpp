@@ -5,7 +5,7 @@
 
 // Local headers
 #include "eBirdDataProcessor.h"
-#include "eBirdInterface.h"
+#include "googleMapsInterface.h"
 
 // Standard C++ headers
 #include <fstream>
@@ -458,7 +458,9 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() co
 
 bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount,
 	const std::string& outputFileName, const std::string& frequencyFileName,
-	const std::string& country, const std::string& state, const std::string& county) const
+	const std::string& country, const std::string& state, const std::string& county,
+	const std::string& hotspotInfoFileName, const std::string& homeLocation,
+	const std::string& mapApiKey) const
 {
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
@@ -559,7 +561,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	}
 	std::cout << std::endl;
 
-	RecommendHotspots(consolidatedSpeciesList, country, state, county);
+	RecommendHotspots(consolidatedSpeciesList, country, state, county, hotspotInfoFileName, homeLocation, mapApiKey);
 
 	return true;
 }
@@ -702,33 +704,34 @@ bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDa
 }
 
 void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolidatedSpeciesList,
-	const std::string& country, const std::string& state, const std::string& county) const
+	const std::string& country, const std::string& state, const std::string& county,
+	const std::string& hotspotInfoFileName, const std::string& homeLocation,
+	const std::string& mapApiKey) const
 {
 	std::cout << "Check eBird for recent sightings..." << std::endl;
 
 	EBirdInterface e;
 	const std::string region(e.GetRegionCode(country, state, county));
 
-	std::map<std::string, unsigned int> hotspotScores;
+	std::map<EBirdInterface::HotspotInfo, std::vector<std::string>, HotspotInfoComparer> hotspotInfo;
 	for (const auto& species : consolidatedSpeciesList)
 	{
 		const std::string scientificName(e.GetScientificNameFromCommonName(species));
-		const std::vector<std::string> hotspots(e.GetHotspotsWithRecentObservationsOf(scientificName, region));
+		const std::vector<EBirdInterface::HotspotInfo> hotspots(e.GetHotspotsWithRecentObservationsOf(scientificName, region));
 		for (const auto& spot : hotspots)
 		{
-			if (hotspotScores.find(spot) == hotspotScores.end())
-				hotspotScores[spot] = 1;
-			else
-				++hotspotScores[spot];
+			if (hotspotInfo.find(spot) == hotspotInfo.end())
+				hotspotInfo[spot].push_back(species);
 		}
 	}
 
-	std::vector<std::pair<unsigned int, std::string>> sortedHotspots;
-	for (const auto& h : hotspotScores)
+	typedef std::pair<std::vector<std::string>, EBirdInterface::HotspotInfo> SpeciesHotspotPair;
+	std::vector<SpeciesHotspotPair> sortedHotspots;
+	for (const auto& h : hotspotInfo)
 		sortedHotspots.push_back(std::make_pair(h.second, h.first));
-	std::sort(sortedHotspots.begin(), sortedHotspots.end(), [](const std::pair<unsigned int, std::string>& a, const std::pair<unsigned int, std::string>& b)
+	std::sort(sortedHotspots.begin(), sortedHotspots.end(), [](const SpeciesHotspotPair& a, const SpeciesHotspotPair& b)
 	{
-		if (a.first > b.first)
+		if (a.first.size() > b.first.size())
 			return true;
 		return false;
 	});
@@ -739,11 +742,32 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 	unsigned int lastHotspotSpeciesCount(0);
 	for (const auto& hotspot : sortedHotspots)
 	{
-		if (hotspotCount >= minimumHotspotCount && hotspot.first < lastHotspotSpeciesCount)
+		if (hotspotCount >= minimumHotspotCount && hotspot.first.size() < lastHotspotSpeciesCount)
 			break;
 
-		std::cout << "  " << hotspot.second << " (" << hotspot.first << " species)" << std::endl;
+		std::cout << "  " << hotspot.second.name << " (" << hotspot.first.size() << " species)" << std::endl;
 		++hotspotCount;
-		lastHotspotSpeciesCount = hotspot.first;
+		lastHotspotSpeciesCount = hotspot.first.size();
 	}
+
+	if (!hotspotInfoFileName.empty())
+		GenerateHotspotInfoFile(sortedHotspots, hotspotInfoFileName, homeLocation, mapApiKey);
+}
+
+void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>, EBirdInterface::HotspotInfo>>& hotspots,
+	const std::string& hotspotInfoFileName, const std::string& homeLocation, const std::string& mapApiKey) const
+{
+	std::ofstream infoFile(hotspotInfoFileName.c_str());
+	if (!infoFile.good() || !infoFile.is_open())
+	{
+		std::cerr << "Failed to open '" << hotspotInfoFileName << "' for output\n";
+		return;
+	}
+
+	// TODO:  Add info here
+}
+
+bool EBirdDataProcessor::HotspotInfoComparer::operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const
+{
+	return a.name < b.name;
 }

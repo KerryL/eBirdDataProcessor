@@ -24,6 +24,8 @@ const std::string EBirdInterface::locationListURL("ref/location/list");
 const std::string EBirdInterface::commonNameTag("comName");
 const std::string EBirdInterface::scientificNameTag("sciName");
 const std::string EBirdInterface::locationNameTag("locName");
+const std::string EBirdInterface::latitudeTag("lat");
+const std::string EBirdInterface::longitudeTag("lng");
 
 const std::string EBirdInterface::countryInfoListHeading("COUNTRY_CODE,COUNTRY_NAME,COUNTRY_NAME_LONG,LOCAL_ABBREVIATION");
 const std::string EBirdInterface::stateInfoListHeading("COUNTRY_CODE,SUBNATIONAL1_CODE,SUBNATIONAL1_NAME,LOCAL_ABBREVIATION");
@@ -32,7 +34,7 @@ const std::string EBirdInterface::countyInfoListHeading("COUNTRY_CODE,SUBNATIONA
 std::unordered_map<std::string, std::string> EBirdInterface::commonToScientificMap;
 std::unordered_map<std::string, std::string> EBirdInterface::scientificToCommonMap;
 
-std::vector<std::string> EBirdInterface::GetHotspotsWithRecentObservationsOf(
+std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentObservationsOf(
 	const std::string& scientificName, const std::string& region)
 {
 	const int daysBack(30);
@@ -60,19 +62,49 @@ std::vector<std::string> EBirdInterface::GetHotspotsWithRecentObservationsOf(
 
 	std::string response;
 	if (!DoCURLGet(URLEncode(request.str()), response))
-		return std::vector<std::string>();
+		return std::vector<HotspotInfo>();
 
 	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		std::cerr << "Failed to parse returned string (GetHotspotsWithRecentObservationsOf())\n";
 		std::cerr << response << '\n';
-		return std::vector<std::string>();
+		return std::vector<HotspotInfo>();
 	}
 
-	std::vector<std::string> hotspots;
-	if (!ReadJSON(root, locationNameTag, hotspots))
-		std::cerr << "Failed to read hotspot data\n";
+	std::vector<HotspotInfo> hotspots;
+	const unsigned int arraySize(cJSON_GetArraySize(root));
+	unsigned int i;
+	for (i = 0; i < arraySize; ++i)
+	{
+		cJSON* item(cJSON_GetArrayItem(root, i));
+		if (!item)
+		{
+			std::cerr << "Failed to get hotspot array item\n";
+			return std::vector<HotspotInfo>();
+		}
+
+		HotspotInfo info;
+		if (!ReadJSON(item, locationNameTag, info.name))
+		{
+			std::cerr << "Failed to get hotspot name for item " << i << '\n';
+			return std::vector<HotspotInfo>();
+		}
+
+		if (!ReadJSON(item, latitudeTag, info.latitude))
+		{
+			std::cerr << "Failed to get hotspot latitude for item " << i << '\n';
+			return std::vector<HotspotInfo>();
+		}
+
+		if (!ReadJSON(item, longitudeTag, info.longitude))
+		{
+			std::cerr << "Failed to get hotspot longitude for item " << i << '\n';
+			return std::vector<HotspotInfo>();
+		}
+
+		hotspots.push_back(info);
+	}
 
 	cJSON_Delete(root);
 	return hotspots;
