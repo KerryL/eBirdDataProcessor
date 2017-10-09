@@ -33,6 +33,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("TOP_COUNT", config.topBirdCount);
 	AddConfigItem("FREQUENCY_FILE", config.frequencyFileName);
 	AddConfigItem("TARGET_INFO_FILE_NAME", config.targetInfoFileName);
+	AddConfigItem("RECENT_PERIOD", config.recentObservationPeriod);
 
 	AddConfigItem("GOOGLE_MAPS_KEY", config.googleMapsAPIKey);
 	AddConfigItem("HOME_LOCATION", config.homeLocation);
@@ -54,6 +55,7 @@ void EBDPConfigFile::AssignDefaults()
 
 	config.generateTargetCalendar = false;
 	config.topBirdCount = false;
+	config.recentObservationPeriod = 15;
 }
 
 bool EBDPConfigFile::ConfigIsOK()
@@ -106,6 +108,12 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (!config.googleMapsAPIKey.empty() && config.homeLocation.empty())
 	{
 		std::cerr << "Must specify " << GetKey(config.homeLocation) << " when using " << GetKey(config.googleMapsAPIKey) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.recentObservationPeriod < 1 || config.recentObservationPeriod > 30)
+	{
+		std::cerr << GetKey(config.recentObservationPeriod) << " must be between 1 and 30\n";
 		configurationOK = false;
 	}
 

@@ -24,7 +24,7 @@ public:
 	};
 
 	std::vector<HotspotInfo> GetHotspotsWithRecentObservationsOf(
-		const std::string& scientificName, const std::string& region);
+		const std::string& scientificName, const std::string& region, const unsigned int& recentPeriod);
 
 	std::string GetScientificNameFromCommonName(const std::string& commonName);
 

@@ -459,6 +459,7 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() co
 bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount,
 	const std::string& outputFileName, const std::string& frequencyFileName,
 	const std::string& country, const std::string& state, const std::string& county,
+	const unsigned int& recentPeriod,
 	const std::string& hotspotInfoFileName, const std::string& homeLocation,
 	const std::string& mapApiKey) const
 {
@@ -561,7 +562,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	}
 	std::cout << std::endl;
 
-	RecommendHotspots(consolidatedSpeciesList, country, state, county, hotspotInfoFileName, homeLocation, mapApiKey);
+	RecommendHotspots(consolidatedSpeciesList, country, state, county, recentPeriod, hotspotInfoFileName, homeLocation, mapApiKey);
 
 	return true;
 }
@@ -704,7 +705,7 @@ bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDa
 }
 
 void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolidatedSpeciesList,
-	const std::string& country, const std::string& state, const std::string& county,
+	const std::string& country, const std::string& state, const std::string& county, const unsigned int& recentPeriod,
 	const std::string& hotspotInfoFileName, const std::string& homeLocation,
 	const std::string& mapApiKey) const
 {
@@ -718,7 +719,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 	for (const auto& species : consolidatedSpeciesList)
 	{
 		const std::string scientificName(e.GetScientificNameFromCommonName(species));
-		const std::vector<EBirdInterface::HotspotInfo> hotspots(e.GetHotspotsWithRecentObservationsOf(scientificName, region));
+		const std::vector<EBirdInterface::HotspotInfo> hotspots(e.GetHotspotsWithRecentObservationsOf(scientificName, region, recentPeriod));
 		for (const auto& spot : hotspots)
 		{
 			hotspotInfo[spot].push_back(species);

@@ -35,9 +35,8 @@ std::unordered_map<std::string, std::string> EBirdInterface::commonToScientificM
 std::unordered_map<std::string, std::string> EBirdInterface::scientificToCommonMap;
 
 std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentObservationsOf(
-	const std::string& scientificName, const std::string& region)
+	const std::string& scientificName, const std::string& region, const unsigned int& recentPeriod)
 {
-	const int daysBack(30);
 	const bool allowProvisional(true);
 	const bool hotspotsOnly(true);
 
@@ -45,7 +44,7 @@ std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentOb
 	request << apiRoot << recentObservationsOfSpeciesInRegionURL << "?r="
 		<< region
 		<< "&sci=" << scientificName
-		<< "&back=" << daysBack
+		<< "&back=" << recentPeriod
 		<< "&fmt=json&includeProvisional=";
 
 	if (allowProvisional)

@@ -63,6 +63,7 @@ public:
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
 		const std::string& outputFileName, const std::string& frequencyFileName,
 		const std::string& country, const std::string& state, const std::string& county,
+		const unsigned int& recentPeriod,
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
 		const std::string& mapApiKey) const;
 
@@ -145,7 +146,7 @@ private:
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
 	void RecommendHotspots(const std::set<std::string>& consolidatedSpeciesList,
-		const std::string& country, const std::string& state, const std::string& county,
+		const std::string& country, const std::string& state, const std::string& county, const unsigned int& recentPeriod,
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
 		const std::string& mapApiKey) const;
 	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>, EBirdInterface::HotspotInfo>>& hotspots,

@@ -98,6 +98,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		processor.GenerateTargetCalendar(configFile.GetConfig().topBirdCount,
 			configFile.GetConfig().outputFileName, configFile.GetConfig().frequencyFileName,
 			configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
+			configFile.GetConfig().recentObservationPeriod,
 			configFile.GetConfig().targetInfoFileName, configFile.GetConfig().homeLocation, configFile.GetConfig().googleMapsAPIKey);
 	}
 

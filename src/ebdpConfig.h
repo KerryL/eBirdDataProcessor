@@ -31,6 +31,7 @@ struct EBDPConfig
 
 	bool generateTargetCalendar;
 	unsigned int topBirdCount;
+	unsigned int recentObservationPeriod;// [days]
 	std::string frequencyFileName;
 	std::string targetInfoFileName;
 
