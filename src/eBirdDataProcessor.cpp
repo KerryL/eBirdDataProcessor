@@ -274,7 +274,7 @@ void EBirdDataProcessor::FilterPartialIDs()
 {
 	data.erase(std::remove_if(data.begin(), data.end(), [](const Entry& entry)
 	{
-		return (entry.commonName.substr(entry.commonName.length() - 4).compare(" sp.") == 0) ||// Eliminate Spuhs
+		return (entry.commonName.find(" sp.") != std::string::npos) ||// Eliminate Spuhs
 			(entry.commonName.find('/') != std::string::npos);// Eliminate species1/species2 type entries
 	}), data.end());
 }
