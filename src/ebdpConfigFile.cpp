@@ -30,6 +30,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("SORT_SECOND", config.secondarySort);
 
 	AddConfigItem("CALENDAR", config.generateTargetCalendar);
+	AddConfigItem("HARVEST_FREQUENCY", config.harvestFrequencyData);
 	AddConfigItem("TOP_COUNT", config.topBirdCount);
 	AddConfigItem("FREQUENCY_FILE", config.frequencyFileName);
 	AddConfigItem("TARGET_INFO_FILE_NAME", config.targetInfoFileName);
@@ -53,6 +54,7 @@ void EBDPConfigFile::AssignDefaults()
 	config.primarySort = 0;
 	config.secondarySort = 0;
 
+	config.harvestFrequencyData = false;
 	config.generateTargetCalendar = false;
 	config.topBirdCount = false;
 	config.recentObservationPeriod = 15;
@@ -114,6 +116,12 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (config.recentObservationPeriod < 1 || config.recentObservationPeriod > 30)
 	{
 		std::cerr << GetKey(config.recentObservationPeriod) << " must be between 1 and 30\n";
+		configurationOK = false;
+	}
+
+	if (config.harvestFrequencyData && config.countryFilter.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.harvestFrequencyData) << '\n';
 		configurationOK = false;
 	}
 

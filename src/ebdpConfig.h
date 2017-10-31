@@ -30,6 +30,7 @@ struct EBDPConfig
 	unsigned int secondarySort;// 0 - none, 1 - date, 2 - common name, 3 - scientific name, 4 - taxonomic order
 
 	bool generateTargetCalendar;
+	bool harvestFrequencyData;
 	unsigned int topBirdCount;
 	unsigned int recentObservationPeriod;// [days]
 	std::string frequencyFileName;

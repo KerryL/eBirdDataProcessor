@@ -4,6 +4,7 @@
 // Desc:  Main class for eBird Data Processor.
 
 #ifndef EBIRD_DATA_PROCESSOR_H_
+#define EBIRD_DATA_PROCESSOR_H_
 
 // Local headers
 #include "eBirdInterface.h"

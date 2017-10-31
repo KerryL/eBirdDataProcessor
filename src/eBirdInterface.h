@@ -4,6 +4,7 @@
 // Desc:  Interface to eBird web API.  See https://confluence.cornell.edu/display/CLOISAPI/eBird+API+1.1.
 
 #ifndef EBIRD_INTERFACE_H_
+#define EBIRD_INTERFACE_H_
 
 // Local headers
 #include "email/jsonInterface.h"

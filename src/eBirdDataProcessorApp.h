@@ -4,6 +4,7 @@
 // Desc:  Application class for eBird Data Processor.
 
 #ifndef EBIRD_DATA_PROCESSOR_APP_H_
+#define EBIRD_DATA_PROCESSOR_APP_H_
 
 // Standard C++ headers
 #include <string>
