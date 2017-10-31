@@ -149,16 +149,6 @@ bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, con
 		return false;
 	}
 
-	struct curl_slist *cookies(nullptr);
-	curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
-
-	while (cookies)
-	{
-		std::cout << cookies->data << std::endl;
-		cookies = cookies->next;
-	}
-	curl_slist_free_all(cookies);
-
 	curl_easy_setopt(curl, CURLOPT_POST, 1L);
 	const std::string loginInfo(BuildEBirdLoginInfo(userName, password, token));
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, loginInfo.c_str());
