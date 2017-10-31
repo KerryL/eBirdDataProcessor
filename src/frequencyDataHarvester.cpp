@@ -28,7 +28,7 @@
 const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
 const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
 const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en");
-const bool FrequencyDataHarvester::verbose(true);
+const bool FrequencyDataHarvester::verbose(false);
 
 FrequencyDataHarvester::~FrequencyDataHarvester()
 {
