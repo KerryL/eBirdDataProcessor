@@ -9,6 +9,10 @@ ipch/
 *.csv
 *.xlsx
 
+scripts/
+calendars/
+configs/
+
 *.suo
 *.sdf
 *.opensdf
