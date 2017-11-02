@@ -29,6 +29,12 @@ const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org
 const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
 const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en");
 const bool FrequencyDataHarvester::verbose(false);
+const std::string FrequencyDataHarvester::cookieFile("ebdp.cookies");
+
+FrequencyDataHarvester::FrequencyDataHarvester()
+{
+	DoGeneralCurlConfiguration();
+}
 
 FrequencyDataHarvester::~FrequencyDataHarvester()
 {
@@ -42,41 +48,20 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	const std::string &state, const std::string &county, const std::string &frequencyFileName)
 {
-	std::cout << "NOTE:  In order for this routine to work you must not have submitted any checklists for the current day in the specified region." << std::endl;
-
-	std::string eBirdUserName, eBirdPassword;
-	std::cout << "Specify your eBird user name:  ";
-	std::cin >> eBirdUserName;
-	std::cout << "Password:  ";
-
-#ifdef _WIN32
-	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE); 
-    DWORD mode = 0;
-    GetConsoleMode(hStdin, &mode);
-    SetConsoleMode(hStdin, mode & (~ENABLE_ECHO_INPUT));
-
-	std::cin.ignore();
-	std::getline(std::cin, eBirdPassword);
-
-	SetConsoleMode(hStdin, mode);
-#else
-	termios oldt;
-    tcgetattr(STDIN_FILENO, &oldt);
-    termios newt = oldt;
-    newt.c_lflag &= ~ECHO;
-    tcsetattr(STDIN_FILENO, TCSANOW, &newt);
-
-	std::getline(std::cin, eBirdPassword);
-
-	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
-#endif
-
-	std::cout << std::endl;
-
-	if (!PostEBirdLoginInfo(eBirdUserName, eBirdPassword))
-	{
-		std::cerr << "Failed to login to eBird\n";
+	std::string loginPage;
+	if (!DoCURLGet(eBirdLoginURL, loginPage))
 		return false;
+
+	while (!EBirdLoginSuccessful(loginPage))
+	{
+		curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL");// erase all existing cookie data
+		std::string eBirdUserName, eBirdPassword;
+		GetUserNameAndPassword(eBirdUserName, eBirdPassword);
+		if (!PostEBirdLoginInfo(eBirdUserName, eBirdPassword, loginPage))
+		{
+			std::cerr << "Failed to login to eBird\n";
+			return false;
+		}
 	}
 
 	const std::string regionString(BuildRegionString(country, state, county));
@@ -105,7 +90,40 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	return true;
 }
 
-bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, const std::string& password)
+void FrequencyDataHarvester::GetUserNameAndPassword(std::string& userName, std::string& password)
+{
+	std::cout << "NOTE:  In order for this routine to work you must not have submitted any checklists for the current day in the specified region." << std::endl;
+
+	std::cout << "Specify your eBird user name:  ";
+	std::cin >> userName;
+	std::cout << "Password:  ";
+
+#ifdef _WIN32
+	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE); 
+	DWORD mode = 0;
+	GetConsoleMode(hStdin, &mode);
+	SetConsoleMode(hStdin, mode & (~ENABLE_ECHO_INPUT));
+
+	std::cin.ignore();
+	std::getline(std::cin, password);
+
+	SetConsoleMode(hStdin, mode);
+#else
+	termios oldt;
+	tcgetattr(STDIN_FILENO, &oldt);
+	termios newt = oldt;
+	newt.c_lflag &= ~ECHO;
+	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
+
+	std::getline(std::cin, password);
+
+	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
+#endif
+
+	std::cout << std::endl;
+}
+
+bool FrequencyDataHarvester::DoGeneralCurlConfiguration()
 {
 	if (!curl)
 		curl = curl_easy_init();
@@ -116,33 +134,31 @@ bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, con
 		return false;
 	}
 
-	/*if (!caCertificatePath.empty())
-		curl_easy_setopt(curl, CURLOPT_CAPATH, caCertificatePath.c_str());*/
-
 	if (verbose)
 		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+
+	/*if (!caCertificatePath.empty())
+		curl_easy_setopt(curl, CURLOPT_CAPATH, caCertificatePath.c_str());*/
 
 	curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
 	curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent.c_str());
 	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
 	headerList = curl_slist_append(headerList, "Connection: Keep-Alive");
 	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList);
-	curl_easy_setopt(curl, CURLOPT_COOKIEFILE, "");
-
-	curl_easy_setopt(curl, CURLOPT_URL, eBirdLoginURL.c_str());
+	curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookieFile.c_str());
+	curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookieFile.c_str());
 	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FrequencyDataHarvester::CURLWriteCallback);
-	std::string loginPage;
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &loginPage);
 
-	CURLcode result = curl_easy_perform(curl);
-	if (result != CURLE_OK)
-	{
-		std::cerr << "Failed getting eBird login session:  " << curl_easy_strerror(result) << "." << std::endl;
-		curl_easy_cleanup(curl);
-		return false;
-	}
+	return true;
+}
 
-	std::string token(ExtractTokenFromLoginPage(loginPage));
+bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage)
+{
+	assert(curl);
+
+	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultPage);
+
+	std::string token(ExtractTokenFromLoginPage(resultPage));
 	if (token.empty())
 	{
 		std::cerr << "Failed to get session token\n";
@@ -153,7 +169,7 @@ bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, con
 	const std::string loginInfo(BuildEBirdLoginInfo(userName, password, token));
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, loginInfo.c_str());
 
-	result = curl_easy_perform(curl);
+	CURLcode result(curl_easy_perform(curl));
 	if (result != CURLE_OK)
 	{
 		std::cerr << "Failed issuing https POST (login):  " << curl_easy_strerror(result) << "." << std::endl;
@@ -161,6 +177,15 @@ bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, con
 	}
 
 	return true;
+}
+
+bool FrequencyDataHarvester::EBirdLoginSuccessful(const std::string& htmlData)
+{
+	const std::string startTag("<li ><a href=\"/ebird/myebird\">");
+	const std::string endTag("</a>");
+	std::string dummy;
+	std::string::size_type offset(0);
+	return ExtractTextBetweenTags(htmlData, startTag, endTag, dummy, offset);
 }
 
 std::string FrequencyDataHarvester::ExtractTokenFromLoginPage(const std::string& htmlData)
@@ -250,14 +275,7 @@ std::string FrequencyDataHarvester::GetTimeFrameString(const ListTimeFrame& time
 
 bool FrequencyDataHarvester::DoCURLGet(const std::string& url, std::string &response)
 {
-	if (!curl)
-		curl = curl_easy_init();
-
-	if (!curl)
-	{
-		std::cerr << "Failed to initialize CURL" << std::endl;
-		return false;
-	}
+	assert(curl);
 
 	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
 	curl_easy_setopt(curl, CURLOPT_POST, 0L);

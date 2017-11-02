@@ -17,6 +17,7 @@ typedef void CURL;
 class FrequencyDataHarvester
 {
 public:
+	FrequencyDataHarvester();
 	~FrequencyDataHarvester();
 
 	bool GenerateFrequencyFile(const std::string &country, const std::string &state,
@@ -27,6 +28,7 @@ private:
 	static const std::string eBirdLoginURL;
 	static const std::string userAgent;
 	static const bool verbose;
+	static const std::string cookieFile;
 
 	CURL* curl = nullptr;
 	struct curl_slist* headerList = nullptr;
@@ -46,7 +48,10 @@ private:
 		const ListTimeFrame& timeFrame);
 	static std::string GetTimeFrameString(const ListTimeFrame& timeFrame);
 
-	bool PostEBirdLoginInfo(const std::string& userName, const std::string& password);
+	bool DoGeneralCurlConfiguration();
+	bool PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage);
+	static bool EBirdLoginSuccessful(const std::string& htmlData);
+	static void GetUserNameAndPassword(std::string& userName, std::string& password);
 	static std::string BuildEBirdLoginInfo(const std::string& userName, const std::string& password, const std::string& token);
 	bool DoCURLGet(const std::string& url, std::string &response);
 	static size_t CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData);
