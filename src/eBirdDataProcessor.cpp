@@ -17,6 +17,7 @@
 #include <cctype>
 #include <functional>
 #include <map>
+#include <regex>
 
 const std::string EBirdDataProcessor::headerLine("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
@@ -198,7 +199,7 @@ void EBirdDataProcessor::FilterLocation(const std::string& location, const std::
 
 	data.erase(std::remove_if(data.begin(), data.end(), [location](const Entry& entry)
 	{
-		return entry.location.compare(location) != 0;
+		return !std::regex_search(entry.location, std::regex(location));
 	}), data.end());
 }
 
