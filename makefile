@@ -11,10 +11,12 @@ TARGET_DEBUG = $(TARGET)d
 DIRS = \
 	src \
 	src/email \
+    src/email/cJSON \
 	src/utilities
 
 # Source files
 SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))
+SRC += $(foreach dir, $(DIRS), $(wildcard $(dir)/*.c))
 
 # Object files
 OBJS_DEBUG = $(addprefix $(OBJDIR_DEBUG),$(SRC:.cpp=.o))
