@@ -25,6 +25,12 @@
     <Filter Include="Header Files\utilities">
       <UniqueIdentifier>{f618638e-de84-4916-b574-9b3d37952a61}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\email\cJSON">
+      <UniqueIdentifier>{62bee263-559c-4d8a-ad0e-e2fcdd482b85}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="Source Files\email\cJSON">
+      <UniqueIdentifier>{d9c17349-85f1-4618-a153-de8b23077f12}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\eBirdDataProcessor.cpp">
@@ -35,9 +41,6 @@
     </ClCompile>
     <ClCompile Include="..\src\eBirdInterface.cpp">
       <Filter>Source Files</Filter>
-    </ClCompile>
-    <ClCompile Include="..\src\email\cJSON.cpp">
-      <Filter>Source Files\email</Filter>
     </ClCompile>
     <ClCompile Include="..\src\email\jsonInterface.cpp">
       <Filter>Source Files\email</Filter>
@@ -57,6 +60,9 @@
     <ClCompile Include="..\src\frequencyDataHarvester.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\email\cJSON\cJSON.c">
+      <Filter>Source Files\email\cJSON</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
@@ -67,9 +73,6 @@
     </ClInclude>
     <ClInclude Include="..\src\eBirdInterface.h">
       <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\email\cJSON.h">
-      <Filter>Header Files\email</Filter>
     </ClInclude>
     <ClInclude Include="..\src\email\jsonInterface.h">
       <Filter>Header Files\email</Filter>
@@ -91,6 +94,9 @@
     </ClInclude>
     <ClInclude Include="..\src\frequencyDataHarvester.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\email\cJSON\cJSON.h">
+      <Filter>Header Files\email\cJSON</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
