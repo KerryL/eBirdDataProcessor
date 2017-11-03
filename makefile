@@ -9,10 +9,12 @@ TARGET_DEBUG = $(TARGET)d
 
 # Directories in which to search for source files
 DIRS = \
-	src/
+	src \
+	src/email \
+	src/utilities
 
 # Source files
-SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)*.cpp))
+SRC = $(foreach dir, $(DIRS), $(wildcard $(dir)/*.cpp))
 
 # Object files
 OBJS_DEBUG = $(addprefix $(OBJDIR_DEBUG),$(SRC:.cpp=.o))
