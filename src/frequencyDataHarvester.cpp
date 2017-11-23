@@ -29,7 +29,7 @@
 const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
 const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
 const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en");
-const bool FrequencyDataHarvester::verbose(false);
+const bool FrequencyDataHarvester::verbose(true);
 const std::string FrequencyDataHarvester::cookieFile("ebdp.cookies");
 
 FrequencyDataHarvester::FrequencyDataHarvester()
@@ -46,7 +46,6 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 		curl_easy_cleanup(curl);
 }
 
-#include <fstream>//TODO:  Remove
 bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	const std::string &state, const std::string &county, const std::string &frequencyFileName)
 {
@@ -58,17 +57,20 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	{
 		if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL"), "Failed to clear existing cookies"))// erase all existing cookie data
 			return false;
+
 		std::string eBirdUserName, eBirdPassword;
 		GetUserNameAndPassword(eBirdUserName, eBirdPassword);
+		char* urlEncodedPassword(curl_easy_escape(curl, eBirdPassword.c_str(), eBirdPassword.length()));
+		if (!urlEncodedPassword)
+			std::cerr << "Failed to URL-encode password\n";
+		eBirdPassword = urlEncodedPassword;
+		curl_free(urlEncodedPassword);
+
 		if (!PostEBirdLoginInfo(eBirdUserName, eBirdPassword, loginPage))
 		{
 			std::cerr << "Failed to login to eBird\n";
 			return false;
 		}
-std::ofstream f("test.html");
-if (!f.is_open())
-	std::cout << "it's not open" << std::endl;
-f << loginPage << std::endl;
 	}
 
 	const std::string regionString(BuildRegionString(country, state, county));
@@ -99,7 +101,7 @@ f << loginPage << std::endl;
 
 void FrequencyDataHarvester::GetUserNameAndPassword(std::string& userName, std::string& password)
 {
-	std::cout << "NOTE:  In order for this routine to work you must not have submitted any checklists for the current day in the specified region." << std::endl;
+	std::cout << "NOTE:  In order for this routine to work properly, you must not have submitted any checklists for the current day in the specified region." << std::endl;
 
 	std::cout << "Specify your eBird user name:  ";
 	std::cin >> userName;
@@ -176,13 +178,22 @@ bool FrequencyDataHarvester::DoGeneralCurlConfiguration()
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FrequencyDataHarvester::CURLWriteCallback), "Failed to set the write callback"))
 		return false;
 
-
 	return true;
 }
 
 bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage)
 {
 	assert(curl);
+
+struct curl_slist *cookies = NULL;// TODO:  Remove
+curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
+std::cout << "=============COOKIES=========" << std::endl;
+while(cookies) {
+std::cout << cookies->data << std::endl;
+        cookies = cookies->next;
+      }
+curl_slist_free_all(cookies);
+std::cout << "=============END COOKIES=========" << std::endl;// TODO:  Remove
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultPage), "Failed to set write data"))
 		return false;
@@ -315,7 +326,6 @@ bool FrequencyDataHarvester::DoCURLGet(const std::string& url, std::string &resp
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), "Failed issuing https GET"))
 		return false;
-
 	return true;
 }
 
