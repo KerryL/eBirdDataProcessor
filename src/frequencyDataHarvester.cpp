@@ -6,6 +6,7 @@
 // Local headers
 #include "frequencyDataHarvester.h"
 #include "eBirdInterface.h"
+#include "email/curlUtilities.h"
 
 // OS headers
 #ifdef _WIN32
@@ -45,6 +46,7 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 		curl_easy_cleanup(curl);
 }
 
+#include <fstream>//TODO:  Remove
 bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	const std::string &state, const std::string &county, const std::string &frequencyFileName)
 {
@@ -54,7 +56,8 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 
 	while (!EBirdLoginSuccessful(loginPage))
 	{
-		curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL");// erase all existing cookie data
+		if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL"), "Failed to clear existing cookies"))// erase all existing cookie data
+			return false;
 		std::string eBirdUserName, eBirdPassword;
 		GetUserNameAndPassword(eBirdUserName, eBirdPassword);
 		if (!PostEBirdLoginInfo(eBirdUserName, eBirdPassword, loginPage))
@@ -62,6 +65,10 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 			std::cerr << "Failed to login to eBird\n";
 			return false;
 		}
+std::ofstream f("test.html");
+if (!f.is_open())
+	std::cout << "it's not open" << std::endl;
+f << loginPage << std::endl;
 	}
 
 	const std::string regionString(BuildRegionString(country, state, county));
@@ -115,6 +122,7 @@ void FrequencyDataHarvester::GetUserNameAndPassword(std::string& userName, std::
 	newt.c_lflag &= ~ECHO;
 	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
+	std::cin.ignore();
 	std::getline(std::cin, password);
 
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
@@ -135,19 +143,39 @@ bool FrequencyDataHarvester::DoGeneralCurlConfiguration()
 	}
 
 	if (verbose)
-		curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L);
+		CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L), "Failed to set verbose output");// Don't fail for this one
 
 	/*if (!caCertificatePath.empty())
 		curl_easy_setopt(curl, CURLOPT_CAPATH, caCertificatePath.c_str());*/
 
-	curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL);
-	curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent.c_str());
-	curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L);
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL), "Failed to enable SSL"))
+		return false;
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent.c_str()), "Failed to set user agent"))
+		return false;
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L), "Failed to enable location following"))
+		return false;
+
 	headerList = curl_slist_append(headerList, "Connection: Keep-Alive");
-	curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList);
-	curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookieFile.c_str());
-	curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookieFile.c_str());
-	curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FrequencyDataHarvester::CURLWriteCallback);
+	if (!headerList)
+	{
+		std::cerr << "Failed to append keep alive to header\n";
+		return false;
+	}
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+		return false;
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookieFile.c_str()), "Failed to load the cookie file"))
+		return false;
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookieFile.c_str()), "Failed to enable saving cookies"))
+		return false;
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FrequencyDataHarvester::CURLWriteCallback), "Failed to set the write callback"))
+		return false;
+
 
 	return true;
 }
@@ -156,7 +184,8 @@ bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, con
 {
 	assert(curl);
 
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultPage);
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultPage), "Failed to set write data"))
+		return false;
 
 	std::string token(ExtractTokenFromLoginPage(resultPage));
 	if (token.empty())
@@ -165,16 +194,14 @@ bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, con
 		return false;
 	}
 
-	curl_easy_setopt(curl, CURLOPT_POST, 1L);
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POST, 1L), "Failed to set action to POST"))
+		return false;
+
 	const std::string loginInfo(BuildEBirdLoginInfo(userName, password, token));
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, loginInfo.c_str());
 
-	CURLcode result(curl_easy_perform(curl));
-	if (result != CURLE_OK)
-	{
-		std::cerr << "Failed issuing https POST (login):  " << curl_easy_strerror(result) << "." << std::endl;
+	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), "Failed issuding https POST (login)"))
 		return false;
-	}
 
 	return true;
 }
@@ -277,16 +304,17 @@ bool FrequencyDataHarvester::DoCURLGet(const std::string& url, std::string &resp
 {
 	assert(curl);
 
-	curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response);
-	curl_easy_setopt(curl, CURLOPT_POST, 0L);
-	curl_easy_setopt(curl, CURLOPT_URL, url.c_str());
-
-	CURLcode result = curl_easy_perform(curl);
-	if (result != CURLE_OK)
-	{
-		std::cerr << "Failed issuing https GET:  " << curl_easy_strerror(result) << "." << std::endl;
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response), "Failed to set write data"))
 		return false;
-	}
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POST, 0L), "Failed to set action to GET"))
+		return false;
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()), "Failed to set URL"))
+		return false;
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), "Failed issuing https GET"))
+		return false;
 
 	return true;
 }
