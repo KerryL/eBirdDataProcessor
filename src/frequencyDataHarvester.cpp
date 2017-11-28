@@ -55,8 +55,8 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 
 	while (!EBirdLoginSuccessful(loginPage))
 	{
-		if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL"), "Failed to clear existing cookies"))// erase all existing cookie data
-			return false;
+		/*if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL"), "Failed to clear existing cookies"))// erase all existing cookie data
+			return false;*/
 
 		std::string eBirdUserName, eBirdPassword;
 		GetUserNameAndPassword(eBirdUserName, eBirdPassword);
