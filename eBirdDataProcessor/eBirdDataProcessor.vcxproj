@@ -126,6 +126,7 @@
     <ClCompile Include="..\src\eBirdDataProcessorApp.cpp" />
     <ClCompile Include="..\src\eBirdInterface.cpp" />
     <ClCompile Include="..\src\email\cJSON\cJSON.c" />
+    <ClCompile Include="..\src\email\curlUtilities.cpp" />
     <ClCompile Include="..\src\email\jsonInterface.cpp" />
     <ClCompile Include="..\src\email\oAuth2Interface.cpp" />
     <ClCompile Include="..\src\frequencyDataHarvester.cpp" />
@@ -139,6 +140,7 @@
     <ClInclude Include="..\src\eBirdDataProcessorApp.h" />
     <ClInclude Include="..\src\eBirdInterface.h" />
     <ClInclude Include="..\src\email\cJSON\cJSON.h" />
+    <ClInclude Include="..\src\email\curlUtilities.h" />
     <ClInclude Include="..\src\email\jsonInterface.h" />
     <ClInclude Include="..\src\email\oAuth2Interface.h" />
     <ClInclude Include="..\src\frequencyDataHarvester.h" />

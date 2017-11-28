@@ -63,6 +63,9 @@
     <ClCompile Include="..\src\email\cJSON\cJSON.c">
       <Filter>Source Files\email\cJSON</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\email\curlUtilities.cpp">
+      <Filter>Source Files\email</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
@@ -97,6 +100,9 @@
     </ClInclude>
     <ClInclude Include="..\src\email\cJSON\cJSON.h">
       <Filter>Header Files\email\cJSON</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\email\curlUtilities.h">
+      <Filter>Header Files\email</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
