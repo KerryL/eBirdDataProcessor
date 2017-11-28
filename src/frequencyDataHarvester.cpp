@@ -29,7 +29,7 @@
 const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
 const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
 const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en");
-const bool FrequencyDataHarvester::verbose(true);
+const bool FrequencyDataHarvester::verbose(false);
 const std::string FrequencyDataHarvester::cookieFile("ebdp.cookies");
 
 FrequencyDataHarvester::FrequencyDataHarvester()
@@ -185,7 +185,7 @@ bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, con
 {
 	assert(curl);
 
-struct curl_slist *cookies = NULL;// TODO:  Remove
+/*struct curl_slist *cookies = NULL;// TODO:  Remove
 curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
 std::cout << "=============COOKIES=========" << std::endl;
 while(cookies) {
@@ -193,7 +193,7 @@ std::cout << cookies->data << std::endl;
         cookies = cookies->next;
       }
 curl_slist_free_all(cookies);
-std::cout << "=============END COOKIES=========" << std::endl;// TODO:  Remove
+std::cout << "=============END COOKIES=========" << std::endl;// TODO:  Remove*/
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultPage), "Failed to set write data"))
 		return false;
@@ -219,11 +219,13 @@ std::cout << "=============END COOKIES=========" << std::endl;// TODO:  Remove
 
 bool FrequencyDataHarvester::EBirdLoginSuccessful(const std::string& htmlData)
 {
-	const std::string startTag("<li ><a href=\"/ebird/myebird\">");
+	const std::string startTag1("<li ><a href=\"/ebird/myebird\">");
+	const std::string startTag2("<li class=\"selected\"><a href=\"/ebird/myebird\" title=\"My eBird\">");
 	const std::string endTag("</a>");
 	std::string dummy;
-	std::string::size_type offset(0);
-	return ExtractTextBetweenTags(htmlData, startTag, endTag, dummy, offset);
+	std::string::size_type offset1(0), offset2(0);
+	return ExtractTextBetweenTags(htmlData, startTag1, endTag, dummy, offset1) ||
+		ExtractTextBetweenTags(htmlData, startTag2, endTag, dummy, offset2);
 }
 
 std::string FrequencyDataHarvester::ExtractTokenFromLoginPage(const std::string& htmlData)
