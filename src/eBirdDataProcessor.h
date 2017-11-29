@@ -132,7 +132,9 @@ private:
 	template<typename T1, typename T2>
 	static void Unzip(const std::vector<std::pair<T1, T2>>& z, std::vector<T1>* v1, std::vector<T2>* v2);
 	template<typename T, typename SortPredicate, typename EquivalencePredicate>
-	static void UnsortedUnique(std::vector<T>& v, SortPredicate sortPredicate, EquivalencePredicate equivalencePredicate);
+	static void StableRemoveDuplicates(std::vector<T>& v, SortPredicate sortPredicate, EquivalencePredicate equivalencePredicate);
+	template<typename EquivalencePredicate>
+	static void StableRemoveDuplicates(std::vector<Entry>& v, EquivalencePredicate equivalencePredicate);
 
 	static bool CommonNamesMatch(std::string a, std::string b);
 	static std::string StripParentheses(std::string s);
@@ -277,7 +279,7 @@ void EBirdDataProcessor::Unzip(const std::vector<std::pair<T1, T2>>& z, std::vec
 // So elements occurring between (and including) the returned iterator and the
 // end of the original vector can safely be erased.
 template<typename T, typename SortPredicate, typename EquivalencePredicate>
-void EBirdDataProcessor::UnsortedUnique(std::vector<T>& v, SortPredicate sortPredicate, EquivalencePredicate equivalencePredicate)
+void EBirdDataProcessor::StableRemoveDuplicates(std::vector<T>& v, SortPredicate sortPredicate, EquivalencePredicate equivalencePredicate)
 {
 	auto z(Zip(v));
 	std::stable_sort(z.begin(), z.end(), [sortPredicate](const std::pair<uint64_t, T>& a, const std::pair<uint64_t, T>& b)
@@ -296,6 +298,19 @@ void EBirdDataProcessor::UnsortedUnique(std::vector<T>& v, SortPredicate sortPre
 	});
 
 	Unzip(z, static_cast<std::vector<uint64_t>*>(nullptr), &v);
+}
+
+template<typename EquivalencePredicate>
+void EBirdDataProcessor::StableRemoveDuplicates(std::vector<Entry>& v, EquivalencePredicate equivalencePredicate)
+{
+	auto sortPredicate([equivalencePredicate](const Entry& a, const Entry& b)
+	{
+		if (equivalencePredicate(a, b))
+			return false;
+		return a.commonName.compare(b.commonName) < 0;
+	});
+
+	StableRemoveDuplicates(v, sortPredicate, equivalencePredicate);
 }
 
 #endif// EBIRD_DATA_PROCESSOR_H_

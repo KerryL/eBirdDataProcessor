@@ -392,15 +392,8 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByLife() c
 		return CommonNamesMatch(a.commonName, b.commonName);
 	});
 
-	auto sortPredicate([equivalencePredicate](const Entry& a, const Entry& b)
-	{
-		if (equivalencePredicate(a, b))
-			return false;
-		return a.commonName.compare(b.commonName) < 0;
-	});
-
 	std::vector<Entry> consolidatedList(data);
-	UnsortedUnique(consolidatedList, sortPredicate, equivalencePredicate);
+	StableRemoveDuplicates(consolidatedList, equivalencePredicate);
 	return consolidatedList;
 }
 
@@ -412,15 +405,8 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByYear() c
 			a.dateTime.tm_year == b.dateTime.tm_year;
 	});
 
-	auto sortPredicate([equivalencePredicate](const Entry& a, const Entry& b)
-	{
-		if (equivalencePredicate(a, b))
-			return false;
-		return a.commonName.compare(b.commonName) < 0;
-	});
-
 	std::vector<Entry> consolidatedList(data);
-	UnsortedUnique(consolidatedList, sortPredicate, equivalencePredicate);
+	StableRemoveDuplicates(consolidatedList, equivalencePredicate);
 
 	return consolidatedList;
 }
@@ -434,15 +420,8 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByMonth() 
 			a.dateTime.tm_mon == b.dateTime.tm_mon;
 	});
 
-	auto sortPredicate([equivalencePredicate](const Entry& a, const Entry& b)
-	{
-		if (equivalencePredicate(a, b))
-			return false;
-		return a.commonName.compare(b.commonName) < 0;
-	});
-
 	std::vector<Entry> consolidatedList(data);
-	UnsortedUnique(consolidatedList, sortPredicate, equivalencePredicate);
+	StableRemoveDuplicates(consolidatedList, equivalencePredicate);
 
 	return consolidatedList;
 }
@@ -465,15 +444,8 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByWeek() c
 			aWeek == bWeek;
 	});
 
-	auto sortPredicate([equivalencePredicate](const Entry& a, const Entry& b)
-	{
-		if (equivalencePredicate(a, b))
-			return false;
-		return a.commonName.compare(b.commonName) < 0;
-	});
-
 	std::vector<Entry> consolidatedList(data);
-	UnsortedUnique(consolidatedList, sortPredicate, equivalencePredicate);
+	StableRemoveDuplicates(consolidatedList, equivalencePredicate);
 
 	return consolidatedList;
 }
@@ -488,15 +460,8 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() co
 			a.dateTime.tm_mday == b.dateTime.tm_mday;
 	});
 
-	auto sortPredicate([equivalencePredicate](const Entry& a, const Entry& b)
-	{
-		if (equivalencePredicate(a, b))
-			return false;
-		return a.commonName.compare(b.commonName) < 0;
-	});
-
 	std::vector<Entry> consolidatedList(data);
-	UnsortedUnique(consolidatedList, sortPredicate, equivalencePredicate);
+	StableRemoveDuplicates(consolidatedList, equivalencePredicate);
 
 	return consolidatedList;
 }
