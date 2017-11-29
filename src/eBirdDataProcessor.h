@@ -18,6 +18,9 @@
 #include <iostream>
 #include <algorithm>
 #include <set>
+#include <utility>
+#include <cassert>
+#include <numeric>
 
 class EBirdDataProcessor
 {
@@ -122,9 +125,15 @@ private:
 	static std::string Sanitize(const std::string& line);
 	static std::string Desanitize(const std::string& token);
 
-	template<typename BinaryPredicate>
-	static std::vector<Entry>::iterator UnsortedUnique(std::vector<Entry>::iterator first,
-		std::vector<Entry>::iterator last, BinaryPredicate p);
+	template<typename T1, typename T2>
+	static std::vector<std::pair<T1, T2>> Zip(const std::vector<T1>& v1, const std::vector<T2>& v2);
+	template<typename T>
+	static std::vector<std::pair<uint64_t, T>> Zip(const std::vector<T>& v);
+	template<typename T1, typename T2>
+	static void Unzip(const std::vector<std::pair<T1, T2>>& z, std::vector<T1>* v1, std::vector<T2>* v2);
+	template<typename T, typename SortPredicate, typename EquivalencePredicate>
+	static void UnsortedUnique(std::vector<T>& v, SortPredicate sortPredicate, EquivalencePredicate equivalencePredicate);
+
 	static bool CommonNamesMatch(std::string a, std::string b);
 	static std::string StripParentheses(std::string s);
 	static std::string Trim(std::string s);
@@ -201,33 +210,92 @@ bool EBirdDataProcessor::InterpretToken(std::istringstream& tokenStream, const s
 	return true;
 }
 
+template<typename T1, typename T2>
+std::vector<std::pair<T1, T2>> EBirdDataProcessor::Zip(const std::vector<T1>& v1, const std::vector<T2>& v2)
+{
+	assert(v1.size() == v1.size());
+	std::vector<std::pair<T1, T2>> z(v1.size());
+	auto v1Iterator(v1.cbegin());
+	auto v2Iterator(v2.cbegin());
+	for (auto& i : z)
+	{
+		i.first = *v1Iterator;
+		i.second = *v2Iterator;
+		++v1Iterator;
+		++v2Iterator;
+	}
+
+	return z;
+}
+
+template<typename T>
+std::vector<std::pair<uint64_t, T>> EBirdDataProcessor::Zip(const std::vector<T>& v)
+{
+	std::vector<uint64_t> indexVector(v.size());
+	std::iota(indexVector.begin(), indexVector.end(), 0);
+	return Zip(indexVector, v);
+}
+
+template<typename T1, typename T2>
+void EBirdDataProcessor::Unzip(const std::vector<std::pair<T1, T2>>& z, std::vector<T1>* v1, std::vector<T2>* v2)
+{
+	assert(v1 || v2);
+	std::vector<T1>::iterator v1Iterator;
+	std::vector<T2>::iterator v2Iterator;
+
+	if (v1)
+	{
+		v1->resize(z.size());
+		v1Iterator = v1->begin();
+	}
+
+	if (v2)
+	{
+		v2->resize(z.size());
+		v2Iterator = v2->begin();
+	}
+
+	for (const auto& i : z)
+	{
+		if (v1)
+		{
+			*v1Iterator = i.first;
+			++v1Iterator;
+		}
+
+		if (v2)
+		{
+			*v2Iterator = i.second;
+			++v2Iterator;
+		}
+	}
+}
+
 // Uniqueness is achieved by:
 // 1.  Moving unique elements to the front of the vector
 // 2.  Returning an iterator pointing to the new end of the vector
 // So elements occurring between (and including) the returned iterator and the
 // end of the original vector can safely be erased.
-template<typename BinaryPredicate>
-std::vector<EBirdDataProcessor::Entry>::iterator EBirdDataProcessor::UnsortedUnique(
-	std::vector<Entry>::iterator first, std::vector<Entry>::iterator last, BinaryPredicate p)
+template<typename T, typename SortPredicate, typename EquivalencePredicate>
+void EBirdDataProcessor::UnsortedUnique(std::vector<T>& v, SortPredicate sortPredicate, EquivalencePredicate equivalencePredicate)
 {
-	std::vector<Entry>::iterator newLast(last);
-	while (first != newLast)
+	auto z(Zip(v));
+	std::stable_sort(z.begin(), z.end(), [sortPredicate](const std::pair<uint64_t, T>& a, const std::pair<uint64_t, T>& b)
 	{
-		std::vector<Entry>::iterator next(std::next(first));
-		while (next != newLast)
-		{
-			if (p(*first, *next))
-			{
-				--newLast;
-				std::rotate(next, next + 1, last);
-			}
-			else
-				++next;
-		}
-		++first;
-	}
+		return sortPredicate(a.second, b.second);
+	});
 
-	return newLast;
+	z.erase(std::unique(z.begin(), z.end(), [equivalencePredicate](const std::pair<uint64_t, T>& a, const std::pair<uint64_t, T>& b)
+	{
+		return equivalencePredicate(a.second, b.second);
+	}), z.end());
+
+	std::sort(z.begin(), z.end(), [](const std::pair<uint64_t, T>& a, const std::pair<uint64_t, T>& b)
+	{
+		return a.first < b.first;
+	});
+
+	Unzip(z, static_cast<std::vector<uint64_t>*>(nullptr), &v);
 }
 
 #endif// EBIRD_DATA_PROCESSOR_H_
