@@ -18,6 +18,7 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem("LIST_TYPE", config.listType);
 
+	AddConfigItem("SCORE_RARITIES", config.generateRarityScores);
 	AddConfigItem("SPECIES_COUNT_ONLY", config.speciesCountOnly);
 	AddConfigItem("INCLUDE_PARTIAL_IDS", config.includePartialIDs);
 
@@ -122,6 +123,12 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (config.harvestFrequencyData && config.countryFilter.empty())
 	{
 		std::cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.harvestFrequencyData) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.generateRarityScores && config.frequencyFileName.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.frequencyFileName) << " when using " << GetKey(config.generateRarityScores) << '\n';
 		configurationOK = false;
 	}
 

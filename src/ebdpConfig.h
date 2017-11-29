@@ -18,6 +18,7 @@ struct EBDPConfig
 
 	unsigned int listType;// 0 - life, 1 - year, 2 - month, 3 - week, 4 - day, 5 - separate all observations
 
+	bool generateRarityScores;
 	bool speciesCountOnly;// Primarily for plotting
 	bool includePartialIDs;
 

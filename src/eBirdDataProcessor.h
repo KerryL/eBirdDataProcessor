@@ -59,6 +59,7 @@ public:
 		SeparateAllObservations
 	};
 
+	void GenerateRarityScores(const std::string& frequencyFileName, const ListType& listType);
 	std::string GenerateList(const ListType& type) const;
 
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
@@ -103,6 +104,8 @@ private:
 	std::vector<Entry> ConsolidateByWeek() const;
 	std::vector<Entry> ConsolidateByDay() const;
 
+	std::vector<Entry> DoConsolidation(const ListType& type) const;
+
 	static bool ParseLine(const std::string& line, Entry& entry);
 
 	static int DoComparison(const Entry& a, const Entry& b, const SortBy& sortBy);
@@ -131,8 +134,9 @@ private:
 	struct FrequencyInfo
 	{
 		std::string species;
-		double frequency;
+		double frequency = 0.0;
 
+		FrequencyInfo() = default;
 		FrequencyInfo(const std::string& species, const double& frequency) : species(species), frequency(frequency) {}
 	};
 	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
@@ -143,6 +147,7 @@ private:
 	static bool ParseFrequencyHeaderLine(const std::string& line, DoubleYear& checklistCounts);
 	static bool ParseFrequencyLine(const std::string& line, FrequencyDataYear& frequencyData);
 	void EliminateObservedSpecies(FrequencyDataYear& frequencyData) const;
+	std::vector<FrequencyInfo> GenerateYearlyFrequencyData(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
@@ -196,7 +201,7 @@ bool EBirdDataProcessor::InterpretToken(std::istringstream& tokenStream, const s
 	return true;
 }
 
-// Uniqueness if achieved by:
+// Uniqueness is achieved by:
 // 1.  Moving unique elements to the front of the vector
 // 2.  Returning an iterator pointing to the new end of the vector
 // So elements occurring between (and including) the returned iterator and the

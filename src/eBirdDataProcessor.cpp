@@ -317,35 +317,37 @@ void EBirdDataProcessor::SortData(const SortBy& primarySort, const SortBy& secon
 	});
 }
 
-std::string EBirdDataProcessor::GenerateList(const ListType& type) const
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const ListType& type) const
 {
 	std::vector<Entry> consolidatedList;
 	switch (type)
 	{
 	case ListType::Life:
-		consolidatedList = ConsolidateByLife();
-		break;
+		return ConsolidateByLife();
 
 	case ListType::Year:
-		consolidatedList = ConsolidateByYear();
-		break;
+		return ConsolidateByYear();
 
 	case ListType::Month:
-		consolidatedList = ConsolidateByMonth();
-		break;
+		return ConsolidateByMonth();
 
 	case ListType::Week:
-		consolidatedList = ConsolidateByWeek();
-		break;
+		return ConsolidateByWeek();
 
 	case ListType::Day:
-		consolidatedList = ConsolidateByDay();
-		break;
+		return ConsolidateByDay();
 
 	default:
 	case ListType::SeparateAllObservations:
-		consolidatedList = data;
+		break;
 	}
+
+	return data;
+}
+
+std::string EBirdDataProcessor::GenerateList(const ListType& type) const
+{
+	std::vector<Entry> consolidatedList(DoConsolidation(type));
 
 	std::ostringstream ss;
 	unsigned int count(1);
@@ -806,6 +808,96 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 			infoFile << "  " << s << '\n';
 		}
 	}
+}
+
+void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFileName, const ListType& listType)
+{
+	FrequencyDataYear monthFrequencyData;
+	DoubleYear checklistCounts;
+	if (!ParseFrequencyFile(frequencyFileName, monthFrequencyData, checklistCounts))
+		return;
+
+	std::vector<EBirdDataProcessor::FrequencyInfo> yearFrequencyData(
+		GenerateYearlyFrequencyData(monthFrequencyData, checklistCounts));
+
+	const auto consolidatedData(DoConsolidation(listType));
+	std::vector<EBirdDataProcessor::FrequencyInfo> rarityScoreData(consolidatedData.size());
+	unsigned int i;
+	for (i = 0; i < rarityScoreData.size(); ++i)
+	{
+		rarityScoreData[i].species = consolidatedData[i].commonName;
+		bool found(false);
+		for (const auto& species : yearFrequencyData)
+		{
+			if (CommonNamesMatch(rarityScoreData[i].species, species.species))
+			{
+				rarityScoreData[i].frequency = species.frequency;
+				found = true;
+				break;
+			}
+		}
+
+		if (!found)
+		{
+			std::cerr << "Failed to find a match for '" << rarityScoreData[i].species << "' in frequency data.  Try re-generating data on a day that you have not submitted any checklists.\n";
+			return;
+		}
+	}
+
+	std::sort(rarityScoreData.begin(), rarityScoreData.end(), [](const FrequencyInfo& a, const FrequencyInfo& b)
+	{
+		return a.frequency < b.frequency;
+	});
+
+	std::cout << std::endl;
+	const unsigned int minSpace(4);
+	unsigned int longestName(0);
+	for (const auto& entry : rarityScoreData)
+	{
+		if (entry.species.length() > longestName)
+			longestName = entry.species.length();
+	}
+
+	for (const auto& entry : rarityScoreData)
+		std::cout << std::left << std::setw(longestName + minSpace) << std::setfill(' ') << entry.species << entry.frequency << "%\n";
+	std::cout << std::endl;
+}
+
+std::vector<EBirdDataProcessor::FrequencyInfo> EBirdDataProcessor::GenerateYearlyFrequencyData(
+	const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts)
+{
+	std::vector<EBirdDataProcessor::FrequencyInfo> yearFrequencyData;
+	double totalObservations(0.0);
+
+	auto monthCountIterator(checklistCounts.begin());
+	for (const auto& monthData : frequencyData)
+	{
+		for (const auto& species : monthData)
+		{
+			const double observations(*monthCountIterator * species.frequency);
+			bool found(false);
+			for (auto& countData : yearFrequencyData)
+			{
+				if (species.species.compare(countData.species) == 0)
+				{
+					countData.frequency += observations;
+					found = true;
+					break;
+				}
+			}
+
+			if (!found)
+				yearFrequencyData.push_back(FrequencyInfo(species.species, observations));
+		}
+
+		totalObservations += *monthCountIterator;
+		++monthCountIterator;
+	}
+
+	for (auto& species : yearFrequencyData)
+		species.frequency /= totalObservations;
+
+	return yearFrequencyData;
 }
 
 bool EBirdDataProcessor::HotspotInfoComparer::operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const

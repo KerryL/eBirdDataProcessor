@@ -6,7 +6,8 @@
     <LocalDebuggerWorkingDirectory>$(ProjectDir)/Debug</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
-    <LocalDebuggerCommandArguments>../configs/montgomeryFrequencyUpdate</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>../../configs/debugFrequencyUpdate</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
+    <LocalDebuggerWorkingDirectory>$(ProjectDir)/Release</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
 </Project>

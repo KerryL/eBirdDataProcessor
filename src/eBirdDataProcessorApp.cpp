@@ -72,27 +72,32 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	// TODO:  species count only?
 
-	curl_global_init(CURL_GLOBAL_DEFAULT);
-
-	processor.SortData(static_cast<EBirdDataProcessor::SortBy>(configFile.GetConfig().primarySort),
-		static_cast<EBirdDataProcessor::SortBy>(configFile.GetConfig().secondarySort));
-
-	const std::string list(processor.GenerateList(
-		static_cast<EBirdDataProcessor::ListType>(configFile.GetConfig().listType)));
-	std::cout << list << std::endl;
-
-	if (!configFile.GetConfig().outputFileName.empty())
+	if (configFile.GetConfig().generateRarityScores)
+		processor.GenerateRarityScores(configFile.GetConfig().frequencyFileName,
+			static_cast<EBirdDataProcessor::ListType>(configFile.GetConfig().listType));
+	else if (!configFile.GetConfig().harvestFrequencyData && !configFile.GetConfig().generateTargetCalendar)
 	{
-		std::ofstream outFile(configFile.GetConfig().outputFileName.c_str());
-		if (!outFile.is_open() || !outFile.good())
-		{
-			std::cerr << "Failed to open '" << configFile.GetConfig().outputFileName << "' for output\n";
-			curl_global_cleanup();
-			return 1;
-		}
+		processor.SortData(static_cast<EBirdDataProcessor::SortBy>(configFile.GetConfig().primarySort),
+			static_cast<EBirdDataProcessor::SortBy>(configFile.GetConfig().secondarySort));
 
-		outFile << list << std::endl;
+		const std::string list(processor.GenerateList(
+			static_cast<EBirdDataProcessor::ListType>(configFile.GetConfig().listType)));
+		std::cout << list << std::endl;
+
+		if (!configFile.GetConfig().outputFileName.empty())
+		{
+			std::ofstream outFile(configFile.GetConfig().outputFileName.c_str());
+			if (!outFile.is_open() || !outFile.good())
+			{
+				std::cerr << "Failed to open '" << configFile.GetConfig().outputFileName << "' for output\n";
+				return 1;
+			}
+
+			outFile << list << std::endl;
+		}
 	}
+
+	curl_global_init(CURL_GLOBAL_DEFAULT);
 
 	if (configFile.GetConfig().harvestFrequencyData)
 	{
