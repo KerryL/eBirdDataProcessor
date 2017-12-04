@@ -5,6 +5,7 @@
 
 // Local headers
 #include "eBirdInterface.h"
+#include "bestObservationTimeEstimator.h"
 #include "email/cJSON/cJSON.h"
 
 // Standard C++ headers
@@ -17,6 +18,7 @@
 
 const std::string EBirdInterface::apiRoot("http://ebird.org/ws1.1/");
 const std::string EBirdInterface::recentObservationsOfSpeciesInRegionURL("data/obs/region_spp/recent");
+const std::string EBirdInterface::recentObservationsOfSpeciesAtHotspotsURL("data/obs/hotspot_spp/recent");
 const std::string EBirdInterface::taxonomyLookupURL("ref/taxa/ebird");
 const std::string EBirdInterface::locationFindURL("ref/location/find");
 const std::string EBirdInterface::locationListURL("ref/location/list");
@@ -24,8 +26,13 @@ const std::string EBirdInterface::locationListURL("ref/location/list");
 const std::string EBirdInterface::commonNameTag("comName");
 const std::string EBirdInterface::scientificNameTag("sciName");
 const std::string EBirdInterface::locationNameTag("locName");
+const std::string EBirdInterface::locationIDTag("locID");
 const std::string EBirdInterface::latitudeTag("lat");
 const std::string EBirdInterface::longitudeTag("lng");
+const std::string EBirdInterface::observationDateTag("obsDt");
+const std::string EBirdInterface::isNotHotspotTag("locationPrivate");
+const std::string EBirdInterface::isReviewedTag("obsReviewed");
+const std::string EBirdInterface::isValidTag("obsValid");
 
 const std::string EBirdInterface::countryInfoListHeading("COUNTRY_CODE,COUNTRY_NAME,COUNTRY_NAME_LONG,LOCAL_ABBREVIATION");
 const std::string EBirdInterface::stateInfoListHeading("COUNTRY_CODE,SUBNATIONAL1_CODE,SUBNATIONAL1_NAME,LOCAL_ABBREVIATION");
@@ -80,26 +87,37 @@ std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentOb
 		if (!item)
 		{
 			std::cerr << "Failed to get hotspot array item\n";
-			return std::vector<HotspotInfo>();
+			hotspots.clear();
+			break;
 		}
 
 		HotspotInfo info;
-		if (!ReadJSON(item, locationNameTag, info.name))
+		if (!ReadJSON(item, locationNameTag, info.hotspotName))
 		{
 			std::cerr << "Failed to get hotspot name for item " << i << '\n';
-			return std::vector<HotspotInfo>();
+			hotspots.clear();
+			break;
+		}
+
+		if (!ReadJSON(item, locationIDTag, info.hotspotID))
+		{
+			std::cerr << "Failed to get hotspot id for item " << i << '\n';
+			hotspots.clear();
+			break;
 		}
 
 		if (!ReadJSON(item, latitudeTag, info.latitude))
 		{
 			std::cerr << "Failed to get hotspot latitude for item " << i << '\n';
-			return std::vector<HotspotInfo>();
+			hotspots.clear();
+			break;
 		}
 
 		if (!ReadJSON(item, longitudeTag, info.longitude))
 		{
 			std::cerr << "Failed to get hotspot longitude for item " << i << '\n';
-			return std::vector<HotspotInfo>();
+			hotspots.clear();
+			break;
 		}
 
 		hotspots.push_back(info);
@@ -107,6 +125,193 @@ std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentOb
 
 	cJSON_Delete(root);
 	return hotspots;
+}
+
+std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservationsOfSpeciesAtHotspot(
+	const std::string& scientificName, const std::string& hotspotID, const unsigned int& recentPeriod,
+	const bool& includeProvisional)
+{
+	std::ostringstream request;
+	request << apiRoot << recentObservationsOfSpeciesAtHotspotsURL << "?r="
+		<< hotspotID
+		<< "&sci=" << scientificName
+		<< "&back=" << recentPeriod
+		<< "&fmt=json&detail=full&includeProvisional=";
+
+	if (includeProvisional)
+		request << "true";
+	else
+		request << "false";
+
+	std::string response;
+	if (!DoCURLGet(URLEncode(request.str()), response))
+		return std::vector<ObservationInfo>();
+
+	cJSON *root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		std::cerr << "Failed to parse returned string (GetRecentObservationsOfSpeciesAtHotspot())\n";
+		std::cerr << response << '\n';
+		return std::vector<ObservationInfo>();
+	}
+
+	std::vector<ObservationInfo> observations;
+	const unsigned int arraySize(cJSON_GetArraySize(root));
+	unsigned int i;
+	for (i = 0; i < arraySize; ++i)
+	{
+		cJSON* item(cJSON_GetArrayItem(root, i));
+		if (!item)
+		{
+			std::cerr << "Failed to get observation array item\n";
+			observations.clear();
+			break;
+		}
+
+		ObservationInfo info;
+		if (!ReadJSONObservationData(item, info))
+		{
+			observations.clear();
+			break;
+		}
+
+		observations.push_back(info);
+	}
+
+	cJSON_Delete(root);
+	return observations;
+}
+
+bool EBirdInterface::ReadJSONObservationData(cJSON* item, ObservationInfo& info)
+{
+	if (!ReadJSON(item, commonNameTag, info.commonName))
+	{
+		std::cerr << "Failed to get common name for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, scientificNameTag, info.scientificName))
+	{
+		std::cerr << "Failed to get scientific name for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, observationDateTag, info.observationDate))
+	{
+		std::cerr << "Failed to get observation date for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, locationNameTag, info.count))
+	{
+		std::cerr << "Failed to get location name for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, locationNameTag, info.locationName))
+	{
+		std::cerr << "Failed to get location name for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, locationIDTag, info.locationID))
+	{
+		std::cerr << "Failed to get location id for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, isNotHotspotTag, info.isNotHotspot))
+	{
+		std::cerr << "Failed to get hotspot status for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, latitudeTag, info.latitude))
+	{
+		std::cerr << "Failed to get location latitude for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, longitudeTag, info.longitude))
+	{
+		std::cerr << "Failed to get location longitude for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, isReviewedTag, info.observationReviewed))
+	{
+		std::cerr << "Failed to get observation reviewed flag for item\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, isValidTag, info.observationValid))
+	{
+		std::cerr << "Failed to get observation valid flag for item\n";
+		return false;
+	}
+
+	return true;
+}
+
+std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservationsOfSpeciesInRegion(
+	const std::string& scientificName, const std::string& region, const unsigned int& recentPeriod,
+	const bool& includeProvisional, const bool& hotspotsOnly)
+{
+	std::ostringstream request;
+	request << apiRoot << recentObservationsOfSpeciesInRegionURL << "?r="
+		<< region
+		<< "&sci=" << scientificName
+		<< "&back=" << recentPeriod
+		<< "&fmt=json&includeProvisional=";
+
+	if (includeProvisional)
+		request << "true";
+	else
+		request << "false";
+
+	request << "&hotspot=";
+	if (hotspotsOnly)
+		request << "true";
+	else
+		request << "false";
+
+	std::string response;
+	if (!DoCURLGet(URLEncode(request.str()), response))
+		return std::vector<ObservationInfo>();
+
+	cJSON *root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		std::cerr << "Failed to parse returned string (GetRecentObservationsOfSpeciesInRegion())\n";
+		std::cerr << response << '\n';
+		return std::vector<ObservationInfo>();
+	}
+
+	std::vector<ObservationInfo> observations;
+	const unsigned int arraySize(cJSON_GetArraySize(root));
+	unsigned int i;
+	for (i = 0; i < arraySize; ++i)
+	{
+		cJSON* item(cJSON_GetArrayItem(root, i));
+		if (!item)
+		{
+			std::cerr << "Failed to get observation array item\n";
+			observations.clear();
+			break;
+		}
+
+		ObservationInfo info;
+		if (!ReadJSONObservationData(item, info))
+		{
+			observations.clear();
+			break;
+		}
+
+		observations.push_back(info);
+	}
+
+	cJSON_Delete(root);
+	return observations;
 }
 
 std::string EBirdInterface::GetScientificNameFromCommonName(const std::string& commonName)

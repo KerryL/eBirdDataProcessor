@@ -66,6 +66,9 @@
     <ClCompile Include="..\src\email\curlUtilities.cpp">
       <Filter>Source Files\email</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\bestObservationTimeEstimator.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
@@ -103,6 +106,9 @@
     </ClInclude>
     <ClInclude Include="..\src\email\curlUtilities.h">
       <Filter>Header Files\email</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\bestObservationTimeEstimator.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

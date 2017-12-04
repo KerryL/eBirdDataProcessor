@@ -121,6 +121,7 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="..\src\bestObservationTimeEstimator.cpp" />
     <ClCompile Include="..\src\ebdpConfigFile.cpp" />
     <ClCompile Include="..\src\eBirdDataProcessor.cpp" />
     <ClCompile Include="..\src\eBirdDataProcessorApp.cpp" />
@@ -134,6 +135,7 @@
     <ClCompile Include="..\src\utilities\configFile.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="..\src\bestObservationTimeEstimator.h" />
     <ClInclude Include="..\src\ebdpConfig.h" />
     <ClInclude Include="..\src\ebdpConfigFile.h" />
     <ClInclude Include="..\src\eBirdDataProcessor.h" />

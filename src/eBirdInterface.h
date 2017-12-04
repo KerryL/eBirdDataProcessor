@@ -13,19 +13,41 @@
 #include <string>
 #include <vector>
 #include <unordered_map>
+#include <ctime>
 
 class EBirdInterface : public JSONInterface
 {
 public:
 	struct HotspotInfo
 	{
-		std::string name;
+		std::string hotspotName;
+		std::string hotspotID;
 		double latitude;
 		double longitude;
 	};
 
 	std::vector<HotspotInfo> GetHotspotsWithRecentObservationsOf(
 		const std::string& scientificName, const std::string& region, const unsigned int& recentPeriod);
+
+	struct ObservationInfo
+	{
+		std::string commonName;
+		std::string scientificName;
+		std::tm observationDate;
+		unsigned int count;
+		std::string locationID;
+		bool isNotHotspot;
+		std::string locationName;
+		double latitude;
+		double longitude;
+		bool observationReviewed;
+		bool observationValid;
+	};
+
+	std::vector<ObservationInfo> GetRecentObservationsOfSpeciesAtHotspot(const std::string& scientificName,
+		const std::string& hotspotID, const unsigned int& recentPeriod, const bool& includeProvisional);
+	std::vector<ObservationInfo> GetRecentObservationsOfSpeciesInRegion(const std::string& scientificName,
+		const std::string& region, const unsigned int& recentPeriod, const bool& includeProvisional, const bool& hotspotsOnly);
 
 	std::string GetScientificNameFromCommonName(const std::string& commonName);
 
@@ -38,6 +60,7 @@ public:
 private:
 	static const std::string apiRoot;
 	static const std::string recentObservationsOfSpeciesInRegionURL;
+	static const std::string recentObservationsOfSpeciesAtHotspotsURL;
 	static const std::string taxonomyLookupURL;
 	static const std::string locationFindURL;
 	static const std::string locationListURL;
@@ -45,8 +68,13 @@ private:
 	static const std::string commonNameTag;
 	static const std::string scientificNameTag;
 	static const std::string locationNameTag;
+	static const std::string locationIDTag;
 	static const std::string latitudeTag;
 	static const std::string longitudeTag;
+	static const std::string observationDateTag;
+	static const std::string isNotHotspotTag;
+	static const std::string isReviewedTag;
+	static const std::string isValidTag;
 
 	static const std::string countryInfoListHeading;
 	static const std::string stateInfoListHeading;
@@ -55,6 +83,8 @@ private:
 	void BuildNameMaps(cJSON* root);
 	static std::unordered_map<std::string, std::string> commonToScientificMap;
 	static std::unordered_map<std::string, std::string> scientificToCommonMap;
+
+	static bool ReadJSONObservationData(cJSON* item, ObservationInfo& info);
 
 	static std::string GetUserInputOnResponse(const std::string& s, const std::string& field);
 

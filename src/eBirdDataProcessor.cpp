@@ -6,6 +6,7 @@
 // Local headers
 #include "eBirdDataProcessor.h"
 #include "googleMapsInterface.h"
+#include "bestObservationTimeEstimator.h"
 
 // Standard C++ headers
 #include <fstream>
@@ -756,7 +757,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 		if (hotspotCount >= minimumHotspotCount && hotspot.first.size() < lastHotspotSpeciesCount)
 			break;
 
-		std::cout << "  " << hotspot.second.name << " (" << hotspot.first.size() << " species)\n";
+		std::cout << "  " << hotspot.second.hotspotName << " (" << hotspot.first.size() << " species)\n";
 		++hotspotCount;
 		lastHotspotSpeciesCount = hotspot.first.size();
 	}
@@ -783,7 +784,7 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 
 	for (const auto& h : hotspots)
 	{
-		infoFile << '\n' << h.second.name;
+		infoFile << '\n' << h.second.hotspotName;
 		if (!homeLocation.empty())
 		{
 			GoogleMapsInterface gMaps("eBirdDataProcessor", mapApiKey);
@@ -812,7 +813,38 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 		infoFile << "\nRecently observed target species (" << h.first.size() << "):\n";
 		for (const auto& s : h.first)
 		{
-			infoFile << "  " << s << '\n';
+			EBirdInterface e;
+			const unsigned int recentPeriod(30);
+			const bool includeProvisional(true);
+			const bool hotspotsOnly(false);
+			std::vector<EBirdInterface::ObservationInfo> observationInfo(e.GetRecentObservationsOfSpeciesInRegion(
+				e.GetScientificNameFromCommonName(s), h.second.hotspotID, recentPeriod, includeProvisional, hotspotsOnly));
+
+			std::vector<std::tm> bestObservationTimes;
+			if (observationInfo.size() > 0)
+				bestObservationTimes = BestObservationTimeEstimator::EstimateBestObservationTime(observationInfo);
+
+			infoFile << "  " << s;
+
+			if (bestObservationTimes.size() > 0)
+			{
+				infoFile << " (observed around ";
+
+				bool first(true);
+				for (const auto& estimate : bestObservationTimes)
+				{
+					if (!first)
+						infoFile << ", ";
+					first = false;
+
+					infoFile << std::setfill('0');
+					infoFile << std::setw(2) << estimate.tm_hour << ":" << std::setw(2) << estimate.tm_min;
+				}
+
+				infoFile << ")\n";
+			}
+			else
+				infoFile << '\n';
 		}
 	}
 }
@@ -909,5 +941,5 @@ std::vector<EBirdDataProcessor::FrequencyInfo> EBirdDataProcessor::GenerateYearl
 
 bool EBirdDataProcessor::HotspotInfoComparer::operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const
 {
-	return a.name < b.name;
+	return a.hotspotName < b.hotspotName;
 }
