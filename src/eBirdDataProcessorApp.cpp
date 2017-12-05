@@ -42,6 +42,9 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!processor.Parse(configFile.GetConfig().dataFileName))
 		return 1;
 
+	if (configFile.GetConfig().uniqueObservations != EBDPConfig::UniquenessType::None)
+		processor.GenerateUniqueObservationsReport(configFile.GetConfig().uniqueObservations);
+
 	// Remove entires that don't fall withing the specified locations
 	if (!configFile.GetConfig().locationFilter.empty())
 		processor.FilterLocation(configFile.GetConfig().locationFilter, configFile.GetConfig().countyFilter,
@@ -72,9 +75,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	// TODO:  species count only?
 
-	if (configFile.GetConfig().uniqueObservations != EBDPConfig::UniquenessType::None)
-		processor.GenerateUniqueObservationsReport(configFile.GetConfig().uniqueObservations);
-	else if (configFile.GetConfig().generateRarityScores)
+	if (configFile.GetConfig().generateRarityScores)
 		processor.GenerateRarityScores(configFile.GetConfig().frequencyFileName,
 			configFile.GetConfig().listType);
 	else if (!configFile.GetConfig().harvestFrequencyData && !configFile.GetConfig().generateTargetCalendar)

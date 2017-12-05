@@ -148,5 +148,11 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 	}
 
+	if (config.uniqueObservations != EBDPConfig::UniquenessType::None && !config.countryFilter.empty())
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.countryFilter) << " and " << GetKey(config.uniqueObservations) << '\n';
+		configurationOK = false;
+	}
+
 	return configurationOK;
 }

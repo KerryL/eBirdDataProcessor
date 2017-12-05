@@ -851,7 +851,93 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 
 void EBirdDataProcessor::GenerateUniqueObservationsReport(const EBDPConfig::UniquenessType& type)
 {
-	// TODO:  Implement
+	typedef bool (*EquivalenceFunction)(const Entry&, const Entry&);
+	EquivalenceFunction equivalenceFunction([type]() -> EquivalenceFunction
+	{
+		if (type == EBDPConfig::UniquenessType::ByCountry)
+		{
+			return [](const Entry& a, const Entry& b)
+			{
+				const std::string aCountry(a.stateProvidence.substr(0, 2));
+				const std::string bCountry(b.stateProvidence.substr(0, 2));
+				return CommonNamesMatch(a.commonName, b.commonName) &&
+					aCountry.compare(bCountry) == 0;
+			};
+		}
+		else if (type == EBDPConfig::UniquenessType::ByState)
+		{
+			return [](const Entry& a, const Entry& b)
+			{
+				return CommonNamesMatch(a.commonName, b.commonName) &&
+					a.stateProvidence.compare(b.stateProvidence) == 0;
+			};
+		}
+		else// if (type == EBDPConfig::UniquenessType::ByCounty)
+		{
+			return [](const Entry& a, const Entry& b)
+			{
+				return CommonNamesMatch(a.commonName, b.commonName) &&
+					a.stateProvidence.compare(b.stateProvidence) == 0 &&
+					a.county.compare(b.county) == 0;
+			};
+		}
+	}());
+
+	if (type == EBDPConfig::UniquenessType::ByCounty)
+	{
+		std::sort(data.begin(), data.end(), [](const Entry& a, const Entry& b)
+		{
+			return a.county < b.county;
+		});
+	}
+
+	std::stable_sort(data.begin(), data.end(), [](const Entry& a, const Entry& b)
+	{
+		return a.stateProvidence < b.stateProvidence;
+	});
+
+	std::stable_sort(data.begin(), data.end(), [](const Entry& a, const Entry& b)
+	{
+		if (CommonNamesMatch(a.commonName, b.commonName))
+			return false;
+		return a.commonName < b.commonName;
+	});
+
+	StableRemoveDuplicates(data, equivalenceFunction);
+
+	auto endUniqueIt(data.end());
+	auto it(data.begin());
+	for (it; it != endUniqueIt; ++it)
+	{
+		auto nextIt(it);
+		++nextIt;
+		if (nextIt == endUniqueIt)
+			break;
+
+		if (CommonNamesMatch(it->commonName, nextIt->commonName))
+		{
+			do
+			{
+				++nextIt;
+			} while (nextIt != endUniqueIt &&
+				CommonNamesMatch(it->commonName, nextIt->commonName));
+
+			auto endShift(std::distance(nextIt, it));
+			std::rotate(it, nextIt, endUniqueIt);
+			std::advance(endUniqueIt, endShift);
+			--it;
+		}
+	}
+
+	data.erase(endUniqueIt, data.end());
+
+	std::cout << "\nUnique observations by ";
+	if (type == EBDPConfig::UniquenessType::ByCountry)
+		std::cout << "Country:\n";
+	else if (type == EBDPConfig::UniquenessType::ByState)
+		std::cout << "State:\n";
+	else// if (type == EBDPConfig::UniquenessType::ByCounty)
+		std::cout << "County:\n";
 }
 
 void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFileName, const EBDPConfig::ListType& listType)
