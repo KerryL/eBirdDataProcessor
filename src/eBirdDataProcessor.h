@@ -8,6 +8,7 @@
 
 // Local headers
 #include "eBirdInterface.h"
+#include "ebdpConfig.h"
 
 // Standard C++ headers
 #include <string>
@@ -41,29 +42,11 @@ public:
 
 	void FilterPartialIDs();
 
-	enum class SortBy : int
-	{
-		None = 0,
-		Date,
-		CommonName,
-		ScientificName,
-		TaxonomicOrder
-	};
+	void SortData(const EBDPConfig::SortBy& primarySort, const EBDPConfig::SortBy& secondarySort);
 
-	void SortData(const SortBy& primarySort, const SortBy& secondarySort);
-
-	enum class ListType : int
-	{
-		Life = 0,
-		Year,
-		Month,
-		Week,
-		Day,
-		SeparateAllObservations
-	};
-
-	void GenerateRarityScores(const std::string& frequencyFileName, const ListType& listType);
-	std::string GenerateList(const ListType& type) const;
+	void GenerateUniqueObservationsReport(const EBDPConfig::UniquenessType& type);
+	void GenerateRarityScores(const std::string& frequencyFileName, const EBDPConfig::ListType& listType);
+	std::string GenerateList(const EBDPConfig::ListType& type) const;
 
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
 		const std::string& outputFileName, const std::string& frequencyFileName,
@@ -107,11 +90,11 @@ private:
 	std::vector<Entry> ConsolidateByWeek() const;
 	std::vector<Entry> ConsolidateByDay() const;
 
-	std::vector<Entry> DoConsolidation(const ListType& type) const;
+	std::vector<Entry> DoConsolidation(const EBDPConfig::ListType& type) const;
 
 	static bool ParseLine(const std::string& line, Entry& entry);
 
-	static int DoComparison(const Entry& a, const Entry& b, const SortBy& sortBy);
+	static int DoComparison(const Entry& a, const Entry& b, const EBDPConfig::SortBy& sortBy);
 
 	template<typename T>
 	static bool ParseToken(std::istringstream& lineStream, const std::string& fieldName, T& target);

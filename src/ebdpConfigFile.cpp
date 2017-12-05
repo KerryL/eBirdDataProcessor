@@ -16,7 +16,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("COUNTY", config.countyFilter);
 	AddConfigItem("LOCATION", config.locationFilter);
 
-	AddConfigItem("LIST_TYPE", config.listType);
+	AddConfigItem("LIST_TYPE", config.listType, EnumReader<EBDPConfig::ListType>);
 
 	AddConfigItem("SCORE_RARITIES", config.generateRarityScores);
 	AddConfigItem("SPECIES_COUNT_ONLY", config.speciesCountOnly);
@@ -29,6 +29,8 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem("SORT_FIRST", config.primarySort);
 	AddConfigItem("SORT_SECOND", config.secondarySort);
+
+	AddConfigItem("SHOW_UNIQUE_OBS", config.uniqueObservations);
 
 	AddConfigItem("CALENDAR", config.generateTargetCalendar);
 	AddConfigItem("HARVEST_FREQUENCY", config.harvestFrequencyData);
@@ -43,7 +45,7 @@ void EBDPConfigFile::BuildConfigItems()
 
 void EBDPConfigFile::AssignDefaults()
 {
-	config.listType = 0;
+	config.listType = EBDPConfig::ListType::Life;
 	config.speciesCountOnly = false;
 	config.includePartialIDs = false;
 
@@ -52,8 +54,10 @@ void EBDPConfigFile::AssignDefaults()
 	config.weekFilter = 0;
 	config.dayFilter = 0;
 
-	config.primarySort = 0;
-	config.secondarySort = 0;
+	config.primarySort = EBDPConfig::SortBy::None;
+	config.secondarySort = EBDPConfig::SortBy::None;
+
+	config.uniqueObservations = EBDPConfig::UniquenessType::None;
 
 	config.harvestFrequencyData = false;
 	config.generateTargetCalendar = false;
@@ -102,12 +106,6 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (config.listType > 5)
-	{
-		std::cerr << "List type (" << GetKey(config.listType) << ") must be in the range 0 - 5\n";
-		configurationOK = false;
-	}
-
 	if (!config.googleMapsAPIKey.empty() && config.homeLocation.empty())
 	{
 		std::cerr << "Must specify " << GetKey(config.homeLocation) << " when using " << GetKey(config.googleMapsAPIKey) << '\n';
@@ -129,6 +127,24 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (config.generateRarityScores && config.frequencyFileName.empty())
 	{
 		std::cerr << "Must specify " << GetKey(config.frequencyFileName) << " when using " << GetKey(config.generateRarityScores) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.generateRarityScores && config.generateTargetCalendar)
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.generateRarityScores) << " and " << GetKey(config.generateTargetCalendar) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.generateRarityScores && config.uniqueObservations != EBDPConfig::UniquenessType::None)
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.generateRarityScores) << " and " << GetKey(config.uniqueObservations) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.generateTargetCalendar && config.uniqueObservations != EBDPConfig::UniquenessType::None)
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.generateTargetCalendar) << " and " << GetKey(config.uniqueObservations) << '\n';
 		configurationOK = false;
 	}
 

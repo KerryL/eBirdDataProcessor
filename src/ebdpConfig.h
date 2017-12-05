@@ -16,7 +16,17 @@ struct EBDPConfig
 	std::string countyFilter;
 	std::string locationFilter;
 
-	unsigned int listType;// 0 - life, 1 - year, 2 - month, 3 - week, 4 - day, 5 - separate all observations
+	enum class ListType : int
+	{
+		Life = 0,
+		Year,
+		Month,
+		Week,
+		Day,
+		SeparateAllObservations
+	};
+
+	ListType listType;
 
 	bool generateRarityScores;
 	bool speciesCountOnly;// Primarily for plotting
@@ -27,8 +37,27 @@ struct EBDPConfig
 	unsigned int weekFilter;
 	unsigned int dayFilter;
 
-	unsigned int primarySort;// 0 - none, 1 - date, 2 - common name, 3 - scientific name, 4 - taxonomic order
-	unsigned int secondarySort;// 0 - none, 1 - date, 2 - common name, 3 - scientific name, 4 - taxonomic order
+	enum class SortBy : int
+	{
+		None = 0,
+		Date,
+		CommonName,
+		ScientificName,
+		TaxonomicOrder
+	};
+
+	SortBy primarySort;
+	SortBy secondarySort;
+
+	enum class UniquenessType : int
+	{
+		None = 0,
+		ByCountry,
+		ByState,
+		ByCounty
+	};
+
+	UniquenessType uniqueObservations;
 
 	bool generateTargetCalendar;
 	bool harvestFrequencyData;

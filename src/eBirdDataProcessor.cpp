@@ -279,31 +279,31 @@ void EBirdDataProcessor::FilterPartialIDs()
 	}), data.end());
 }
 
-int EBirdDataProcessor::DoComparison(const Entry& a, const Entry& b, const SortBy& sortBy)
+int EBirdDataProcessor::DoComparison(const Entry& a, const Entry& b, const EBDPConfig::SortBy& sortBy)
 {
-	if (sortBy == SortBy::None)
+	if (sortBy == EBDPConfig::SortBy::None)
 		return 0;
 
-	if (sortBy == SortBy::Date)
+	if (sortBy == EBDPConfig::SortBy::Date)
 	{
 		std::tm aTime(a.dateTime);
 		std::tm bTime(b.dateTime);
 		return static_cast<int>(difftime(mktime(&aTime), mktime(&bTime)));
 	}
-	else if (sortBy == SortBy::CommonName)
+	else if (sortBy == EBDPConfig::SortBy::CommonName)
 		return a.commonName.compare(b.commonName);
-	else if (sortBy == SortBy::ScientificName)
+	else if (sortBy == EBDPConfig::SortBy::ScientificName)
 		return a.scientificName.compare(b.scientificName);
-	else if (sortBy == SortBy::TaxonomicOrder)
+	else if (sortBy == EBDPConfig::SortBy::TaxonomicOrder)
 		return a.taxonomicOrder - b.taxonomicOrder;
 
 	assert(false);
 	return 0;
 }
 
-void EBirdDataProcessor::SortData(const SortBy& primarySort, const SortBy& secondarySort)
+void EBirdDataProcessor::SortData(const EBDPConfig::SortBy& primarySort, const EBDPConfig::SortBy& secondarySort)
 {
-	if (primarySort == SortBy::None && secondarySort == SortBy::None)
+	if (primarySort == EBDPConfig::SortBy::None && secondarySort == EBDPConfig::SortBy::None)
 		return;
 
 	std::sort(data.begin(), data.end(), [primarySort, secondarySort](const Entry& a, const Entry& b)
@@ -316,35 +316,35 @@ void EBirdDataProcessor::SortData(const SortBy& primarySort, const SortBy& secon
 	});
 }
 
-std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const ListType& type) const
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const EBDPConfig::ListType& type) const
 {
 	std::vector<Entry> consolidatedList;
 	switch (type)
 	{
-	case ListType::Life:
+	case EBDPConfig::ListType::Life:
 		return ConsolidateByLife();
 
-	case ListType::Year:
+	case EBDPConfig::ListType::Year:
 		return ConsolidateByYear();
 
-	case ListType::Month:
+	case EBDPConfig::ListType::Month:
 		return ConsolidateByMonth();
 
-	case ListType::Week:
+	case EBDPConfig::ListType::Week:
 		return ConsolidateByWeek();
 
-	case ListType::Day:
+	case EBDPConfig::ListType::Day:
 		return ConsolidateByDay();
 
 	default:
-	case ListType::SeparateAllObservations:
+	case EBDPConfig::ListType::SeparateAllObservations:
 		break;
 	}
 
 	return data;
 }
 
-std::string EBirdDataProcessor::GenerateList(const ListType& type) const
+std::string EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type) const
 {
 	std::vector<Entry> consolidatedList(DoConsolidation(type));
 
@@ -849,7 +849,12 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 	}
 }
 
-void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFileName, const ListType& listType)
+void EBirdDataProcessor::GenerateUniqueObservationsReport(const EBDPConfig::UniquenessType& type)
+{
+	// TODO:  Implement
+}
+
+void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFileName, const EBDPConfig::ListType& listType)
 {
 	FrequencyDataYear monthFrequencyData;
 	DoubleYear checklistCounts;

@@ -72,16 +72,16 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	// TODO:  species count only?
 
-	if (configFile.GetConfig().generateRarityScores)
+	if (configFile.GetConfig().uniqueObservations != EBDPConfig::UniquenessType::None)
+		processor.GenerateUniqueObservationsReport(configFile.GetConfig().uniqueObservations);
+	else if (configFile.GetConfig().generateRarityScores)
 		processor.GenerateRarityScores(configFile.GetConfig().frequencyFileName,
-			static_cast<EBirdDataProcessor::ListType>(configFile.GetConfig().listType));
+			configFile.GetConfig().listType);
 	else if (!configFile.GetConfig().harvestFrequencyData && !configFile.GetConfig().generateTargetCalendar)
 	{
-		processor.SortData(static_cast<EBirdDataProcessor::SortBy>(configFile.GetConfig().primarySort),
-			static_cast<EBirdDataProcessor::SortBy>(configFile.GetConfig().secondarySort));
+		processor.SortData(configFile.GetConfig().primarySort, configFile.GetConfig().secondarySort);
 
-		const std::string list(processor.GenerateList(
-			static_cast<EBirdDataProcessor::ListType>(configFile.GetConfig().listType)));
+		const std::string list(processor.GenerateList(configFile.GetConfig().listType));
 		std::cout << list << std::endl;
 
 		if (!configFile.GetConfig().outputFileName.empty())
