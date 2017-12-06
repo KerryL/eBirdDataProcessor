@@ -57,6 +57,7 @@ void EBDPConfigFile::AssignDefaults()
 
 	config.harvestFrequencyData = false;
 	config.generateTargetCalendar = false;
+	config.generateRarityScores = false;
 	config.topBirdCount = false;
 	config.recentObservationPeriod = 15;
 }
