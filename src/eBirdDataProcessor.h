@@ -225,8 +225,8 @@ template<typename T1, typename T2>
 void EBirdDataProcessor::Unzip(const std::vector<std::pair<T1, T2>>& z, std::vector<T1>* v1, std::vector<T2>* v2)
 {
 	assert(v1 || v2);
-	std::vector<T1>::iterator v1Iterator;
-	std::vector<T2>::iterator v2Iterator;
+	typename std::vector<T1>::iterator v1Iterator;
+	typename std::vector<T2>::iterator v2Iterator;
 
 	if (v1)
 	{

@@ -13,6 +13,8 @@ scripts/
 calendars/
 configs/
 
+*.sh
+
 *.cookies
 
 *.suo
