@@ -92,8 +92,7 @@ std::string BestObservationTimeEstimator::EstimateBestObservationTime(
 		if (peak.type == TimeProbability::Type::Peak)
 		{
 			assert(!lastWasRangeStart);
-			if (ss.str().empty())
-				ss << "around ";
+			ss << "around ";
 		}
 		else if (peak.type == TimeProbability::Type::RangeStart)
 		{
