@@ -150,7 +150,8 @@ private:
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
 		const std::string& mapApiKey) const;
 	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>, EBirdInterface::HotspotInfo>>& hotspots,
-		const std::string& hotspotInfoFileName, const std::string& homeLocation, const std::string& mapApiKey) const;
+		const std::string& hotspotInfoFileName, const std::string& homeLocation, const std::string& mapApiKey,
+		const std::string& regionCode) const;
 
 	struct HotspotInfoComparer
 	{

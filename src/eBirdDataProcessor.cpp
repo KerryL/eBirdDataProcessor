@@ -764,11 +764,11 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 	std::cout << std::endl;
 
 	if (!hotspotInfoFileName.empty())
-		GenerateHotspotInfoFile(sortedHotspots, hotspotInfoFileName, homeLocation, mapApiKey);
+		GenerateHotspotInfoFile(sortedHotspots, hotspotInfoFileName, homeLocation, mapApiKey, region);
 }
 
 void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>, EBirdInterface::HotspotInfo>>& hotspots,
-	const std::string& hotspotInfoFileName, const std::string& homeLocation, const std::string& mapApiKey) const
+	const std::string& hotspotInfoFileName, const std::string& homeLocation, const std::string& mapApiKey, const std::string& regionCode) const
 {
 	std::cout << "Writing hotspot information to file..." << std::endl;
 
@@ -818,31 +818,16 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 			const bool includeProvisional(true);
 			const bool hotspotsOnly(false);
 			std::vector<EBirdInterface::ObservationInfo> observationInfo(e.GetRecentObservationsOfSpeciesInRegion(
-				e.GetScientificNameFromCommonName(s), h.second.hotspotID, recentPeriod, includeProvisional, hotspotsOnly));
+				e.GetScientificNameFromCommonName(s), /*h.second.hotspotID*/regionCode, recentPeriod, includeProvisional, hotspotsOnly));// If we use hotspot ID, we get only the most recent sighting
 
-			std::vector<std::tm> bestObservationTimes;
+			std::string bestObservationTime;
 			if (observationInfo.size() > 0)
-				bestObservationTimes = BestObservationTimeEstimator::EstimateBestObservationTime(observationInfo);
+				bestObservationTime = BestObservationTimeEstimator::EstimateBestObservationTime(observationInfo);
 
 			infoFile << "  " << s;
 
-			if (bestObservationTimes.size() > 0)
-			{
-				infoFile << " (observed around ";
-
-				bool first(true);
-				for (const auto& estimate : bestObservationTimes)
-				{
-					if (!first)
-						infoFile << ", ";
-					first = false;
-
-					infoFile << std::setfill('0');
-					infoFile << std::setw(2) << estimate.tm_hour << ":" << std::setw(2) << estimate.tm_min;
-				}
-
-				infoFile << ")\n";
-			}
+			if (!bestObservationTime.empty())
+				infoFile << " (observed " << bestObservationTime << ")\n";
 			else
 				infoFile << '\n';
 		}

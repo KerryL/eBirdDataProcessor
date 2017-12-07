@@ -75,7 +75,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(CURL)/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(CURL)/lib/Debug;$(OPENSSL)/lib</AdditionalLibraryDirectories>
@@ -97,7 +97,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(CURL)/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -132,6 +132,7 @@
     <ClCompile Include="..\src\email\oAuth2Interface.cpp" />
     <ClCompile Include="..\src\frequencyDataHarvester.cpp" />
     <ClCompile Include="..\src\googleMapsInterface.cpp" />
+    <ClCompile Include="..\src\kernelDensityEstimation.cpp" />
     <ClCompile Include="..\src\utilities\configFile.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -147,6 +148,7 @@
     <ClInclude Include="..\src\email\oAuth2Interface.h" />
     <ClInclude Include="..\src\frequencyDataHarvester.h" />
     <ClInclude Include="..\src\googleMapsInterface.h" />
+    <ClInclude Include="..\src\kernelDensityEstimation.h" />
     <ClInclude Include="..\src\utilities\configFile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

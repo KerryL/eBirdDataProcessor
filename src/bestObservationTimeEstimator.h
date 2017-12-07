@@ -12,9 +12,26 @@
 class BestObservationTimeEstimator
 {
 public:
-	static std::vector<std::tm> EstimateBestObservationTime(const std::vector<EBirdInterface::ObservationInfo>& observationInfo);
+	static std::string EstimateBestObservationTime(const std::vector<EBirdInterface::ObservationInfo>& observationInfo);
 
 private:
+	struct Sequence
+	{
+	public:
+		Sequence(const double& minimum, const double& step)
+			: minimum(minimum), step(step) { i = 0; }
+
+		double operator()() { return minimum + ++i * step; }
+
+	private:
+		const double minimum;
+		const double step;
+		unsigned int i;
+	};
+
+	static bool IsNocturnal(const std::vector<double>& pdf);
+	static bool HasFlatPDF(const std::vector<double>& pdf);
+	static std::vector<double> FindPeaks(const std::vector<double>& pdf, const std::vector<double>& input);
 };
 
 #endif// BEST_OBSERVATION_TIME_ESTIMATOR_H_
