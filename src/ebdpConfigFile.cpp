@@ -16,7 +16,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("COUNTY", config.countyFilter);
 	AddConfigItem("LOCATION", config.locationFilter);
 
-	AddConfigItem("LIST_TYPE", config.listType, EnumReader<EBDPConfig::ListType>);
+	AddConfigItem("LIST_TYPE", config.listType);
 
 	AddConfigItem("SCORE_RARITIES", config.generateRarityScores);
 	AddConfigItem("SPECIES_COUNT_ONLY", config.speciesCountOnly);

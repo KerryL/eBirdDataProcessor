@@ -907,7 +907,7 @@ void EBirdDataProcessor::GenerateUniqueObservationsReport(const EBDPConfig::Uniq
 
 	auto endUniqueIt(data.end());
 	auto it(data.begin());
-	for (it; it != endUniqueIt; ++it)
+	for (; it != endUniqueIt; ++it)
 	{
 		auto nextIt(it);
 		++nextIt;
