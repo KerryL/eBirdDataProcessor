@@ -16,6 +16,23 @@
 std::string BestObservationTimeEstimator::EstimateBestObservationTime(
 	const std::vector<EBirdInterface::ObservationInfo>& observationInfo)
 {
+	if (observationInfo.size() < 3)
+	{
+		std::ostringstream ss;
+		ss << std::setfill('0');
+		for (const auto& o : observationInfo)
+		{
+			if (ss.str().empty())
+				ss << "at ";
+			else
+				ss << " and ";
+
+			ss << std::setw(2) << o.observationDate.tm_hour << ':' << std::setw(2) << o.observationDate.tm_min;
+		}
+
+		return ss.str();
+	}
+
 	// For ease of processing, convert times to a double representation of time as fractional hours since midnight
 	std::vector<double> inputTimes(observationInfo.size());
 	auto inputIt(inputTimes.begin());
@@ -41,33 +58,58 @@ std::string BestObservationTimeEstimator::EstimateBestObservationTime(
 		return "throughout the day and night";
 
 	const bool isNocturnal(IsNocturnal(pdfEstimate));
+	unsigned int shift(0);
 	if (isNocturnal)
-		std::rotate(pdfEstimate.begin(), pdfEstimate.begin() + pdfPointCount / 2, pdfEstimate.end());
-
-	auto peaks(FindPeaks(pdfEstimate, inputTimes));
-	if (peaks.size() == 0)
 	{
-		const double maxProbability(*std::max_element(pdfEstimate.begin(), pdfEstimate.end()));
-		// TODO:  Find start and stop times (adjust if nocturnal)
-		return "between ";
+		std::rotate(pdfEstimate.begin(), pdfEstimate.begin() + pdfPointCount / 2, pdfEstimate.end());
+		shift = 12;
 	}
 
+	auto peaks(FindPeaks(pdfEstimate));
+	assert(peaks.size() > 0);
+
 	std::ostringstream ss;
-	ss << "around ";
 	ss << std::setfill('0');
-	int shift([isNocturnal]()
+	bool lastWasRangeStart(false);
+	const auto lastPeakPtr([&peaks]() -> TimeProbability*
 	{
-		if (isNocturnal)
-			return 12;
-		return 0;
+		if (peaks.back().type == TimeProbability::Type::Peak)
+			return &*peaks.rbegin();
+		return &*(peaks.rbegin() + 1);
 	}());
-	bool first(true);
-	for (const auto& t : peaks)
+
+	for (const auto& peak : peaks)
 	{
-		if (!first)
-			ss << ", ";
-		ss << std::setw(2) << static_cast<int>(t + shift) % 24 << ':' << std::setw(2) << static_cast<int>(fmod(t, 60.0));
-		first = false;
+		const bool isLast(&peak == lastPeakPtr);
+		if (!ss.str().empty() && !lastWasRangeStart)
+		{
+			if (!isLast)
+				ss << ", ";
+			else
+				ss << " and ";
+		}
+
+		if (peak.type == TimeProbability::Type::Peak)
+		{
+			assert(!lastWasRangeStart);
+			if (ss.str().empty())
+				ss << "around ";
+		}
+		else if (peak.type == TimeProbability::Type::RangeStart)
+		{
+			assert(!lastWasRangeStart);
+			ss << "from ";
+		}
+		else// if (peak.type == TimeProbability::Type::RangeEnd)
+		{
+			assert(lastWasRangeStart);
+			ss << " to ";
+		}
+
+		ss << std::setw(2) << static_cast<int>(peak.time + shift) % 24 << ':'
+			<< std::setw(2) << static_cast<int>((peak.time - static_cast<int>(peak.time)) * 60.0);
+
+		lastWasRangeStart = peak.type == TimeProbability::Type::RangeStart;
 	}
 
 	return ss.str();
@@ -97,7 +139,7 @@ bool BestObservationTimeEstimator::IsNocturnal(const std::vector<double>& pdf)
 bool BestObservationTimeEstimator::HasFlatPDF(const std::vector<double>& pdf)
 {
 	const double uniformProbability(1.0 / pdf.size());
-	const double allowedVariation(0.2);// [% of uniform]
+	const double allowedVariation(0.5);// [% of uniform]
 	const unsigned int allowedOutliers(3);
 	unsigned int outliers(0);
 	for (const auto& p : pdf)
@@ -114,70 +156,39 @@ bool BestObservationTimeEstimator::HasFlatPDF(const std::vector<double>& pdf)
 	return true;
 }
 
-std::vector<double> BestObservationTimeEstimator::FindPeaks(const std::vector<double>& pdf, const std::vector<double>& input)
+std::vector<BestObservationTimeEstimator::TimeProbability> BestObservationTimeEstimator::FindPeaks(
+	const std::vector<double>& pdf)
 {
-	const double maxProbability(*std::max_element(pdf.begin(), pdf.end()));
-	// Split the data at each valley - but because the valleys can be wide and flat,
-	// we'll use half-way between adjacent peaks as the valley positions.
-	unsigned int lastPeak(pdf.size()), newPeak;
-	const double minimum(*std::min_element(input.begin(), input.end()));
-	double classMinimum(minimum - 1.0);
-	double classMaximum;
-	std::vector<double> bins;
-	unsigned int i;
-	for (i = 0; i < pdf.size(); i++)
+	// If there is a time where observation is twice as likely as another time, this 
+	// is significant.  Less variation than that is not significant.
+	const double significanceRatio(0.5);
+	const double minimumOnProbability(*std::max_element(pdf.begin(), pdf.end()) * significanceRatio);
+
+	std::vector<TimeProbability> peaks;
+	auto pdfIt(pdf.begin());
+	for (; pdfIt != pdf.end(); ++pdfIt)
 	{
-		// Check to see if we're at a peak
-		newPeak = 0;
-		if (i == 0)
-		{
-			if (pdf[0] > pdf[1])
-				lastPeak = 0;
-		}
-		else if (i == pdf.size() - 1)
-		{
-			if (pdf[i] > pdf[i - 1])
-				newPeak = i;
-		}
-		else if ((pdf[i] > pdf[i - 1] && pdf[i] >= pdf[i + 1]))
-			newPeak = i;
+		if (*pdfIt < minimumOnProbability)
+			continue;
 
-		if (newPeak > 0 && lastPeak < pdf.size())// Found a new peak that we can process
-		{
-			classMaximum = minimum + (newPeak + lastPeak) / 2 * (24.0 / pdf.size());
+		auto nextIt(pdfIt + 1);
+		if (peaks.size() > 0 &&
+			peaks.back().type == TimeProbability::Type::RangeStart &&
+			*nextIt >= minimumOnProbability)// If this is in the middle of a wider range
+			continue;
 
-			std::vector<double> temp;
-			for (const auto& t : input)
-			{
-				if (t <= classMaximum && t > classMinimum)
-					temp.push_back(t);
-			}
+		TimeProbability::Type type;
+		if (nextIt != pdf.end() && *nextIt > minimumOnProbability)
+			type = TimeProbability::Type::RangeStart;
+		else if (peaks.size() > 0 && peaks.back().type == TimeProbability::Type::RangeStart)
+			type = TimeProbability::RangeEnd;
+		else
+			type = TimeProbability::Peak;
 
-			// If the PDF isn't quite smooth enough, we may get some bogus bins
-			// that don't contain any values.  We want to ignore these.
-			if (temp.size() > 0)
-				bins.push_back(KernelDensityEstimation::ComputeMean(temp));
-
-			lastPeak = newPeak;
-			classMinimum = classMaximum;
-		}
-		else if (newPeak > 0)// Found the first peak - store it, but don't do any processing yet
-			lastPeak = newPeak;
-		else if (i == pdf.size() - 1)// Reached the end of the range, and the last point is not a peak
-		{
-			std::vector<double> temp;
-			for (const auto& t : input)
-			{
-				if (t > classMinimum)
-					temp.push_back(t);
-			}
-
-			// If the PDF isn't quite smooth enough, we may get some bogus bins
-			// that don't contain any values.  We want to ignore these.
-			if (temp.size() > 0)
-				bins.push_back(KernelDensityEstimation::ComputeMean(temp));
-		}
+		peaks.push_back(TimeProbability(std::distance(pdf.begin(), pdfIt), type));
 	}
 
-	return bins;
+	assert(peaks.back().type != TimeProbability::RangeStart);
+
+	return peaks;
 }

@@ -31,7 +31,24 @@ private:
 
 	static bool IsNocturnal(const std::vector<double>& pdf);
 	static bool HasFlatPDF(const std::vector<double>& pdf);
-	static std::vector<double> FindPeaks(const std::vector<double>& pdf, const std::vector<double>& input);
+
+	struct TimeProbability
+	{
+		double time;
+
+		enum Type
+		{
+			Peak,
+			RangeStart,
+			RangeEnd
+		};
+
+		Type type;
+
+		TimeProbability(const double &time, const Type& type) : time(time), type(type) {}
+	};
+
+	static std::vector<TimeProbability> FindPeaks(const std::vector<double>& pdf);
 };
 
 #endif// BEST_OBSERVATION_TIME_ESTIMATOR_H_

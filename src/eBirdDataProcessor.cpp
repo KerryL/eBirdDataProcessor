@@ -720,7 +720,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 	const std::string& hotspotInfoFileName, const std::string& homeLocation,
 	const std::string& mapApiKey) const
 {
-	std::cout << "Check eBird for recent sightings..." << std::endl;
+	std::cout << "Checking eBird for recent sightings..." << std::endl;
 
 	EBirdInterface e;
 	const std::string region(e.GetRegionCode(country, state, county));
