@@ -18,9 +18,21 @@ std::string BestObservationTimeEstimator::EstimateBestObservationTime(
 {
 	if (observationInfo.size() < 3)
 	{
+		auto obsInfoSortable(observationInfo);
+		std::sort(obsInfoSortable.begin(), obsInfoSortable.end(),
+			[](const EBirdInterface::ObservationInfo& a, const EBirdInterface::ObservationInfo& b)
+		{
+			if (a.observationDate.tm_hour < b.observationDate.tm_hour)
+				return true;
+			else if (a.observationDate.tm_hour > b.observationDate.tm_hour)
+				return false;
+
+			return a.observationDate.tm_min < b.observationDate.tm_min;
+		});
+
 		std::ostringstream ss;
 		ss << std::setfill('0');
-		for (const auto& o : observationInfo)
+		for (const auto& o : obsInfoSortable)
 		{
 			if (ss.str().empty())
 				ss << "at ";
