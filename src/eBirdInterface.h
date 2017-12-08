@@ -42,6 +42,8 @@ public:
 		double longitude;
 		bool observationReviewed;
 		bool observationValid;
+
+		bool dateIncludesTimeInfo = true;
 	};
 
 	std::vector<ObservationInfo> GetRecentObservationsOfSpeciesAtHotspot(const std::string& scientificName,

@@ -15,6 +15,7 @@
 #include <algorithm>
 #include <map>
 #include <cassert>
+#include <iomanip>
 
 const std::string EBirdInterface::apiRoot("http://ebird.org/ws1.1/");
 const std::string EBirdInterface::recentObservationsOfSpeciesInRegionURL("data/obs/region_spp/recent");
@@ -198,8 +199,22 @@ bool EBirdInterface::ReadJSONObservationData(cJSON* item, ObservationInfo& info)
 
 	if (!ReadJSON(item, observationDateTag, info.observationDate))
 	{
-		std::cerr << "Failed to get observation date for item\n";
-		return false;
+		// Try without time info before declaring a failure
+		std::string dateString;
+		if (!ReadJSON(item, observationDateTag, dateString))
+		{
+			std::cerr << "Failed to get observation date and time for item\n";
+			return false;
+		}
+
+		std::istringstream ss(dateString);
+		if ((ss >> std::get_time(&info.observationDate, "%Y-%m-%d")).fail())
+		{
+			std::cerr << "Failed to get observation date for item\n";
+			return false;
+		}
+
+		info.dateIncludesTimeInfo = false;
 	}
 
 	if (!ReadJSON(item, locationNameTag, info.count))

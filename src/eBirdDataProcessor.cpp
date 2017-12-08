@@ -782,6 +782,8 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 	if (!homeLocation.empty())
 		infoFile << "Travel time and distance given from " << homeLocation << '\n';
 
+	std::map<std::string, std::string> speciesToObservationTimeMap;
+
 	for (const auto& h : hotspots)
 	{
 		infoFile << '\n' << h.second.hotspotName;
@@ -813,21 +815,34 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 		infoFile << "\nRecently observed target species (" << h.first.size() << "):\n";
 		for (const auto& s : h.first)
 		{
-			EBirdInterface e;
-			const unsigned int recentPeriod(30);
-			const bool includeProvisional(true);
-			const bool hotspotsOnly(false);
-			std::vector<EBirdInterface::ObservationInfo> observationInfo(e.GetRecentObservationsOfSpeciesInRegion(
-				e.GetScientificNameFromCommonName(s), /*h.second.hotspotID*/regionCode, recentPeriod, includeProvisional, hotspotsOnly));// If we use hotspot ID, we get only the most recent sighting
+			if (speciesToObservationTimeMap.find(s) == speciesToObservationTimeMap.end() ||
+				speciesToObservationTimeMap[s].empty())
+			{
+				EBirdInterface e;
+				const unsigned int recentPeriod(30);
+				const bool includeProvisional(true);
+				const bool hotspotsOnly(false);
+				std::vector<EBirdInterface::ObservationInfo> observationInfo(e.GetRecentObservationsOfSpeciesInRegion(
+					e.GetScientificNameFromCommonName(s), /*h.second.hotspotID*/regionCode, recentPeriod, includeProvisional, hotspotsOnly));// If we use hotspot ID, we get only the most recent sighting
 
-			std::string bestObservationTime;
-			if (observationInfo.size() > 0)
-				bestObservationTime = BestObservationTimeEstimator::EstimateBestObservationTime(observationInfo);
+				// Remove entires that don't include time data
+				observationInfo.erase(std::remove_if(observationInfo.begin(), observationInfo.end(), [](const EBirdInterface::ObservationInfo& o)
+				{
+					return !o.dateIncludesTimeInfo;
+				}), observationInfo.end());
+
+				std::string bestObservationTime;
+				if (observationInfo.size() > 0)
+					bestObservationTime = BestObservationTimeEstimator::EstimateBestObservationTime(observationInfo);
+
+				speciesToObservationTimeMap[s] = bestObservationTime;
+			}
 
 			infoFile << "  " << s;
 
-			if (!bestObservationTime.empty())
-				infoFile << " (observed " << bestObservationTime << ")\n";
+			const std::string observationString(speciesToObservationTimeMap[s]);
+			if (!observationString.empty())
+				infoFile << " (observed " << observationString << ")\n";
 			else
 				infoFile << '\n';
 		}
