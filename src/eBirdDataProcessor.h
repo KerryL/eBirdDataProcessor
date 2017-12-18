@@ -27,6 +27,7 @@ class EBirdDataProcessor
 {
 public:
 	bool Parse(const std::string& dataFile);
+	bool ReadPhotoList(const std::string& photoFileName);
 
 	void FilterLocation(const std::string& location, const std::string& county,
 		const std::string& state, const std::string& country);
@@ -46,7 +47,7 @@ public:
 
 	void GenerateUniqueObservationsReport(const EBDPConfig::UniquenessType& type);
 	void GenerateRarityScores(const std::string& frequencyFileName, const EBDPConfig::ListType& listType);
-	std::string GenerateList(const EBDPConfig::ListType& type) const;
+	std::string GenerateList(const EBDPConfig::ListType& type, const bool& withoutPhotosOnly) const;
 
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
 		const std::string& outputFileName, const std::string& frequencyFileName,
@@ -80,6 +81,8 @@ private:
 		std::string breedingCode;
 		std::string speciesComments;
 		std::string checklistComments;
+
+		bool hasPhoto = false;
 	};
 
 	std::vector<Entry> data;

@@ -22,6 +22,9 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("SPECIES_COUNT_ONLY", config.speciesCountOnly);
 	AddConfigItem("INCLUDE_PARTIAL_IDS", config.includePartialIDs);
 
+	AddConfigItem("PHOTO_FILE", config.photoFileName);
+	AddConfigItem("SHOW_PHOTO_NEEDS", config.showOnlyPhotoNeeds);
+
 	AddConfigItem("YEAR", config.yearFilter);
 	AddConfigItem("MONTH", config.monthFilter);
 	AddConfigItem("WEEK", config.weekFilter);
@@ -64,6 +67,8 @@ void EBDPConfigFile::AssignDefaults()
 	config.generateRarityScores = false;
 	config.topBirdCount = false;
 	config.recentObservationPeriod = 15;
+
+	config.showOnlyPhotoNeeds = false;
 }
 
 bool EBDPConfigFile::ConfigIsOK()
@@ -152,6 +157,12 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (config.uniqueObservations != EBDPConfig::UniquenessType::None && !config.countryFilter.empty())
 	{
 		std::cerr << "Cannot specify both " << GetKey(config.countryFilter) << " and " << GetKey(config.uniqueObservations) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.showOnlyPhotoNeeds && config.photoFileName.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.photoFileName) << " when using " << GetKey(config.showOnlyPhotoNeeds) << '\n';
 		configurationOK = false;
 	}
 

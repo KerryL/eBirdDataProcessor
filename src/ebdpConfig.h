@@ -66,6 +66,9 @@ struct EBDPConfig
 	std::string frequencyFileName;
 	std::string targetInfoFileName;
 
+	bool showOnlyPhotoNeeds;
+	std::string photoFileName;
+
 	std::string googleMapsAPIKey;
 	std::string homeLocation;
 };

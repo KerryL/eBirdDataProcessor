@@ -344,15 +344,28 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const
 	return data;
 }
 
-std::string EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type) const
+std::string EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type, const bool& withoutPhotosOnly) const
 {
 	std::vector<Entry> consolidatedList(DoConsolidation(type));
+
+	if (withoutPhotosOnly)
+		std::cout << "Showing only species which have not been photographed:\n";
 
 	std::ostringstream ss;
 	unsigned int count(1);
 	for (const auto& entry : consolidatedList)
-		ss << count++ << ", " << std::put_time(&entry.dateTime, "%D") << ", "
-		<< entry.commonName << ", '" << entry.location << "', " << entry.count << "\n";
+	{
+		if (!withoutPhotosOnly || !entry.hasPhoto)
+		{
+			ss << count++ << ", " << std::put_time(&entry.dateTime, "%D") << ", "
+				<< entry.commonName << ", '" << entry.location << "', " << entry.count;
+
+			if (entry.hasPhoto)
+				ss << " (photo)";
+
+			ss << '\n';
+		}
+	}
 
 	return ss.str();
 }
@@ -1033,4 +1046,48 @@ std::vector<EBirdDataProcessor::FrequencyInfo> EBirdDataProcessor::GenerateYearl
 bool EBirdDataProcessor::HotspotInfoComparer::operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const
 {
 	return a.hotspotName < b.hotspotName;
+}
+
+bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
+{
+	std::ifstream photoFile(photoFileName.c_str());
+	if (!photoFile.is_open() || !photoFile.good())
+	{
+		std::cerr << "Failed to open '" << photoFileName << "' for input" << std::endl;
+		return false;
+	}
+
+	struct PhotoEntry
+	{
+		explicit PhotoEntry(const std::string& commonName) : commonName(commonName) {}
+
+		std::string commonName;
+		bool matchedOnce = false;
+	};
+	std::vector<PhotoEntry> photoList;
+
+	std::string line;
+	while (std::getline(photoFile, line))
+		photoList.push_back(PhotoEntry(line));
+
+	for (auto& entry : data)
+	{
+		for (auto& p : photoList)
+		{
+			if (CommonNamesMatch(entry.commonName, p.commonName))
+			{
+				p.matchedOnce = true;
+				entry.hasPhoto = true;
+				break;
+			}
+		}
+	}
+
+	for (const auto& p : photoList)
+	{
+		if (!p.matchedOnce)
+			std::cout << "Warning:  Failed to match species in photo list '" << p.commonName << "' to any observation\n";
+	}
+
+	return true;
 }
