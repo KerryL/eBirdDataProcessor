@@ -61,7 +61,7 @@ std::string BestObservationTimeEstimator::EstimateBestObservationTime(
 
 	KernelDensityEstimation kde;
 	std::vector<double> pdfEstimate(kde.ComputePDF(inputTimes, pdfRange,
-		KernelDensityEstimation::EstimateOptimalBandwidth(inputTimes)));
+		std::max(1.0, KernelDensityEstimation::EstimateOptimalBandwidth(inputTimes))));
 
 	// Examine PDF to give insight into observation times.  There can be (multiple) obvious peaks
 	// where we should list out certain hours, or PDF can be flat over several hours, in which
