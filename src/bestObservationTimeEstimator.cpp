@@ -53,7 +53,6 @@ std::string BestObservationTimeEstimator::EstimateBestObservationTime(
 
 	// Estimate the probability distribution by binning into 1-hour wide slots
 	const double minimum(0.0);// hours since midnight
-	const double maximum(23.0);// hours since midnight
 	const unsigned int pdfPointCount(24);
 	const double step(1.0);// hours
 	std::vector<double> pdfRange(pdfPointCount);

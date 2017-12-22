@@ -4,7 +4,6 @@
 // Desc:  Class for performing kernel density estimation.
 
 // Standard C++ headers
-#include <algorithm>
 #include <cmath>
 
 // Local headers

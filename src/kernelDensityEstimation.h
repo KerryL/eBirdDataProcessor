@@ -9,6 +9,7 @@
 // Standard C++ headers
 #include <vector>
 #include <cmath>
+#include <algorithm>
 
 class KernelDensityEstimation
 {
