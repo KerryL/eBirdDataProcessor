@@ -737,6 +737,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 
 	EBirdInterface e;
 	const std::string region(e.GetRegionCode(country, state, county));
+	std::set<std::string> recentSpecies;
 
 	typedef std::vector<std::string> SpeciesList;
 	std::map<EBirdInterface::HotspotInfo, SpeciesList, HotspotInfoComparer> hotspotInfo;
@@ -747,8 +748,11 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 		for (const auto& spot : hotspots)
 		{
 			hotspotInfo[spot].push_back(species);
+			recentSpecies.emplace(species);
 		}
 	}
+
+	std::cout << recentSpecies.size() << " needed species have been observed within the last " << recentPeriod << " days" << std::endl;
 
 	typedef std::pair<SpeciesList, EBirdInterface::HotspotInfo> SpeciesHotspotPair;
 	std::vector<SpeciesHotspotPair> sortedHotspots;
