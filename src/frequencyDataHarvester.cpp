@@ -93,6 +93,12 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 		}
 	}
 
+	if (CurrentDataMissingSpecies(frequencyFileName, frequencyData))
+	{
+		std::cerr << "New frequency data is missing species that were previously included.  This function cannot be executed if you have submitted observations for this area to eBird today." << std::endl;
+		return false;
+	}
+
 	if (!WriteFrequencyDataToFile(frequencyFileName, frequencyData))
 		return false;
 
@@ -478,4 +484,53 @@ bool FrequencyDataHarvester::WriteFrequencyDataToFile(const std::string& fileNam
 	}
 
 	return true;
+}
+
+bool FrequencyDataHarvester::CurrentDataMissingSpecies(const std::string& fileName, const std::array<FrequencyData, 12>& data)
+{
+	std::ifstream file(fileName.c_str());
+	if (!file.is_open() || !file.good())
+		return false;// Not an error - file may not exist
+
+	std::array<std::vector<std::string>, 12> oldData;
+
+	std::string line;
+	std::getline(file, line);// skip header rows
+	std::getline(file, line);// skip header rows
+	while (std::getline(file, line))
+	{
+		std::istringstream ss(line);
+		auto it(oldData.begin());
+		std::string token;
+		while (std::getline(ss, token, ','))
+		{
+			if (!token.empty())
+				it->push_back(token);
+
+			std::getline(ss, token, ',');// skip frequency data
+			++it;
+		}
+	}
+
+	unsigned int i;
+	for (i = 0; i < 12; ++i)
+	{
+		for (const auto& species : oldData[i])
+		{
+			bool found(false);
+			for (const auto& s : data[i].frequencies)
+			{
+				if (species.compare(s.species) == 0)
+				{
+					found = true;
+					break;
+				}
+			}
+
+			if (!found)
+				return true;
+		}
+	}
+
+	return false;
 }

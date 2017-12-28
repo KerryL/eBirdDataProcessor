@@ -73,6 +73,7 @@ private:
 	static bool ExtractTextBetweenTags(const std::string& htmlData, const std::string& startTag,
 		const std::string& endTag, std::string& text, std::string::size_type& offset);
 	static std::string ExtractTokenFromLoginPage(const std::string& htmlData);
+	static bool CurrentDataMissingSpecies(const std::string& fileName, const std::array<FrequencyData, 12>& data);
 };
 
 #endif// FREQUENCY_DATA_HARVESTER_H_
