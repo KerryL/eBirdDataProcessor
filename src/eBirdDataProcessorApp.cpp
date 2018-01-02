@@ -83,7 +83,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			configFile.GetConfig().listType);
 	else if (!configFile.GetConfig().harvestFrequencyData &&
 		!configFile.GetConfig().generateTargetCalendar &&
-		!configFile.GetConfig().bulkFrequencyUpdate)
+		configFile.GetConfig().bulkFrequencyUpdate.empty())
 	{
 		processor.SortData(configFile.GetConfig().primarySort, configFile.GetConfig().secondarySort);
 
@@ -105,11 +105,11 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 
-	if (configFile.GetConfig().bulkFrequencyUpdate)
+	if (!configFile.GetConfig().bulkFrequencyUpdate.empty())
 	{
 		FrequencyDataHarvester harvester;
 		if (!harvester.DoBulkFrequencyHarvest(configFile.GetConfig().countryFilter,
-			configFile.GetConfig().stateFilter))
+			configFile.GetConfig().stateFilter, configFile.GetConfig().bulkFrequencyUpdate))
 		{
 			curl_global_cleanup();
 			return 1;

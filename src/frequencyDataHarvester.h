@@ -23,7 +23,8 @@ public:
 	bool GenerateFrequencyFile(const std::string &country, const std::string &state,
 		const std::string &county, const std::string &frequencyFileName);
 
-	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state);
+	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state,
+		const std::string& targetPath);
 
 private:
 	static const std::string targetSpeciesURLBase;
@@ -50,18 +51,11 @@ private:
 	static std::string BuildTargetSpeciesURL(const std::string& regionString,
 		const unsigned int& beginMonth, const unsigned int& endMonth,
 		const ListTimeFrame& timeFrame);
-	static std::string ExtractCountyNameFromPage(const std::string& htmlData);
+	static std::string ExtractCountyNameFromPage(const std::string& regionString, const std::string& htmlData);
 	static std::string GetTimeFrameString(const ListTimeFrame& timeFrame);
 
 	bool DoGeneralCurlConfiguration();
 	bool DoEBirdLogin();
-	bool PullFrequencyData(const std::string& regionString, const std::string& frequencyFileName);
-	bool PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage);
-	static bool EBirdLoginSuccessful(const std::string& htmlData);
-	static void GetUserNameAndPassword(std::string& userName, std::string& password);
-	static std::string BuildEBirdLoginInfo(const std::string& userName, const std::string& password, const std::string& token);
-	bool DoCURLGet(const std::string& url, std::string &response);
-	static size_t CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData);
 
 	struct FrequencyData
 	{
@@ -74,6 +68,14 @@ private:
 		unsigned int checklistCount;
 		std::vector<SpeciesFrequency> frequencies;
 	};
+
+	bool PullFrequencyData(const std::string& regionString, std::array<FrequencyData, 12>& frequencyData, std::string* countyName = nullptr);
+	bool PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage);
+	static bool EBirdLoginSuccessful(const std::string& htmlData);
+	static void GetUserNameAndPassword(std::string& userName, std::string& password);
+	static std::string BuildEBirdLoginInfo(const std::string& userName, const std::string& password, const std::string& token);
+	bool DoCURLGet(const std::string& url, std::string &response);
+	static size_t CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData);
 
 	static bool ExtractFrequencyData(const std::string& htmlData, FrequencyData& data);
 	static bool WriteFrequencyDataToFile(const std::string& fileName, const std::array<FrequencyData, 12>& data);

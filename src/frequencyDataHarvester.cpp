@@ -50,19 +50,53 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	const std::string &state, const std::string &county, const std::string &frequencyFileName)
 {
-	DoEBirdLogin();
-	return PullFrequencyData(BuildRegionString(country, state, county), frequencyFileName);
+	if (!DoEBirdLogin())
+		return false;
+
+	std::array<FrequencyData, 12> frequencyData;
+	if (!PullFrequencyData(BuildRegionString(country, state, county), frequencyData))
+		return false;
+
+	return WriteFrequencyDataToFile(frequencyFileName, frequencyData);
 }
 
-bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country, const std::string &state)
+bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
+	const std::string &state, const std::string& targetPath)
 {
-	// TODO:  Implement
+	std::cout << "Harvesting frequency data for all counties in " << state << ", " << country << std::endl;
+	std::cout << "Frequency files will be stored in " << targetPath << std::endl;
+
+	if (!DoEBirdLogin())
+		return false;
+
+	unsigned int countyCount(0);
+	while (true)
+	{
+		std::array<FrequencyData, 12> data;
+		std::string countyName;
+		if (!PullFrequencyData(BuildRegionString(country, state, countyCount * 2 + 1), data, &countyName) ||
+			countyName.compare("null") == 0)
+			break;
+
+		if (!WriteFrequencyDataToFile(targetPath + countyName + state + "FrequencyData.csv", data))
+			break;
+
+		++countyCount;
+	}
+
+	if (countyCount == 0)
+		return false;
+
+	std::cout << "Found frequency data for " << countyCount << " counties in " << state << std::endl;
+
 	return true;
 }
 
-bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString, const std::string& frequencyFileName)
+bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString, std::array<FrequencyData, 12>& frequencyData, std::string* countyName)
 {
-	std::array<FrequencyData, 12> frequencyData;
+	if (countyName)
+		countyName->clear();
+
 	unsigned int month;
 	for (month = 1; month <= 12; ++month)
 	{
@@ -73,21 +107,15 @@ bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString, 
 			return false;
 		}
 
+		if (countyName && countyName->empty())
+			*countyName = ExtractCountyNameFromPage(regionString, response);
+
 		if (!ExtractFrequencyData(response, frequencyData[month - 1]))
 		{
 			std::cerr << "Failed to parse HTML to extract frequency data\n";
 			return false;
 		}
 	}
-
-	if (CurrentDataMissingSpecies(frequencyFileName, frequencyData))
-	{
-		std::cerr << "New frequency data is missing species that were previously included.  This function cannot be executed if you have submitted observations for this area to eBird today." << std::endl;
-		return false;
-	}
-
-	if (!WriteFrequencyDataToFile(frequencyFileName, frequencyData))
-		return false;
 
 	return true;
 }
@@ -305,8 +333,8 @@ std::string FrequencyDataHarvester::BuildRegionString(const std::string &country
 	if (county == 0)
 		return countryAndStateCode;
 
-	std::ostringstream ss(countryAndStateCode);
-	ss << '-' << std::setfill('0') << std::setw(3) << county;
+	std::ostringstream ss;
+	ss << countryAndStateCode << '-' << std::setfill('0') << std::setw(3) << county;
 	return ss.str();
 }
 
@@ -460,6 +488,12 @@ bool FrequencyDataHarvester::ExtractTextBetweenTags(const std::string& htmlData,
 
 bool FrequencyDataHarvester::WriteFrequencyDataToFile(const std::string& fileName, const std::array<FrequencyData, 12>& data)
 {
+	if (CurrentDataMissingSpecies(fileName, data))
+	{
+		std::cerr << "New frequency data is missing species that were previously included.  This function cannot be executed if you have submitted observations for this area to eBird today." << std::endl;
+		return false;
+	}
+
 	const unsigned int maxSpecies([&data]()
 	{
 		unsigned int s(0);
@@ -501,9 +535,7 @@ bool FrequencyDataHarvester::WriteFrequencyDataToFile(const std::string& fileNam
 		for (const auto& m : data)
 		{
 			if (i < m.frequencies.size())
-			{
 				file << m.frequencies[i].species << ',' << m.frequencies[i].frequency << ',';
-			}
 			else
 				file << ",,";
 		}
@@ -561,4 +593,17 @@ bool FrequencyDataHarvester::CurrentDataMissingSpecies(const std::string& fileNa
 	}
 
 	return false;
+}
+
+std::string FrequencyDataHarvester::ExtractCountyNameFromPage(const std::string& regionString, const std::string& htmlData)
+{
+	const std::string matchStart("<option value=\"" + regionString + "\" selected=\"selected\">");
+	const std::string matchEnd(" County, ");
+
+	std::string countyName;
+	std::string::size_type offset(0);
+	if (!ExtractTextBetweenTags(htmlData, matchStart, matchEnd, countyName, offset))
+		return std::string();
+	
+	return countyName;
 }

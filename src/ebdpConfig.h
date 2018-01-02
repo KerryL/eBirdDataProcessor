@@ -16,7 +16,7 @@ struct EBDPConfig
 	std::string countyFilter;
 	std::string locationFilter;
 
-	bool bulkFrequencyUpdate;
+	std::string bulkFrequencyUpdate;
 
 	enum class ListType : int
 	{
