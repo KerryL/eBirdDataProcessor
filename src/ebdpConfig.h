@@ -16,6 +16,8 @@ struct EBDPConfig
 	std::string countyFilter;
 	std::string locationFilter;
 
+	bool bulkFrequencyUpdate;
+
 	enum class ListType : int
 	{
 		Life = 0,

@@ -24,6 +24,7 @@
 #include <sstream>
 #include <cassert>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
 
 const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
@@ -49,33 +50,19 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	const std::string &state, const std::string &county, const std::string &frequencyFileName)
 {
-	std::string loginPage;
-	if (!DoCURLGet(eBirdLoginURL, loginPage))
-		return false;
+	DoEBirdLogin();
+	return PullFrequencyData(BuildRegionString(country, state, county), frequencyFileName);
+}
 
-	while (!EBirdLoginSuccessful(loginPage))
-	{
-		/*if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL"), "Failed to clear existing cookies"))// erase all existing cookie data
-			return false;*/
+bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country, const std::string &state)
+{
+	// TODO:  Implement
+	return true;
+}
 
-		std::string eBirdUserName, eBirdPassword;
-		GetUserNameAndPassword(eBirdUserName, eBirdPassword);
-		char* urlEncodedPassword(curl_easy_escape(curl, eBirdPassword.c_str(), eBirdPassword.length()));
-		if (!urlEncodedPassword)
-			std::cerr << "Failed to URL-encode password\n";
-		eBirdPassword = urlEncodedPassword;
-		curl_free(urlEncodedPassword);
-
-		if (!PostEBirdLoginInfo(eBirdUserName, eBirdPassword, loginPage))
-		{
-			std::cerr << "Failed to login to eBird\n";
-			return false;
-		}
-	}
-
-	const std::string regionString(BuildRegionString(country, state, county));
+bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString, const std::string& frequencyFileName)
+{
 	std::array<FrequencyData, 12> frequencyData;
-
 	unsigned int month;
 	for (month = 1; month <= 12; ++month)
 	{
@@ -101,6 +88,35 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 
 	if (!WriteFrequencyDataToFile(frequencyFileName, frequencyData))
 		return false;
+
+	return true;
+}
+
+bool FrequencyDataHarvester::DoEBirdLogin()
+{
+	std::string loginPage;
+	if (!DoCURLGet(eBirdLoginURL, loginPage))
+		return false;
+
+	while (!EBirdLoginSuccessful(loginPage))
+	{
+		/*if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL"), "Failed to clear existing cookies"))// erase all existing cookie data
+			return false;*/
+
+		std::string eBirdUserName, eBirdPassword;
+		GetUserNameAndPassword(eBirdUserName, eBirdPassword);
+		char* urlEncodedPassword(curl_easy_escape(curl, eBirdPassword.c_str(), eBirdPassword.length()));
+		if (!urlEncodedPassword)
+			std::cerr << "Failed to URL-encode password\n";
+		eBirdPassword = urlEncodedPassword;
+		curl_free(urlEncodedPassword);
+
+		if (!PostEBirdLoginInfo(eBirdUserName, eBirdPassword, loginPage))
+		{
+			std::cerr << "Failed to login to eBird\n";
+			return false;
+		}
+	}
 
 	return true;
 }
@@ -280,6 +296,18 @@ std::string FrequencyDataHarvester::BuildRegionString(const std::string &country
 		return std::string();
 
 	return countyCode;
+}
+
+std::string FrequencyDataHarvester::BuildRegionString(const std::string &country, const std::string &state,
+	const unsigned int &county)
+{
+	const std::string countryAndStateCode(BuildRegionString(country, state, std::string()));
+	if (county == 0)
+		return countryAndStateCode;
+
+	std::ostringstream ss(countryAndStateCode);
+	ss << '-' << std::setfill('0') << std::setw(3) << county;
+	return ss.str();
 }
 
 std::string FrequencyDataHarvester::BuildTargetSpeciesURL(const std::string& regionString,

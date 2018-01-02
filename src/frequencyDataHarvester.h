@@ -23,6 +23,8 @@ public:
 	bool GenerateFrequencyFile(const std::string &country, const std::string &state,
 		const std::string &county, const std::string &frequencyFileName);
 
+	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state);
+
 private:
 	static const std::string targetSpeciesURLBase;
 	static const std::string eBirdLoginURL;
@@ -43,12 +45,17 @@ private:
 
 	static std::string BuildRegionString(const std::string &country, const std::string &state,
 		const std::string &county);
+	static std::string BuildRegionString(const std::string &country, const std::string &state,
+		const unsigned int &county);
 	static std::string BuildTargetSpeciesURL(const std::string& regionString,
 		const unsigned int& beginMonth, const unsigned int& endMonth,
 		const ListTimeFrame& timeFrame);
+	static std::string ExtractCountyNameFromPage(const std::string& htmlData);
 	static std::string GetTimeFrameString(const ListTimeFrame& timeFrame);
 
 	bool DoGeneralCurlConfiguration();
+	bool DoEBirdLogin();
+	bool PullFrequencyData(const std::string& regionString, const std::string& frequencyFileName);
 	bool PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage);
 	static bool EBirdLoginSuccessful(const std::string& htmlData);
 	static void GetUserNameAndPassword(std::string& userName, std::string& password);

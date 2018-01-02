@@ -37,6 +37,7 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem("CALENDAR", config.generateTargetCalendar);
 	AddConfigItem("HARVEST_FREQUENCY", config.harvestFrequencyData);
+	AddConfigItem("BULD_FREQUENCY_UPDATE", config.bulkFrequencyUpdate);
 	AddConfigItem("TOP_COUNT", config.topBirdCount);
 	AddConfigItem("FREQUENCY_FILE", config.frequencyFileName);
 	AddConfigItem("TARGET_INFO_FILE_NAME", config.targetInfoFileName);
@@ -63,6 +64,7 @@ void EBDPConfigFile::AssignDefaults()
 	config.uniqueObservations = EBDPConfig::UniquenessType::None;
 
 	config.harvestFrequencyData = false;
+	config.bulkFrequencyUpdate = false;
 	config.generateTargetCalendar = false;
 	config.generateRarityScores = false;
 	config.topBirdCount = false;
@@ -127,6 +129,24 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (config.harvestFrequencyData && config.countryFilter.empty())
 	{
 		std::cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.harvestFrequencyData) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.bulkFrequencyUpdate && config.harvestFrequencyData)
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.bulkFrequencyUpdate) << " and " << GetKey(config.harvestFrequencyData) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.bulkFrequencyUpdate && config.countryFilter.compare("US") != 0)
+	{
+		std::cerr << "Cannot use " << GetKey(config.bulkFrequencyUpdate) << " for countries other than US\n";
+		configurationOK = false;
+	}
+
+	if (config.bulkFrequencyUpdate && config.stateFilter.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.stateFilter) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
 		configurationOK = false;
 	}
 
