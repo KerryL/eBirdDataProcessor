@@ -6,6 +6,9 @@
 // Local headers
 #include "ebdpConfigFile.h"
 
+// Standard C++ headers
+#include <chrono>
+
 void EBDPConfigFile::BuildConfigItems()
 {
 	AddConfigItem("OBS_DATA_FILE", config.dataFileName);
@@ -48,6 +51,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("CENSUS_KEY", config.usCensusAPIKey);
 
 	AddConfigItem("FIND_MAX_NEEDS", config.findMaxNeedsLocations);
+	AddConfigItem("MAX_NEEDS_MONTH", config.maxNeedsMonth);
 }
 
 void EBDPConfigFile::AssignDefaults()
@@ -73,6 +77,11 @@ void EBDPConfigFile::AssignDefaults()
 	config.recentObservationPeriod = 15;
 
 	config.showOnlyPhotoNeeds = false;
+
+	// maxNeedsMonth defaults to current month
+	const time_t now(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+	struct tm localTime(*localtime(&now));
+	config.maxNeedsMonth = localTime.tm_mon + 1;
 }
 
 bool EBDPConfigFile::ConfigIsOK()
@@ -185,6 +194,12 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (config.showOnlyPhotoNeeds && config.photoFileName.empty())
 	{
 		std::cerr << "Must specify " << GetKey(config.photoFileName) << " when using " << GetKey(config.showOnlyPhotoNeeds) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.maxNeedsMonth < 1 || config.maxNeedsMonth > 12)
+	{
+		std::cerr << GetKey(config.maxNeedsMonth) << " must be between 1 and 12 inclusive\n";
 		configurationOK = false;
 	}
 

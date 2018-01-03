@@ -1106,7 +1106,8 @@ bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
 	return true;
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory) const
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
+	const unsigned int& month) const
 {
 	DIR *dir(opendir(frequencyFileDirectory.c_str()));
 	if (!dir)
@@ -1115,15 +1116,45 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& fr
 		return false;
 	}
 
+	std::vector<FrequencyInfo> newSightingProbability;// frequency is probability of seeing new species and species is file name of frequency data file
+
 	struct dirent *ent;
 	while (ent = readdir(dir), ent)
 	{
 		if (std::string(ent->d_name).compare(".") == 0 ||
 			std::string(ent->d_name).compare("..") == 0)
 			continue;
-		std::cout << ent->d_name << std::endl;
+
+		newSightingProbability.push_back(FrequencyInfo(ent->d_name,
+			ComputeNewSpeciesProbability(frequencyFileDirectory + ent->d_name, month)));
 	}
 	closedir(dir);
 
+	std::sort(newSightingProbability.begin(), newSightingProbability.end(), [](const FrequencyInfo& a, const FrequencyInfo& b)
+	{
+		return a.frequency > b.frequency;
+	});
+
+	for (const auto& location : newSightingProbability)
+		std::cout << location.species << " : " << location.frequency << "%\n";
+
 	return true;
+}
+
+double EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileName, const unsigned int& month) const
+{
+	assert(month > 0 && month < 13);
+
+	FrequencyDataYear frequencyData;
+	DoubleYear dummy;
+	if (!ParseFrequencyFile(fileName, frequencyData, dummy))
+		return -1.0;
+
+	EliminateObservedSpecies(frequencyData);
+
+	double product(1.0);
+	for (const auto& entry : frequencyData[month])
+		product *= (1.0 - entry.frequency);
+
+	return 1.0 - product;
 }

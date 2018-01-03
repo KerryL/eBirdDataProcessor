@@ -76,6 +76,7 @@ struct EBDPConfig
 	std::string usCensusAPIKey;
 
 	std::string findMaxNeedsLocations;
+	unsigned int maxNeedsMonth;
 };
 
 #endif// EBDP_CONFIG_H_

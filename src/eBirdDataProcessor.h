@@ -56,7 +56,8 @@ public:
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
 		const std::string& mapApiKey) const;
 
-	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory) const;
+	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
+		const unsigned int& month) const;
 
 private:
 	static const std::string headerLine;
@@ -162,6 +163,8 @@ private:
 	{
 		bool operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const;
 	};
+
+	double ComputeNewSpeciesProbability(const std::string& fileName, const unsigned int& month) const;
 };
 
 template<typename T>
