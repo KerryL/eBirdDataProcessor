@@ -133,6 +133,7 @@
     <ClCompile Include="..\src\frequencyDataHarvester.cpp" />
     <ClCompile Include="..\src\googleMapsInterface.cpp" />
     <ClCompile Include="..\src\kernelDensityEstimation.cpp" />
+    <ClCompile Include="..\src\usCensusInterface.cpp" />
     <ClCompile Include="..\src\utilities\configFile.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -149,6 +150,7 @@
     <ClInclude Include="..\src\frequencyDataHarvester.h" />
     <ClInclude Include="..\src\googleMapsInterface.h" />
     <ClInclude Include="..\src\kernelDensityEstimation.h" />
+    <ClInclude Include="..\src\usCensusInterface.h" />
     <ClInclude Include="..\src\utilities\configFile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

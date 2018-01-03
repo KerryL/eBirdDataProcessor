@@ -6,6 +6,7 @@
 // Local headers
 #include "frequencyDataHarvester.h"
 #include "eBirdInterface.h"
+#include "usCensusInterface.h"
 #include "email/curlUtilities.h"
 
 // OS headers
@@ -26,6 +27,7 @@
 #include <iostream>
 #include <iomanip>
 #include <fstream>
+#include <cctype>
 
 const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
 const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
@@ -61,33 +63,34 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 }
 
 bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
-	const std::string &state, const std::string& targetPath)
+	const std::string &state, const std::string& targetPath, const std::string& censusKey)
 {
-	std::cout << "Harvesting frequency data for all counties in " << state << ", " << country << std::endl;
+	std::cout << "Harvesting frequency data for " << state << ", " << country << std::endl;
 	std::cout << "Frequency files will be stored in " << targetPath << std::endl;
 
 	if (!DoEBirdLogin())
 		return false;
 
-	unsigned int countyCount(0);
-	while (true)
-	{
-		std::array<FrequencyData, 12> data;
-		std::string countyName;
-		if (!PullFrequencyData(BuildRegionString(country, state, countyCount * 2 + 1), data, &countyName) ||
-			countyName.compare("null") == 0)
-			break;
+	assert(country.compare("US") == 0 && "Cannot perform bulk frequency harvesting outside of US");
 
-		if (!WriteFrequencyDataToFile(targetPath + countyName + state + "FrequencyData.csv", data))
-			break;
-
-		++countyCount;
-	}
-
-	if (countyCount == 0)
+	unsigned int stateFIPSCode;
+	if (!USCensusInterface::GetStateFIPSCode(state, stateFIPSCode))
 		return false;
 
-	std::cout << "Found frequency data for " << countyCount << " counties in " << state << std::endl;
+	USCensusInterface censusInterface(censusKey);
+	std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
+
+	std::cout << "Beginning harvest for " << countyList.size() << " counties" << std::endl;
+
+	for (const auto& county : countyList)
+	{
+		std::array<FrequencyData, 12> data;
+		if (!PullFrequencyData(BuildRegionString(country, state, county.fipsCode), data))
+			break;
+
+		if (!WriteFrequencyDataToFile(targetPath + Clean(county.name) + state + "FrequencyData.csv", data))
+			break;
+	}
 
 	return true;
 }
@@ -606,4 +609,31 @@ std::string FrequencyDataHarvester::ExtractCountyNameFromPage(const std::string&
 		return std::string();
 	
 	return countyName;
+}
+
+// This removes "County", everything after the comma (results are in format "Whatever County, State Name") as well as apostrophes, periods and spaces
+// Two separate checks for "County" and comma because some counties are actually city names (i.e. "Baltimore city")
+std::string FrequencyDataHarvester::Clean(const std::string& s)
+{
+	std::string cleanString(s);
+
+	const auto lastComma(cleanString.find_last_of(','));
+	if (lastComma != std::string::npos)
+		cleanString.erase(cleanString.begin() + lastComma, cleanString.end());
+
+	const auto countyString(cleanString.find(" County"));
+	if (countyString != std::string::npos)
+		cleanString.erase(cleanString.begin() + countyString, cleanString.end());
+
+	cleanString.erase(std::remove_if(cleanString.begin(), cleanString.end(), [](const char& c)
+	{
+		if (std::isspace(c) ||
+			c == '\'' ||
+			c == '.')
+			return true;
+
+		return false;
+	}), cleanString.end());
+
+	return cleanString;
 }

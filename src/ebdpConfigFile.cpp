@@ -45,6 +45,7 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem("GOOGLE_MAPS_KEY", config.googleMapsAPIKey);
 	AddConfigItem("HOME_LOCATION", config.homeLocation);
+	AddConfigItem("CENSUS_KEY", config.usCensusAPIKey);
 }
 
 void EBDPConfigFile::AssignDefaults()

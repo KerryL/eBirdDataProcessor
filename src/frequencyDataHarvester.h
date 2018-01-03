@@ -24,7 +24,7 @@ public:
 		const std::string &county, const std::string &frequencyFileName);
 
 	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state,
-		const std::string& targetPath);
+		const std::string& targetPath, const std::string& censusKey);
 
 private:
 	static const std::string targetSpeciesURLBase;
@@ -83,6 +83,8 @@ private:
 		const std::string& endTag, std::string& text, std::string::size_type& offset);
 	static std::string ExtractTokenFromLoginPage(const std::string& htmlData);
 	static bool CurrentDataMissingSpecies(const std::string& fileName, const std::array<FrequencyData, 12>& data);
+
+	static std::string Clean(const std::string& s);
 };
 
 #endif// FREQUENCY_DATA_HARVESTER_H_
