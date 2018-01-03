@@ -8,6 +8,16 @@
 #include "googleMapsInterface.h"
 #include "bestObservationTimeEstimator.h"
 
+// System headers (added from https://github.com/tronkko/dirent/ for Windows)
+#ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable:4505)
+#endif
+#include <dirent.h>
+#ifdef _WIN32
+#pragma warning(pop)
+#endif
+
 // Standard C++ headers
 #include <fstream>
 #include <iostream>
@@ -1098,7 +1108,22 @@ bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory) const
 {
-	for (const auto& fileName : std::filesystem::directory_iterator(frequencyFileDirectory))
+	DIR *dir(opendir(frequencyFileDirectory.c_str()));
+	if (!dir)
 	{
+		std::cerr << "Failed to open directory '" << frequencyFileDirectory << "'\n";
+		return false;
 	}
+
+	struct dirent *ent;
+	while (ent = readdir(dir), ent)
+	{
+		if (std::string(ent->d_name).compare(".") == 0 ||
+			std::string(ent->d_name).compare("..") == 0)
+			continue;
+		std::cout << ent->d_name << std::endl;
+	}
+	closedir(dir);
+
+	return true;
 }
