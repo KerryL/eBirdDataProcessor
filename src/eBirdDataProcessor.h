@@ -56,6 +56,8 @@ public:
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
 		const std::string& mapApiKey) const;
 
+	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory) const;
+
 private:
 	static const std::string headerLine;
 

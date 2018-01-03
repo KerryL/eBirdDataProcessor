@@ -1095,3 +1095,10 @@ bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
 
 	return true;
 }
+
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory) const
+{
+	for (const auto& fileName : std::filesystem::directory_iterator(frequencyFileDirectory))
+	{
+	}
+}

@@ -74,6 +74,8 @@ struct EBDPConfig
 	std::string googleMapsAPIKey;
 	std::string homeLocation;
 	std::string usCensusAPIKey;
+
+	std::string findMaxNeedsLocations;
 };
 
 #endif// EBDP_CONFIG_H_

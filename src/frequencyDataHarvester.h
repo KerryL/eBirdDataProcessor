@@ -69,7 +69,7 @@ private:
 		std::vector<SpeciesFrequency> frequencies;
 	};
 
-	bool PullFrequencyData(const std::string& regionString, std::array<FrequencyData, 12>& frequencyData, std::string* countyName = nullptr);
+	bool PullFrequencyData(const std::string& regionString, std::array<FrequencyData, 12>& frequencyData);
 	bool PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage);
 	static bool EBirdLoginSuccessful(const std::string& htmlData);
 	static void GetUserNameAndPassword(std::string& userName, std::string& password);
@@ -85,6 +85,7 @@ private:
 	static bool CurrentDataMissingSpecies(const std::string& fileName, const std::array<FrequencyData, 12>& data);
 
 	static std::string Clean(const std::string& s);
+	static bool DataIsEmpty(const std::array<FrequencyData, 12>& frequencyData);
 };
 
 #endif// FREQUENCY_DATA_HARVESTER_H_

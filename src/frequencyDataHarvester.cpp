@@ -88,6 +88,12 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		if (!PullFrequencyData(BuildRegionString(country, state, county.fipsCode), data))
 			break;
 
+		// Some independent cities (i.e. "Baltimore city") are recognized in census data as "county equivalents,"
+		// but are apparently combined with a neighboring county by eBird.  When this happens, data will be empty,
+		// but we return true to allow processing to continue.
+		if (DataIsEmpty(data))
+			continue;
+
 		if (!WriteFrequencyDataToFile(targetPath + Clean(county.name) + state + "FrequencyData.csv", data))
 			break;
 	}
@@ -95,11 +101,9 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 	return true;
 }
 
-bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString, std::array<FrequencyData, 12>& frequencyData, std::string* countyName)
+bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
+	std::array<FrequencyData, 12>& frequencyData)
 {
-	if (countyName)
-		countyName->clear();
-
 	unsigned int month;
 	for (month = 1; month <= 12; ++month)
 	{
@@ -110,8 +114,11 @@ bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString, 
 			return false;
 		}
 
-		if (countyName && countyName->empty())
-			*countyName = ExtractCountyNameFromPage(regionString, response);
+		if (ExtractCountyNameFromPage(regionString, response).compare("null") == 0)
+		{
+			std::cerr << "Warning:  Found null county data for region string '" << regionString << "'\n";
+			return true;
+		}
 
 		if (!ExtractFrequencyData(response, frequencyData[month - 1]))
 		{
@@ -636,4 +643,15 @@ std::string FrequencyDataHarvester::Clean(const std::string& s)
 	}), cleanString.end());
 
 	return cleanString;
+}
+
+bool FrequencyDataHarvester::DataIsEmpty(const std::array<FrequencyData, 12>& frequencyData)
+{
+	for (const auto& month : frequencyData)
+	{
+		if (month.frequencies.size() > 0)
+			return false;
+	}
+
+	return true;
 }
