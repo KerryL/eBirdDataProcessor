@@ -1136,7 +1136,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& fr
 	});
 
 	for (const auto& location : newSightingProbability)
-		std::cout << location.species << " : " << location.frequency << "%\n";
+		std::cout << location.species << " : " << location.frequency * 100.0 << "%\n";
 
 	return true;
 }
@@ -1153,8 +1153,8 @@ double EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileN
 	EliminateObservedSpecies(frequencyData);
 
 	double product(1.0);
-	for (const auto& entry : frequencyData[month])
-		product *= (1.0 - entry.frequency);
+	for (const auto& entry : frequencyData[month - 1])
+		product *= (1.0 - entry.frequency / 100.0);
 
 	return 1.0 - product;
 }
