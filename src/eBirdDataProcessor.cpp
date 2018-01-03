@@ -1146,15 +1146,21 @@ double EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileN
 	assert(month > 0 && month < 13);
 
 	FrequencyDataYear frequencyData;
-	DoubleYear dummy;
-	if (!ParseFrequencyFile(fileName, frequencyData, dummy))
+	DoubleYear checklistCounts;
+	if (!ParseFrequencyFile(fileName, frequencyData, checklistCounts))
 		return -1.0;
 
 	EliminateObservedSpecies(frequencyData);
 
+	const double thresholdFrequency(2.0);// TODO:  Don't hardcode
 	double product(1.0);
 	for (const auto& entry : frequencyData[month - 1])
+	{
+		if (entry.frequency < thresholdFrequency)// Ignore rarities
+			continue;
+
 		product *= (1.0 - entry.frequency / 100.0);
+	}
 
 	return 1.0 - product;
 }
