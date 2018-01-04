@@ -84,7 +84,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	else if (!configFile.GetConfig().findMaxNeedsLocations.empty())
 	{
 		if (!processor.FindBestLocationsForNeededSpecies(
-			configFile.GetConfig().findMaxNeedsLocations, configFile.GetConfig().maxNeedsMonth))
+			configFile.GetConfig().findMaxNeedsLocations, configFile.GetConfig().maxNeedsMonth,
+			configFile.GetConfig().googleMapsAPIKey))
 			return 1;
 	}
 	else if (!configFile.GetConfig().harvestFrequencyData &&

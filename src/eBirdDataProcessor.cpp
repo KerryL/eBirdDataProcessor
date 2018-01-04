@@ -7,6 +7,7 @@
 #include "eBirdDataProcessor.h"
 #include "googleMapsInterface.h"
 #include "bestObservationTimeEstimator.h"
+#include "mapPageGenerator.h"
 
 // System headers (added from https://github.com/tronkko/dirent/ for Windows)
 #ifdef _WIN32
@@ -1107,7 +1108,7 @@ bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
 }
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
-	const unsigned int& month) const
+	const unsigned int& month, const std::string& googleMapsKey) const
 {
 	DIR *dir(opendir(frequencyFileDirectory.c_str()));
 	if (!dir)
@@ -1138,6 +1139,15 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& fr
 	for (const auto& location : newSightingProbability)
 		std::cout << location.species << " : " << location.frequency * 100.0 << "%\n";
 
+	if (!googleMapsKey.empty())
+	{
+		const std::string fileName("bestLocations.html");// TODO:  Don't hardcode
+		if (!WriteBestLocationsViewerPage(fileName, googleMapsKey, newSightingProbability))
+		{
+			std::cerr << "Faild to create Google Maps best locations page\n";
+		}
+	}
+
 	return true;
 }
 
@@ -1152,7 +1162,7 @@ double EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileN
 
 	EliminateObservedSpecies(frequencyData);
 
-	const double thresholdFrequency(2.0);// TODO:  Don't hardcode
+	const double thresholdFrequency(5.0);// TODO:  Don't hardcode
 	double product(1.0);
 	for (const auto& entry : frequencyData[month - 1])
 	{
@@ -1163,4 +1173,10 @@ double EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileN
 	}
 
 	return 1.0 - product;
+}
+
+bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFileName,
+	const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities)
+{
+	
 }
