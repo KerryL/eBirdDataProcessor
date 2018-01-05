@@ -7,6 +7,17 @@
 #include "eBirdDataProcessor.h"
 #include "googleMapsInterface.h"
 #include "bestObservationTimeEstimator.h"
+#include "mapPageGenerator.h"
+
+// System headers (added from https://github.com/tronkko/dirent/ for Windows)
+#ifdef _WIN32
+#pragma warning(push)
+#pragma warning(disable:4505)
+#endif
+#include <dirent.h>
+#ifdef _WIN32
+#pragma warning(pop)
+#endif
 
 // Standard C++ headers
 #include <fstream>
@@ -737,6 +748,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 
 	EBirdInterface e;
 	const std::string region(e.GetRegionCode(country, state, county));
+	std::set<std::string> recentSpecies;
 
 	typedef std::vector<std::string> SpeciesList;
 	std::map<EBirdInterface::HotspotInfo, SpeciesList, HotspotInfoComparer> hotspotInfo;
@@ -747,8 +759,11 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 		for (const auto& spot : hotspots)
 		{
 			hotspotInfo[spot].push_back(species);
+			recentSpecies.emplace(species);
 		}
 	}
+
+	std::cout << recentSpecies.size() << " needed species have been observed within the last " << recentPeriod << " days" << std::endl;
 
 	typedef std::pair<SpeciesList, EBirdInterface::HotspotInfo> SpeciesHotspotPair;
 	std::vector<SpeciesHotspotPair> sortedHotspots;
@@ -1090,4 +1105,78 @@ bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
 	}
 
 	return true;
+}
+
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
+	const unsigned int& month, const std::string& googleMapsKey) const
+{
+	DIR *dir(opendir(frequencyFileDirectory.c_str()));
+	if (!dir)
+	{
+		std::cerr << "Failed to open directory '" << frequencyFileDirectory << "'\n";
+		return false;
+	}
+
+	std::vector<FrequencyInfo> newSightingProbability;// frequency is probability of seeing new species and species is file name of frequency data file
+
+	struct dirent *ent;
+	while (ent = readdir(dir), ent)
+	{
+		if (std::string(ent->d_name).compare(".") == 0 ||
+			std::string(ent->d_name).compare("..") == 0)
+			continue;
+
+		newSightingProbability.push_back(FrequencyInfo(ent->d_name,
+			ComputeNewSpeciesProbability(frequencyFileDirectory + ent->d_name, month)));
+	}
+	closedir(dir);
+
+	std::sort(newSightingProbability.begin(), newSightingProbability.end(), [](const FrequencyInfo& a, const FrequencyInfo& b)
+	{
+		return a.frequency > b.frequency;
+	});
+
+	for (const auto& location : newSightingProbability)
+		std::cout << location.species << " : " << location.frequency * 100.0 << "%\n";
+
+	if (!googleMapsKey.empty())
+	{
+		const std::string fileName("bestLocations.html");// TODO:  Don't hardcode
+		if (!WriteBestLocationsViewerPage(fileName, googleMapsKey, newSightingProbability))
+		{
+			std::cerr << "Faild to create Google Maps best locations page\n";
+		}
+	}
+
+	return true;
+}
+
+double EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileName, const unsigned int& month) const
+{
+	assert(month > 0 && month < 13);
+
+	FrequencyDataYear frequencyData;
+	DoubleYear checklistCounts;
+	if (!ParseFrequencyFile(fileName, frequencyData, checklistCounts))
+		return -1.0;
+
+	EliminateObservedSpecies(frequencyData);
+
+	const double thresholdFrequency(5.0);// TODO:  Don't hardcode
+	double product(1.0);
+	for (const auto& entry : frequencyData[month - 1])
+	{
+		if (entry.frequency < thresholdFrequency)// Ignore rarities
+			continue;
+
+		product *= (1.0 - entry.frequency / 100.0);
+	}
+
+	return 1.0 - product;
+}
+
+bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFileName,
+	const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities)
+{
+	
 }

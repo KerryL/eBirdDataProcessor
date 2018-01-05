@@ -6,6 +6,7 @@
 // Local headers
 #include "frequencyDataHarvester.h"
 #include "eBirdInterface.h"
+#include "usCensusInterface.h"
 #include "email/curlUtilities.h"
 
 // OS headers
@@ -24,7 +25,9 @@
 #include <sstream>
 #include <cassert>
 #include <iostream>
+#include <iomanip>
 #include <fstream>
+#include <cctype>
 
 const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
 const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
@@ -49,6 +52,86 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	const std::string &state, const std::string &county, const std::string &frequencyFileName)
 {
+	if (!DoEBirdLogin())
+		return false;
+
+	std::array<FrequencyData, 12> frequencyData;
+	if (!PullFrequencyData(BuildRegionString(country, state, county), frequencyData))
+		return false;
+
+	return WriteFrequencyDataToFile(frequencyFileName, frequencyData);
+}
+
+bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
+	const std::string &state, const std::string& targetPath, const std::string& censusKey)
+{
+	std::cout << "Harvesting frequency data for " << state << ", " << country << std::endl;
+	std::cout << "Frequency files will be stored in " << targetPath << std::endl;
+
+	if (!DoEBirdLogin())
+		return false;
+
+	assert(country.compare("US") == 0 && "Cannot perform bulk frequency harvesting outside of US");
+
+	unsigned int stateFIPSCode;
+	if (!USCensusInterface::GetStateFIPSCode(state, stateFIPSCode))
+		return false;
+
+	USCensusInterface censusInterface(censusKey);
+	std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
+
+	std::cout << "Beginning harvest for " << countyList.size() << " counties" << std::endl;
+
+	for (const auto& county : countyList)
+	{
+		std::array<FrequencyData, 12> data;
+		if (!PullFrequencyData(BuildRegionString(country, state, county.fipsCode), data))
+			break;
+
+		// Some independent cities (i.e. "Baltimore city") are recognized in census data as "county equivalents,"
+		// but are apparently combined with a neighboring county by eBird.  When this happens, data will be empty,
+		// but we return true to allow processing to continue.
+		if (DataIsEmpty(data))
+			continue;
+
+		if (!WriteFrequencyDataToFile(targetPath + Clean(county.name) + state + "FrequencyData.csv", data))
+			break;
+	}
+
+	return true;
+}
+
+bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
+	std::array<FrequencyData, 12>& frequencyData)
+{
+	unsigned int month;
+	for (month = 1; month <= 12; ++month)
+	{
+		std::string response;
+		if (!DoCURLGet(BuildTargetSpeciesURL(regionString, month, month, ListTimeFrame::Day), response))
+		{
+			std::cerr << "Failed to read target species web page\n";
+			return false;
+		}
+
+		if (ExtractCountyNameFromPage(regionString, response).compare("null") == 0)
+		{
+			std::cerr << "Warning:  Found null county data for region string '" << regionString << "'\n";
+			return true;
+		}
+
+		if (!ExtractFrequencyData(response, frequencyData[month - 1]))
+		{
+			std::cerr << "Failed to parse HTML to extract frequency data\n";
+			return false;
+		}
+	}
+
+	return true;
+}
+
+bool FrequencyDataHarvester::DoEBirdLogin()
+{
 	std::string loginPage;
 	if (!DoCURLGet(eBirdLoginURL, loginPage))
 		return false;
@@ -72,29 +155,6 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 			return false;
 		}
 	}
-
-	const std::string regionString(BuildRegionString(country, state, county));
-	std::array<FrequencyData, 12> frequencyData;
-
-	unsigned int month;
-	for (month = 1; month <= 12; ++month)
-	{
-		std::string response;
-		if (!DoCURLGet(BuildTargetSpeciesURL(regionString, month, month, ListTimeFrame::Day), response))
-		{
-			std::cerr << "Failed to read target species web page\n";
-			return false;
-		}
-
-		if (!ExtractFrequencyData(response, frequencyData[month - 1]))
-		{
-			std::cerr << "Failed to parse HTML to extract frequency data\n";
-			return false;
-		}
-	}
-
-	if (!WriteFrequencyDataToFile(frequencyFileName, frequencyData))
-		return false;
 
 	return true;
 }
@@ -276,6 +336,18 @@ std::string FrequencyDataHarvester::BuildRegionString(const std::string &country
 	return countyCode;
 }
 
+std::string FrequencyDataHarvester::BuildRegionString(const std::string &country, const std::string &state,
+	const unsigned int &county)
+{
+	const std::string countryAndStateCode(BuildRegionString(country, state, std::string()));
+	if (county == 0)
+		return countryAndStateCode;
+
+	std::ostringstream ss;
+	ss << countryAndStateCode << '-' << std::setfill('0') << std::setw(3) << county;
+	return ss.str();
+}
+
 std::string FrequencyDataHarvester::BuildTargetSpeciesURL(const std::string& regionString,
 	const unsigned int& beginMonth, const unsigned int& endMonth, const ListTimeFrame& timeFrame)
 {
@@ -426,6 +498,12 @@ bool FrequencyDataHarvester::ExtractTextBetweenTags(const std::string& htmlData,
 
 bool FrequencyDataHarvester::WriteFrequencyDataToFile(const std::string& fileName, const std::array<FrequencyData, 12>& data)
 {
+	if (CurrentDataMissingSpecies(fileName, data))
+	{
+		std::cerr << "New frequency data is missing species that were previously included.  This function cannot be executed if you have submitted observations for this area to eBird today." << std::endl;
+		return false;
+	}
+
 	const unsigned int maxSpecies([&data]()
 	{
 		unsigned int s(0);
@@ -467,14 +545,112 @@ bool FrequencyDataHarvester::WriteFrequencyDataToFile(const std::string& fileNam
 		for (const auto& m : data)
 		{
 			if (i < m.frequencies.size())
-			{
 				file << m.frequencies[i].species << ',' << m.frequencies[i].frequency << ',';
-			}
 			else
 				file << ",,";
 		}
 
 		file << '\n';
+	}
+
+	return true;
+}
+
+bool FrequencyDataHarvester::CurrentDataMissingSpecies(const std::string& fileName, const std::array<FrequencyData, 12>& data)
+{
+	std::ifstream file(fileName.c_str());
+	if (!file.is_open() || !file.good())
+		return false;// Not an error - file may not exist
+
+	std::array<std::vector<std::string>, 12> oldData;
+
+	std::string line;
+	std::getline(file, line);// skip header rows
+	std::getline(file, line);// skip header rows
+	while (std::getline(file, line))
+	{
+		std::istringstream ss(line);
+		auto it(oldData.begin());
+		std::string token;
+		while (std::getline(ss, token, ','))
+		{
+			if (!token.empty())
+				it->push_back(token);
+
+			std::getline(ss, token, ',');// skip frequency data
+			++it;
+		}
+	}
+
+	unsigned int i;
+	for (i = 0; i < 12; ++i)
+	{
+		for (const auto& species : oldData[i])
+		{
+			bool found(false);
+			for (const auto& s : data[i].frequencies)
+			{
+				if (species.compare(s.species) == 0)
+				{
+					found = true;
+					break;
+				}
+			}
+
+			if (!found)
+				return true;
+		}
+	}
+
+	return false;
+}
+
+std::string FrequencyDataHarvester::ExtractCountyNameFromPage(const std::string& regionString, const std::string& htmlData)
+{
+	const std::string matchStart("<option value=\"" + regionString + "\" selected=\"selected\">");
+	const std::string matchEnd(" County, ");
+
+	std::string countyName;
+	std::string::size_type offset(0);
+	if (!ExtractTextBetweenTags(htmlData, matchStart, matchEnd, countyName, offset))
+		return std::string();
+	
+	return countyName;
+}
+
+// This removes "County", everything after the comma (results are in format "Whatever County, State Name") as well as apostrophes, periods and spaces
+// Two separate checks for "County" and comma because some counties are actually city names (i.e. "Baltimore city")
+std::string FrequencyDataHarvester::Clean(const std::string& s)
+{
+	std::string cleanString(s);
+
+	const auto lastComma(cleanString.find_last_of(','));
+	if (lastComma != std::string::npos)
+		cleanString.erase(cleanString.begin() + lastComma, cleanString.end());
+
+	const auto countyString(cleanString.find(" County"));
+	if (countyString != std::string::npos)
+		cleanString.erase(cleanString.begin() + countyString, cleanString.end());
+
+	cleanString.erase(std::remove_if(cleanString.begin(), cleanString.end(), [](const char& c)
+	{
+		if (std::isspace(c) ||
+			c == '\'' ||
+			c == '.')
+			return true;
+
+		return false;
+	}), cleanString.end());
+
+	return cleanString;
+}
+
+bool FrequencyDataHarvester::DataIsEmpty(const std::array<FrequencyData, 12>& frequencyData)
+{
+	for (const auto& month : frequencyData)
+	{
+		if (month.frequencies.size() > 0)
+			return false;
 	}
 
 	return true;

@@ -56,6 +56,18 @@ public:
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
 		const std::string& mapApiKey) const;
 
+	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
+		const unsigned int& month, const std::string& googleMapsKey) const;
+
+	struct FrequencyInfo
+	{
+		std::string species;
+		double frequency = 0.0;
+
+		FrequencyInfo() = default;
+		FrequencyInfo(const std::string& species, const double& frequency) : species(species), frequency(frequency) {}
+	};
+
 private:
 	static const std::string headerLine;
 
@@ -128,14 +140,6 @@ private:
 
 	static const std::string commaPlaceholder;
 
-	struct FrequencyInfo
-	{
-		std::string species;
-		double frequency = 0.0;
-
-		FrequencyInfo() = default;
-		FrequencyInfo(const std::string& species, const double& frequency) : species(species), frequency(frequency) {}
-	};
 	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
 	typedef std::array<double, 12> DoubleYear;
 
@@ -160,6 +164,11 @@ private:
 	{
 		bool operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const;
 	};
+
+	double ComputeNewSpeciesProbability(const std::string& fileName, const unsigned int& month) const;
+
+	static bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
+		const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities);
 };
 
 template<typename T>

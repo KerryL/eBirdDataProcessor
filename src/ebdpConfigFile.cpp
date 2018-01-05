@@ -6,6 +6,9 @@
 // Local headers
 #include "ebdpConfigFile.h"
 
+// Standard C++ headers
+#include <chrono>
+
 void EBDPConfigFile::BuildConfigItems()
 {
 	AddConfigItem("OBS_DATA_FILE", config.dataFileName);
@@ -37,6 +40,7 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem("CALENDAR", config.generateTargetCalendar);
 	AddConfigItem("HARVEST_FREQUENCY", config.harvestFrequencyData);
+	AddConfigItem("BULD_FREQUENCY_UPDATE", config.bulkFrequencyUpdate);
 	AddConfigItem("TOP_COUNT", config.topBirdCount);
 	AddConfigItem("FREQUENCY_FILE", config.frequencyFileName);
 	AddConfigItem("TARGET_INFO_FILE_NAME", config.targetInfoFileName);
@@ -44,6 +48,10 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem("GOOGLE_MAPS_KEY", config.googleMapsAPIKey);
 	AddConfigItem("HOME_LOCATION", config.homeLocation);
+	AddConfigItem("CENSUS_KEY", config.usCensusAPIKey);
+
+	AddConfigItem("FIND_MAX_NEEDS", config.findMaxNeedsLocations);
+	AddConfigItem("MAX_NEEDS_MONTH", config.maxNeedsMonth);
 }
 
 void EBDPConfigFile::AssignDefaults()
@@ -69,6 +77,11 @@ void EBDPConfigFile::AssignDefaults()
 	config.recentObservationPeriod = 15;
 
 	config.showOnlyPhotoNeeds = false;
+
+	// maxNeedsMonth defaults to current month
+	const time_t now(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+	struct tm localTime(*localtime(&now));
+	config.maxNeedsMonth = localTime.tm_mon + 1;
 }
 
 bool EBDPConfigFile::ConfigIsOK()
@@ -130,6 +143,24 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 	}
 
+	if (!config.bulkFrequencyUpdate.empty() && config.harvestFrequencyData)
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.bulkFrequencyUpdate) << " and " << GetKey(config.harvestFrequencyData) << '\n';
+		configurationOK = false;
+	}
+
+	if (!config.bulkFrequencyUpdate.empty() && config.countryFilter.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
+		configurationOK = false;
+	}
+
+	if (!config.bulkFrequencyUpdate.empty() && config.stateFilter.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.stateFilter) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
+		configurationOK = false;
+	}
+
 	if (config.generateRarityScores && config.frequencyFileName.empty())
 	{
 		std::cerr << "Must specify " << GetKey(config.frequencyFileName) << " when using " << GetKey(config.generateRarityScores) << '\n';
@@ -163,6 +194,12 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (config.showOnlyPhotoNeeds && config.photoFileName.empty())
 	{
 		std::cerr << "Must specify " << GetKey(config.photoFileName) << " when using " << GetKey(config.showOnlyPhotoNeeds) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.maxNeedsMonth < 1 || config.maxNeedsMonth > 12)
+	{
+		std::cerr << GetKey(config.maxNeedsMonth) << " must be between 1 and 12 inclusive\n";
 		configurationOK = false;
 	}
 

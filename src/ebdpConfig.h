@@ -16,6 +16,8 @@ struct EBDPConfig
 	std::string countyFilter;
 	std::string locationFilter;
 
+	std::string bulkFrequencyUpdate;
+
 	enum class ListType : int
 	{
 		Life = 0,
@@ -71,6 +73,10 @@ struct EBDPConfig
 
 	std::string googleMapsAPIKey;
 	std::string homeLocation;
+	std::string usCensusAPIKey;
+
+	std::string findMaxNeedsLocations;
+	unsigned int maxNeedsMonth;
 };
 
 #endif// EBDP_CONFIG_H_

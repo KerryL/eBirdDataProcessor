@@ -81,7 +81,16 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (configFile.GetConfig().generateRarityScores)
 		processor.GenerateRarityScores(configFile.GetConfig().frequencyFileName,
 			configFile.GetConfig().listType);
-	else if (!configFile.GetConfig().harvestFrequencyData && !configFile.GetConfig().generateTargetCalendar)
+	else if (!configFile.GetConfig().findMaxNeedsLocations.empty())
+	{
+		if (!processor.FindBestLocationsForNeededSpecies(
+			configFile.GetConfig().findMaxNeedsLocations, configFile.GetConfig().maxNeedsMonth,
+			configFile.GetConfig().googleMapsAPIKey))
+			return 1;
+	}
+	else if (!configFile.GetConfig().harvestFrequencyData &&
+		!configFile.GetConfig().generateTargetCalendar &&
+		configFile.GetConfig().bulkFrequencyUpdate.empty())
 	{
 		processor.SortData(configFile.GetConfig().primarySort, configFile.GetConfig().secondarySort);
 
@@ -103,33 +112,46 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	curl_global_init(CURL_GLOBAL_DEFAULT);
 
-	if (configFile.GetConfig().harvestFrequencyData)
+	if (!configFile.GetConfig().bulkFrequencyUpdate.empty())
 	{
 		FrequencyDataHarvester harvester;
-		if (!harvester.GenerateFrequencyFile(configFile.GetConfig().countryFilter,
-			configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
-			configFile.GetConfig().frequencyFileName))
+		if (!harvester.DoBulkFrequencyHarvest(configFile.GetConfig().countryFilter,
+			configFile.GetConfig().stateFilter, configFile.GetConfig().bulkFrequencyUpdate, configFile.GetConfig().usCensusAPIKey))
 		{
-			std::cerr << "Failed to generate frequency file\n";
 			curl_global_cleanup();
 			return 1;
 		}
 	}
-
-	if (configFile.GetConfig().generateTargetCalendar)
+	else
 	{
-		if (configFile.GetConfig().topBirdCount == 0)
+		if (configFile.GetConfig().harvestFrequencyData)
 		{
-			std::cerr << "Attempting to generate target calendar, but top bird count == 0\n";
-			curl_global_cleanup();
-			return 1;
+			FrequencyDataHarvester harvester;
+			if (!harvester.GenerateFrequencyFile(configFile.GetConfig().countryFilter,
+				configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
+				configFile.GetConfig().frequencyFileName))
+			{
+				std::cerr << "Failed to generate frequency file\n";
+				curl_global_cleanup();
+				return 1;
+			}
 		}
 
-		processor.GenerateTargetCalendar(configFile.GetConfig().topBirdCount,
-			configFile.GetConfig().outputFileName, configFile.GetConfig().frequencyFileName,
-			configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
-			configFile.GetConfig().recentObservationPeriod,
-			configFile.GetConfig().targetInfoFileName, configFile.GetConfig().homeLocation, configFile.GetConfig().googleMapsAPIKey);
+		if (configFile.GetConfig().generateTargetCalendar)
+		{
+			if (configFile.GetConfig().topBirdCount == 0)
+			{
+				std::cerr << "Attempting to generate target calendar, but top bird count == 0\n";
+				curl_global_cleanup();
+				return 1;
+			}
+
+			processor.GenerateTargetCalendar(configFile.GetConfig().topBirdCount,
+				configFile.GetConfig().outputFileName, configFile.GetConfig().frequencyFileName,
+				configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
+				configFile.GetConfig().recentObservationPeriod,
+				configFile.GetConfig().targetInfoFileName, configFile.GetConfig().homeLocation, configFile.GetConfig().googleMapsAPIKey);
+		}
 	}
 
 	curl_global_cleanup();
