@@ -74,27 +74,26 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
     	<< "          mapTypeId: 'roadmap'\n"
     	<< "        });\n"
 		<< '\n'
-    	<< "        var iconBase = 'https://maps.google.com/mapfiles/kml/shapes/';\n"
-    	<< "        var icons = {\n"
-    	<< "          parking: {\n"
-    	<< "            icon: iconBase + 'parking_lot_maps.png'\n"
-    	<< "          },\n"
-    	<< "          library: {\n"
-    	<< "            icon: iconBase + 'library_maps.png'\n"
-    	<< "          },\n"
-    	<< "          info: {\n"
-    	<< "            icon: iconBase + 'info-i_maps.png'\n"
-    	<< "          }\n"
-    	<< "        };\n"
+		<< "        map.fitBounds({north:" << northeastLatitude << ", east:" << northeastLongitude
+			<< ", south:" << southwestLatitude << ", west:" << southwestLongitude << "});\n"
+		<< '\n'
 
 		<< markerLocations.str()// filled above
 
 		<< "        features.forEach(function(feature) {\n"
 		<< "          var marker = new google.maps.Marker({\n"
         << "            position: feature.position,\n"
-		<< "            icon: icons[feature.type].icon,\n"
+		<< "            title: feature.name + ' (' + feature.info + ')',\n"
 		<< "            map: map\n"
         << "          });\n"
+		<< '\n'
+		/*<< "          var infoWindow = new google.maps.InfoWindow({\n"
+		<< "            content: feature.info\n"
+		<< "          });"
+		<< '\n'
+		<< "          marker.addListener('click', function() {\n"
+		<< "            infoWindow.open(map, marker);\n"
+		<< "          });\n"*/// TODO:  Possibly list most likely species in this window?
         << "        });\n"
 		<< "      }\n"
 		<< "    </script>\n"
@@ -142,20 +141,22 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 			f << ',';
 
 		if (newNELatitude > northeastLatitude)
-			newNELatitude = northeastLatitude;
+			northeastLatitude = newNELatitude;
 		if (newNELongitude > northeastLongitude)
-			newNELongitude = northeastLongitude;
+			northeastLongitude = newNELongitude;
 		if (newSWLatitude < southwestLatitude)
-			newSWLatitude = southwestLatitude;
+			southwestLatitude = newSWLatitude;
 		if (newSWLongitude < southwestLongitude)
-			newSWLongitude = southwestLongitude;
+			southwestLongitude = newSWLongitude;
 
 		f << '\n';
 
 		f << "          {\n"
 			<< "            position: new google.maps.LatLng(" << newLatitude << ',' << newLongitude << "),\n"
-			<< "            type: 'info'\n"// TODO:  Type should be a function of entry.frequency (to pick the color of the icon)
-			<< "        }";
+			<< "            probability: " << entry.frequency << ",\n"
+			<< "            name: '" << county << ", " << state << "',\n"
+			<< "            info: '" << entry.frequency * 100 << "%'\n"
+			<< "          }";
 	}
 
 	f << "\n        ];\n";
