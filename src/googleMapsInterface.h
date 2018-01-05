@@ -86,8 +86,15 @@ private:
 	static const std::string northeastKey;
 	static const std::string southwestKey;
 	static const std::string locationKey;
+	static const std::string locationTypeKey;
+	static const std::string viewportKey;
 	static const std::string latitudeKey;
 	static const std::string longitudeKey;
+	static const std::string addressComponentsKey;
+	static const std::string longNameKey;
+	static const std::string shortNameKey;
+	static const std::string typesKey;
+	static const std::string placeIDKey;
 
 	std::string BuildRequestString(const std::string& origin, const std::string& destination,
 		const TravelMode& mode, const bool& alternativeRoutes, const Units& units) const;
@@ -97,7 +104,7 @@ private:
 	static std::string GetModeString(const TravelMode& mode);
 	static std::string GetUnitString(const Units& units);
 
-	bool ProcessResponse(const std::string& response, std::vector<Directions>& directions) const;
+	bool ProcessDirectionsResponse(const std::string& response, std::vector<Directions>& directions) const;
 	bool ProcessRoute(cJSON* route, Directions& d) const;
 	bool ProcessLeg(cJSON* leg, Leg& l) const;
 	bool ProcessValueTextItem(cJSON* item, DistanceInfo& info) const;
@@ -134,7 +141,11 @@ private:
 		std::vector<std::string> types;
 	};
 
-	bool ProcessGeocodeResponse(const std::string& response, GeocodeInfo& info) const;
+	bool ProcessGeocodeResponse(const std::string& response, std::vector<GeocodeInfo>& info) const;
+	bool ProcessAddressComponents(cJSON* results, std::vector<GeocodeInfo::ComponentInfo>& components) const;
+	bool ProcessGeometry(cJSON* results, GeocodeInfo& info) const;
+	bool ReadLatLongPair(cJSON* json, GeocodeInfo::LatLongPair& latLong) const;
+	bool ReadBoundsPair(cJSON* json, GeocodeInfo::LatLongPair& northeast, GeocodeInfo::LatLongPair& southwest) const;
 };
 
 #endif// GOOGLE_MAPS_INTERFACE_H_

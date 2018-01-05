@@ -8,7 +8,6 @@
 #include "eBirdDataProcessor.h"
 #include "ebdpConfigFile.h"
 #include "frequencyDataHarvester.h"
-#include "email/oAuth2Interface.h"
 
 // cURL headers
 #include <curl/curl.h>
