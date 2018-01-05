@@ -10,7 +10,9 @@
 #include <cassert>
 #include <iostream>
 
-const std::string GoogleMapsInterface::apiRoot("https://maps.googleapis.com/maps/api/directions/json");
+const std::string GoogleMapsInterface::apiRoot("https://maps.googleapis.com/maps/api/");
+const std::string GoogleMapsInterface::directionsEndPoint("directions/json");
+const std::string GoogleMapsInterface::geocodeEndPoint("geocode/json");
 const std::string GoogleMapsInterface::statusKey("status");
 const std::string GoogleMapsInterface::okStatus("OK");
 const std::string GoogleMapsInterface::errorMessageKey("error_message");
@@ -23,6 +25,15 @@ const std::string GoogleMapsInterface::distanceKey("distance");
 const std::string GoogleMapsInterface::durationKey("duration");
 const std::string GoogleMapsInterface::valueKey("value");
 const std::string GoogleMapsInterface::textKey("text");
+const std::string GoogleMapsInterface::resultsKey("results");
+const std::string GoogleMapsInterface::formattedAddressKey("formatted_address");
+const std::string GoogleMapsInterface::geometryKey("geometry");
+const std::string GoogleMapsInterface::boundsKey("bounds");
+const std::string GoogleMapsInterface::northeastKey("northeast");
+const std::string GoogleMapsInterface::southwestKey("southwest");
+const std::string GoogleMapsInterface::locationKey("location");
+const std::string GoogleMapsInterface::latitudeKey("lat");
+const std::string GoogleMapsInterface::longitudeKey("lng");
 
 GoogleMapsInterface::GoogleMapsInterface(const std::string& userAgent, const std::string& apiKey) : JSONInterface(userAgent), apiKey(apiKey)
 {
@@ -31,7 +42,8 @@ GoogleMapsInterface::GoogleMapsInterface(const std::string& userAgent, const std
 GoogleMapsInterface::Directions GoogleMapsInterface::GetDirections(const std::string& from,
 	const std::string& to, const TravelMode& mode, const Units& units) const
 {
-	const std::string requestURL(apiRoot + BuildRequestString(from, to, mode, false, units));
+	const std::string requestURL(apiRoot + directionsEndPoint
+		+ BuildRequestString(from, to, mode, false, units));
 	std::string response;
 	if (!DoCURLGet(requestURL, response))
 	{
@@ -51,7 +63,8 @@ GoogleMapsInterface::Directions GoogleMapsInterface::GetDirections(const std::st
 std::vector<GoogleMapsInterface::Directions> GoogleMapsInterface::GetMultipleDirections(const std::string& from,
 	const std::string& to, const TravelMode& mode, const Units& units) const
 {
-	const std::string requestURL(apiRoot + BuildRequestString(from, to, mode, true, units));
+	const std::string requestURL(apiRoot + directionsEndPoint
+		+ BuildRequestString(from, to, mode, true, units));
 	std::string response;
 	if (!DoCURLGet(requestURL, response))
 	{
@@ -292,3 +305,70 @@ std::string GoogleMapsInterface::SanitizeAddress(const std::string& s)
 
 	return address;
 }
+
+bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
+	std::string& formattedAddress, double& latitude, double& longitude,
+	double& northeastLatitude, double& northeastLongitude,
+	double& southwestLatitude, double& southwestLongitude) const
+{
+	const std::string requestURL(apiRoot + geocodeEndPoint
+		+ "?address=" + SanitizeAddress(searchString));
+	std::string response;
+	if (!DoCURLGet(requestURL, response))
+	{
+		std::cerr << "Failed to process GET request\n";
+		return false;
+	}
+
+	cJSON *root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		std::cerr << "Failed to parse response (GoogleMapsInterface::LookupCoordinates)\n";
+		std::cerr << response << std::endl;
+		return false;
+	}
+
+	std::string status;
+	if (!ReadJSON(root, statusKey, status))
+	{
+		std::cerr << "Failed to read status information\n";
+		return false;
+	}
+
+	if (status.compare(okStatus) != 0)
+	{
+		std::cerr << "Geocode request response is not OK.  Status = " << status << '\n';
+
+		std::string errorMessage;
+		if (ReadJSON(root, errorMessageKey, errorMessage))
+			std::cerr << errorMessage << '\n';
+
+		return false;
+	}
+
+	/*if (!ReadJSON(route, summaryKey, d.summary))
+	{
+		std::cerr << "Failed to read summary\n";
+		return false;
+	}
+
+resultsKey("results");
+const std::string GoogleMapsInterface::formattedAddressKey("formatted_address");
+const std::string GoogleMapsInterface::geometryKey("geometry");
+const std::string GoogleMapsInterface::boundsKey("bounds");
+const std::string GoogleMapsInterface::northeastKey("northeast");
+const std::string GoogleMapsInterface::southwestKey("southwest");
+const std::string GoogleMapsInterface::locationKey("location");
+const std::string GoogleMapsInterface::latitudeKey("lat");
+const std::string GoogleMapsInterface::longitudeKey("lng");*/
+
+	return true;
+}
+
+bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
+	GeocodeInfo& info) const
+{
+	// TODO:  Try:  https://maps.googleapis.com/maps/api/geocode/json?address=StMarys+MD
+	return false;
+}
+

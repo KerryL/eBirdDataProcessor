@@ -5,6 +5,10 @@
 
 // Local headers
 #include "mapPageGenerator.h"
+#include "googleMapsInterface.h"
+
+// Standard C++ headers
+#include <sstream>
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey,
@@ -47,6 +51,17 @@ void MapPageGenerator::WriteHeadSection(std::ofstream& f)
 void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMapsKey,
 	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities)
 {
+	std::ostringstream markerLocations;
+	double northeastLatitude, northeastLongitude;
+	double southwestLatitude, southwestLongitude;
+
+	WriteMarkerLocations(markerLocations, observationProbabilities,
+		northeastLatitude, northeastLongitude, southwestLatitude, southwestLongitude,
+		googleMapsKey);
+
+	const double centerLatitude(0.5 * (northeastLatitude + southwestLatitude));
+	const double centerLongitude(0.5 * (northeastLongitude + southwestLongitude));
+
 	f << "  <body>\n"
 		<< "    <div id=\"map\"></div>\n"
     	<< "    <script>\n"
@@ -54,7 +69,8 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
     	<< "      function initMap() {\n"
     	<< "        map = new google.maps.Map(document.getElementById('map'), {\n"
     	<< "          zoom: 16,\n"
-    	<< "          center: new google.maps.LatLng(-33.91722, 151.23064),\n"// TODO:  Compute proper center location
+    	<< "          center: new google.maps.LatLng(" << centerLatitude 
+			<< ',' << centerLongitude << "),\n"
     	<< "          mapTypeId: 'roadmap'\n"
     	<< "        });\n"
 		<< '\n'
@@ -69,11 +85,11 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
     	<< "          info: {\n"
     	<< "            icon: iconBase + 'info-i_maps.png'\n"
     	<< "          }\n"
-    	<< "        };\n";
+    	<< "        };\n"
 
-	WriteMarkerLocations(f, observationProbabilities);
+		<< markerLocations.str()// filled above
 
-	f << "        features.forEach(function(feature) {\n"
+		<< "        features.forEach(function(feature) {\n"
 		<< "          var marker = new google.maps.Marker({\n"
         << "            position: feature.position,\n"
 		<< "            icon: icons[feature.type].icon,\n"
@@ -88,8 +104,10 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 		<< "</html>";
 }
 
-void MapPageGenerator::WriteMarkerLocations(std::ofstream& f,
-	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities)
+void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
+	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
+	double& northeastLatitude, double& northeastLongitude,
+	double& southwestLatitude, double& southwestLongitude, const std::string& googleMapsKey)
 {
 	f << "        var features = [";
 
@@ -103,17 +121,39 @@ void MapPageGenerator::WriteMarkerLocations(std::ofstream& f,
 		if (!GetCountyNameFromFileName(entry.species, county))
 			continue;
 
-		double latitude, longitude;
-		if (!GetLatitudeAndLongitudeFromCountyAndState(state, county, latitude, longitude))
+		double newLatitude, newLongitude;
+		double newNELatitude, newNELongitude;
+		double newSWLatitude, newSWLongitude;
+		if (!GetLatitudeAndLongitudeFromCountyAndState(state, county,
+			newLatitude, newLongitude, newNELatitude,
+			newNELongitude, newSWLatitude, newSWLongitude, googleMapsKey))
 			continue;
 
-		if (!first)
+		if (first)
+		{
+			first = false;
+
+			northeastLatitude = newLatitude;
+			northeastLongitude = newLongitude;
+			southwestLatitude = newLatitude;
+			southwestLongitude = newLongitude;
+		}
+		else
 			f << ',';
-		first = false;
+
+		if (newNELatitude > northeastLatitude)
+			newNELatitude = northeastLatitude;
+		if (newNELongitude > northeastLongitude)
+			newNELongitude = northeastLongitude;
+		if (newSWLatitude < southwestLatitude)
+			newSWLatitude = southwestLatitude;
+		if (newSWLongitude < southwestLongitude)
+			newSWLongitude = southwestLongitude;
+
 		f << '\n';
 
 		f << "          {\n"
-			<< "            position: new google.maps.LatLng(" << latitude << ',' << longitude << "),\n"
+			<< "            position: new google.maps.LatLng(" << newLatitude << ',' << newLongitude << "),\n"
 			<< "            type: 'info'\n"// TODO:  Type should be a function of entry.frequency (to pick the color of the icon)
 			<< "        }";
 	}
@@ -122,17 +162,48 @@ void MapPageGenerator::WriteMarkerLocations(std::ofstream& f,
 }
 
 bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
-	const std::string& county, double& latitude, double& longitude)
+	const std::string& county, double& latitude, double& longitude,
+	double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
+	const std::string& googleMapsKey)
 {
-	// TODO:  Implement
+	GoogleMapsInterface gMap("County Lookup Tool", googleMapsKey);
+	std::string formattedAddress;
+	if (!gMap.LookupCoordinates(county + " " + state, formattedAddress,
+		latitude, longitude, neLatitude, neLongitude, swLatitude, swLongitude))
+		return false;
+
+	// TODO:  Check address string to make sure its a good match
+
+	return true;
 }
 
 bool MapPageGenerator::GetStateAbbreviationFromFileName(const std::string& fileName, std::string& state)
 {
-	// TODO:  Implement
+	const std::string searchString("FrequencyData.csv");
+	const std::string::size_type position(fileName.find(searchString));
+	if (position == std::string::npos || position < 2)
+	{
+		std::cerr << "Failed to extract state abbreviation from '" << fileName << "'\n";
+		return false;
+	}
+
+	state = fileName.substr(position - 2, 2);
+
+	return true;
 }
 
 bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, std::string& county)
 {
-	// TODO:  Implement
+	const std::string searchString("FrequencyData.csv");
+	const std::string::size_type position(fileName.find(searchString));
+	if (position == std::string::npos || position < 3)
+	{
+		std::cerr << "Failed to extract county name from '" << fileName << "'\n";
+		return false;
+	}
+
+	county = fileName.substr(0, position - 2);
+
+	return true;
 }
+

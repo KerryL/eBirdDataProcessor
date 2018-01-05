@@ -28,6 +28,7 @@
 #include <iomanip>
 #include <fstream>
 #include <cctype>
+#include <algorithm>
 
 const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
 const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");

@@ -1178,5 +1178,6 @@ double EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileN
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities)
 {
-	
+	return MapPageGenerator::WriteBestLocationsViewerPage(htmlFileName,
+		googleMapsKey, observationProbabilities);
 }

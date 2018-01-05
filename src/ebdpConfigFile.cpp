@@ -125,11 +125,11 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (!config.googleMapsAPIKey.empty() && config.homeLocation.empty())
+/*	if (!config.googleMapsAPIKey.empty() && config.homeLocation.empty())
 	{
 		std::cerr << "Must specify " << GetKey(config.homeLocation) << " when using " << GetKey(config.googleMapsAPIKey) << '\n';
 		configurationOK = false;
-	}
+	}*/
 
 	if (config.recentObservationPeriod < 1 || config.recentObservationPeriod > 30)
 	{

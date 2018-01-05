@@ -56,10 +56,17 @@ public:
 	std::vector<Directions> GetMultipleDirections(const std::string& from, const std::string& to,
 		const TravelMode& mode = TravelMode::Driving, const Units& units = Units::Imperial) const;
 
+	bool LookupCoordinates(const std::string& searchString, std::string& formattedAddress,
+		double& latitude, double& longitude,
+		double& northeastLatitude, double& northeastLongitude,
+		double& southwestLatitude, double& southwestLongitude) const;
+
 private:
 	const std::string apiKey;
 
 	static const std::string apiRoot;
+	static const std::string directionsEndPoint;
+	static const std::string geocodeEndPoint;
 	static const std::string statusKey;
 	static const std::string okStatus;
 	static const std::string errorMessageKey;
@@ -72,6 +79,15 @@ private:
 	static const std::string durationKey;
 	static const std::string valueKey;
 	static const std::string textKey;
+	static const std::string resultsKey;
+	static const std::string formattedAddressKey;
+	static const std::string geometryKey;
+	static const std::string boundsKey;
+	static const std::string northeastKey;
+	static const std::string southwestKey;
+	static const std::string locationKey;
+	static const std::string latitudeKey;
+	static const std::string longitudeKey;
 
 	std::string BuildRequestString(const std::string& origin, const std::string& destination,
 		const TravelMode& mode, const bool& alternativeRoutes, const Units& units) const;
@@ -87,6 +103,38 @@ private:
 	bool ProcessValueTextItem(cJSON* item, DistanceInfo& info) const;
 
 	static std::string SanitizeAddress(const std::string& s);
+
+	struct GeocodeInfo
+	{
+		struct ComponentInfo
+		{
+			std::string longName;
+			std::string shortName;
+			std::vector<std::string> types;
+		};
+
+		std::vector<ComponentInfo> addressComponents;
+		std::string formattedAddress;
+
+		struct LatLongPair
+		{
+			double latitude;
+			double longitude;
+		};
+
+		LatLongPair northeastBound;
+		LatLongPair southwestBound;
+		LatLongPair location;
+		std::string locationType;
+
+		LatLongPair northeastViewport;
+		LatLongPair southwestViewport;
+
+		std::string placeID;
+		std::vector<std::string> types;
+	};
+
+	bool ProcessGeocodeResponse(const std::string& response, GeocodeInfo& info) const;
 };
 
 #endif// GOOGLE_MAPS_INTERFACE_H_
