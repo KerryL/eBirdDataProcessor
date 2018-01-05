@@ -85,6 +85,7 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 
 	for (const auto& county : countyList)
 	{
+		std::cout << county.name << " (FIPS = " << county.fipsCode << ")..." << std::endl;
 		std::array<FrequencyData, 12> data;
 		if (!PullFrequencyData(BuildRegionString(country, state, county.fipsCode), data))
 			break;

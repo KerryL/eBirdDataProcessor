@@ -83,6 +83,8 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 		<< "        features.forEach(function(feature) {\n"
 		<< "          var marker = new google.maps.Marker({\n"
         << "            position: feature.position,\n"
+		// title is "hover text"
+		// label puts text inside marker (so more than one character overflows)
 		<< "            title: feature.name + ' (' + feature.info + ')',\n"
 		<< "            map: map\n"
         << "          });\n"
@@ -95,6 +97,30 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 		<< "            infoWindow.open(map, marker);\n"
 		<< "          });\n"*/// TODO:  Possibly list most likely species in this window?
         << "        });\n"
+		<< '\n'
+		<< "        var countyLayer = new google.maps.FusionTablesLayer({\n"
+        << "          query: {\n"
+        << "            select: 'geometry',\n"
+        << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa'\n"// hash for US county boundaries fusion table
+        << "          },\n"
+        << "          styles: [{\n"
+        << "            polygonOptions: {\n"
+        << "              fillColor: '#00FF00',\n"
+        << "              fillOpacity: 0.3\n"
+        << "            }\n"
+        /*<< "          /*}, {
+        << "            where: 'birds > 300',
+        << "            polygonOptions: {
+        << "              fillColor: '#0000FF'
+        << "            }
+        << "          }, {
+        << "            where: 'population > 5',
+        << "            polygonOptions: {
+        << "              fillOpacity: 1.0
+        << "            }*/
+        << "          }]\n"
+        << "        });\n"
+		<< "        countyLayer.setMap(map);\n"
 		<< "      }\n"
 		<< "    </script>\n"
 		<< "    <script async defer src=\"https://maps.googleapis.com/maps/api/js?key=" << googleMapsKey << "&callback=initMap\">\n"
@@ -119,6 +145,7 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 
 		if (!GetCountyNameFromFileName(entry.species, county))
 			continue;
+		county += " County";
 
 		double newLatitude, newLongitude;
 		double newNELatitude, newNELongitude;
