@@ -102,6 +102,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
         << "          query: {\n"
         << "            select: 'geometry',\n"
         << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa'\n"// hash for US county boundaries fusion table
+		// TODO:  where state matches one of the ones we have data for?  Or state and county?
         << "          },\n"
         << "          styles: [{\n"
         << "            polygonOptions: {\n"
