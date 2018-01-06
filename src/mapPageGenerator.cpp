@@ -54,10 +54,11 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 	std::ostringstream markerLocations;
 	double northeastLatitude, northeastLongitude;
 	double southwestLatitude, southwestLongitude;
+	std::vector<std::string> stateCountyList;
 
 	WriteMarkerLocations(markerLocations, observationProbabilities,
 		northeastLatitude, northeastLongitude, southwestLatitude, southwestLongitude,
-		googleMapsKey);
+		stateCountyList, googleMapsKey);
 
 	const double centerLatitude(0.5 * (northeastLatitude + southwestLatitude));
 	const double centerLongitude(0.5 * (northeastLongitude + southwestLongitude));
@@ -101,15 +102,27 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 		<< "        var countyLayer = new google.maps.FusionTablesLayer({\n"
         << "          query: {\n"
         << "            select: 'geometry',\n"
-        << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa'\n"// hash for US county boundaries fusion table
-		// TODO:  where state matches one of the ones we have data for?  Or state and county?
+        << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa',\n"// hash for US county boundaries fusion table
+		<< "            where: \"'State-County' IN (";
+
+		bool needComma(false);
+		for (const auto& stateCounty : stateCountyList)
+		{
+			if (needComma)
+				f << ", ";
+			needComma = true;
+			f << '\'' << CleanString(stateCounty) << '\'';
+		}
+
+		f << ")\"\n"
         << "          },\n"
         << "          styles: [{\n"
         << "            polygonOptions: {\n"
         << "              fillColor: '#00FF00',\n"
-        << "              fillOpacity: 0.3\n"
+        << "              fillOpacity: 0.3,\n"
+		<< "              strokeColor: '#FFFFFF'\n"
         << "            }\n"
-        /*<< "          /*}, {
+        /*<< "          }, {
         << "            where: 'birds > 300',
         << "            polygonOptions: {
         << "              fillColor: '#0000FF'
@@ -133,7 +146,8 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
-	double& southwestLatitude, double& southwestLongitude, const std::string& googleMapsKey)
+	double& southwestLatitude, double& southwestLongitude,
+	std::vector<std::string>& stateCountyList, const std::string& googleMapsKey)
 {
 	f << "        var features = [";
 
@@ -146,15 +160,40 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 
 		if (!GetCountyNameFromFileName(entry.species, county))
 			continue;
-		county += " County";
 
 		double newLatitude, newLongitude;
 		double newNELatitude, newNELongitude;
 		double newSWLatitude, newSWLongitude;
-		if (!GetLatitudeAndLongitudeFromCountyAndState(state, county,
+		std::string geographicName;
+		if (!GetLatitudeAndLongitudeFromCountyAndState(state, county + " County",
 			newLatitude, newLongitude, newNELatitude,
-			newNELongitude, newSWLatitude, newSWLongitude, googleMapsKey))
+			newNELongitude, newSWLatitude, newSWLongitude, geographicName, googleMapsKey))
 			continue;
+
+		const std::string endString(" County, ");
+		std::string::size_type endPosition(std::min(
+			geographicName.find(endString), geographicName.find(',')));
+		if (endPosition == std::string::npos)
+		{
+			std::cerr << "Warning:  Failed to extract county name from '" << geographicName << "'\n";
+
+			// TODO:  Move this bit outside - when we need to include this logic, it's not
+			// because the search failed, it's because the WHERE with fusion table data
+			// didn't include all of the desired results (which we cannot check for)
+			const std::string::size_type saintStart(geographicName.find("St "));
+			if (saintStart != std::string::npos)
+			{
+				geographicName.insert(saintStart + 2, ".");
+				stateCountyList.push_back(state + "-" + geographicName.substr(0, endPosition + 1));
+			}
+		}
+		else
+			stateCountyList.push_back(state + "-" + geographicName.substr(0, endPosition));
+
+		county = geographicName.substr(0, geographicName.find(','));// TODO:  Make robust
+		// Also, problems with things like "Brooklyn" vs. "King's County".  Both names
+		// are returned from the maps search, but we need to be able to determine which
+		// one to use
 
 		if (first)
 		{
@@ -182,7 +221,7 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 		f << "          {\n"
 			<< "            position: new google.maps.LatLng(" << newLatitude << ',' << newLongitude << "),\n"
 			<< "            probability: " << entry.frequency << ",\n"
-			<< "            name: '" << county << ", " << state << "',\n"
+			<< "            name: '" << CleanString(county) << ", " << state << "',\n"
 			<< "            info: '" << entry.frequency * 100 << "%'\n"
 			<< "          }";
 	}
@@ -193,11 +232,10 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 	const std::string& county, double& latitude, double& longitude,
 	double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
-	const std::string& googleMapsKey)
+	std::string& geographicName, const std::string& googleMapsKey)
 {
 	GoogleMapsInterface gMap("County Lookup Tool", googleMapsKey);
-	std::string formattedAddress;
-	if (!gMap.LookupCoordinates(county + " " + state, formattedAddress,
+	if (!gMap.LookupCoordinates(county + " " + state, geographicName,
 		latitude, longitude, neLatitude, neLongitude, swLatitude, swLongitude))
 		return false;
 
@@ -234,5 +272,20 @@ bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, st
 	county = fileName.substr(0, position - 2);
 
 	return true;
+}
+
+std::string MapPageGenerator::CleanString(const std::string& s)
+{
+	std::string clean;
+
+	for (const auto& c : s)
+	{
+		if (c == '\'')
+			clean.append("&apos;");
+		else
+			clean.push_back(c);
+	}
+
+	return clean;
 }
 

@@ -27,13 +27,15 @@ private:
 		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
-		const std::string& googleMapsKey);
+		std::vector<std::string>& stateCountyList, const std::string& googleMapsKey);
 	static bool GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 		const std::string& county, double& latitude, double& longitude,
 		double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
-		const std::string& googleMapsKey);
+		std::string& geographicName, const std::string& googleMapsKey);
 	static bool GetStateAbbreviationFromFileName(const std::string& fileName, std::string& state);
 	static bool GetCountyNameFromFileName(const std::string& fileName, std::string& county);
+
+	static std::string CleanString(const std::string& s);
 };
 
 #endif// MAP_PAGE_GENERATOR_H_
