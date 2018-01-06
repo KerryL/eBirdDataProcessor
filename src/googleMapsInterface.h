@@ -59,7 +59,8 @@ public:
 	bool LookupCoordinates(const std::string& searchString, std::string& formattedAddress,
 		double& latitude, double& longitude,
 		double& northeastLatitude, double& northeastLongitude,
-		double& southwestLatitude, double& southwestLongitude) const;
+		double& southwestLatitude, double& southwestLongitude,
+		const std::string& preferNameContaining = "") const;
 
 private:
 	const std::string apiKey;

@@ -111,7 +111,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 			if (needComma)
 				f << ", ";
 			needComma = true;
-			f << '\'' << CleanString(stateCounty) << '\'';
+			f << '\'' << CleanQueryString(stateCounty) << '\'';
 		}
 
 		f << ")\"\n"
@@ -143,6 +143,8 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 		<< "</html>";
 }
 
+// TODO:  Consider multithreading all of the "bulk" stuff - contacting google maps for county info, reading frequency data, etc.  Maybe not for frequency harvesting (eBird has limits on crawling in robots.txt), but for google apis.
+
 void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
@@ -170,30 +172,24 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 			newNELongitude, newSWLatitude, newSWLongitude, geographicName, googleMapsKey))
 			continue;
 
-		const std::string endString(" County, ");
+		const std::string endString(" County");
 		std::string::size_type endPosition(std::min(
 			geographicName.find(endString), geographicName.find(',')));
 		if (endPosition == std::string::npos)
 		{
 			std::cerr << "Warning:  Failed to extract county name from '" << geographicName << "'\n";
-
-			// TODO:  Move this bit outside - when we need to include this logic, it's not
-			// because the search failed, it's because the WHERE with fusion table data
-			// didn't include all of the desired results (which we cannot check for)
-			const std::string::size_type saintStart(geographicName.find("St "));
-			if (saintStart != std::string::npos)
-			{
-				geographicName.insert(saintStart + 2, ".");
-				stateCountyList.push_back(state + "-" + geographicName.substr(0, endPosition + 1));
-			}
 		}
 		else
 			stateCountyList.push_back(state + "-" + geographicName.substr(0, endPosition));
 
+		const std::string::size_type saintStart(geographicName.find("St "));
+		if (saintStart != std::string::npos)
+		{
+			geographicName.insert(saintStart + 2, ".");
+			stateCountyList.back() = state + "-" + geographicName.substr(0, endPosition + 1);
+		}
+
 		county = geographicName.substr(0, geographicName.find(','));// TODO:  Make robust
-		// Also, problems with things like "Brooklyn" vs. "King's County".  Both names
-		// are returned from the maps search, but we need to be able to determine which
-		// one to use
 
 		if (first)
 		{
@@ -221,7 +217,7 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 		f << "          {\n"
 			<< "            position: new google.maps.LatLng(" << newLatitude << ',' << newLongitude << "),\n"
 			<< "            probability: " << entry.frequency << ",\n"
-			<< "            name: '" << CleanString(county) << ", " << state << "',\n"
+			<< "            name: '" << CleanNameString(county) << ", " << state << "',\n"
 			<< "            info: '" << entry.frequency * 100 << "%'\n"
 			<< "          }";
 	}
@@ -236,7 +232,8 @@ bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::stri
 {
 	GoogleMapsInterface gMap("County Lookup Tool", googleMapsKey);
 	if (!gMap.LookupCoordinates(county + " " + state, geographicName,
-		latitude, longitude, neLatitude, neLongitude, swLatitude, swLongitude))
+		latitude, longitude, neLatitude, neLongitude, swLatitude, swLongitude,
+		"County"))
 		return false;
 
 	// TODO:  Check address string to make sure its a good match
@@ -274,14 +271,29 @@ bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, st
 	return true;
 }
 
-std::string MapPageGenerator::CleanString(const std::string& s)
+std::string MapPageGenerator::CleanNameString(const std::string& s)
 {
 	std::string clean;
 
 	for (const auto& c : s)
 	{
 		if (c == '\'')
-			clean.append("&apos;");
+			clean.append("\\'");
+		else
+			clean.push_back(c);
+	}
+
+	return clean;
+}
+
+std::string MapPageGenerator::CleanQueryString(const std::string& s)
+{
+	std::string clean;
+
+	for (const auto& c : s)
+	{
+		if (c == '\'')
+			clean.append("''");
 		else
 			clean.push_back(c);
 	}

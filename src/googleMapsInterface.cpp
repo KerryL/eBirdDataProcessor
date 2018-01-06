@@ -316,7 +316,8 @@ std::string GoogleMapsInterface::SanitizeAddress(const std::string& s)
 bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 	std::string& formattedAddress, double& latitude, double& longitude,
 	double& northeastLatitude, double& northeastLongitude,
-	double& southwestLatitude, double& southwestLongitude) const
+	double& southwestLatitude, double& southwestLongitude,
+	const std::string& preferNameContaining) const
 {
 	const std::string requestURL(apiRoot + geocodeEndPoint
 		+ "?address=" + SanitizeAddress(searchString) + "&key=" + apiKey);
@@ -335,7 +336,22 @@ bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 	if (info.size() > 1)
 		std::cerr << "Warning:  Multiple results found for '" << searchString << "' - using first result\n";
 
-	formattedAddress = info.front().formattedAddress;
+	if (!preferNameContaining.empty() &&
+		info.front().formattedAddress.find(preferNameContaining) == std::string::npos)
+	{
+		for (const auto& component : info.front().addressComponents)
+		{
+			if (component.longName.find(preferNameContaining) != std::string::npos)
+			{
+				formattedAddress = component.longName;
+				break;
+			}
+		}
+	}
+
+	if (formattedAddress.empty())
+		formattedAddress = info.front().formattedAddress;
+
 	latitude = info.front().location.latitude;
 	longitude = info.front().location.longitude;
 	northeastLatitude = info.front().northeastBound.latitude;

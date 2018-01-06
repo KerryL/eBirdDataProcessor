@@ -35,7 +35,8 @@ private:
 	static bool GetStateAbbreviationFromFileName(const std::string& fileName, std::string& state);
 	static bool GetCountyNameFromFileName(const std::string& fileName, std::string& county);
 
-	static std::string CleanString(const std::string& s);
+	static std::string CleanNameString(const std::string& s);
+	static std::string CleanQueryString(const std::string& s);
 };
 
 #endif// MAP_PAGE_GENERATOR_H_
