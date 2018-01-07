@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
 	return app.Run(argc, argv);
 }
 
+#include "googleFusionTablesInterface.h"
 int EBirdDataProcessorApp::Run(int argc, char *argv[])
 {
 	if (argc != 2)
@@ -36,6 +37,12 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	EBDPConfigFile configFile;
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
+
+	GoogleFusionTablesInterface gfti("test", configFile.GetConfig().oAuthClientId,
+		configFile.GetConfig().oAuthClientSecret);
+	std::vector<GoogleFusionTablesInterface::TableInfo> tables;
+	gfti.ListTables(tables);
+	return 1;
 
 	EBirdDataProcessor processor;
 	if (!processor.Parse(configFile.GetConfig().dataFileName))

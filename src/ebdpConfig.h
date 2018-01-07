@@ -77,6 +77,9 @@ struct EBDPConfig
 
 	std::string findMaxNeedsLocations;
 	unsigned int maxNeedsMonth;
+
+	std::string oAuthClientId;
+	std::string oAuthClientSecret;
 };
 
 #endif// EBDP_CONFIG_H_

@@ -52,6 +52,9 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem("FIND_MAX_NEEDS", config.findMaxNeedsLocations);
 	AddConfigItem("MAX_NEEDS_MONTH", config.maxNeedsMonth);
+
+	AddConfigItem("OAUTH_CLIENT_ID", config.oAuthClientId);
+	AddConfigItem("OAUTH_CLIENT_SECRET", config.oAuthClientSecret);
 }
 
 void EBDPConfigFile::AssignDefaults()
@@ -200,6 +203,14 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (config.maxNeedsMonth < 1 || config.maxNeedsMonth > 12)
 	{
 		std::cerr << GetKey(config.maxNeedsMonth) << " must be between 1 and 12 inclusive\n";
+		configurationOK = false;
+	}
+
+	if (!config.findMaxNeedsLocations.empty() &&
+		(config.oAuthClientId.empty() || config.oAuthClientSecret.empty()))
+	{
+		std::cerr << GetKey(config.findMaxNeedsLocations) << " requires "
+			<< GetKey(config.oAuthClientId) << " and " << GetKey(config.oAuthClientSecret) << '\n';
 		configurationOK = false;
 	}
 
