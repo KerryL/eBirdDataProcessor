@@ -86,7 +86,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
         << "            position: feature.position,\n"
 		// title is "hover text"
 		// label puts text inside marker (so more than one character overflows)
-		<< "            title: feature.name + ' (' + feature.info + ')',\n"
+		<< "            title: feature.name + ' (' + feature.value + ')',\n"
 		<< "            map: map\n"
         << "          });\n"
 		<< '\n'
@@ -122,17 +122,20 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
         << "              fillOpacity: 0.3,\n"
 		<< "              strokeColor: '#FFFFFF'\n"
         << "            }\n"
-        /*<< "          }, {
-        << "            where: 'birds > 300',
-        << "            polygonOptions: {
-        << "              fillColor: '#0000FF'
-        << "            }
-        << "          }, {
-        << "            where: 'population > 5',
-        << "            polygonOptions: {
-        << "              fillOpacity: 1.0
-        << "            }*/
-        << "          }]\n"
+		<< "          }";
+
+		for (const auto& stateCounty : stateCountyList)
+		{
+			// TODO:  This method is no good - fusion tables only supports 5 different style options
+			f << ",{\n"
+			<< "            where: \"'State-County' = '" << stateCounty << "'\",\n"
+			<< "            polygonOptions: {\n"
+			<< "              fillColor: '" << ComputeColor(stateCounty, observationProbabilities) << "'\n"
+			<< "            }\n"
+			<< "          }";
+		}
+
+        f << "]\n"
         << "        });\n"
 		<< "        countyLayer.setMap(map);\n"
 		<< "      }\n"
@@ -218,7 +221,7 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 			<< "            position: new google.maps.LatLng(" << newLatitude << ',' << newLongitude << "),\n"
 			<< "            probability: " << entry.frequency << ",\n"
 			<< "            name: '" << CleanNameString(county) << ", " << state << "',\n"
-			<< "            info: '" << entry.frequency * 100 << "%'\n"
+			<< "            value: '" << entry.frequency * 100 << "%'\n"
 			<< "          }";
 	}
 
@@ -299,5 +302,101 @@ std::string MapPageGenerator::CleanQueryString(const std::string& s)
 	}
 
 	return clean;
+}
+
+std::string MapPageGenerator::ComputeColor(const std::string& stateCounty,
+	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities)
+{
+	assert(stateCounty.size() > 3);
+	const std::string stateAbbr(stateCounty.substr(0, 2));
+	const std::string countyName(stateCounty.substr(3));
+	const std::string matchString(countyName + stateAbbr);
+
+std::cout << "original stateCounty = " << stateCounty << " : matchString = " << matchString << std::endl;
+
+	const Color minColor(0.0, 0.75, 0.365);// Greenish
+	const Color maxColor(1.0, 0.0, 0.0);// Red
+
+	for (const auto& entry : observationProbabilities)
+	{
+		if (entry.species.compare(matchString) == 0)
+			return ColorToHexString(InterpolateColor(minColor, maxColor, entry.frequency));
+	}
+
+std::cout << "no match for " << stateCounty << " (matchString = " << matchString << ")" << std::endl;
+	
+	return "#000000";
+}
+
+MapPageGenerator::Color MapPageGenerator::InterpolateColor(
+	const Color& minColor, const Color& maxColor, const double& value)
+{
+	double minHue, minSat, minVal, maxHue, maxSat, maxVal;
+	GetHSV(minColor, minHue, minSat, minVal);
+	GetHSV(maxColor, maxHue, maxSat, maxVal);
+
+	// Interpolation based on 0..1 range
+	return ColorFromHSV(minHue + (maxHue - minHue) * value, minSat + (maxSat - minSat) * value,
+		minVal + (maxVal - minVal) * value);
+}
+
+std::string MapPageGenerator::ColorToHexString(const Color& c)
+{
+	std::ostringstream hex;
+	hex << "#" << std::hex
+		<< static_cast<uint8_t>(c.red * 255.0)
+		<< static_cast<uint8_t>(c.green * 255.0)
+		<< static_cast<uint8_t>(c.blue * 255.0);
+	
+	return hex.str();
+}
+
+void MapPageGenerator::GetHSV(const Color& c, double& hue, double& saturation, double& value)
+{
+	value = std::max(std::max(c.red, c.green), c.blue);
+	const double delta(value - std::min(std::min(c.red, c.green), c.blue));
+
+	if (delta == 0)
+		hue = 0.0;
+	else if (value == c.red)
+		hue = fmod((c.green - c.blue) / delta, 6.0) / 6.0;
+	else if (value == c.green)
+		hue = ((c.blue - c.red) / delta + 2.0) / 6.0;
+	else// if (value == c.blue)
+		hue = ((c.red - c.green) / delta + 4.0) / 6.0;
+
+	if (hue < 0.0)
+		hue += 1.0;
+	assert(hue >= 0.0 && hue <= 1.0);
+
+	if (value == 0.0)
+		saturation = 0.0;
+	else
+		saturation = delta / value;
+}
+
+MapPageGenerator::Color MapPageGenerator::ColorFromHSV(
+	const double& hue, const double& saturation, const double& value)
+{
+	assert(hue >= 0.0 && hue <= 1.0);
+	assert(saturation >= 0.0 && saturation <= 1.0);
+	assert(value >= 0.0 && value <= 1.0);
+
+	const double c(value * saturation);
+	const double x(c * (1.0 - fabs(fmod(hue * 6.0, 2.0) - 1.0)));
+	const double m(value - c);
+
+	if (hue < 1.0 / 6.0)
+		return Color(c + m, x + m, m);
+	else if (hue < 2.0 / 6.0)
+		return Color(x + m, c + m, m);
+	else if (hue < 3.0 / 6.0)
+		return Color(m, c + m, x + m);
+	else if (hue < 4.0 / 6.0)
+		return Color(m, x + m, c + m);
+	else if (hue < 5.0 / 6.0)
+		return Color(x + m, m, c + m);
+	//else if (hue < 6.0 / 6.0)
+		return Color(c + m, m, x + m);
 }
 

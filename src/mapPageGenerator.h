@@ -37,6 +37,23 @@ private:
 
 	static std::string CleanNameString(const std::string& s);
 	static std::string CleanQueryString(const std::string& s);
+	static std::string ComputeColor(const std::string& stateCounty,
+		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities);
+
+	struct Color
+	{
+		Color() = default;
+		Color(const double& red, const double& green, const double& blue)
+			: red(red), green(green), blue(blue) {}
+		double red = 0;
+		double green = 0;
+		double blue = 0;
+	};
+
+	static Color InterpolateColor(const Color& minColor, const Color& maxColor, const double& value);
+	static std::string ColorToHexString(const Color& c);
+	static void GetHSV(const Color& c, double& hue, double& saturation, double& value);
+	static Color ColorFromHSV( const double& hue, const double& saturation, const double& value);
 };
 
 #endif// MAP_PAGE_GENERATOR_H_
