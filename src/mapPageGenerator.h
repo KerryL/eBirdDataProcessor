@@ -37,6 +37,7 @@ private:
 
 	static std::string CleanNameString(const std::string& s);
 	static std::string CleanQueryString(const std::string& s);
+	static std::string CleanFileName(const std::string& s);
 	static std::string ComputeColor(const std::string& stateCounty,
 		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities);
 

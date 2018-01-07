@@ -9,6 +9,7 @@
 
 // Standard C++ headers
 #include <sstream>
+#include <iomanip>
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey,
@@ -310,9 +311,7 @@ std::string MapPageGenerator::ComputeColor(const std::string& stateCounty,
 	assert(stateCounty.size() > 3);
 	const std::string stateAbbr(stateCounty.substr(0, 2));
 	const std::string countyName(stateCounty.substr(3));
-	const std::string matchString(countyName + stateAbbr);
-
-std::cout << "original stateCounty = " << stateCounty << " : matchString = " << matchString << std::endl;
+	const std::string matchString(CleanFileName(countyName) + stateAbbr + "FrequencyData.csv");
 
 	const Color minColor(0.0, 0.75, 0.365);// Greenish
 	const Color maxColor(1.0, 0.0, 0.0);// Red
@@ -343,10 +342,10 @@ MapPageGenerator::Color MapPageGenerator::InterpolateColor(
 std::string MapPageGenerator::ColorToHexString(const Color& c)
 {
 	std::ostringstream hex;
-	hex << "#" << std::hex
-		<< static_cast<uint8_t>(c.red * 255.0)
-		<< static_cast<uint8_t>(c.green * 255.0)
-		<< static_cast<uint8_t>(c.blue * 255.0);
+	hex << "#" << std::hex << std::setw(2) << std::setfill('0')
+		<< static_cast<int>(c.red * 255.0)
+		<< static_cast<int>(c.green * 255.0)
+		<< static_cast<int>(c.blue * 255.0);
 	
 	return hex.str();
 }
@@ -398,5 +397,21 @@ MapPageGenerator::Color MapPageGenerator::ColorFromHSV(
 		return Color(x + m, m, c + m);
 	//else if (hue < 6.0 / 6.0)
 		return Color(c + m, m, x + m);
+}
+
+std::string MapPageGenerator::CleanFileName(const std::string& s)
+{
+	std::string cleanString(s);
+	cleanString.erase(std::remove_if(cleanString.begin(), cleanString.end(), [](const char& c)
+	{
+		if (std::isspace(c) ||
+			c == '\'' ||
+			c == '.')
+			return true;
+
+		return false;
+	}), cleanString.end());
+
+	return cleanString;
 }
 
