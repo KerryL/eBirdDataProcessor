@@ -148,6 +148,7 @@ bool USCensusInterface::ParseResponse(const std::string& response, std::vector<F
 		if (!item)
 		{
 			std::cerr << "Failed to access item " << i << " in response:\n" << response << '\n';
+			cJSON_Delete(root);
 			return false;
 		}
 
@@ -159,6 +160,7 @@ bool USCensusInterface::ParseResponse(const std::string& response, std::vector<F
 		if (!fipsCode || !name)
 		{
 			std::cerr << "Failed to find FIPS code and/or region name\n";
+			cJSON_Delete(root);
 			return false;
 		}
 
@@ -167,12 +169,14 @@ bool USCensusInterface::ParseResponse(const std::string& response, std::vector<F
 		if ((ss >> codeAsInt).fail())
 		{
 			std::cerr << "Failed to convert FIPS code to number\n";
+			cJSON_Delete(root);
 			return false;
 		}
 
 		codes.push_back(FIPSNamePair(codeAsInt, name->valuestring));
 	}
 
+	cJSON_Delete(root);
 	return true;
 }
 

@@ -10,6 +10,7 @@
 // Standard C++ headers
 #include <sstream>
 #include <iomanip>
+#include <cctype>
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey,

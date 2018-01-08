@@ -100,6 +100,7 @@ bool GoogleMapsInterface::ProcessDirectionsResponse(const std::string& response,
 	if (!ReadJSON(root, statusKey, status))
 	{
 		std::cerr << "Failed to read status information\n";
+		cJSON_Delete(root);
 		return false;
 	}
 
@@ -111,6 +112,7 @@ bool GoogleMapsInterface::ProcessDirectionsResponse(const std::string& response,
 		if (ReadJSON(root, errorMessageKey, errorMessage))
 			std::cerr << errorMessage << '\n';
 
+		cJSON_Delete(root);
 		return false;
 	}
 
@@ -118,6 +120,7 @@ bool GoogleMapsInterface::ProcessDirectionsResponse(const std::string& response,
 	if (!routes)
 	{
 		std::cerr << "Failed to get routes array from response\n";
+		cJSON_Delete(root);
 		return false;
 	}
 
@@ -129,12 +132,14 @@ bool GoogleMapsInterface::ProcessDirectionsResponse(const std::string& response,
 		if (!ProcessRoute(cJSON_GetArrayItem(routes, i), d))
 		{
 			std::cerr << "Failed to process route " << i << std::endl;
+			cJSON_Delete(root);
 			return false;
 		}
 
 		directions.push_back(d);
 	}
 
+	cJSON_Delete(root);
 	return true;
 }
 
@@ -377,6 +382,7 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 	if (!ReadJSON(root, statusKey, status))
 	{
 		std::cerr << "Failed to read status information\n";
+		cJSON_Delete(root);
 		return false;
 	}
 
@@ -388,6 +394,7 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 		if (ReadJSON(root, errorMessageKey, errorMessage))
 			std::cerr << errorMessage << '\n';
 
+		cJSON_Delete(root);
 		return false;
 	}
 
@@ -395,6 +402,7 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 	if (!results)
 	{
 		std::cerr << "Failed to read geocode results\n";
+		cJSON_Delete(root);
 		return false;
 	}
 
@@ -406,36 +414,47 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 		if (!resultEntry)
 		{
 			std::cerr << "Failed to get result entry " << i << '\n';
+			cJSON_Delete(root);
 			return false;
 		}
 
 		if (!ProcessAddressComponents(resultEntry, resultInfo.addressComponents))
+		{
+			cJSON_Delete(root);
 			return false;
+		}
 
 		if (!ProcessGeometry(resultEntry, resultInfo))
+		{
+			cJSON_Delete(root);
 			return false;
+		}
 
 		if (!ReadJSON(resultEntry, formattedAddressKey, resultInfo.formattedAddress))
 		{
 			std::cerr << "Failed to read formatted address\n";
+			cJSON_Delete(root);
 			return false;
 		}
 
 		if (!ReadJSON(resultEntry, placeIDKey, resultInfo.placeID))
 		{
 			std::cerr << "Failed to read place ID\n";
+			cJSON_Delete(root);
 			return false;
 		}
 
 		if (!ReadJSONArrayToVector(resultEntry, typesKey, resultInfo.types))
 		{
 			std::cerr << "Failed to result types\n";
+			cJSON_Delete(root);
 			return false;
 		}
 
 		++i;
 	}
 
+	cJSON_Delete(root);
 	return true;
 }
 
