@@ -144,6 +144,7 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 
 	// TODO:  Add support for nextPageToken in order to support long result lists
 
+	tables.clear();
 	cJSON* items(cJSON_GetObjectItem(root, itemsKey.c_str()));
 	if (items)// May not be items, if no tables exist
 	{
@@ -175,7 +176,14 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 
 bool GoogleFusionTablesInterface::DeleteTable(const std::string& tableId)
 {
-	// TODO:  Implement
+	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
+	std::string response;
+	if (!DoCURLGet(apiRoot + tablesEndPoint + '/' + tableId, response, AddAuthAndDeleteToCurlHeader, &authTokenData))
+	{
+		std::cerr << "Failed to delete table\n";
+		return false;
+	}
+
 	return false;
 }
 
@@ -319,6 +327,25 @@ bool GoogleFusionTablesInterface::AddAuthToCurlHeader(CURL* curl, const Modifica
 	}
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+		return false;
+
+	return true;
+}
+
+bool GoogleFusionTablesInterface::AddAuthAndDeleteToCurlHeader(CURL* curl, const ModificationData* data)
+{
+	curl_slist* headerList(nullptr);
+	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer " + static_cast<const AuthTokenData*>(data)->authToken).c_str());
+	if (!headerList)
+	{
+		std::cerr << "Failed to append auth token to header in ListTables\n";
+		return false;
+	}
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+		return false;
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE"), "Failed to set request type to DELETE"))
 		return false;
 
 	return true;

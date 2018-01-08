@@ -40,8 +40,33 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	GoogleFusionTablesInterface gfti("test", configFile.GetConfig().oAuthClientId,
 		configFile.GetConfig().oAuthClientSecret);
-	std::vector<GoogleFusionTablesInterface::TableInfo> tables;
+
+	GoogleFusionTablesInterface::TableInfo info;
+	/*info.name = "First test table";
+	info.description = "Description would go here";
+	info.isExportable = true;
+	info.columns.resize(3);
+	info.columns[0].name = "Column Heading 1";
+	info.columns[0].type = GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType::String;
+	info.columns[1].name = "Column Heading 2";
+	info.columns[1].type = GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType::Number;
+	info.columns[2].name = "Column Heading 3";
+	info.columns[2].type = GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType::Location;
+	gfti.CreateTable(info);*/
+
+	/*std::vector<GoogleFusionTablesInterface::TableInfo> tables;
 	gfti.ListTables(tables);
+	std::cout << "list 1:" << std::endl;
+	for (const auto& t : tables)
+	{
+		std::cout << t.name << " : " << t.tableId << std::endl;
+		gfti.DeleteTable(t.tableId);
+	}
+
+	gfti.ListTables(tables);
+	std::cout << "list 2:" << std::endl;
+	for (const auto& t : tables)
+		std::cout << t.name << " : " << t.tableId << std::endl;*/
 	return 1;
 
 	EBirdDataProcessor processor;

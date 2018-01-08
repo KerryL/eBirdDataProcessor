@@ -87,6 +87,7 @@ private:
 
 	static bool ResponseHasError(cJSON* root);
 	static bool KindMatches(cJSON* root, const std::string& kind);
+	static bool AddAuthAndDeleteToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
 	static bool AddAuthToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
 	static bool AddAuthAndContentTypeToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
 
