@@ -54,6 +54,7 @@ private:
 	static const std::string tablesEndPoint;
 	static const std::string importEndPoint;
 	static const std::string columnsEndPoint;
+	static const std::string copyEndPoint;
 	static const std::string tableListKindText;
 	static const std::string tableKindText;
 	static const std::string columnKindText;
@@ -67,11 +68,35 @@ private:
 	static const std::string typeKey;
 	static const std::string descriptionKey;
 	static const std::string isExportableKey;
+	static const std::string errorKey;
+	static const std::string codeKey;
+	static const std::string messageKey;
 
 	static const std::string typeStringText;
 	static const std::string typeNumberText;
 	static const std::string typeDateTimeText;
-	static const std::string locationText;
+	static const std::string typeLocationText;
+
+	static const std::string fusionTableRefreshTokenFileName;
+
+	struct AuthTokenData : public ModificationData
+	{
+		AuthTokenData(const std::string& authToken) : authToken(authToken) {}
+		std::string authToken;
+	};
+
+	static bool ResponseHasError(cJSON* root);
+	static bool KindMatches(cJSON* root, const std::string& kind);
+	static bool AddAuthToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
+	static bool AddAuthAndContentTypeToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
+
+	static bool ReadTable(cJSON* root, TableInfo& info);
+	static bool ReadColumn(cJSON* root, TableInfo::ColumnInfo& info);
+
+	static std::string BuildCreateTableData(const TableInfo& info);
+	static cJSON* BuildColumnItem(const TableInfo::ColumnInfo& columnInfo);
+	static std::string GetColumnTypeString(const TableInfo::ColumnInfo::ColumnType& type);
+	static TableInfo::ColumnInfo::ColumnType GetColumnTypeFromString(const std::string& s);
 };
 
 #endif// GOOGLE_FUSION_TABLES_INTERFACE_H_

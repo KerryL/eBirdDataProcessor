@@ -131,6 +131,7 @@
     <ClCompile Include="..\src\email\jsonInterface.cpp" />
     <ClCompile Include="..\src\email\oAuth2Interface.cpp" />
     <ClCompile Include="..\src\frequencyDataHarvester.cpp" />
+    <ClCompile Include="..\src\googleFusionTablesInterface.cpp" />
     <ClCompile Include="..\src\googleMapsInterface.cpp" />
     <ClCompile Include="..\src\kernelDensityEstimation.cpp" />
     <ClCompile Include="..\src\mapPageGenerator.cpp" />
@@ -149,6 +150,7 @@
     <ClInclude Include="..\src\email\jsonInterface.h" />
     <ClInclude Include="..\src\email\oAuth2Interface.h" />
     <ClInclude Include="..\src\frequencyDataHarvester.h" />
+    <ClInclude Include="..\src\googleFusionTablesInterface.h" />
     <ClInclude Include="..\src\googleMapsInterface.h" />
     <ClInclude Include="..\src\kernelDensityEstimation.h" />
     <ClInclude Include="..\src\mapPageGenerator.h" />
