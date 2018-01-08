@@ -24,7 +24,6 @@ int main(int argc, char *argv[])
 	return app.Run(argc, argv);
 }
 
-#include "googleFusionTablesInterface.h"
 int EBirdDataProcessorApp::Run(int argc, char *argv[])
 {
 	if (argc != 2)
@@ -37,37 +36,6 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	EBDPConfigFile configFile;
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
-
-	GoogleFusionTablesInterface gfti("test", configFile.GetConfig().oAuthClientId,
-		configFile.GetConfig().oAuthClientSecret);
-
-	GoogleFusionTablesInterface::TableInfo info;
-	/*info.name = "First test table";
-	info.description = "Description would go here";
-	info.isExportable = true;
-	info.columns.resize(3);
-	info.columns[0].name = "Column Heading 1";
-	info.columns[0].type = GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType::String;
-	info.columns[1].name = "Column Heading 2";
-	info.columns[1].type = GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType::Number;
-	info.columns[2].name = "Column Heading 3";
-	info.columns[2].type = GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType::Location;
-	gfti.CreateTable(info);*/
-
-	/*std::vector<GoogleFusionTablesInterface::TableInfo> tables;
-	gfti.ListTables(tables);
-	std::cout << "list 1:" << std::endl;
-	for (const auto& t : tables)
-	{
-		std::cout << t.name << " : " << t.tableId << std::endl;
-		gfti.DeleteTable(t.tableId);
-	}
-
-	gfti.ListTables(tables);
-	std::cout << "list 2:" << std::endl;
-	for (const auto& t : tables)
-		std::cout << t.name << " : " << t.tableId << std::endl;*/
-	return 1;
 
 	EBirdDataProcessor processor;
 	if (!processor.Parse(configFile.GetConfig().dataFileName))
@@ -116,7 +84,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	{
 		if (!processor.FindBestLocationsForNeededSpecies(
 			configFile.GetConfig().findMaxNeedsLocations, configFile.GetConfig().maxNeedsMonth,
-			configFile.GetConfig().googleMapsAPIKey))
+			configFile.GetConfig().googleMapsAPIKey, configFile.GetConfig().oAuthClientId,
+			configFile.GetConfig().oAuthClientSecret))
 			return 1;
 	}
 	else if (!configFile.GetConfig().harvestFrequencyData &&

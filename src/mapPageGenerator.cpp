@@ -6,6 +6,7 @@
 // Local headers
 #include "mapPageGenerator.h"
 #include "googleMapsInterface.h"
+#include "googleFusionTablesInterface.h"
 
 // Standard C++ headers
 #include <sstream>
@@ -14,7 +15,8 @@
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey,
-	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities)
+	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
+	const std::string& clientId, const std::string& clientSecret)
 {
 	std::ofstream file(htmlFileName.c_str());
 	if (!file.is_open() || !file.good())
@@ -24,7 +26,9 @@ bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileN
 	}
 
 	WriteHeadSection(file);
-	WriteBody(file, googleMapsKey, observationProbabilities);
+
+	const Keys keys(googleMapsKey, clientId, clientSecret);
+	WriteBody(file, keys, observationProbabilities);
 
 	return true;
 }
@@ -50,7 +54,7 @@ void MapPageGenerator::WriteHeadSection(std::ofstream& f)
 		<< "  </head>\n";
 }
 
-void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMapsKey,
+void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities)
 {
 	std::ostringstream markerLocations;
@@ -60,7 +64,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 
 	WriteMarkerLocations(markerLocations, observationProbabilities,
 		northeastLatitude, northeastLongitude, southwestLatitude, southwestLongitude,
-		stateCountyList, googleMapsKey);
+		stateCountyList, keys);
 
 	const double centerLatitude(0.5 * (northeastLatitude + southwestLatitude));
 	const double centerLongitude(0.5 * (northeastLongitude + southwestLongitude));
@@ -142,7 +146,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::string& googleMaps
 		<< "        countyLayer.setMap(map);\n"
 		<< "      }\n"
 		<< "    </script>\n"
-		<< "    <script async defer src=\"https://maps.googleapis.com/maps/api/js?key=" << googleMapsKey << "&callback=initMap\">\n"
+		<< "    <script async defer src=\"https://maps.googleapis.com/maps/api/js?key=" << keys.googleMapsKey << "&callback=initMap\">\n"
 		<< "    </script>\n"
 		<< "  </body>\n"
 		<< "</html>";
@@ -154,7 +158,7 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
-	std::vector<std::string>& stateCountyList, const std::string& googleMapsKey)
+	std::vector<std::string>& stateCountyList, const Keys& keys)
 {
 	f << "        var features = [";
 
@@ -174,7 +178,7 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 		std::string geographicName;
 		if (!GetLatitudeAndLongitudeFromCountyAndState(state, county + " County",
 			newLatitude, newLongitude, newNELatitude,
-			newNELongitude, newSWLatitude, newSWLongitude, geographicName, googleMapsKey))
+			newNELongitude, newSWLatitude, newSWLongitude, geographicName, keys.googleMapsKey))
 			continue;
 
 		const std::string endString(" County");
@@ -207,6 +211,8 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 		}
 		else
 			f << ',';
+
+		// TODO:  Re-work this section to also use fusion tables to store this data
 
 		if (newNELatitude > northeastLatitude)
 			northeastLatitude = newNELatitude;

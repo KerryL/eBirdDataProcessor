@@ -1107,8 +1107,10 @@ bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
 	return true;
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
-	const unsigned int& month, const std::string& googleMapsKey) const
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(
+	const std::string& frequencyFileDirectory, const unsigned int& month,
+	const std::string& googleMapsKey, const std::string& clientId,
+	const std::string& clientSecret) const
 {
 	DIR *dir(opendir(frequencyFileDirectory.c_str()));
 	if (!dir)
@@ -1127,7 +1129,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& fr
 			continue;
 
 		newSightingProbability.push_back(FrequencyInfo(ent->d_name,
-			ComputeNewSpeciesProbability(frequencyFileDirectory + ent->d_name, month)));
+			ComputeNewSpeciesProbability(frequencyFileDirectory + ent->d_name, month)));// TODO:  Possibly do this in parallel?
 	}
 	closedir(dir);
 
@@ -1142,7 +1144,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const std::string& fr
 	if (!googleMapsKey.empty())
 	{
 		const std::string fileName("bestLocations.html");// TODO:  Don't hardcode
-		if (!WriteBestLocationsViewerPage(fileName, googleMapsKey, newSightingProbability))
+		if (!WriteBestLocationsViewerPage(fileName, googleMapsKey, newSightingProbability, clientId, clientSecret))
 		{
 			std::cerr << "Faild to create Google Maps best locations page\n";
 		}
@@ -1176,8 +1178,9 @@ double EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileN
 }
 
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFileName,
-	const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities)
+	const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities,
+	const std::string& clientId, const std::string& clientSecret)
 {
 	return MapPageGenerator::WriteBestLocationsViewerPage(htmlFileName,
-		googleMapsKey, observationProbabilities);
+		googleMapsKey, observationProbabilities, clientId, clientSecret);
 }

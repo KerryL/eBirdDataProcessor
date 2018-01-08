@@ -17,13 +17,15 @@
 #include <cassert>
 
 const std::string GoogleFusionTablesInterface::apiRoot("https://www.googleapis.com/fusiontables/v2/");
+const std::string GoogleFusionTablesInterface::apiRootUpload("https://www.googleapis.com/upload/fusiontables/v2/");
 const std::string GoogleFusionTablesInterface::tablesEndPoint("tables");
-const std::string GoogleFusionTablesInterface::importEndPoint("import");
+const std::string GoogleFusionTablesInterface::importEndPoint("/import");
 const std::string GoogleFusionTablesInterface::columnsEndPoint("/columns");
 const std::string GoogleFusionTablesInterface::copyEndPoint("/copy");
 const std::string GoogleFusionTablesInterface::tableListKindText("fusiontables#tableList");
 const std::string GoogleFusionTablesInterface::tableKindText("fusiontables#table");
 const std::string GoogleFusionTablesInterface::columnKindText("fusiontables#column");
+const std::string GoogleFusionTablesInterface::importKindText("fusiontables#import");
 const std::string GoogleFusionTablesInterface::columnListKindText("");
 const std::string GoogleFusionTablesInterface::itemsKey("items");
 const std::string GoogleFusionTablesInterface::kindKey("kind");
@@ -37,6 +39,7 @@ const std::string GoogleFusionTablesInterface::isExportableKey("isExportable");
 const std::string GoogleFusionTablesInterface::errorKey("error");
 const std::string GoogleFusionTablesInterface::codeKey("code");
 const std::string GoogleFusionTablesInterface::messageKey("message");
+const std::string GoogleFusionTablesInterface::numberOfRowsImportedKey("numRowsReceived");
 
 const std::string GoogleFusionTablesInterface::typeStringText("STRING");
 const std::string GoogleFusionTablesInterface::typeNumberText("NUMBER");
@@ -83,7 +86,7 @@ bool GoogleFusionTablesInterface::CreateTable(TableInfo& info)
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
 	if (!DoCURLPost(apiRoot + tablesEndPoint, BuildCreateTableData(info),
-		response, AddAuthAndContentTypeToCurlHeader, &authTokenData))
+		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
 		std::cerr << "Failed to create table\n";
 		return false;
@@ -192,7 +195,7 @@ bool GoogleFusionTablesInterface::CopyTable(const std::string& tableId, TableInf
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
 	if (!DoCURLPost(apiRoot + tablesEndPoint + '/' + tableId + copyEndPoint, std::string(),
-		response, AddAuthAndContentTypeToCurlHeader, &authTokenData))
+		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
 		std::cerr << "Failed to copy table\n";
 		return false;
@@ -224,8 +227,47 @@ bool GoogleFusionTablesInterface::CopyTable(const std::string& tableId, TableInf
 bool GoogleFusionTablesInterface::Import(const std::string& tableId,
 	const std::string& csvData)
 {
-	// TODO:  implement
-	return false;
+	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
+	std::string response;
+	if (!DoCURLPost(apiRootUpload + tablesEndPoint + '/' + tableId + importEndPoint + "?uploadType=media", csvData,
+		response, AddAuthAndOctetContentTypeToCurlHeader, &authTokenData))
+	{
+		std::cerr << "Failed to import data to table\n";
+		return false;
+	}
+
+	cJSON* root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		std::cerr << "Failed to parse copy import response\n";
+		return false;
+	}
+
+	if (ResponseHasError(root))
+	{
+		cJSON_Delete(root);
+		return false;
+	}
+
+	if (!KindMatches(root, importKindText))
+	{
+		std::cerr << "Received unexpected kind in import response\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	std::string rowsString;
+	if (!ReadJSON(root, numberOfRowsImportedKey, rowsString))
+	{
+		std::cerr << "Failed to check number of imported rows\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	std::cout << "Successfully imported " << rowsString << " new rows into table " << tableId << std::endl;
+
+	cJSON_Delete(root);
+	return true;
 }
 
 bool GoogleFusionTablesInterface::ListColumns(const std::string& tableId,
@@ -319,14 +361,16 @@ bool GoogleFusionTablesInterface::KindMatches(cJSON* root, const std::string& ki
 bool GoogleFusionTablesInterface::AddAuthToCurlHeader(CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer " + static_cast<const AuthTokenData*>(data)->authToken).c_str());
+	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer "
+		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
 		std::cerr << "Failed to append auth token to header in ListTables\n";
 		return false;
 	}
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
+		CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
 		return false;
 
 	return true;
@@ -335,26 +379,31 @@ bool GoogleFusionTablesInterface::AddAuthToCurlHeader(CURL* curl, const Modifica
 bool GoogleFusionTablesInterface::AddAuthAndDeleteToCurlHeader(CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer " + static_cast<const AuthTokenData*>(data)->authToken).c_str());
+	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer "
+		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
 		std::cerr << "Failed to append auth token to header in ListTables\n";
 		return false;
 	}
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
+		CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_CUSTOMREQUEST, "DELETE"), "Failed to set request type to DELETE"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
+		CURLOPT_CUSTOMREQUEST, "DELETE"), "Failed to set request type to DELETE"))
 		return false;
 
 	return true;
 }
 
-bool GoogleFusionTablesInterface::AddAuthAndContentTypeToCurlHeader(CURL* curl, const ModificationData* data)
+bool GoogleFusionTablesInterface::AddAuthAndJSONContentTypeToCurlHeader(
+	CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer " + static_cast<const AuthTokenData*>(data)->authToken).c_str());
+	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer "
+		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
 		std::cerr << "Failed to append auth token to header in ListTables\n";
@@ -368,7 +417,34 @@ bool GoogleFusionTablesInterface::AddAuthAndContentTypeToCurlHeader(CURL* curl, 
 		return false;
 	}
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
+		CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+		return false;
+
+	return true;
+}
+
+bool GoogleFusionTablesInterface::AddAuthAndOctetContentTypeToCurlHeader(
+	CURL* curl, const ModificationData* data)
+{
+	curl_slist* headerList(nullptr);
+	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer "
+		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
+	if (!headerList)
+	{
+		std::cerr << "Failed to append auth token to header in ListTables\n";
+		return false;
+	}
+
+	headerList = curl_slist_append(headerList, "Content-Type: application/octet-stream");
+	if (!headerList)
+	{
+		std::cerr << "Failed to append content type to header in ListTables\n";
+		return false;
+	}
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
+		CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
 		return false;
 
 	return true;

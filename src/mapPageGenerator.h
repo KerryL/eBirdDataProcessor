@@ -17,17 +17,29 @@ class MapPageGenerator
 public:
 	static bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
 		const std::string& googleMapsKey,
-		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities);
+		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
+		const std::string& clientId, const std::string& clientSecret);
 
 private:
+	struct Keys
+	{
+		Keys(const std::string& googleMapsKey, const std::string& clientId,
+			const std::string& clientSecret) : googleMapsKey(googleMapsKey),
+			clientId(clientId), clientSecret(clientSecret) {}
+
+		const std::string googleMapsKey;
+		const std::string clientId;
+		const std::string clientSecret;
+	};
+
 	static void WriteHeadSection(std::ofstream& f);
-	static void WriteBody(std::ofstream& f, const std::string& googleMapsKey,
+	static void WriteBody(std::ofstream& f, const Keys& keys,
 		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities);
 	static void WriteMarkerLocations(std::ostream& f,
 		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
-		std::vector<std::string>& stateCountyList, const std::string& googleMapsKey);
+		std::vector<std::string>& stateCountyList, const Keys& keys);
 	static bool GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 		const std::string& county, double& latitude, double& longitude,
 		double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,

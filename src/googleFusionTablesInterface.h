@@ -51,6 +51,7 @@ public:
 
 private:
 	static const std::string apiRoot;
+	static const std::string apiRootUpload;
 	static const std::string tablesEndPoint;
 	static const std::string importEndPoint;
 	static const std::string columnsEndPoint;
@@ -59,6 +60,7 @@ private:
 	static const std::string tableKindText;
 	static const std::string columnKindText;
 	static const std::string columnListKindText;
+	static const std::string importKindText;
 	static const std::string itemsKey;
 	static const std::string kindKey;
 	static const std::string tableIdKey;
@@ -71,6 +73,7 @@ private:
 	static const std::string errorKey;
 	static const std::string codeKey;
 	static const std::string messageKey;
+	static const std::string numberOfRowsImportedKey;
 
 	static const std::string typeStringText;
 	static const std::string typeNumberText;
@@ -89,7 +92,8 @@ private:
 	static bool KindMatches(cJSON* root, const std::string& kind);
 	static bool AddAuthAndDeleteToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
 	static bool AddAuthToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
-	static bool AddAuthAndContentTypeToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
+	static bool AddAuthAndJSONContentTypeToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
+	static bool AddAuthAndOctetContentTypeToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
 
 	static bool ReadTable(cJSON* root, TableInfo& info);
 	static bool ReadColumn(cJSON* root, TableInfo::ColumnInfo& info);

@@ -57,7 +57,8 @@ public:
 		const std::string& mapApiKey) const;
 
 	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
-		const unsigned int& month, const std::string& googleMapsKey) const;
+		const unsigned int& month, const std::string& googleMapsKey,
+		const std::string& clientId, const std::string& clientSecret) const;
 
 	struct FrequencyInfo
 	{
@@ -168,7 +169,8 @@ private:
 	double ComputeNewSpeciesProbability(const std::string& fileName, const unsigned int& month) const;
 
 	static bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
-		const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities);
+		const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities,
+		const std::string& clientId, const std::string& clientSecret);
 };
 
 template<typename T>
