@@ -500,7 +500,7 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 	std::vector<CountyGeometry>& geometry)
 {
 	const std::string usCountyBoundaryTableId("1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa");
-	const std::string query("SELECT State,County,geometry FROM " + usCountyBoundaryTableId);
+	const std::string query("SELECT State Abbr,County Name,geometry FROM " + usCountyBoundaryTableId);
 	cJSON* root;
 	if (!fusionTables.SubmitQuery(query, root))
 		return false;
