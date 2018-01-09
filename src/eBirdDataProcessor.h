@@ -57,8 +57,7 @@ public:
 		const std::string& mapApiKey) const;
 
 	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
-		const unsigned int& month, const std::string& googleMapsKey,
-		const std::string& clientId, const std::string& clientSecret) const;
+		const std::string& googleMapsKey, const std::string& clientId, const std::string& clientSecret) const;
 
 	struct FrequencyInfo
 	{
@@ -67,6 +66,16 @@ public:
 
 		FrequencyInfo() = default;
 		FrequencyInfo(const std::string& species, const double& frequency) : species(species), frequency(frequency) {}
+	};
+
+	struct YearFrequencyInfo
+	{
+		YearFrequencyInfo() = default;
+		YearFrequencyInfo(const std::string& locationHint,
+			const std::array<double, 12>& probabilities) : locationHint(locationHint), probabilities(probabilities) {}
+
+		std::string locationHint;
+		std::array<double, 12> probabilities;
 	};
 
 private:
@@ -166,10 +175,10 @@ private:
 		bool operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const;
 	};
 
-	double ComputeNewSpeciesProbability(const std::string& fileName, const unsigned int& month) const;
+	std::array<double, 12> ComputeNewSpeciesProbability(const std::string& fileName) const;
 
 	static bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
-		const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities,
+		const std::string& googleMapsKey, const std::vector<YearFrequencyInfo>& observationProbabilities,
 		const std::string& clientId, const std::string& clientSecret);
 };
 

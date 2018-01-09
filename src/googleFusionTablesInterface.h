@@ -53,6 +53,7 @@ public:
 	bool Import(const std::string& tableId, const std::string& csvData);
 	bool ListColumns(const std::string& tableId,
 		std::vector<TableInfo::ColumnInfo>& columnInfo);
+	bool DeleteAllRows(const std::string& tableId);
 
 private:
 	static const std::string apiRoot;
@@ -61,6 +62,7 @@ private:
 	static const std::string importEndPoint;
 	static const std::string columnsEndPoint;
 	static const std::string copyEndPoint;
+	static const std::string queryEndPoint;
 	static const std::string tableListKindText;
 	static const std::string tableKindText;
 	static const std::string columnKindText;

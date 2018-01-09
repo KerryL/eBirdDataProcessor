@@ -28,6 +28,7 @@
 #include <functional>
 #include <map>
 #include <regex>
+#include <chrono>
 
 const std::string EBirdDataProcessor::headerLine("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
@@ -1107,10 +1108,8 @@ bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
 	return true;
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(
-	const std::string& frequencyFileDirectory, const unsigned int& month,
-	const std::string& googleMapsKey, const std::string& clientId,
-	const std::string& clientSecret) const
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& frequencyFileDirectory,
+	const std::string& googleMapsKey, const std::string& clientId, const std::string& clientSecret) const
 {
 	DIR *dir(opendir(frequencyFileDirectory.c_str()));
 	if (!dir)
@@ -1119,7 +1118,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(
 		return false;
 	}
 
-	std::vector<FrequencyInfo> newSightingProbability;// frequency is probability of seeing new species and species is file name of frequency data file
+	std::vector<YearFrequencyInfo> newSightingProbability;// frequency is probability of seeing new species and species is file name of frequency data file
 
 	struct dirent *ent;
 	while (ent = readdir(dir), ent)
@@ -1128,18 +1127,26 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(
 			std::string(ent->d_name).compare("..") == 0)
 			continue;
 
-		newSightingProbability.push_back(FrequencyInfo(ent->d_name,
-			ComputeNewSpeciesProbability(frequencyFileDirectory + ent->d_name, month)));// TODO:  Possibly do this in parallel?
+		newSightingProbability.push_back(YearFrequencyInfo(ent->d_name,
+			ComputeNewSpeciesProbability(frequencyFileDirectory + ent->d_name)));// TODO:  Possibly do this in parallel?
 	}
 	closedir(dir);
 
-	std::sort(newSightingProbability.begin(), newSightingProbability.end(), [](const FrequencyInfo& a, const FrequencyInfo& b)
+	time_t now(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+	const struct tm nowTime(*localtime(&now));
+	const int currentMonth(nowTime.tm_mon);
+	std::sort(newSightingProbability.begin(), newSightingProbability.end(), [&currentMonth](const YearFrequencyInfo& a, const YearFrequencyInfo& b)
 	{
-		return a.frequency > b.frequency;
+		return a.probabilities[currentMonth] > b.probabilities[currentMonth];
 	});
 
 	for (const auto& location : newSightingProbability)
-		std::cout << location.species << " : " << location.frequency * 100.0 << "%\n";
+	{
+		std::cout << location.locationHint << " : ";
+		for (const auto& p : location.probabilities)
+			std::cout << p * 100.0 << "%\t";
+		std::cout << std::endl;
+	}
 
 	if (!googleMapsKey.empty())
 	{
@@ -1153,32 +1160,37 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(
 	return true;
 }
 
-double EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileName, const unsigned int& month) const
+std::array<double, 12> EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileName) const
 {
-	assert(month > 0 && month < 13);
-
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
 	if (!ParseFrequencyFile(fileName, frequencyData, checklistCounts))
-		return -1.0;
+		return std::array<double, 12>();
 
 	EliminateObservedSpecies(frequencyData);
 
-	const double thresholdFrequency(5.0);// TODO:  Don't hardcode
-	double product(1.0);
-	for (const auto& entry : frequencyData[month - 1])
+	std::array<double, 12> probabilities;
+	unsigned int i(0);
+	for (auto& p : probabilities)
 	{
-		if (entry.frequency < thresholdFrequency)// Ignore rarities
-			continue;
+		const double thresholdFrequency(5.0);// TODO:  Don't hardcode
+		double product(1.0);
+		for (const auto& entry : frequencyData[i])
+		{
+			if (entry.frequency < thresholdFrequency)// Ignore rarities
+				continue;
+			product *= (1.0 - entry.frequency / 100.0);
+		}
 
-		product *= (1.0 - entry.frequency / 100.0);
+		p = 1.0 - product;
+		++i;
 	}
 
-	return 1.0 - product;
+	return probabilities;
 }
 
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFileName,
-	const std::string& googleMapsKey, const std::vector<FrequencyInfo>& observationProbabilities,
+	const std::string& googleMapsKey, const std::vector<YearFrequencyInfo>& observationProbabilities,
 	const std::string& clientId, const std::string& clientSecret)
 {
 	return MapPageGenerator::WriteBestLocationsViewerPage(htmlFileName,

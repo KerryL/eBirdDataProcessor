@@ -6,17 +6,19 @@
 // Local headers
 #include "mapPageGenerator.h"
 #include "googleMapsInterface.h"
-#include "googleFusionTablesInterface.h"
 
 // Standard C++ headers
 #include <sstream>
 #include <iomanip>
 #include <cctype>
 #include <iostream>
+#include <thread>
+
+const std::string MapPageGenerator::birdProbabilityTableName("Bird Probability Table");
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey,
-	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
 	const std::string& clientId, const std::string& clientSecret)
 {
 	std::ofstream file(htmlFileName.c_str());
@@ -56,7 +58,7 @@ void MapPageGenerator::WriteHeadSection(std::ofstream& f)
 }
 
 void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
-	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities)
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities)
 {
 	double northeastLatitude, northeastLongitude;
 	double southwestLatitude, southwestLongitude;
@@ -90,20 +92,20 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 		<< "        var countyLayer = new google.maps.FusionTablesLayer({\n"
         << "          query: {\n"
         << "            select: 'geometry',\n"
-        << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa',\n"// hash for US county boundaries fusion table
-		<< "            where: \"'State-County' IN (";
+        << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa'\n";// hash for US county boundaries fusion table
+		/*<< "            where: \"'State-County' IN (";
 
-		/*bool needComma(false);
+		bool needComma(false);
 		for (const auto& stateCounty : stateCountyList)
 		{
 			if (needComma)
 				f << ", ";
 			needComma = true;
 			f << '\'' << CleanQueryString(stateCounty) << '\'';
-		}*/
+		}
 
 		f << ")\"\n"
-        /*<< "          },\n"
+        << "          },\n"
         << "          styles: [{\n"
         << "            polygonOptions: {\n"
         << "              fillColor: '#00FF00',\n"
@@ -124,7 +126,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 		}
 
         f << "]\n"*/
-        << "        });\n"
+        f << "        });\n"
 		<< "        countyLayer.setMap(map);\n"
 		<< "      }\n"
 		<< "    </script>\n"
@@ -134,131 +136,183 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 		<< "</html>";
 }
 
-// TODO:  Consider multithreading all of the "bulk" stuff - contacting google maps for county info, reading frequency data, etc.  Maybe not for frequency harvesting (eBird has limits on crawling in robots.txt), but for google apis.
+// TODO:  Consider multithreading all of the "bulk" stuff - contacting google maps for
+// county info, reading frequency data, etc.  Maybe not for frequency harvesting (eBird
+// has limits on crawling in robots.txt), but for google apis.
 
 bool MapPageGenerator::CreateFusionTable(
-	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
 	std::string& tableId, const Keys& keys)
 {
-	GoogleFusionTablesInterface fusionTables("Bird Probability Tool", keys.clientId, keys.clientSecret);
-	std::vector<GoogleFusionTablesInterface::TableInfo> tableList;
+	GFTI fusionTables("Bird Probability Tool", keys.clientId, keys.clientSecret);
+	std::vector<GFTI::TableInfo> tableList;
 	if (!fusionTables.ListTables(tableList))
 	{
 		std::cerr << "Failed to generate list of existing tables\n";
 		return false;
 	}
 
-	const std::string birdProbabilityTableName("Bird Probability Table");
+	tableId.clear();
 	for (const auto& t : tableList)
 	{
 		if (t.name.compare(birdProbabilityTableName) == 0)
 		{
-			if (!fusionTables.DeleteTable(t.tableId))
-				std::cerr << "Warning:  Failed to delete existing table " << t.tableId << '\n';
+			std::cout << "Found existing table " << t.tableId << std::endl;
+			tableId = t.tableId;
+			if (!fusionTables.DeleteAllRows(t.tableId))
+				std::cerr << "Warning:  Failed to delete existing rows from table\n";
+			break;
 		}
 	}
 
-	GoogleFusionTablesInterface::TableInfo tableInfo;
-	tableInfo.name = birdProbabilityTableName;
-	tableInfo.description = "Table of bird observation probabilities";
-	tableInfo.isExportable = true;
-	tableInfo.columns.resize(7);
-
-	tableInfo.columns[0] = GoogleFusionTablesInterface::ColumnInfo("State",
-		GoogleFusionTablesInterface::ColumnType::String);
-	tableInfo.columns[1] = GoogleFusionTablesInterface::ColumnInfo("County",
-		GoogleFusionTablesInterface::ColumnType::String);
-	tableInfo.columns[2] = GoogleFusionTablesInterface::ColumnInfo("Location",
-		GoogleFusionTablesInterface::ColumnType::Location);
-	tableInfo.columns[3] = GoogleFusionTablesInterface::ColumnInfo("Probability",
-		GoogleFusionTablesInterface::ColumnType::Number);
-	tableInfo.columns[4] = GoogleFusionTablesInterface::ColumnInfo("Color",
-		GoogleFusionTablesInterface::ColumnType::String);
-	tableInfo.columns[5] = GoogleFusionTablesInterface::ColumnInfo("Name",
-		GoogleFusionTablesInterface::ColumnType::String);
-	tableInfo.columns[6] = GoogleFusionTablesInterface::ColumnInfo("State-County",
-		GoogleFusionTablesInterface::ColumnType::String);
-
-	if (!fusionTables.CreateTable(tableInfo))
+	if (tableId.empty())
 	{
-		std::cerr << "Failed to create fusion table\n";
-		return false;
+		GFTI::TableInfo tableInfo(BuildTableLayout());
+		if (!fusionTables.CreateTable(tableInfo))
+		{
+			std::cerr << "Failed to create fusion table\n";
+			return false;
+		}
+
+		tableId = tableInfo.tableId;
+		std::cout << "Created new fusion table " << tableId << std::endl;
+		// TODO:  Can we make the new table public or unlisted here?  Instead of requiring user to log in and change it?
 	}
 
-	tableId = tableInfo.tableId;
-	std::cout << "Created new fusion table " << tableId << std::endl;
-
-	std::ostringstream ss;
+	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
+	std::vector<std::thread> threads(countyInfo.size());
+	Semaphore semaphore(threads.size());
+	auto countyIt(countyInfo.begin());
+	auto threadIt(threads.begin());
 	for (const auto& entry : observationProbabilities)
 	{
-		std::string state, county;
-		if (!GetStateAbbreviationFromFileName(entry.species, state))
-			continue;
-
-		if (!GetCountyNameFromFileName(entry.species, county))
-			continue;
-
-		double newLatitude, newLongitude;
-		double newNELatitude, newNELongitude;
-		double newSWLatitude, newSWLongitude;
-		std::string geographicName;
-		if (!GetLatitudeAndLongitudeFromCountyAndState(state, county + " County",
-			newLatitude, newLongitude, newNELatitude,
-			newNELongitude, newSWLatitude, newSWLongitude, geographicName, keys.googleMapsKey))
-			continue;
-
-		const std::string endString(" County");
-		std::string::size_type endPosition(std::min(
-			geographicName.find(endString), geographicName.find(',')));
-		std::string stateCounty;
-		if (endPosition == std::string::npos)
-			std::cerr << "Warning:  Failed to extract county name from '" << geographicName << "'\n";
-		else
-			stateCounty = state + "-" + geographicName.substr(0, endPosition);
-
-		const std::string::size_type saintStart(geographicName.find("St "));
-		if (saintStart != std::string::npos)
-		{
-			geographicName.insert(saintStart + 2, ".");
-			stateCounty = state + "-" + geographicName.substr(0, endPosition + 1);
-		}
-
-		county = geographicName.substr(0, geographicName.find(','));// TODO:  Make robust
-
-		if (ss.str().empty())
-		{
-			northeastLatitude = newLatitude;
-			northeastLongitude = newLongitude;
-			southwestLatitude = newLatitude;
-			southwestLongitude = newLongitude;
-		}
-
-		if (newNELatitude > northeastLatitude)
-			northeastLatitude = newNELatitude;
-		if (newNELongitude > northeastLongitude)
-			northeastLongitude = newNELongitude;
-		if (newSWLatitude < southwestLatitude)
-			southwestLatitude = newSWLatitude;
-		if (newSWLongitude < southwestLongitude)
-			southwestLongitude = newSWLongitude;
-
-		ss << state << ',' << county << ',' << newLatitude << ' ' << newLongitude << ','
-			<< entry.frequency * 100.0 << ',' << ComputeColor(entry.frequency) << ",\""
-			<< CleanNameString(county) << ", " << state << "\"," << stateCounty << '\n';
+		*threadIt = std::thread(PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, semaphore);
+		++threadIt;
+		++countyIt;
 	}
 
-	if (!fusionTables.Import(tableInfo.tableId, ss.str()))
+	for (auto& t : threads)
+		t.join();
+
+	semaphore.Wait();
+
+	std::ostringstream ss;
+	for (const auto& c : countyInfo)
+	{
+		if (ss.str().empty())
+		{
+			northeastLatitude = c.latitude;
+			northeastLongitude = c.longitude;
+			southwestLatitude = c.latitude;
+			southwestLongitude = c.longitude;
+		}
+
+		if (c.neLatitude > northeastLatitude)
+			northeastLatitude = c.neLatitude;
+		if (c.neLongitude > northeastLongitude)
+			northeastLongitude = c.neLongitude;
+		if (c.swLatitude < southwestLatitude)
+			southwestLatitude = c.swLatitude;
+		if (c.swLongitude < southwestLongitude)
+			southwestLongitude = c.swLongitude;
+
+		ss << c.state << ',' << c.county << ',' << c.state + '-' + c.county << ',' << c.name << ','
+			<< c.latitude << ' ' << c.longitude << ',';
+		for (const auto& p : c.probabilities)
+			ss << p * 100.0 << ',';
+		for (const auto& p : c.probabilities)
+			ss << ComputeColor(p) << ',';
+		ss << '\n';
+	}
+
+	if (!fusionTables.Import(tableId, ss.str()))
 	{
 		std::cerr << "Failed to import data\n";
 		return false;
 	}
 
 	// TODO:  Merge with county boundary table here?  Use that table in page?
-	// TODO:  Can we make a table public here without requiring drive log in?
 
 	return true;
+}
+
+void MapPageGenerator::PopulateCountyInfo(CountyInfo& info,
+	const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo, const std::string& googleMapsKey, Semaphore& semaphore)
+{
+	SemaphoreDecrementor decrementor(semaphore);
+
+	if (!GetStateAbbreviationFromFileName(frequencyInfo.locationHint, info.state))
+		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationHint << "'\n";
+
+	if (!GetCountyNameFromFileName(frequencyInfo.locationHint, info.county))
+		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationHint << "'\n";
+
+	if (!GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
+		info.latitude, info.longitude, info.neLatitude,
+		info.neLongitude, info.swLatitude, info.swLongitude, info.name, googleMapsKey))
+		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationHint << "'\n";
+
+	const std::string endString(" County");
+	std::string::size_type endPosition(std::min(
+		info.name.find(endString), info.name.find(',')));
+	if (endPosition == std::string::npos)
+		std::cerr << "Warning:  Failed to extract county name from '" << info.name << "'\n";
+	else
+		info.county = info.name.substr(0, endPosition);
+
+	const std::string::size_type saintStart(info.name.find("St "));
+	if (saintStart != std::string::npos)
+	{
+		info.name.insert(saintStart + 2, ".");
+		info.county = info.name.substr(0, endPosition + 1);
+	}
+
+	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
+	info.probabilities = std::move(frequencyInfo.probabilities);
+}
+
+GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
+{
+	GFTI::TableInfo tableInfo;
+	tableInfo.name = birdProbabilityTableName;
+	tableInfo.description = "Table of bird observation probabilities";
+	tableInfo.isExportable = true;
+
+	tableInfo.columns.push_back(GFTI::ColumnInfo("State", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("County", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("State-County", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Name", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Location", GFTI::ColumnType::Location));
+
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Jan", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Feb", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Mar", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Apr", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-May", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Jun", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Jul", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Aug", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Sep", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Oct", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Nov", GFTI::ColumnType::Number));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Dec", GFTI::ColumnType::Number));
+
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Jan", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Feb", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Mar", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Apr", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-May", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Jun", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Jul", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Aug", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Sep", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Oct", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Nov", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Dec", GFTI::ColumnType::String));
+
+	return tableInfo;
 }
 
 bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,

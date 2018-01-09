@@ -19,6 +19,7 @@
 const std::string GoogleFusionTablesInterface::apiRoot("https://www.googleapis.com/fusiontables/v2/");
 const std::string GoogleFusionTablesInterface::apiRootUpload("https://www.googleapis.com/upload/fusiontables/v2/");
 const std::string GoogleFusionTablesInterface::tablesEndPoint("tables");
+const std::string GoogleFusionTablesInterface::queryEndPoint("query");
 const std::string GoogleFusionTablesInterface::importEndPoint("/import");
 const std::string GoogleFusionTablesInterface::columnsEndPoint("/columns");
 const std::string GoogleFusionTablesInterface::copyEndPoint("/copy");
@@ -635,4 +636,52 @@ GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType
 
 	assert(false);
 	return TableInfo::ColumnInfo::ColumnType::String;
+}
+
+bool GoogleFusionTablesInterface::DeleteAllRows(const std::string& tableId)
+{
+	const std::string deleteCommand("DELETE FROM " + tableId);
+	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
+	std::string response;
+	if (!DoCURLPost(apiRootUpload + queryEndPoint + '?' + URLEncode(deleteCommand), std::string(),
+		response, AddAuthToCurlHeader, &authTokenData))
+	{
+		std::cerr << "Failed to delete all rows\n";
+		return false;
+	}
+
+	cJSON* root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		std::cerr << "Failed to parse delete all rows response\n";
+		return false;
+	}
+
+	if (ResponseHasError(root))
+	{
+		cJSON_Delete(root);
+		return false;
+	}
+
+	std::cout << response << std::endl;
+
+	/*if (!KindMatches(root, importKindText))
+	{
+		std::cerr << "Received unexpected kind in import response\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	std::string rowsString;
+	if (!ReadJSON(root, numberOfRowsImportedKey, rowsString))
+	{
+		std::cerr << "Failed to check number of imported rows\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	std::cout << "Successfully imported " << rowsString << " new rows into table " << tableId << std::endl;*/
+
+	cJSON_Delete(root);
+	return true;
 }

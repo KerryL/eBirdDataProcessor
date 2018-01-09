@@ -76,7 +76,6 @@ struct EBDPConfig
 	std::string usCensusAPIKey;
 
 	std::string findMaxNeedsLocations;
-	unsigned int maxNeedsMonth;
 
 	std::string oAuthClientId;
 	std::string oAuthClientSecret;

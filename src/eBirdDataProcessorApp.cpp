@@ -24,6 +24,7 @@ int main(int argc, char *argv[])
 	return app.Run(argc, argv);
 }
 
+#include "googleFusionTablesInterface.h"
 int EBirdDataProcessorApp::Run(int argc, char *argv[])
 {
 	if (argc != 2)
@@ -36,6 +37,26 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	EBDPConfigFile configFile;
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
+
+	///////////
+	/*GoogleFusionTablesInterface fusionTables("Bird Probability Tool", configFile.GetConfig().oAuthClientId, configFile.GetConfig().oAuthClientSecret);
+	std::vector<GoogleFusionTablesInterface::TableInfo> tableList;
+	if (!fusionTables.ListTables(tableList))
+	{
+		std::cerr << "Failed to generate list of existing tables\n";
+		return false;
+	}
+
+	for (const auto& t : tableList)
+	{
+		if (t.name.compare("Bird Probability Table") == 0)
+		{
+			std::cout << "Found existing table " << t.tableId << std::endl;
+			if (!fusionTables.DeleteAllRows(t.tableId))
+				std::cerr << "Warning:  Failed to delete existing rows from table\n";
+			break;
+		}
+	}//////////*/
 
 	EBirdDataProcessor processor;
 	if (!processor.Parse(configFile.GetConfig().dataFileName))
@@ -83,7 +104,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	else if (!configFile.GetConfig().findMaxNeedsLocations.empty())
 	{
 		if (!processor.FindBestLocationsForNeededSpecies(
-			configFile.GetConfig().findMaxNeedsLocations, configFile.GetConfig().maxNeedsMonth,
+			configFile.GetConfig().findMaxNeedsLocations,
 			configFile.GetConfig().googleMapsAPIKey, configFile.GetConfig().oAuthClientId,
 			configFile.GetConfig().oAuthClientSecret))
 			return 1;
