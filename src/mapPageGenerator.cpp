@@ -255,6 +255,9 @@ bool MapPageGenerator::CreateFusionTable(
 		return false;
 	}
 
+	// TODO:  Merge with county boundary table here?  Use that table in page?
+	// TODO:  Can we make a table public here without requiring drive log in?
+
 	return true;
 }
 
