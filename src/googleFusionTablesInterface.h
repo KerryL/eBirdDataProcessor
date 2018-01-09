@@ -24,9 +24,6 @@ public:
 
 		struct ColumnInfo
 		{
-			unsigned int columnId;
-			std::string name;
-
 			enum class ColumnType
 			{
 				String,
@@ -35,11 +32,19 @@ public:
 				Location
 			};
 
+			ColumnInfo() = default;
+			ColumnInfo(const std::string& name, const ColumnType& type) : name(name), type(type) {}
+			unsigned int columnId;
+			std::string name;
+
 			ColumnType type;
 		};
 
 		std::vector<ColumnInfo> columns;
 	};
+
+	typedef TableInfo::ColumnInfo ColumnInfo;
+	typedef ColumnInfo::ColumnType ColumnType;
 
 	bool CreateTable(TableInfo& info);
 	bool ListTables(std::vector<TableInfo>& tables);

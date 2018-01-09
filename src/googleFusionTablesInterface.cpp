@@ -187,7 +187,7 @@ bool GoogleFusionTablesInterface::DeleteTable(const std::string& tableId)
 		return false;
 	}
 
-	return false;
+	return true;
 }
 
 bool GoogleFusionTablesInterface::CopyTable(const std::string& tableId, TableInfo& info)

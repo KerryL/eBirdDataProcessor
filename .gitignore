@@ -17,6 +17,7 @@ configs/
 *.html
 
 *.cookies
+~*
 
 *.suo
 *.sdf

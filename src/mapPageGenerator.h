@@ -35,11 +35,11 @@ private:
 	static void WriteHeadSection(std::ofstream& f);
 	static void WriteBody(std::ofstream& f, const Keys& keys,
 		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities);
-	static void WriteMarkerLocations(std::ostream& f,
+	static bool CreateFusionTable(
 		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
-		std::vector<std::string>& stateCountyList, const Keys& keys);
+		std::string& tableId, const Keys& keys);
 	static bool GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 		const std::string& county, double& latitude, double& longitude,
 		double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
@@ -50,8 +50,7 @@ private:
 	static std::string CleanNameString(const std::string& s);
 	static std::string CleanQueryString(const std::string& s);
 	static std::string CleanFileName(const std::string& s);
-	static std::string ComputeColor(const std::string& stateCounty,
-		const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities);
+	static std::string ComputeColor(const double& frequency);
 
 	struct Color
 	{

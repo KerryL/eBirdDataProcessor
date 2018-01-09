@@ -12,6 +12,7 @@
 #include <sstream>
 #include <iomanip>
 #include <cctype>
+#include <iostream>
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey,
@@ -57,14 +58,16 @@ void MapPageGenerator::WriteHeadSection(std::ofstream& f)
 void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities)
 {
-	std::ostringstream markerLocations;
 	double northeastLatitude, northeastLongitude;
 	double southwestLatitude, southwestLongitude;
-	std::vector<std::string> stateCountyList;
+	std::string stateCountyList;
 
-	WriteMarkerLocations(markerLocations, observationProbabilities,
-		northeastLatitude, northeastLongitude, southwestLatitude, southwestLongitude,
-		stateCountyList, keys);
+	if (!CreateFusionTable(observationProbabilities, northeastLatitude,
+		northeastLongitude, southwestLatitude, southwestLongitude, stateCountyList, keys))
+	{
+		std::cerr << "Failed to create fusion table\n";
+		return;
+	}
 
 	const double centerLatitude(0.5 * (northeastLatitude + southwestLatitude));
 	const double centerLongitude(0.5 * (northeastLongitude + southwestLongitude));
@@ -84,44 +87,23 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 		<< "        map.fitBounds({north:" << northeastLatitude << ", east:" << northeastLongitude
 			<< ", south:" << southwestLatitude << ", west:" << southwestLongitude << "});\n"
 		<< '\n'
-
-		<< markerLocations.str()// filled above
-
-		<< "        features.forEach(function(feature) {\n"
-		<< "          var marker = new google.maps.Marker({\n"
-        << "            position: feature.position,\n"
-		// title is "hover text"
-		// label puts text inside marker (so more than one character overflows)
-		<< "            title: feature.name + ' (' + feature.value + ')',\n"
-		<< "            map: map\n"
-        << "          });\n"
-		<< '\n'
-		/*<< "          var infoWindow = new google.maps.InfoWindow({\n"
-		<< "            content: feature.info\n"
-		<< "          });"
-		<< '\n'
-		<< "          marker.addListener('click', function() {\n"
-		<< "            infoWindow.open(map, marker);\n"
-		<< "          });\n"*/// TODO:  Possibly list most likely species in this window?
-        << "        });\n"
-		<< '\n'
 		<< "        var countyLayer = new google.maps.FusionTablesLayer({\n"
         << "          query: {\n"
         << "            select: 'geometry',\n"
         << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa',\n"// hash for US county boundaries fusion table
 		<< "            where: \"'State-County' IN (";
 
-		bool needComma(false);
+		/*bool needComma(false);
 		for (const auto& stateCounty : stateCountyList)
 		{
 			if (needComma)
 				f << ", ";
 			needComma = true;
 			f << '\'' << CleanQueryString(stateCounty) << '\'';
-		}
+		}*/
 
 		f << ")\"\n"
-        << "          },\n"
+        /*<< "          },\n"
         << "          styles: [{\n"
         << "            polygonOptions: {\n"
         << "              fillColor: '#00FF00',\n"
@@ -141,7 +123,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 			<< "          }";
 		}
 
-        f << "]\n"
+        f << "]\n"*/
         << "        });\n"
 		<< "        countyLayer.setMap(map);\n"
 		<< "      }\n"
@@ -154,15 +136,61 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 
 // TODO:  Consider multithreading all of the "bulk" stuff - contacting google maps for county info, reading frequency data, etc.  Maybe not for frequency harvesting (eBird has limits on crawling in robots.txt), but for google apis.
 
-void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
+bool MapPageGenerator::CreateFusionTable(
 	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
-	std::vector<std::string>& stateCountyList, const Keys& keys)
+	std::string& tableId, const Keys& keys)
 {
-	f << "        var features = [";
+	GoogleFusionTablesInterface fusionTables("Bird Probability Tool", keys.clientId, keys.clientSecret);
+	std::vector<GoogleFusionTablesInterface::TableInfo> tableList;
+	if (!fusionTables.ListTables(tableList))
+	{
+		std::cerr << "Failed to generate list of existing tables\n";
+		return false;
+	}
 
-	bool first(true);
+	const std::string birdProbabilityTableName("Bird Probability Table");
+	for (const auto& t : tableList)
+	{
+		if (t.name.compare(birdProbabilityTableName) == 0)
+		{
+			if (!fusionTables.DeleteTable(t.tableId))
+				std::cerr << "Warning:  Failed to delete existing table " << t.tableId << '\n';
+		}
+	}
+
+	GoogleFusionTablesInterface::TableInfo tableInfo;
+	tableInfo.name = birdProbabilityTableName;
+	tableInfo.description = "Table of bird observation probabilities";
+	tableInfo.isExportable = true;
+	tableInfo.columns.resize(7);
+
+	tableInfo.columns[0] = GoogleFusionTablesInterface::ColumnInfo("State",
+		GoogleFusionTablesInterface::ColumnType::String);
+	tableInfo.columns[1] = GoogleFusionTablesInterface::ColumnInfo("County",
+		GoogleFusionTablesInterface::ColumnType::String);
+	tableInfo.columns[2] = GoogleFusionTablesInterface::ColumnInfo("Location",
+		GoogleFusionTablesInterface::ColumnType::Location);
+	tableInfo.columns[3] = GoogleFusionTablesInterface::ColumnInfo("Probability",
+		GoogleFusionTablesInterface::ColumnType::Number);
+	tableInfo.columns[4] = GoogleFusionTablesInterface::ColumnInfo("Color",
+		GoogleFusionTablesInterface::ColumnType::String);
+	tableInfo.columns[5] = GoogleFusionTablesInterface::ColumnInfo("Name",
+		GoogleFusionTablesInterface::ColumnType::String);
+	tableInfo.columns[6] = GoogleFusionTablesInterface::ColumnInfo("State-County",
+		GoogleFusionTablesInterface::ColumnType::String);
+
+	if (!fusionTables.CreateTable(tableInfo))
+	{
+		std::cerr << "Failed to create fusion table\n";
+		return false;
+	}
+
+	tableId = tableInfo.tableId;
+	std::cout << "Created new fusion table " << tableId << std::endl;
+
+	std::ostringstream ss;
 	for (const auto& entry : observationProbabilities)
 	{
 		std::string state, county;
@@ -184,35 +212,28 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 		const std::string endString(" County");
 		std::string::size_type endPosition(std::min(
 			geographicName.find(endString), geographicName.find(',')));
+		std::string stateCounty;
 		if (endPosition == std::string::npos)
-		{
 			std::cerr << "Warning:  Failed to extract county name from '" << geographicName << "'\n";
-		}
 		else
-			stateCountyList.push_back(state + "-" + geographicName.substr(0, endPosition));
+			stateCounty = state + "-" + geographicName.substr(0, endPosition);
 
 		const std::string::size_type saintStart(geographicName.find("St "));
 		if (saintStart != std::string::npos)
 		{
 			geographicName.insert(saintStart + 2, ".");
-			stateCountyList.back() = state + "-" + geographicName.substr(0, endPosition + 1);
+			stateCounty = state + "-" + geographicName.substr(0, endPosition + 1);
 		}
 
 		county = geographicName.substr(0, geographicName.find(','));// TODO:  Make robust
 
-		if (first)
+		if (ss.str().empty())
 		{
-			first = false;
-
 			northeastLatitude = newLatitude;
 			northeastLongitude = newLongitude;
 			southwestLatitude = newLatitude;
 			southwestLongitude = newLongitude;
 		}
-		else
-			f << ',';
-
-		// TODO:  Re-work this section to also use fusion tables to store this data
 
 		if (newNELatitude > northeastLatitude)
 			northeastLatitude = newNELatitude;
@@ -223,17 +244,18 @@ void MapPageGenerator::WriteMarkerLocations(std::ostream& f,
 		if (newSWLongitude < southwestLongitude)
 			southwestLongitude = newSWLongitude;
 
-		f << '\n';
-
-		f << "          {\n"
-			<< "            position: new google.maps.LatLng(" << newLatitude << ',' << newLongitude << "),\n"
-			<< "            probability: " << entry.frequency << ",\n"
-			<< "            name: '" << CleanNameString(county) << ", " << state << "',\n"
-			<< "            value: '" << entry.frequency * 100 << "%'\n"
-			<< "          }";
+		ss << state << ',' << county << ',' << newLatitude << ' ' << newLongitude << ','
+			<< entry.frequency * 100.0 << ',' << ComputeColor(entry.frequency) << ",\""
+			<< CleanNameString(county) << ", " << state << "\"," << stateCounty << '\n';
 	}
 
-	f << "\n        ];\n";
+	if (!fusionTables.Import(tableInfo.tableId, ss.str()))
+	{
+		std::cerr << "Failed to import data\n";
+		return false;
+	}
+
+	return true;
 }
 
 bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
@@ -312,26 +334,11 @@ std::string MapPageGenerator::CleanQueryString(const std::string& s)
 	return clean;
 }
 
-std::string MapPageGenerator::ComputeColor(const std::string& stateCounty,
-	const std::vector<EBirdDataProcessor::FrequencyInfo>& observationProbabilities)
+std::string MapPageGenerator::ComputeColor(const double& frequency)
 {
-	assert(stateCounty.size() > 3);
-	const std::string stateAbbr(stateCounty.substr(0, 2));
-	const std::string countyName(stateCounty.substr(3));
-	const std::string matchString(CleanFileName(countyName) + stateAbbr + "FrequencyData.csv");
-
 	const Color minColor(0.0, 0.75, 0.365);// Greenish
 	const Color maxColor(1.0, 0.0, 0.0);// Red
-
-	for (const auto& entry : observationProbabilities)
-	{
-		if (entry.species.compare(matchString) == 0)
-			return ColorToHexString(InterpolateColor(minColor, maxColor, entry.frequency));
-	}
-
-std::cout << "no match for " << stateCounty << " (matchString = " << matchString << ")" << std::endl;
-	
-	return "#000000";
+	return ColorToHexString(InterpolateColor(minColor, maxColor, frequency));
 }
 
 MapPageGenerator::Color MapPageGenerator::InterpolateColor(
