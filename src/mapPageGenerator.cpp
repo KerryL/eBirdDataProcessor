@@ -13,6 +13,7 @@
 #include <cctype>
 #include <iostream>
 #include <thread>
+#include <algorithm>
 
 const std::string MapPageGenerator::birdProbabilityTableName("Bird Probability Table");
 
@@ -92,7 +93,8 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 		<< "        var countyLayer = new google.maps.FusionTablesLayer({\n"
         << "          query: {\n"
         << "            select: 'geometry',\n"
-        << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa'\n";// hash for US county boundaries fusion table
+        << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa'\n"// hash for US county boundaries fusion table
+		<< "          }\n";// hash for US county boundaries fusion table
 		/*<< "            where: \"'State-County' IN (";
 
 		bool needComma(false);
@@ -183,20 +185,17 @@ bool MapPageGenerator::CreateFusionTable(
 
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
 	std::vector<std::thread> threads(countyInfo.size());
-	Semaphore semaphore(threads.size());
 	auto countyIt(countyInfo.begin());
 	auto threadIt(threads.begin());
 	for (const auto& entry : observationProbabilities)
 	{
-		*threadIt = std::thread(PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, semaphore);
+		*threadIt = std::thread(PopulateCountyInfo, std::ref(*countyIt), std::ref(entry), keys.googleMapsKey);
 		++threadIt;
 		++countyIt;
 	}
 
 	for (auto& t : threads)
 		t.join();
-
-	semaphore.Wait();
 
 	std::ostringstream ss;
 	for (const auto& c : countyInfo)
@@ -218,12 +217,12 @@ bool MapPageGenerator::CreateFusionTable(
 		if (c.swLongitude < southwestLongitude)
 			southwestLongitude = c.swLongitude;
 
-		ss << c.state << ',' << c.county << ',' << c.state + '-' + c.county << ',' << c.name << ','
-			<< c.latitude << ' ' << c.longitude << ',';
+		ss << c.state << ',' << c.county << ',' << c.state + '-' + c.county << ",\"" << c.name << "\","
+			<< c.latitude << ' ' << c.longitude;
 		for (const auto& p : c.probabilities)
-			ss << p * 100.0 << ',';
+			ss << ',' << p * 100.0;
 		for (const auto& p : c.probabilities)
-			ss << ComputeColor(p) << ',';
+			ss << ',' << ComputeColor(p);
 		ss << '\n';
 	}
 
@@ -239,10 +238,8 @@ bool MapPageGenerator::CreateFusionTable(
 }
 
 void MapPageGenerator::PopulateCountyInfo(CountyInfo& info,
-	const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo, const std::string& googleMapsKey, Semaphore& semaphore)
+	const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo, const std::string& googleMapsKey)
 {
-	SemaphoreDecrementor decrementor(semaphore);
-
 	if (!GetStateAbbreviationFromFileName(frequencyInfo.locationHint, info.state))
 		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationHint << "'\n";
 
@@ -413,12 +410,14 @@ MapPageGenerator::Color MapPageGenerator::InterpolateColor(
 std::string MapPageGenerator::ColorToHexString(const Color& c)
 {
 	std::ostringstream hex;
-	hex << "#" << std::hex << std::setw(2) << std::setfill('0')
-		<< static_cast<int>(c.red * 255.0)
-		<< static_cast<int>(c.green * 255.0)
-		<< static_cast<int>(c.blue * 255.0);
+	hex << "#" << std::hex
+		<< std::setw(2) << std::setfill('0') << static_cast<int>(c.red * 255.0)
+		<< std::setw(2) << std::setfill('0') << static_cast<int>(c.green * 255.0)
+		<< std::setw(2) << std::setfill('0') << static_cast<int>(c.blue * 255.0);
 	
-	return hex.str();
+	std::string hexString(hex.str());
+	std::transform(hexString.begin(), hexString.end(), hexString.begin(), std::toupper);
+	return hexString;
 }
 
 void MapPageGenerator::GetHSV(const Color& c, double& hue, double& saturation, double& value)

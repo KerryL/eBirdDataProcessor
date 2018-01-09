@@ -12,8 +12,6 @@
 
 // Standard C++ headers
 #include <fstream>
-#include <condition_variable>
-#include <mutex>
 
 class MapPageGenerator
 {
@@ -84,51 +82,8 @@ private:
 		std::array<double, 12> probabilities;
 	};
 
-	class Semaphore
-	{
-	public:
-		Semaphore() = default;
-		explicit Semaphore(const unsigned int& initialCount) : count(initialCount) {}
-
-		void Wait()
-		{
-			std::unique_lock<std::mutex> lock(m);
-			condition.wait(lock, [this]()
-			{
-				return count == 0;
-			});
-		}
-
-		void Signal()
-		{
-			{
-				std::lock_guard<std::mutex> lock(m);
-				--count;
-			}
-			condition.notify_one();
-		}
-
-	private:
-		unsigned int count = 0;
-		std::mutex m;
-		std::condition_variable condition;
-	};
-
-	class SemaphoreDecrementor
-	{
-	public:
-		SemaphoreDecrementor(Semaphore& s) : s(s) {}
-		~SemaphoreDecrementor()
-		{
-			s.Signal();
-		}
-
-	private:
-		Semaphore& s;
-	};
-
 	static void PopulateCountyInfo(CountyInfo& info,
-		const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo, const std::string& googleMapsKey, Semaphore& semaphore);
+		const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo, const std::string& googleMapsKey);
 
 	static Color InterpolateColor(const Color& minColor, const Color& maxColor, const double& value);
 	static std::string ColorToHexString(const Color& c);
