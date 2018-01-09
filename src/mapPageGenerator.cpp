@@ -63,10 +63,10 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 {
 	double northeastLatitude, northeastLongitude;
 	double southwestLatitude, southwestLongitude;
-	std::string stateCountyList;
+	std::string tableId;
 
 	if (!CreateFusionTable(observationProbabilities, northeastLatitude,
-		northeastLongitude, southwestLatitude, southwestLongitude, stateCountyList, keys))
+		northeastLongitude, southwestLatitude, southwestLongitude, tableId, keys))
 	{
 		std::cerr << "Failed to create fusion table\n";
 		return;
@@ -93,8 +93,8 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 		<< "        var countyLayer = new google.maps.FusionTablesLayer({\n"
         << "          query: {\n"
         << "            select: 'geometry',\n"
-        << "            from: '1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa'\n"// hash for US county boundaries fusion table
-		<< "          }\n";// hash for US county boundaries fusion table
+        << "            from: '" << tableId << "'\n"
+		<< "          }\n";
 		/*<< "            where: \"'State-County' IN (";
 
 		bool needComma(false);
@@ -138,10 +138,6 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 		<< "</html>";
 }
 
-// TODO:  Consider multithreading all of the "bulk" stuff - contacting google maps for
-// county info, reading frequency data, etc.  Maybe not for frequency harvesting (eBird
-// has limits on crawling in robots.txt), but for google apis.
-
 bool MapPageGenerator::CreateFusionTable(
 	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
@@ -180,8 +176,13 @@ bool MapPageGenerator::CreateFusionTable(
 
 		tableId = tableInfo.tableId;
 		std::cout << "Created new fusion table " << tableId << std::endl;
-		// TODO:  Can we make the new table public or unlisted here?  Instead of requiring user to log in and change it?
+		if (!fusionTables.SetTableAccess(tableInfo.tableId, GoogleFusionTablesInterface::TableAccess::Public))
+			std::cerr << "Failed to make table public\n";
 	}
+
+	std::vector<CountyGeometry> geometry;
+	if (!GetCountyGeometry(fusionTables, geometry))
+		return false;
 
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
 	std::vector<std::thread> threads(countyInfo.size());
@@ -189,7 +190,7 @@ bool MapPageGenerator::CreateFusionTable(
 	auto threadIt(threads.begin());
 	for (const auto& entry : observationProbabilities)
 	{
-		*threadIt = std::thread(PopulateCountyInfo, std::ref(*countyIt), std::ref(entry), keys.googleMapsKey);
+		*threadIt = std::thread(PopulateCountyInfo, std::ref(*countyIt), std::ref(entry), keys.googleMapsKey, geometry);
 		++threadIt;
 		++countyIt;
 	}
@@ -223,7 +224,7 @@ bool MapPageGenerator::CreateFusionTable(
 			ss << ',' << p * 100.0;
 		for (const auto& p : c.probabilities)
 			ss << ',' << ComputeColor(p);
-		ss << '\n';
+		ss << ',' << c.geometryKML <<'\n';
 	}
 
 	if (!fusionTables.Import(tableId, ss.str()))
@@ -232,13 +233,12 @@ bool MapPageGenerator::CreateFusionTable(
 		return false;
 	}
 
-	// TODO:  Merge with county boundary table here?  Use that table in page?
-
 	return true;
 }
 
 void MapPageGenerator::PopulateCountyInfo(CountyInfo& info,
-	const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo, const std::string& googleMapsKey)
+	const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo,
+	const std::string& googleMapsKey, const std::vector<CountyGeometry>& geometry)
 {
 	if (!GetStateAbbreviationFromFileName(frequencyInfo.locationHint, info.state))
 		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationHint << "'\n";
@@ -268,6 +268,15 @@ void MapPageGenerator::PopulateCountyInfo(CountyInfo& info,
 
 	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
 	info.probabilities = std::move(frequencyInfo.probabilities);
+
+	for (const auto& g : geometry)
+	{
+		if (g.state.compare(info.state) == 0 && g.county.compare(info.county) == 0)
+		{
+			info.geometryKML = g.kml;
+			break;
+		}
+	}
 }
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
@@ -308,6 +317,8 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Oct", GFTI::ColumnType::String));
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Nov", GFTI::ColumnType::String));
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Dec", GFTI::ColumnType::String));
+
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Geometry", GFTI::ColumnType::Location));
 
 	return tableInfo;
 }
@@ -485,3 +496,16 @@ std::string MapPageGenerator::CleanFileName(const std::string& s)
 	return cleanString;
 }
 
+bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTables,
+	std::vector<CountyGeometry>& geometry)
+{
+	const std::string usCountyBoundaryTableId("1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa");
+	const std::string query("SELECT State,County,geometry FROM " + usCountyBoundaryTableId);
+	cJSON* root;
+	if (!fusionTables.SubmitQuery(query, root))
+		return false;
+
+	// TODO:  Process root to populate geometry
+
+	return true;
+}

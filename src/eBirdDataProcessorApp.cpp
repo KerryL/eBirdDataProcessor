@@ -38,26 +38,6 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
 
-	///////////
-	/*GoogleFusionTablesInterface fusionTables("Bird Probability Tool", configFile.GetConfig().oAuthClientId, configFile.GetConfig().oAuthClientSecret);
-	std::vector<GoogleFusionTablesInterface::TableInfo> tableList;
-	if (!fusionTables.ListTables(tableList))
-	{
-		std::cerr << "Failed to generate list of existing tables\n";
-		return false;
-	}
-
-	for (const auto& t : tableList)
-	{
-		if (t.name.compare("Bird Probability Table") == 0)
-		{
-			std::cout << "Found existing table " << t.tableId << std::endl;
-			if (!fusionTables.DeleteAllRows(t.tableId))
-				std::cerr << "Warning:  Failed to delete existing rows from table\n";
-			break;
-		}
-	}//////////*/
-
 	EBirdDataProcessor processor;
 	if (!processor.Parse(configFile.GetConfig().dataFileName))
 		return 1;

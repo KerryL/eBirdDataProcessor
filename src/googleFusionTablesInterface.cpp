@@ -27,6 +27,7 @@ const std::string GoogleFusionTablesInterface::tableListKindText("fusiontables#t
 const std::string GoogleFusionTablesInterface::tableKindText("fusiontables#table");
 const std::string GoogleFusionTablesInterface::columnKindText("fusiontables#column");
 const std::string GoogleFusionTablesInterface::importKindText("fusiontables#import");
+const std::string GoogleFusionTablesInterface::queryResponseKindText("fusiontables#sqlresponse");
 const std::string GoogleFusionTablesInterface::columnListKindText("");
 const std::string GoogleFusionTablesInterface::itemsKey("items");
 const std::string GoogleFusionTablesInterface::kindKey("kind");
@@ -641,19 +642,35 @@ GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType
 bool GoogleFusionTablesInterface::DeleteAllRows(const std::string& tableId)
 {
 	const std::string deleteCommand("DELETE FROM " + tableId);
+	cJSON* root(nullptr);
+	if (!SubmitQuery(deleteCommand, root))
+		return false;
+
+	cJSON_Delete(root);
+	return true;
+}
+
+bool GoogleFusionTablesInterface::SetTableAccess(const std::string& tableId, const TableAccess& access)
+{
+	// TODO:  implement
+	return false;
+}
+
+bool GoogleFusionTablesInterface::SubmitQuery(const std::string& query, cJSON*& root)
+{
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	if (!DoCURLPost(apiRootUpload + queryEndPoint + '?' + URLEncode(deleteCommand), std::string(),
+	if (!DoCURLPost(apiRoot + queryEndPoint + "?sql=" + URLEncode(query), std::string(),
 		response, AddAuthToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to delete all rows\n";
+		std::cerr << "Failed to submit query\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	root = cJSON_Parse(response.c_str());
 	if (!root)
 	{
-		std::cerr << "Failed to parse delete all rows response\n";
+		std::cerr << "Failed to parse query response\n";
 		return false;
 	}
 
@@ -663,25 +680,13 @@ bool GoogleFusionTablesInterface::DeleteAllRows(const std::string& tableId)
 		return false;
 	}
 
-	std::cout << response << std::endl;
-
-	/*if (!KindMatches(root, importKindText))
+	if (!KindMatches(root, queryResponseKindText))
 	{
-		std::cerr << "Received unexpected kind in import response\n";
+		std::cerr << "Received unexpected kind in query response\n";
 		cJSON_Delete(root);
 		return false;
 	}
 
-	std::string rowsString;
-	if (!ReadJSON(root, numberOfRowsImportedKey, rowsString))
-	{
-		std::cerr << "Failed to check number of imported rows\n";
-		cJSON_Delete(root);
-		return false;
-	}
-
-	std::cout << "Successfully imported " << rowsString << " new rows into table " << tableId << std::endl;*/
-
-	cJSON_Delete(root);
+	//cJSON_Delete(root);// Caller responsible for freeing root!
 	return true;
 }

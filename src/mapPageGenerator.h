@@ -79,11 +79,21 @@ private:
 		double swLatitude;
 		double swLongitude;
 
+		std::string geometryKML;
+
 		std::array<double, 12> probabilities;
 	};
 
+	struct CountyGeometry
+	{
+		std::string state;
+		std::string county;
+		std::string kml;
+	};
+
 	static void PopulateCountyInfo(CountyInfo& info,
-		const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo, const std::string& googleMapsKey);
+		const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo,
+		const std::string& googleMapsKey, const std::vector<CountyGeometry>& geometry);
 
 	static Color InterpolateColor(const Color& minColor, const Color& maxColor, const double& value);
 	static std::string ColorToHexString(const Color& c);
@@ -91,6 +101,8 @@ private:
 	static Color ColorFromHSV( const double& hue, const double& saturation, const double& value);
 
 	static GFTI::TableInfo BuildTableLayout();
+
+	static bool GetCountyGeometry(GoogleFusionTablesInterface& fusionTables, std::vector<CountyGeometry>& geometry);
 };
 
 #endif// MAP_PAGE_GENERATOR_H_

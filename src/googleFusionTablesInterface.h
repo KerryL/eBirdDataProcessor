@@ -55,6 +55,17 @@ public:
 		std::vector<TableInfo::ColumnInfo>& columnInfo);
 	bool DeleteAllRows(const std::string& tableId);
 
+	enum class TableAccess
+	{
+		Public,
+		Private,
+		Unlisted
+	};
+
+	bool SetTableAccess(const std::string& tableId, const TableAccess& access);
+
+	bool SubmitQuery(const std::string& query, cJSON*& root);
+
 private:
 	static const std::string apiRoot;
 	static const std::string apiRootUpload;
@@ -68,6 +79,7 @@ private:
 	static const std::string columnKindText;
 	static const std::string columnListKindText;
 	static const std::string importKindText;
+	static const std::string queryResponseKindText;
 	static const std::string itemsKey;
 	static const std::string kindKey;
 	static const std::string tableIdKey;
