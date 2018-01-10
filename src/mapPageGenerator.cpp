@@ -32,15 +32,17 @@ bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileN
 		return false;
 	}
 
+	std::vector<unsigned int> styleIds;
 	const Keys keys(googleMapsKey, clientId, clientSecret);
-	WriteHeadSection(file, keys, observationProbabilities);
-	WriteBody(file);
+	WriteHeadSection(file, keys, observationProbabilities, styleIds);
+	WriteBody(file, styleIds);
 
 	return true;
 }
 
 void MapPageGenerator::WriteHeadSection(std::ofstream& f, const Keys& keys,
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities)
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
+	std::vector<unsigned int>& styleIds)
 {
 	f << "<!DOCTYPE html>\n"
 		<< "<html>\n"
@@ -59,30 +61,30 @@ void MapPageGenerator::WriteHeadSection(std::ofstream& f, const Keys& keys,
 		<< "      }\n"
 		<< "    </style>\n";
 
-	WriteScripts(f, keys, observationProbabilities);
+	WriteScripts(f, keys, observationProbabilities, styleIds);
 
 	f << "  </head>\n";
 }
 
-void MapPageGenerator::WriteBody(std::ofstream& f)
+void MapPageGenerator::WriteBody(std::ofstream& f, const std::vector<unsigned int>& styleIds)
 {
 	f << "  <body>\n"
 		<< "    <div id=\"map\"></div>\n"
 		<< "    <div>\n"
     	<< "      <label>Select Month:</label>\n"
     	<< "      <select id=\"month\">\n"
-    	<< "        <option value=\"1\">January</option>\n"
-    	<< "        <option value=\"2\">February</option>\n"
-    	<< "        <option value=\"3\">March</option>\n"
-    	<< "        <option value=\"4\">April</option>\n"
-    	<< "        <option value=\"5\">May</option>\n"
-    	<< "        <option value=\"6\">June</option>\n"
-    	<< "        <option value=\"7\">July</option>\n"
-    	<< "        <option value=\"8\">August</option>\n"
-    	<< "        <option value=\"9\">September</option>\n"
-    	<< "        <option value=\"10\">October</option>\n"
-    	<< "        <option value=\"11\">November</option>\n"
-    	<< "        <option value=\"12\">December</option>\n"
+    	<< "        <option value=\"" << styleIds[0] << "\">January</option>\n"
+    	<< "        <option value=\"" << styleIds[1] << "\">February</option>\n"
+    	<< "        <option value=\"" << styleIds[2] << "\">March</option>\n"
+    	<< "        <option value=\"" << styleIds[3] << "\">April</option>\n"
+    	<< "        <option value=\"" << styleIds[4] << "\">May</option>\n"
+    	<< "        <option value=\"" << styleIds[5] << "\">June</option>\n"
+    	<< "        <option value=\"" << styleIds[6] << "\">July</option>\n"
+    	<< "        <option value=\"" << styleIds[7] << "\">August</option>\n"
+    	<< "        <option value=\"" << styleIds[8] << "\">September</option>\n"
+    	<< "        <option value=\"" << styleIds[9] << "\">October</option>\n"
+    	<< "        <option value=\"" << styleIds[10] << "\">November</option>\n"
+    	<< "        <option value=\"" << styleIds[11] << "\">December</option>\n"
     	<< "      </select>\n"
 		<< "    </div>\n"
 		<< "  </body>\n"
@@ -90,14 +92,15 @@ void MapPageGenerator::WriteBody(std::ofstream& f)
 }
 
 void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities)
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
+	std::vector<unsigned int>& styleIds)
 {
 	double northeastLatitude, northeastLongitude;
 	double southwestLatitude, southwestLongitude;
 	std::string tableId;
 
 	if (!CreateFusionTable(observationProbabilities, northeastLatitude,
-		northeastLongitude, southwestLatitude, southwestLongitude, tableId, keys))
+		northeastLongitude, southwestLatitude, southwestLongitude, tableId, keys, styleIds))
 	{
 		std::cerr << "Failed to create fusion table\n";
 		return;
@@ -147,7 +150,7 @@ bool MapPageGenerator::CreateFusionTable(
 	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
-	std::string& tableId, const Keys& keys)
+	std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds)
 {
 	GFTI fusionTables("Bird Probability Tool", keys.clientId, keys.clientSecret);
 	std::vector<GFTI::TableInfo> tableList;
@@ -244,7 +247,7 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 #endif// DONT_CALL_MAPS_API
 
-	if (!VerifyTableStyles(fusionTables, tableId))
+	if (!VerifyTableStyles(fusionTables, tableId, styleIds))
 	{
 		std::cerr << "Failed to verify table styles\n";
 		return false;
@@ -561,7 +564,8 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 	return true;
 }
 
-bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTables, const std::string& tableId)
+bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
+	const std::string& tableId, std::vector<unsigned int>& styleIds)
 {
 	std::vector<GoogleFusionTablesInterface::StyleInfo> styles;
 	if (!fusionTables.ListStyles(tableId, styles))
@@ -590,10 +594,14 @@ bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTabl
 	styles.push_back(CreateStyle(tableId, "Nov", 11));
 	styles.push_back(CreateStyle(tableId, "Dec", 12));
 
+	styleIds.resize(styles.size());
+	auto idIt(styleIds.begin());
 	for (auto& s : styles)
 	{
 		if (!fusionTables.CreateStyle(tableId, s))
 			return false;
+		*idIt = s.styleId;
+		++idIt;
 	}
 
 	return true;

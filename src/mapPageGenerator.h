@@ -38,15 +38,16 @@ private:
 	typedef GoogleFusionTablesInterface GFTI;
 
 	static void WriteHeadSection(std::ofstream& f, const Keys& keys,
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities);
-	static void WriteBody(std::ofstream& f);
+		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities, std::vector<unsigned int>& styleIds);
+	static void WriteBody(std::ofstream& f, const std::vector<unsigned int>& styleIds);
 	static void WriteScripts(std::ofstream& f, const Keys& keys,
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities);
+		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
+		std::vector<unsigned int>& styleIds);
 	static bool CreateFusionTable(
 		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
-		std::string& tableId, const Keys& keys);
+		std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds);
 	static bool GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 		const std::string& county, double& latitude, double& longitude,
 		double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
@@ -127,7 +128,8 @@ private:
 
 	static void PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo);
 
-	static bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables, const std::string& tableId);
+	static bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
+		const std::string& tableId, std::vector<unsigned int>& styleIds);
 	static GoogleFusionTablesInterface::StyleInfo CreateStyle(const std::string& tableId,
 		const std::string& month, const unsigned int& id);
 };
