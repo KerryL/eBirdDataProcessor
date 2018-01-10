@@ -82,7 +82,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
     	<< "      function initMap() {\n"
     	<< "        map = new google.maps.Map(document.getElementById('map'), {\n"
     	<< "          zoom: 16,\n"
-    	<< "          center: new google.maps.LatLng(" << centerLatitude 
+    	<< "          center: new google.maps.LatLng(" << centerLatitude
 			<< ',' << centerLongitude << "),\n"
     	<< "          mapTypeId: 'roadmap'\n"
     	<< "        });\n"
@@ -224,7 +224,7 @@ bool MapPageGenerator::CreateFusionTable(
 			ss << ',' << p * 100.0;
 		for (const auto& p : c.probabilities)
 			ss << ',' << ComputeColor(p);
-		ss << ',' << c.geometryKML <<'\n';
+		ss << ",\"" << c.geometryKML <<"\"\n";
 	}
 
 	if (!fusionTables.Import(tableId, ss.str()))
@@ -277,6 +277,9 @@ void MapPageGenerator::PopulateCountyInfo(CountyInfo& info,
 			break;
 		}
 	}
+
+	if (info.geometry.empty())
+		std::cerr << "Warning:  Geometry not found for '" << info.name << "'\n";
 }
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
@@ -425,9 +428,9 @@ std::string MapPageGenerator::ColorToHexString(const Color& c)
 		<< std::setw(2) << std::setfill('0') << static_cast<int>(c.red * 255.0)
 		<< std::setw(2) << std::setfill('0') << static_cast<int>(c.green * 255.0)
 		<< std::setw(2) << std::setfill('0') << static_cast<int>(c.blue * 255.0);
-	
+
 	std::string hexString(hex.str());
-	std::transform(hexString.begin(), hexString.end(), hexString.begin(), std::toupper);
+	std::transform(hexString.begin(), hexString.end(), hexString.begin(), ::toupper);
 	return hexString;
 }
 
@@ -500,12 +503,48 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 	std::vector<CountyGeometry>& geometry)
 {
 	const std::string usCountyBoundaryTableId("1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa");
-	const std::string query("SELECT State Abbr,County Name,geometry FROM " + usCountyBoundaryTableId);
+	const std::string query("SELECT 'State Abbr','County Name',geometry FROM " + usCountyBoundaryTableId + "&typed=false");
 	cJSON* root;
 	if (!fusionTables.SubmitQuery(query, root))
 		return false;
 
-	// TODO:  Process root to populate geometry
+	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
+	if (!rowsArray)
+	{
+		std::cerr << "Failed to get rows array\n";
+		cJSON_Delete(root);
+		return false;
+	}
 
+	geometry.resize(cJSON_GetArraySize(rowsArray));
+	unsigned int i(0);
+	for (auto& g : geometry)
+	{
+		cJSON* item(cJSON_GetArrayItem(rowsArray, i));
+		if (!item)
+		{
+			std::cerr << "Failed to get array item " << i << '\n';
+			cJSON_Delete(root);
+			return false;
+		}
+
+		cJSON* state(cJSON_GetArrayItem(item, 0));
+		cJSON* county(cJSON_GetArrayItem(item, 1));
+		cJSON* kml(cJSON_GetArrayItem(item, 2));
+		if (!state || !county || !kml)
+		{
+			std::cerr << "Failed to get row information for row " << i << '\n';
+			cJSON_Delete(root);
+			return false;
+		}
+
+		g.state = state->valuestring;
+		g.county = county->valuestring;
+		g.kml = kml->valuestring;
+
+		++i;
+	}
+
+	cJSON_Delete(root);
 	return true;
 }
