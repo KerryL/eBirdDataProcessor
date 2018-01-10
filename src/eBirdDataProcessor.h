@@ -9,6 +9,7 @@
 // Local headers
 #include "eBirdInterface.h"
 #include "ebdpConfig.h"
+#include "threadPool.h"
 
 // Standard C++ headers
 #include <string>
@@ -180,6 +181,21 @@ private:
 	static bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
 		const std::string& googleMapsKey, const std::vector<YearFrequencyInfo>& observationProbabilities,
 		const std::string& clientId, const std::string& clientSecret);
+
+	class FileReadJob : public ThreadPool::JobInfo
+	{
+	public:
+		FileReadJob(ThreadPool::JobFunction jobFunction, YearFrequencyInfo& frequencyInfo,
+			const std::string& fileName, const std::string& directory, const EBirdDataProcessor* self) : JobInfo(jobFunction),
+			frequencyInfo(frequencyInfo), fileName(fileName), directory(directory), self(self) {}
+
+		YearFrequencyInfo& frequencyInfo;
+		const std::string& fileName;
+		const std::string& directory;
+		const EBirdDataProcessor* self;
+	};
+
+	static void ParallelReadFrequencyFile(const ThreadPool::JobInfo& jobInfo);
 };
 
 template<typename T>

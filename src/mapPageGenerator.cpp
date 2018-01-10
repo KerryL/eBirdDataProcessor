@@ -184,19 +184,22 @@ bool MapPageGenerator::CreateFusionTable(
 	if (!GetCountyGeometry(fusionTables, geometry))
 		return false;
 
+	// NOTE:  Google maps geocoding API has rate limit of 50 queries per sec, and usage limit of 2500 queries per day
+	// In order to prevent exceeding the query limit, we should only update the data in the rows,
+	// and not touch the name, geometry or location columns unless it's necessary. (TODO)
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
-	std::vector<std::thread> threads(countyInfo.size());
+	const unsigned int maxThreadCount(10);// to avoid exceeding Google Maps API limits
+	const unsigned int rateLimit(25);// Half of published limit to give us some buffer
+	GoogleMapsThreadPool pool(std::min(std::thread::hardware_concurrency() * 2, maxThreadCount), rateLimit);
 	auto countyIt(countyInfo.begin());
-	auto threadIt(threads.begin());
 	for (const auto& entry : observationProbabilities)
 	{
-		*threadIt = std::thread(PopulateCountyInfo, std::ref(*countyIt), std::ref(entry), keys.googleMapsKey, geometry);
-		++threadIt;
+		pool.AddJob(std::make_unique<GoogleMapsThreadPool::MapJobInfo>(
+			PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, geometry));
 		++countyIt;
 	}
 
-	for (auto& t : threads)
-		t.join();
+	pool.WaitForAllJobsComplete();
 
 	std::ostringstream ss;
 	for (const auto& c : countyInfo)
@@ -236,10 +239,14 @@ bool MapPageGenerator::CreateFusionTable(
 	return true;
 }
 
-void MapPageGenerator::PopulateCountyInfo(CountyInfo& info,
+void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo)/*CountyInfo& info,
 	const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo,
-	const std::string& googleMapsKey, const std::vector<CountyGeometry>& geometry)
+	const std::string& googleMapsKey, const std::vector<CountyGeometry>& geometry)*/
 {
+	const GoogleMapsThreadPool::MapJobInfo& mapJobInfo(static_cast<const GoogleMapsThreadPool::MapJobInfo&>(jobInfo));
+	CountyInfo& info(mapJobInfo.info);
+	const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo(mapJobInfo.frequencyInfo);
+
 	if (!GetStateAbbreviationFromFileName(frequencyInfo.locationHint, info.state))
 		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationHint << "'\n";
 
@@ -248,34 +255,24 @@ void MapPageGenerator::PopulateCountyInfo(CountyInfo& info,
 
 	if (!GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
-		info.neLongitude, info.swLatitude, info.swLongitude, info.name, googleMapsKey))
+		info.neLongitude, info.swLatitude, info.swLongitude, info.name, mapJobInfo.googleMapsKey))
 		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationHint << "'\n";
 
-	const std::string endString(" County");
-	std::string::size_type endPosition(std::min(
-		info.name.find(endString), info.name.find(',')));
-	if (endPosition == std::string::npos)
-		std::cerr << "Warning:  Failed to extract county name from '" << info.name << "'\n";
-	else
-		info.county = info.name.substr(0, endPosition);
+	info.county = StripCountyFromName(info.name);// TODO:  This whole county name thing needs to be cleaned up
 
 	const std::string::size_type saintStart(info.name.find("St "));
 	if (saintStart != std::string::npos)
 	{
 		info.name.insert(saintStart + 2, ".");
-		info.county = info.name.substr(0, endPosition + 1);
+		info.county.insert(saintStart + 2, ".");
 	}
 
 	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
 	info.probabilities = std::move(frequencyInfo.probabilities);
 
-	for (const auto& g : geometry)
+	for (const auto& g : mapJobInfo.geometry)
 	{
-		const std::string endString(" County");
-		std::string countyString(info.county);
-		std::string::size_type endPosition(countyString.find(endString));
-		if (endPosition != std::string::npos)
-			countyString = countyString.substr(0, endPosition);
+		std::string countyString(StripCountyFromName(info.county));
 		if (g.state.compare(info.state) == 0 && g.county.compare(countyString) == 0)
 		{
 			info.geometryKML = g.kml;
@@ -377,17 +374,13 @@ bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, st
 	return true;
 }
 
-std::string MapPageGenerator::CleanNameString(const std::string& s)
+std::string MapPageGenerator::StripCountyFromName(const std::string& s)
 {
-	std::string clean;
-
-	for (const auto& c : s)
-	{
-		if (c == '\'')
-			clean.append("\\'");
-		else
-			clean.push_back(c);
-	}
+	const std::string endString(" County");
+	std::string clean(s);
+	std::string::size_type endPosition(clean.find(endString));
+	if (endPosition != std::string::npos)
+		clean = clean.substr(0, endPosition);
 
 	return clean;
 }
@@ -411,6 +404,11 @@ std::string MapPageGenerator::ComputeColor(const double& frequency)
 {
 	const Color minColor(0.0, 0.75, 0.365);// Greenish
 	const Color maxColor(1.0, 0.0, 0.0);// Red
+	const Color zeroColor(0.3, 0.3, 0.3);// Grey
+
+	if (frequency == 0)
+		return ColorToHexString(zeroColor);
+
 	return ColorToHexString(InterpolateColor(minColor, maxColor, frequency));
 }
 

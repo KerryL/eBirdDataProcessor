@@ -9,6 +9,7 @@
 // Local headers
 #include "eBirdDataProcessor.h"
 #include "googleFusionTablesInterface.h"
+#include "threadPool.h"
 
 // Standard C++ headers
 #include <fstream>
@@ -51,7 +52,7 @@ private:
 	static bool GetStateAbbreviationFromFileName(const std::string& fileName, std::string& state);
 	static bool GetCountyNameFromFileName(const std::string& fileName, std::string& county);
 
-	static std::string CleanNameString(const std::string& s);
+	static std::string StripCountyFromName(const std::string& s);
 	static std::string CleanQueryString(const std::string& s);
 	static std::string CleanFileName(const std::string& s);
 	static std::string ComputeColor(const double& frequency);
@@ -91,10 +92,6 @@ private:
 		std::string kml;
 	};
 
-	static void PopulateCountyInfo(CountyInfo& info,
-		const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo,
-		const std::string& googleMapsKey, const std::vector<CountyGeometry>& geometry);
-
 	static Color InterpolateColor(const Color& minColor, const Color& maxColor, const double& value);
 	static std::string ColorToHexString(const Color& c);
 	static void GetHSV(const Color& c, double& hue, double& saturation, double& value);
@@ -103,6 +100,30 @@ private:
 	static GFTI::TableInfo BuildTableLayout();
 
 	static bool GetCountyGeometry(GoogleFusionTablesInterface& fusionTables, std::vector<CountyGeometry>& geometry);
+
+	class GoogleMapsThreadPool : public ThreadPool
+	{
+	public:
+		GoogleMapsThreadPool(const unsigned int& threadCount, const unsigned int& rateLimit)
+			: ThreadPool(threadCount, rateLimit) {}
+
+		struct MapJobInfo : public JobInfo
+		{
+			MapJobInfo() = default;
+			MapJobInfo(JobFunction jobFunction, CountyInfo& info,
+				const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo, const std::string& googleMapsKey,
+				const std::vector<CountyGeometry>& geometry)
+				: JobInfo(jobFunction), info(info), frequencyInfo(frequencyInfo),
+				googleMapsKey(googleMapsKey), geometry(geometry) {}
+
+			CountyInfo& info;
+			const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo;
+			const std::string& googleMapsKey;
+			const std::vector<CountyGeometry>& geometry;
+		};
+	};
+
+	static void PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo);
 };
 
 #endif// MAP_PAGE_GENERATOR_H_

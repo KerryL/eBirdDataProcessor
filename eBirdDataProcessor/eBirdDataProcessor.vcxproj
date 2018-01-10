@@ -135,6 +135,7 @@
     <ClCompile Include="..\src\googleMapsInterface.cpp" />
     <ClCompile Include="..\src\kernelDensityEstimation.cpp" />
     <ClCompile Include="..\src\mapPageGenerator.cpp" />
+    <ClCompile Include="..\src\threadPool.cpp" />
     <ClCompile Include="..\src\usCensusInterface.cpp" />
     <ClCompile Include="..\src\utilities\configFile.cpp" />
   </ItemGroup>
@@ -154,6 +155,7 @@
     <ClInclude Include="..\src\googleMapsInterface.h" />
     <ClInclude Include="..\src\kernelDensityEstimation.h" />
     <ClInclude Include="..\src\mapPageGenerator.h" />
+    <ClInclude Include="..\src\threadPool.h" />
     <ClInclude Include="..\src\usCensusInterface.h" />
     <ClInclude Include="..\src\utilities\configFile.h" />
   </ItemGroup>

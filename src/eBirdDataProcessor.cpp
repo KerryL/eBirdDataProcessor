@@ -666,7 +666,7 @@ void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyDa
 bool EBirdDataProcessor::ParseFrequencyFile(const std::string& fileName,
 	FrequencyDataYear& frequencyData, DoubleYear& checklistCounts)
 {
-	std::cout << "Reading frequency information from '" << fileName << "'.\n";
+	//std::cout << "Reading frequency information from '" << fileName << "'.\n";
 	std::ifstream frequencyFile(fileName.c_str());
 	if (!frequencyFile.good() || !frequencyFile.is_open())
 	{
@@ -1118,8 +1118,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 		return false;
 	}
 
-	std::vector<YearFrequencyInfo> newSightingProbability;// frequency is probability of seeing new species and species is file name of frequency data file
-
+	std::vector<std::string> fileNames;
 	struct dirent *ent;
 	while (ent = readdir(dir), ent)
 	{
@@ -1127,10 +1126,22 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 			std::string(ent->d_name).compare("..") == 0)
 			continue;
 
-		newSightingProbability.push_back(YearFrequencyInfo(ent->d_name,
-			ComputeNewSpeciesProbability(frequencyFileDirectory + ent->d_name)));// TODO:  Possibly do this in parallel?
+		fileNames.push_back(ent->d_name);
 	}
 	closedir(dir);
+
+	std::vector<YearFrequencyInfo> newSightingProbability(fileNames.size());// frequency is probability of seeing new species and species is file name of frequency data file
+	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
+
+	auto probEntryIt(newSightingProbability.begin());
+	for (const auto& f : fileNames)
+	{
+		pool.AddJob(std::make_unique<FileReadJob>(&ParallelReadFrequencyFile,
+			*probEntryIt, f, frequencyFileDirectory, this));
+		++probEntryIt;
+	}
+
+	pool.WaitForAllJobsComplete();
 
 	time_t now(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 	const struct tm nowTime(*localtime(&now));
@@ -1141,7 +1152,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 	});
 
 	for (const auto& location : newSightingProbability)
-		std::cout << location.locationHint << " : " << location.probabilities[currentMonth] << std::endl;
+		std::cout << location.locationHint << " : " << location.probabilities[currentMonth] * 100.0 << std::endl;
 
 	if (!googleMapsKey.empty())
 	{
@@ -1190,4 +1201,11 @@ bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFil
 {
 	return MapPageGenerator::WriteBestLocationsViewerPage(htmlFileName,
 		googleMapsKey, observationProbabilities, clientId, clientSecret);
+}
+
+void EBirdDataProcessor::ParallelReadFrequencyFile(const ThreadPool::JobInfo& jobInfo)
+{
+	const FileReadJob& fileJobInfo(static_cast<const FileReadJob&>(jobInfo));
+	fileJobInfo.frequencyInfo.locationHint = fileJobInfo.fileName;
+	fileJobInfo.frequencyInfo.probabilities = fileJobInfo.self->ComputeNewSpeciesProbability(fileJobInfo.directory + fileJobInfo.fileName);
 }
