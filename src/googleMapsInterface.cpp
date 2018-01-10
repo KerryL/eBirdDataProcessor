@@ -388,7 +388,7 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 
 	if (status.compare(okStatus) != 0)
 	{
-		std::cerr << "Geocode request response is not OK.  Status = " << status << '\n';
+		std::cerr << "Geocode request response is not OK.  Status = " << status << '\n';// TODO:  If status = "UNKNOWN_ERROR" maybe we should try again?
 
 		std::string errorMessage;
 		if (ReadJSON(root, errorMessageKey, errorMessage))
