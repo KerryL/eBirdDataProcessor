@@ -42,11 +42,11 @@ private:
 	std::vector<std::thread> threads;
 	const std::chrono::milliseconds minRequestDelta;
 
-	// Both jobQueue and lastRequstTime are protected by queueMutex
+	void ThreadEntry();
+
+	// These members are protected by queueMutex
 	std::queue<std::unique_ptr<JobInfo>> jobQueue;
 	std::chrono::steady_clock::time_point lastRequestTime = std::chrono::steady_clock::now();
-
-	void ThreadEntry();
 };
 
 #endif// THREAD_POOL_H_

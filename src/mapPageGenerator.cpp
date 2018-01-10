@@ -15,6 +15,9 @@
 #include <thread>
 #include <algorithm>
 
+// TODO:  Comment this out for normal builds - this prevent usage of maps API quota
+#define DONT_CALL_MAPS_API
+
 const std::string MapPageGenerator::birdProbabilityTableName("Bird Probability Table");
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
@@ -29,15 +32,15 @@ bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileN
 		return false;
 	}
 
-	WriteHeadSection(file);
-
 	const Keys keys(googleMapsKey, clientId, clientSecret);
-	WriteBody(file, keys, observationProbabilities);
+	WriteHeadSection(file, keys, observationProbabilities);
+	WriteBody(file);
 
 	return true;
 }
 
-void MapPageGenerator::WriteHeadSection(std::ofstream& f)
+void MapPageGenerator::WriteHeadSection(std::ofstream& f, const Keys& keys,
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities)
 {
 	f << "<!DOCTYPE html>\n"
 		<< "<html>\n"
@@ -47,18 +50,29 @@ void MapPageGenerator::WriteHeadSection(std::ofstream& f)
 		<< "    <meta charset=\"utf-8\">\n"
 		<< "    <style>\n"
 		<< "      #map {\n"
-		<< "        height: 100%;\n"
+		<< "        height: 95%;\n"
 		<< "      }\n"
 		<< "      html, body {\n"
 		<< "        height: 100%;\n"
 		<< "        margin: 0;\n"
 		<< "        padding: 0;\n"
 		<< "      }\n"
-		<< "    </style>\n"
-		<< "  </head>\n";
+		<< "    </style>\n";
+
+	WriteScripts(f, keys, observationProbabilities);
+
+	f << "  </head>\n";
 }
 
-void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
+void MapPageGenerator::WriteBody(std::ofstream& f)
+{
+	f << "  <body>\n"
+		<< "    <div id=\"map\"></div>\n"
+		<< "  </body>\n"
+		<< "</html>";
+}
+
+void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities)
 {
 	double northeastLatitude, northeastLongitude;
@@ -75,9 +89,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 	const double centerLatitude(0.5 * (northeastLatitude + southwestLatitude));
 	const double centerLongitude(0.5 * (northeastLongitude + southwestLongitude));
 
-	f << "  <body>\n"
-		<< "    <div id=\"map\"></div>\n"
-    	<< "    <script>\n"
+	f << "    <script type=\"text/javascript\">\n"
     	<< "      var map;\n"
     	<< "      function initMap() {\n"
     	<< "        map = new google.maps.Map(document.getElementById('map'), {\n"
@@ -128,14 +140,12 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const Keys& keys,
 		}
 
         f << "]\n"*/
-        f << "        });\n"
+	f << "        });\n"
 		<< "        countyLayer.setMap(map);\n"
 		<< "      }\n"
 		<< "    </script>\n"
 		<< "    <script async defer src=\"https://maps.googleapis.com/maps/api/js?key=" << keys.googleMapsKey << "&callback=initMap\">\n"
-		<< "    </script>\n"
-		<< "  </body>\n"
-		<< "</html>";
+		<< "    </script>\n";
 }
 
 bool MapPageGenerator::CreateFusionTable(
@@ -159,8 +169,10 @@ bool MapPageGenerator::CreateFusionTable(
 		{
 			std::cout << "Found existing table " << t.tableId << std::endl;
 			tableId = t.tableId;
+#ifndef DONT_CALL_MAPS_API
 			if (!fusionTables.DeleteAllRows(t.tableId))
 				std::cerr << "Warning:  Failed to delete existing rows from table\n";
+#endif// DONT_CALL_MAPS_API
 			break;
 		}
 	}
@@ -185,12 +197,11 @@ bool MapPageGenerator::CreateFusionTable(
 		return false;
 
 	// NOTE:  Google maps geocoding API has rate limit of 50 queries per sec, and usage limit of 2500 queries per day
-	// In order to prevent exceeding the query limit, we should only update the data in the rows,
+	// In order to prevent exceeding the daily query limit, we should only update the data in the rows,
 	// and not touch the name, geometry or location columns unless it's necessary. (TODO)
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
-	const unsigned int maxThreadCount(10);// to avoid exceeding Google Maps API limits
 	const unsigned int rateLimit(25);// Half of published limit to give us some buffer
-	GoogleMapsThreadPool pool(std::min(std::thread::hardware_concurrency() * 2, maxThreadCount), rateLimit);
+	GoogleMapsThreadPool pool(std::thread::hardware_concurrency() * 2, rateLimit);
 	auto countyIt(countyInfo.begin());
 	for (const auto& entry : observationProbabilities)
 	{
@@ -230,18 +241,24 @@ bool MapPageGenerator::CreateFusionTable(
 		ss << ",\"" << c.geometryKML <<"\"\n";
 	}
 
+#ifndef DONT_CALL_MAPS_API
 	if (!fusionTables.Import(tableId, ss.str()))
 	{
 		std::cerr << "Failed to import data\n";
+		return false;
+	}
+#endif// DONT_CALL_MAPS_API
+
+	if (!VerifyTableStyles(fusionTables, tableId))
+	{
+		std::cerr << "Failed to verify table styles\n";
 		return false;
 	}
 
 	return true;
 }
 
-void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo)/*CountyInfo& info,
-	const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo,
-	const std::string& googleMapsKey, const std::vector<CountyGeometry>& geometry)*/
+void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo)
 {
 	const GoogleMapsThreadPool::MapJobInfo& mapJobInfo(static_cast<const GoogleMapsThreadPool::MapJobInfo&>(jobInfo));
 	CountyInfo& info(mapJobInfo.info);
@@ -253,19 +270,16 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 	if (!GetCountyNameFromFileName(frequencyInfo.locationHint, info.county))
 		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationHint << "'\n";
 
+#ifndef DONT_CALL_MAPS_API
 	if (!GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
 		info.neLongitude, info.swLatitude, info.swLongitude, info.name, mapJobInfo.googleMapsKey))
 		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationHint << "'\n";
-
-	info.county = StripCountyFromName(info.name);// TODO:  This whole county name thing needs to be cleaned up
+#endif// DONT_CALL_MAPS_API
 
 	const std::string::size_type saintStart(info.name.find("St "));
 	if (saintStart != std::string::npos)
-	{
 		info.name.insert(saintStart + 2, ".");
-		info.county.insert(saintStart + 2, ".");
-	}
 
 	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
 	info.probabilities = std::move(frequencyInfo.probabilities);
@@ -550,4 +564,60 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 
 	cJSON_Delete(root);
 	return true;
+}
+
+bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTables, const std::string& tableId)
+{
+	std::vector<GoogleFusionTablesInterface::StyleInfo> styles;
+	if (!fusionTables.ListStyles(tableId, styles))
+		return false;
+
+	if (styles.size() == 12)// TODO:  Should we do a better check?
+		return true;
+
+	for (const auto& s : styles)
+	{
+		if (!fusionTables.DeleteStyle(tableId, s.styleId))
+			return false;
+	}
+
+	styles.clear();
+	styles.push_back(CreateStyle(tableId, "Jan", 1));
+	styles.push_back(CreateStyle(tableId, "Feb", 2));
+	styles.push_back(CreateStyle(tableId, "Mar", 3));
+	styles.push_back(CreateStyle(tableId, "Apr", 4));
+	styles.push_back(CreateStyle(tableId, "May", 5));
+	styles.push_back(CreateStyle(tableId, "Jun", 6));
+	styles.push_back(CreateStyle(tableId, "Jul", 7));
+	styles.push_back(CreateStyle(tableId, "Aug", 8));
+	styles.push_back(CreateStyle(tableId, "Sep", 9));
+	styles.push_back(CreateStyle(tableId, "Oct", 10));
+	styles.push_back(CreateStyle(tableId, "Nov", 11));
+	styles.push_back(CreateStyle(tableId, "Dec", 12));
+
+	for (auto& s : styles)
+	{
+		if (!fusionTables.CreateStyle(tableId, s))
+			return false;
+	}
+
+	return true;
+}
+
+GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const std::string& tableId,
+	const std::string& month, const unsigned int& id)
+{
+	GoogleFusionTablesInterface::StyleInfo style;
+	style.name = month;
+	style.hasPolygonOptions = true;
+	style.styleId = id;
+	style.tableId = tableId;
+
+	GoogleFusionTablesInterface::StyleInfo::Options polygonOptions;
+	style.polygonOptions.push_back(polygonOptions);
+	polygonOptions.type = GoogleFusionTablesInterface::StyleInfo::Options::Type::Complex;
+	polygonOptions.key = "fillColorStyler";
+	polygonOptions.c.push_back(GoogleFusionTablesInterface::StyleInfo::Options("columnName", "Color-" + month));
+
+	return style;
 }

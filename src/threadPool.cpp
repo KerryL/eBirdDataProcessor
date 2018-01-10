@@ -18,7 +18,7 @@ ThreadPool::~ThreadPool()
 {
 	{
 		std::lock_guard<std::mutex> lock(queueMutex);
-		while (jobQueue.empty())
+		while (!jobQueue.empty())
 			jobQueue.pop();
 	}
 
