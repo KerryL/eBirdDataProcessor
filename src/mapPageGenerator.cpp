@@ -271,14 +271,19 @@ void MapPageGenerator::PopulateCountyInfo(CountyInfo& info,
 
 	for (const auto& g : geometry)
 	{
-		if (g.state.compare(info.state) == 0 && g.county.compare(info.county) == 0)
+		const std::string endString(" County");
+		std::string countyString(info.county);
+		std::string::size_type endPosition(countyString.find(endString));
+		if (endPosition != std::string::npos)
+			countyString = countyString.substr(0, endPosition);
+		if (g.state.compare(info.state) == 0 && g.county.compare(countyString) == 0)
 		{
 			info.geometryKML = g.kml;
 			break;
 		}
 	}
 
-	if (info.geometry.empty())
+	if (info.geometryKML.empty())
 		std::cerr << "Warning:  Geometry not found for '" << info.name << "'\n";
 }
 
