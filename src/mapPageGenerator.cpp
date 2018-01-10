@@ -16,7 +16,7 @@
 #include <algorithm>
 
 // TODO:  Comment this out for normal builds - this prevent usage of maps API quota
-#define DONT_CALL_MAPS_API
+//#define DONT_CALL_MAPS_API
 
 const std::string MapPageGenerator::birdProbabilityTableName("Bird Probability Table");
 
@@ -68,6 +68,23 @@ void MapPageGenerator::WriteBody(std::ofstream& f)
 {
 	f << "  <body>\n"
 		<< "    <div id=\"map\"></div>\n"
+		<< "    <div>\n"
+    	<< "      <label>Select Month:</label>\n"
+    	<< "      <select id=\"month\">\n"
+    	<< "        <option value=\"1\">January</option>\n"
+    	<< "        <option value=\"2\">February</option>\n"
+    	<< "        <option value=\"3\">March</option>\n"
+    	<< "        <option value=\"4\">April</option>\n"
+    	<< "        <option value=\"5\">May</option>\n"
+    	<< "        <option value=\"6\">June</option>\n"
+    	<< "        <option value=\"7\">July</option>\n"
+    	<< "        <option value=\"8\">August</option>\n"
+    	<< "        <option value=\"9\">September</option>\n"
+    	<< "        <option value=\"10\">October</option>\n"
+    	<< "        <option value=\"11\">November</option>\n"
+    	<< "        <option value=\"12\">December</option>\n"
+    	<< "      </select>\n"
+		<< "    </div>\n"
 		<< "  </body>\n"
 		<< "</html>";
 }
@@ -89,6 +106,9 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 	const double centerLatitude(0.5 * (northeastLatitude + southwestLatitude));
 	const double centerLongitude(0.5 * (northeastLongitude + southwestLongitude));
 
+	time_t now(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+	struct tm nowTime(*localtime(&now));
+
 	f << "    <script type=\"text/javascript\">\n"
     	<< "      var map;\n"
     	<< "      function initMap() {\n"
@@ -106,42 +126,17 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
         << "          query: {\n"
         << "            select: 'geometry',\n"
         << "            from: '" << tableId << "'\n"
-		<< "          }\n";
-		/*<< "            where: \"'State-County' IN (";
-
-		bool needComma(false);
-		for (const auto& stateCounty : stateCountyList)
-		{
-			if (needComma)
-				f << ", ";
-			needComma = true;
-			f << '\'' << CleanQueryString(stateCounty) << '\'';
-		}
-
-		f << ")\"\n"
-        << "          },\n"
-        << "          styles: [{\n"
-        << "            polygonOptions: {\n"
-        << "              fillColor: '#00FF00',\n"
-        << "              fillOpacity: 0.3,\n"
-		<< "              strokeColor: '#FFFFFF'\n"
-        << "            }\n"
-		<< "          }";
-
-		for (const auto& stateCounty : stateCountyList)
-		{
-			// TODO:  This method is no good - fusion tables only supports 5 different style options
-			f << ",{\n"
-			<< "            where: \"'State-County' = '" << stateCounty << "'\",\n"
-			<< "            polygonOptions: {\n"
-			<< "              fillColor: '" << ComputeColor(stateCounty, observationProbabilities) << "'\n"
-			<< "            }\n"
-			<< "          }";
-		}
-
-        f << "]\n"*/
-	f << "        });\n"
+		<< "          },\n"
+		<< "          map: map,\n"
+		<< "          styleId: " << nowTime.tm_mon + 1 << '\n'
+		<< "        });\n"
 		<< "        countyLayer.setMap(map);\n"
+		<< '\n'
+		<< "        google.maps.event.addDomListener(document.getElementById('month'),\n"
+        << "          'change', function() {\n"
+        << "            var selectedStyle = this.value;\n"
+        << "            countyLayer.set('styleId', selectedStyle);\n"
+        << "          });\n"
 		<< "      }\n"
 		<< "    </script>\n"
 		<< "    <script async defer src=\"https://maps.googleapis.com/maps/api/js?key=" << keys.googleMapsKey << "&callback=initMap\">\n"
@@ -614,10 +609,10 @@ GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const std::
 	style.tableId = tableId;
 
 	GoogleFusionTablesInterface::StyleInfo::Options polygonOptions;
-	style.polygonOptions.push_back(polygonOptions);
 	polygonOptions.type = GoogleFusionTablesInterface::StyleInfo::Options::Type::Complex;
 	polygonOptions.key = "fillColorStyler";
 	polygonOptions.c.push_back(GoogleFusionTablesInterface::StyleInfo::Options("columnName", "Color-" + month));
+	style.polygonOptions.push_back(polygonOptions);
 
 	return style;
 }
