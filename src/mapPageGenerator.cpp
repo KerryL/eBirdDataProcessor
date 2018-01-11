@@ -3,7 +3,7 @@
 // Auth:  K. Loux
 // Desc:  Tool for generating web page that embeds google map with custom markers.
 //        To view table data, go to:
-//        https://fusiontables.google.com/data?docid=1kjOZyhfNIJklaYFc99N91Ok-vy3V_9l8r0S7gGlV#rows:id=1
+//        https://fusiontables.google.com/data?docid=1YzezTGDbYkUwOqvZ_yo0nKU8JjbAoEjYw01Sgcga
 
 // Local headers
 #include "mapPageGenerator.h"
@@ -169,7 +169,7 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
         << "            from: '" << tableId << "'\n"
 		<< "          },\n"
 		<< "          map: map,\n"
-		<< "          styleId: " << styleIds[nowTime.tm_mon] << '\n'
+		<< "          styleId: " << styleIds[nowTime.tm_mon] << ",\n"
 		<< "          templateId: " << templateIds[nowTime.tm_mon] << '\n'
 		<< "        });\n"
 		<< "        countyLayer.setMap(map);\n"
@@ -179,11 +179,12 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
         << "            var selectedStyle = this.value;\n"
         << "            if (selectedStyle == -1)\n"
         << "                  timerHandle = setInterval(setNextStyle, 1500);\n"
-        << "                else\n"
-        << "                {\n"
-        << "                  countyLayer.set('styleId', monthStyles[selectedStyle]);\n"
-        << "                  clearInterval(timerHandle);\n"
-		<< "                }\n"
+        << "            else\n"
+        << "            {\n"
+        << "              countyLayer.set('styleId', monthStyles[selectedStyle]);\n"
+		<< "              countyLayer.set('templateId', monthTemplates[selectedStyle]);\n"
+        << "              clearInterval(timerHandle);\n"
+		<< "            }\n"
         << "          });\n"
 		<< "      }\n"
 		<< '\n'
@@ -288,7 +289,7 @@ bool MapPageGenerator::CreateFusionTable(
 			southwestLongitude = c.swLongitude;
 
 		ss << c.state << ',' << c.county << ',' << c.state + '-' + c.county << ",\"" << c.name << "\","
-			<< c.latitude << ' ' << c.longitude << ",\"" << c.geometryKML <<"\",";
+			<< c.latitude << ' ' << c.longitude << ",\"" << c.geometryKML << '"';
 
 		unsigned int i(0);
 		for (const auto& p : c.probabilities)
@@ -720,9 +721,9 @@ GoogleFusionTablesInterface::TemplateInfo MapPageGenerator::CreateTemplate(
 	std::ostringstream ss;
 	ss << "<div class='googft-info-window' style='font-family: sans-serif'>\n"
 		<< "<p><b>{Name}</b></p>\n"
-		<< "<p>Probability of Observing a Lifer: {Probability-" << month << "}</p>\n"
+		<< "<p>Probability of Observing a Lifer: {Probability-" << std::setprecision(2) << std::fixed << month << "}%</p>\n"
 		<< "<p>Likely Species:</p>\n"
-		<< "<div style=\"\"height:100px;width:200px;border:1px solid #0C0C0C;overflow:auto;\"\">{Species-" << month << "}</div>\n"
+		<< "<div style=\"height:100px;width:300px;border:1px solid #0C0C0C;overflow:auto;\">{Species-" << month << "}</div>\n"
 		<< "</div>";
 
 	info.body = ss.str();
@@ -733,11 +734,12 @@ GoogleFusionTablesInterface::TemplateInfo MapPageGenerator::CreateTemplate(
 std::string MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProcessor::FrequencyInfo>& info)
 {
 	std::ostringstream ss;
+	ss << std::setprecision(2) << std::fixed;
 	for (const auto& s : info)
 	{
 		if (!ss.str().empty())
 			ss << "<br>";
-		ss << s.species << " (" << s.frequency * 100.0 << ')';
+		ss << s.species << " (" << s.frequency << "%)";
 	}
 
 	return ss.str();
