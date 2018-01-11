@@ -24,6 +24,7 @@ const std::string GoogleFusionTablesInterface::queryEndPoint("query");
 const std::string GoogleFusionTablesInterface::importEndPoint("/import");
 const std::string GoogleFusionTablesInterface::columnsEndPoint("/columns");
 const std::string GoogleFusionTablesInterface::stylesEndPoint("/styles");
+const std::string GoogleFusionTablesInterface::templatesEndPoint("/templates");
 const std::string GoogleFusionTablesInterface::copyEndPoint("/copy");
 const std::string GoogleFusionTablesInterface::tableListKindText("fusiontables#tableList");
 const std::string GoogleFusionTablesInterface::tableKindText("fusiontables#table");
@@ -34,6 +35,8 @@ const std::string GoogleFusionTablesInterface::styleSettingListText("fusiontable
 const std::string GoogleFusionTablesInterface::styleSettingKindText("fusiontables#styleSetting");
 const std::string GoogleFusionTablesInterface::columnListKindText("fusiontables#columnList");
 const std::string GoogleFusionTablesInterface::fromColumnKindText("fusiontables#fromColumn");
+const std::string GoogleFusionTablesInterface::templateListKindText("fusiontables#templateList");
+const std::string GoogleFusionTablesInterface::templateKindText("fusiontables#template");
 const std::string GoogleFusionTablesInterface::itemsKey("items");
 const std::string GoogleFusionTablesInterface::kindKey("kind");
 const std::string GoogleFusionTablesInterface::tableIdKey("tableId");
@@ -50,6 +53,8 @@ const std::string GoogleFusionTablesInterface::messageKey("message");
 const std::string GoogleFusionTablesInterface::numberOfRowsImportedKey("numRowsReceived");
 const std::string GoogleFusionTablesInterface::columnNameKey("columnName");
 const std::string GoogleFusionTablesInterface::fillColorStylerKey("fillColorStyler");
+const std::string GoogleFusionTablesInterface::templateIdKey("templateId");
+const std::string GoogleFusionTablesInterface::bodyKey("body");
 
 const std::string GoogleFusionTablesInterface::isDefaultKey("isDefaultForTable");
 const std::string GoogleFusionTablesInterface::markerOptionsKey("markerOptions");
@@ -666,6 +671,8 @@ bool GoogleFusionTablesInterface::DeleteAllRows(const std::string& tableId)
 bool GoogleFusionTablesInterface::SetTableAccess(const std::string& tableId, const TableAccess& access)
 {
 	// TODO:  implement
+	std::cerr << "Setting table access permissions is not currently implemented.  You can do this"
+		<< " manually by logging into Google Drive and modifying the 'Sharing' settings for the table.\n";
 	return false;
 }
 
@@ -1004,6 +1011,175 @@ bool GoogleFusionTablesInterface::ReadOptions(cJSON* root, std::vector<StyleInfo
 		}
 
 		next = next->next;
+	}
+
+	return true;
+}
+
+bool GoogleFusionTablesInterface::CreateTemplate(const std::string& tableId, TemplateInfo& info)
+{
+	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
+	std::string response;
+	if (!DoCURLPost(apiRoot + tablesEndPoint + '/' + tableId + templatesEndPoint, BuildCreateTemplateData(info),
+		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
+	{
+		std::cerr << "Failed to create template\n";
+		return false;
+	}
+
+	cJSON* root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		std::cerr << "Failed to parse create template response\n";
+		return false;
+	}
+
+	if (ResponseHasError(root))
+	{
+		cJSON_Delete(root);
+		return false;
+	}
+
+	if (!ReadTemplate(root, info))
+	{
+		cJSON_Delete(root);
+		return false;
+	}
+
+	cJSON_Delete(root);
+	return true;
+}
+
+bool GoogleFusionTablesInterface::ListTemplates(const std::string& tableId, std::vector<TemplateInfo>& templates)
+{
+	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
+	std::string response;
+	if (!DoCURLGet(apiRoot + tablesEndPoint + '/' + tableId + templatesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
+	{
+		std::cerr << "Failed to request template list\n";
+		return false;
+	}
+
+	cJSON* root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		std::cerr << "Failed to parse template list response\n";
+		return false;
+	}
+
+	if (ResponseHasError(root))
+	{
+		cJSON_Delete(root);
+		return false;
+	}
+
+	if (!KindMatches(root, templateListKindText))
+	{
+		std::cerr << "Recieved unexpected kind in response to request for template list\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	templates.clear();
+	cJSON* items(cJSON_GetObjectItem(root, itemsKey.c_str()));
+	if (items)// May not be items, if no templates exist
+	{
+		templates.resize(cJSON_GetArraySize(items));
+		unsigned int i(0);
+		for (auto& t : templates)
+		{
+			cJSON* item(cJSON_GetArrayItem(items, i));
+			if (!item)
+			{
+				std::cerr << "Failed to get info for template " << i << '\n';
+				cJSON_Delete(root);
+				return false;
+			}
+
+			if (!ReadTemplate(item, t))
+			{
+				cJSON_Delete(root);
+				return false;
+			}
+
+			++i;
+		}
+	}
+
+	cJSON_Delete(root);
+	return true;
+}
+
+bool GoogleFusionTablesInterface::DeleteTemplate(const std::string& tableId, const unsigned int& templateId)
+{
+	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
+	std::string response;
+	std::ostringstream ss;
+	ss << templateId;
+	if (!DoCURLGet(apiRoot + tablesEndPoint + '/' + tableId + templatesEndPoint + '/' + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
+	{
+		std::cerr << "Failed to delete template\n";
+		return false;
+	}
+
+	return true;
+}
+
+std::string GoogleFusionTablesInterface::BuildCreateTemplateData(const TemplateInfo& info)
+{
+	cJSON* root(cJSON_CreateObject());
+	if (!root)
+	{
+		std::cerr << "Failed to create template data\n";
+		return std::string();
+	}
+
+	cJSON_AddStringToObject(root, nameKey.c_str(), info.name.c_str());
+	cJSON_AddStringToObject(root, tableIdKey.c_str(), info.tableId.c_str());
+	cJSON_AddStringToObject(root, bodyKey.c_str(), info.body.c_str());
+	if (info.isDefaultForTable)
+		cJSON_AddTrueToObject(root, isDefaultKey.c_str());
+	else
+		cJSON_AddFalseToObject(root, isDefaultKey.c_str());
+
+	const std::string data(cJSON_Print(root));
+	cJSON_Delete(root);
+	return data;
+}
+
+bool GoogleFusionTablesInterface::ReadTemplate(cJSON* root, TemplateInfo& info)
+{
+	if (!KindMatches(root, templateKindText))
+	{
+		std::cerr << "Kind of element is not template\n";
+		return false;
+	}
+
+	if (!ReadJSON(root, isDefaultKey, info.isDefaultForTable))
+		info.isDefaultForTable = false;// not a required element
+
+	if (!ReadJSON(root, templateIdKey, info.templateId))
+	{
+		std::cerr << "Failed to read template id\n";
+		return false;
+	}
+
+	if (!ReadJSON(root, tableIdKey, info.tableId))
+	{
+		std::cerr << "Failed to read table id\n";
+		return false;
+	}
+
+	if (!ReadJSON(root, nameKey, info.name))
+	{
+		std::cerr << "Failed to read template name\n";
+		return false;
+	}
+
+	if (!ReadJSON(root, bodyKey, info.body))
+	{
+		std::cerr << "Failed to read template body\n";
+		return false;
 	}
 
 	return true;

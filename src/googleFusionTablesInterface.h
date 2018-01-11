@@ -104,6 +104,19 @@ public:
 	bool ListStyles(const std::string& tableId, std::vector<StyleInfo>& styles);
 	bool DeleteStyle(const std::string& tableId, const unsigned int& styleId);
 
+	struct TemplateInfo
+	{
+		std::string tableId;
+		unsigned int templateId;
+		std::string name;
+		std::string body;
+		bool isDefaultForTable;
+	};
+
+	bool CreateTemplate(const std::string& tableId, TemplateInfo& info);
+	bool ListTemplates(const std::string& tableId, std::vector<TemplateInfo>& templates);
+	bool DeleteTemplate(const std::string& tableId, const unsigned int& templateId);
+
 	enum class TableAccess
 	{
 		Public,
@@ -122,6 +135,7 @@ private:
 	static const std::string importEndPoint;
 	static const std::string columnsEndPoint;
 	static const std::string stylesEndPoint;
+	static const std::string templatesEndPoint;
 	static const std::string copyEndPoint;
 	static const std::string queryEndPoint;
 	static const std::string tableListKindText;
@@ -132,6 +146,8 @@ private:
 	static const std::string queryResponseKindText;
 	static const std::string styleSettingListText;
 	static const std::string styleSettingKindText;
+	static const std::string templateListKindText;
+	static const std::string templateKindText;
 	static const std::string fromColumnKindText;
 	static const std::string itemsKey;
 	static const std::string kindKey;
@@ -153,6 +169,8 @@ private:
 	static const std::string polygonOptionsKey;
 	static const std::string columnNameKey;
 	static const std::string fillColorStylerKey;
+	static const std::string templateIdKey;
+	static const std::string bodyKey;
 
 	static const std::string typeStringText;
 	static const std::string typeNumberText;
@@ -190,6 +208,9 @@ private:
 
 	static bool ReadStyle(cJSON* root, StyleInfo& info);
 	static bool ReadOptions(cJSON* root, std::vector<StyleInfo::Options>& info);
+
+	static std::string BuildCreateTemplateData(const TemplateInfo& info);
+	static bool ReadTemplate(cJSON* root, TemplateInfo& info);
 };
 
 #endif// GOOGLE_FUSION_TABLES_INTERFACE_H_
