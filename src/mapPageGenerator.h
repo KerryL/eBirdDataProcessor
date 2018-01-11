@@ -51,11 +51,10 @@ private:
 	typedef GoogleFusionTablesInterface GFTI;
 
 	static void WriteHeadSection(std::ofstream& f, const Keys& keys,
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities, std::vector<unsigned int>& styleIds);
-	static void WriteBody(std::ofstream& f, const std::vector<unsigned int>& styleIds);
+		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities);
+	static void WriteBody(std::ofstream& f);
 	static void WriteScripts(std::ofstream& f, const Keys& keys,
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
-		std::vector<unsigned int>& styleIds);
+		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities);
 	static bool CreateFusionTable(
 		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
 		double& northeastLatitude, double& northeastLongitude,

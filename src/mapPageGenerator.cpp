@@ -46,17 +46,15 @@ bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileN
 		return false;
 	}
 
-	std::vector<unsigned int> styleIds;
 	const Keys keys(googleMapsKey, clientId, clientSecret);
-	WriteHeadSection(file, keys, observationProbabilities, styleIds);
-	WriteBody(file, styleIds);
+	WriteHeadSection(file, keys, observationProbabilities);
+	WriteBody(file);
 
 	return true;
 }
 
 void MapPageGenerator::WriteHeadSection(std::ofstream& f, const Keys& keys,
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
-	std::vector<unsigned int>& styleIds)
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities)
 {
 	f << "<!DOCTYPE html>\n"
 		<< "<html>\n"
@@ -75,15 +73,13 @@ void MapPageGenerator::WriteHeadSection(std::ofstream& f, const Keys& keys,
 		<< "      }\n"
 		<< "    </style>\n";
 
-	WriteScripts(f, keys, observationProbabilities, styleIds);
+	WriteScripts(f, keys, observationProbabilities);
 
 	f << "  </head>\n";
 }
 
-void MapPageGenerator::WriteBody(std::ofstream& f, const std::vector<unsigned int>& styleIds)
+void MapPageGenerator::WriteBody(std::ofstream& f)
 {
-	assert(styleIds.size() == monthNames.size());
-
 	f << "  <body>\n"
 		<< "    <div id=\"map\"></div>\n"
 		<< "    <div>\n"
@@ -92,21 +88,22 @@ void MapPageGenerator::WriteBody(std::ofstream& f, const std::vector<unsigned in
 
     unsigned int i(0);
     for (const auto& m : monthNames)
-		f << "        <option value=\"" << styleIds[i++] << "\">" << m.longName << "</option>\n";
+		f << "        <option value=\"" << i++ << "\">" << m.longName << "</option>\n";
 
-    f << "      </select>\n"
+	f << "        <option value=\"-1\">Cycle</option>\n"
+		<< "      </select>\n"
 		<< "    </div>\n"
 		<< "  </body>\n"
 		<< "</html>";
 }
 
 void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
-	std::vector<unsigned int>& styleIds)
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities)
 {
 	double northeastLatitude, northeastLongitude;
 	double southwestLatitude, southwestLongitude;
 	std::string tableId;
+	std::vector<unsigned int> styleIds;
 
 	if (!CreateFusionTable(observationProbabilities, northeastLatitude,
 		northeastLongitude, southwestLatitude, southwestLongitude, tableId, keys, styleIds))
@@ -123,6 +120,22 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 
 	f << "    <script type=\"text/javascript\">\n"
     	<< "      var map;\n"
+    	<< "      var monthIndex = 0;\n"
+		<< "      var monthStyles = [";
+
+	bool needComma(false);
+	for (const auto& s : styleIds)
+	{
+		if (needComma)
+			f << ',';
+		needComma = true;
+		f << s;
+	}
+
+	f << "];\n"
+		<< "      var countyLayer;\n"
+		<< "      var timerHandle;\n"
+		<< '\n'
     	<< "      function initMap() {\n"
     	<< "        map = new google.maps.Map(document.getElementById('map'), {\n"
     	<< "          zoom: 16,\n"
@@ -147,8 +160,21 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 		<< "        google.maps.event.addDomListener(document.getElementById('month'),\n"
         << "          'change', function() {\n"
         << "            var selectedStyle = this.value;\n"
-        << "            countyLayer.set('styleId', selectedStyle);\n"
+        << "            if (selectedStyle == -1)\n"
+        << "                  timerHandle = setInterval(setNextStyle, 1500);\n"
+        << "                else\n"
+        << "                {\n"
+        << "                  countyLayer.set('styleId', monthStyles[selectedStyle]);\n"
+        << "                  clearInterval(timerHandle);\n"
+		<< "                }\n"
         << "          });\n"
+		<< "      }\n"
+		<< '\n'
+		<< "      function setNextStyle() {\n"
+		<< "        monthIndex++;\n"
+		<< "        if (monthIndex > 11)\n"
+		<< "          monthIndex = 0;\n"
+		<< "        countyLayer.set('styleId', monthStyles[monthIndex]);\n"
 		<< "      }\n"
 		<< "    </script>\n"
 		<< "    <script async defer src=\"https://maps.googleapis.com/maps/api/js?key=" << keys.googleMapsKey << "&callback=initMap\">\n"
