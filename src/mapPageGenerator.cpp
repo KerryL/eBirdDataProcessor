@@ -2,6 +2,8 @@
 // Date:  81/3/2018
 // Auth:  K. Loux
 // Desc:  Tool for generating web page that embeds google map with custom markers.
+//        To view table data, go to:
+//        https://fusiontables.google.com/data?docid=1kjOZyhfNIJklaYFc99N91Ok-vy3V_9l8r0S7gGlV#rows:id=1
 
 // Local headers
 #include "mapPageGenerator.h"
@@ -147,7 +149,7 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 		<< "        map.fitBounds({north:" << northeastLatitude << ", east:" << northeastLongitude
 			<< ", south:" << southwestLatitude << ", west:" << southwestLongitude << "});\n"
 		<< '\n'
-		<< "        var countyLayer = new google.maps.FusionTablesLayer({\n"
+		<< "        countyLayer = new google.maps.FusionTablesLayer({\n"
         << "          query: {\n"
         << "            select: 'geometry',\n"
         << "            from: '" << tableId << "'\n"
