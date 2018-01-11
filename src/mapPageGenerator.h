@@ -17,9 +17,11 @@
 class MapPageGenerator
 {
 public:
+	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
+
 	static bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
 		const std::string& googleMapsKey,
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
+		const std::vector<ObservationInfo>& observationInfo,
 		const std::string& clientId, const std::string& clientSecret);
 
 private:
@@ -51,15 +53,16 @@ private:
 	typedef GoogleFusionTablesInterface GFTI;
 
 	static void WriteHeadSection(std::ofstream& f, const Keys& keys,
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities);
+		const std::vector<ObservationInfo>& observationProbabilities);
 	static void WriteBody(std::ofstream& f);
 	static void WriteScripts(std::ofstream& f, const Keys& keys,
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities);
+		const std::vector<ObservationInfo>& observationProbabilities);
 	static bool CreateFusionTable(
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
+		const std::vector<ObservationInfo>& observationProbabilities,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
-		std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds);
+		std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
+		std::vector<unsigned int>& templateIds);
 	static bool GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 		const std::string& county, double& latitude, double& longitude,
 		double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
@@ -98,6 +101,7 @@ private:
 		std::string geometryKML;
 
 		std::array<double, 12> probabilities;
+		std::array<std::vector<EBirdDataProcessor::FrequencyInfo>, 12> frequencyInfo;
 	};
 
 	struct CountyGeometry
@@ -111,6 +115,8 @@ private:
 	static std::string ColorToHexString(const Color& c);
 	static void GetHSV(const Color& c, double& hue, double& saturation, double& value);
 	static Color ColorFromHSV( const double& hue, const double& saturation, const double& value);
+
+	static std::string BuildSpeciesInfoString(const std::vector<EBirdDataProcessor::FrequencyInfo>& info);
 
 	static GFTI::TableInfo BuildTableLayout();
 
@@ -126,13 +132,13 @@ private:
 		{
 			MapJobInfo() = default;
 			MapJobInfo(JobFunction jobFunction, CountyInfo& info,
-				const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo, const std::string& googleMapsKey,
+				const ObservationInfo& frequencyInfo, const std::string& googleMapsKey,
 				const std::vector<CountyGeometry>& geometry)
 				: JobInfo(jobFunction), info(info), frequencyInfo(frequencyInfo),
 				googleMapsKey(googleMapsKey), geometry(geometry) {}
 
 			CountyInfo& info;
-			const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo;
+			const ObservationInfo& frequencyInfo;
 			const std::string& googleMapsKey;
 			const std::vector<CountyGeometry>& geometry;
 		};
@@ -143,6 +149,11 @@ private:
 	static bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
 		const std::string& tableId, std::vector<unsigned int>& styleIds);
 	static GoogleFusionTablesInterface::StyleInfo CreateStyle(const std::string& tableId,
+		const std::string& month);
+
+	static bool VerifyTableTemplates(GoogleFusionTablesInterface& fusionTables,
+		const std::string& tableId, std::vector<unsigned int>& templateIds);
+	static GoogleFusionTablesInterface::TemplateInfo CreateTemplate(const std::string& tableId,
 		const std::string& month);
 };
 

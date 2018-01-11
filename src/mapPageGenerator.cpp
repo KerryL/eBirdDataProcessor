@@ -38,7 +38,7 @@ const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = 
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey,
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
+	const std::vector<ObservationInfo>& observationProbabilities,
 	const std::string& clientId, const std::string& clientSecret)
 {
 	std::ofstream file(htmlFileName.c_str());
@@ -56,7 +56,7 @@ bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileN
 }
 
 void MapPageGenerator::WriteHeadSection(std::ofstream& f, const Keys& keys,
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities)
+	const std::vector<ObservationInfo>& observationProbabilities)
 {
 	f << "<!DOCTYPE html>\n"
 		<< "<html>\n"
@@ -84,7 +84,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f)
 {
 	f << "  <body>\n"
 		<< "    <div id=\"map\"></div>\n"
-		<< "    <div>\n"
+		<< "    <div style='font-family: sans-serif'>\n"
     	<< "      <label>Select Month:</label>\n"
     	<< "      <select id=\"month\">\n";
 
@@ -100,15 +100,17 @@ void MapPageGenerator::WriteBody(std::ofstream& f)
 }
 
 void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities)
+	const std::vector<ObservationInfo>& observationProbabilities)
 {
 	double northeastLatitude, northeastLongitude;
 	double southwestLatitude, southwestLongitude;
 	std::string tableId;
 	std::vector<unsigned int> styleIds;
+	std::vector<unsigned int> templateIds;
 
 	if (!CreateFusionTable(observationProbabilities, northeastLatitude,
-		northeastLongitude, southwestLatitude, southwestLongitude, tableId, keys, styleIds))
+		northeastLongitude, southwestLatitude, southwestLongitude, tableId,
+		keys, styleIds, templateIds))
 	{
 		std::cerr << "Failed to create fusion table\n";
 		return;
@@ -135,6 +137,18 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 	}
 
 	f << "];\n"
+		<< "      var monthTemplates = [";
+
+	needComma = false;
+	for (const auto& t : templateIds)
+	{
+		if (needComma)
+			f << ',';
+		needComma = true;
+		f << t;
+	}
+
+	f << "];\n"
 		<< "      var countyLayer;\n"
 		<< "      var timerHandle;\n"
 		<< '\n'
@@ -156,6 +170,7 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 		<< "          },\n"
 		<< "          map: map,\n"
 		<< "          styleId: " << styleIds[nowTime.tm_mon] << '\n'
+		<< "          templateId: " << templateIds[nowTime.tm_mon] << '\n'
 		<< "        });\n"
 		<< "        countyLayer.setMap(map);\n"
 		<< '\n'
@@ -177,6 +192,7 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 		<< "        if (monthIndex > 11)\n"
 		<< "          monthIndex = 0;\n"
 		<< "        countyLayer.set('styleId', monthStyles[monthIndex]);\n"
+		<< "        countyLayer.set('templateId', monthTemplates[monthIndex]);\n"
 		<< "      }\n"
 		<< "    </script>\n"
 		<< "    <script async defer src=\"https://maps.googleapis.com/maps/api/js?key=" << keys.googleMapsKey << "&callback=initMap\">\n"
@@ -184,10 +200,11 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 }
 
 bool MapPageGenerator::CreateFusionTable(
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& observationProbabilities,
+	const std::vector<ObservationInfo>& observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
-	std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds)
+	std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
+	std::vector<unsigned int>& templateIds)
 {
 	GFTI fusionTables("Bird Probability Tool", keys.clientId, keys.clientSecret);
 	std::vector<GFTI::TableInfo> tableList;
@@ -200,12 +217,13 @@ bool MapPageGenerator::CreateFusionTable(
 	tableId.clear();
 	for (const auto& t : tableList)
 	{
-		if (t.name.compare(birdProbabilityTableName) == 0)
+		if (t.name.compare(birdProbabilityTableName) == 0 && t.columns.size() == 42)// TODO:  Better check necessary?
 		{
 			std::cout << "Found existing table " << t.tableId << std::endl;
 			tableId = t.tableId;
+
 #ifndef DONT_CALL_MAPS_API
-			if (!fusionTables.DeleteAllRows(t.tableId))
+			if (!fusionTables.DeleteAllRows(t.tableId))// TODO:  Don't do this any more?
 				std::cerr << "Warning:  Failed to delete existing rows from table\n";
 #endif// DONT_CALL_MAPS_API
 			break;
@@ -228,7 +246,7 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	std::vector<CountyGeometry> geometry;
-	if (!GetCountyGeometry(fusionTables, geometry))
+	if (!GetCountyGeometry(fusionTables, geometry))// TODO:  Only if necessary?
 		return false;
 
 	// NOTE:  Google maps geocoding API has rate limit of 50 queries per sec, and usage limit of 2500 queries per day
@@ -240,6 +258,8 @@ bool MapPageGenerator::CreateFusionTable(
 	auto countyIt(countyInfo.begin());
 	for (const auto& entry : observationProbabilities)
 	{
+		// TODO:  Populate known info here?  So we don't have to contact Google Maps if we don't have to?  Only update probability data?
+		countyIt->frequencyInfo = std::move(entry.frequencyInfo);
 		pool.AddJob(std::make_unique<GoogleMapsThreadPool::MapJobInfo>(
 			PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, geometry));
 		++countyIt;
@@ -268,16 +288,17 @@ bool MapPageGenerator::CreateFusionTable(
 			southwestLongitude = c.swLongitude;
 
 		ss << c.state << ',' << c.county << ',' << c.state + '-' + c.county << ",\"" << c.name << "\","
-			<< c.latitude << ' ' << c.longitude;
+			<< c.latitude << ' ' << c.longitude << ",\"" << c.geometryKML <<"\",";
+
+		unsigned int i(0);
 		for (const auto& p : c.probabilities)
-			ss << ',' << p * 100.0;
-		for (const auto& p : c.probabilities)
-			ss << ',' << ComputeColor(p);
-		ss << ",\"" << c.geometryKML <<"\"\n";
+			ss << ',' << p * 100.0 << ',' << ComputeColor(p) << ",\"" << BuildSpeciesInfoString(c.frequencyInfo[i++]) << '"';
+
+		ss << '\n';
 	}
 
 #ifndef DONT_CALL_MAPS_API
-	if (!fusionTables.Import(tableId, ss.str()))
+	if (!fusionTables.Import(tableId, ss.str()))// TODO:  Update instead of import?
 	{
 		std::cerr << "Failed to import data\n";
 		return false;
@@ -290,6 +311,12 @@ bool MapPageGenerator::CreateFusionTable(
 		return false;
 	}
 
+	if (!VerifyTableTemplates(fusionTables, tableId, templateIds))
+	{
+		std::cerr << "Failed to verify table templates\n";
+		return false;
+	}
+
 	return true;
 }
 
@@ -297,7 +324,7 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 {
 	const GoogleMapsThreadPool::MapJobInfo& mapJobInfo(static_cast<const GoogleMapsThreadPool::MapJobInfo&>(jobInfo));
 	CountyInfo& info(mapJobInfo.info);
-	const EBirdDataProcessor::YearFrequencyInfo& frequencyInfo(mapJobInfo.frequencyInfo);
+	const ObservationInfo& frequencyInfo(mapJobInfo.frequencyInfo);
 
 	if (!GetStateAbbreviationFromFileName(frequencyInfo.locationHint, info.state))
 		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationHint << "'\n";
@@ -306,6 +333,7 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationHint << "'\n";
 
 #ifndef DONT_CALL_MAPS_API
+	// TODO:  Only if necessary?
 	if (!GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
 		info.neLongitude, info.swLatitude, info.swLongitude, info.name,
@@ -320,7 +348,7 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
 	info.probabilities = std::move(frequencyInfo.probabilities);
 
-	for (const auto& g : mapJobInfo.geometry)
+	for (const auto& g : mapJobInfo.geometry)// TODO:  Only if necessary?
 	{
 		std::string countyString(StripCountyFromName(info.county));
 		if (g.state.compare(info.state) == 0 && g.county.compare(countyString) == 0)
@@ -346,14 +374,14 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 	tableInfo.columns.push_back(GFTI::ColumnInfo("State-County", GFTI::ColumnType::String));
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Name", GFTI::ColumnType::String));
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Location", GFTI::ColumnType::Location));
-
-	for (const auto& m : monthNames)
-		tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-" + m.shortName, GFTI::ColumnType::Number));
-
-	for (const auto& m : monthNames)
-		tableInfo.columns.push_back(GFTI::ColumnInfo("Color-" + m.shortName, GFTI::ColumnType::String));
-
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Geometry", GFTI::ColumnType::Location));
+
+	for (const auto& m : monthNames)
+	{
+		tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-" + m.shortName, GFTI::ColumnType::Number));
+		tableInfo.columns.push_back(GFTI::ColumnInfo("Color-" + m.shortName, GFTI::ColumnType::String));
+		tableInfo.columns.push_back(GFTI::ColumnInfo("Species-" + m.shortName, GFTI::ColumnType::String));
+	}
 
 	return tableInfo;
 }
@@ -647,4 +675,70 @@ GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const std::
 	style.polygonOptions.push_back(polygonOptions);
 
 	return style;
+}
+
+bool MapPageGenerator::VerifyTableTemplates(GoogleFusionTablesInterface& fusionTables,
+	const std::string& tableId, std::vector<unsigned int>& templateIds)
+{
+	std::vector<GoogleFusionTablesInterface::TemplateInfo> templates;
+	if (!fusionTables.ListTemplates(tableId, templates))
+		return false;
+
+	if (templates.size() == 12)// TODO:  Should we do a better check?
+		return true;
+
+	for (const auto& t : templates)
+	{
+		if (!fusionTables.DeleteTemplate(tableId, t.templateId))
+			return false;
+	}
+
+	templates.clear();
+	for (const auto& m : monthNames)
+		templates.push_back(CreateTemplate(tableId, m.shortName));
+
+	templateIds.resize(templates.size());
+	auto idIt(templateIds.begin());
+	for (auto& t : templates)
+	{
+		if (!fusionTables.CreateTemplate(tableId, t))
+			return false;
+		*idIt = t.templateId;
+		++idIt;
+	}
+
+	return true;
+}
+
+GoogleFusionTablesInterface::TemplateInfo MapPageGenerator::CreateTemplate(
+	const std::string& tableId, const std::string& month)
+{
+	GoogleFusionTablesInterface::TemplateInfo info;
+	info.name = month;
+	info.tableId = tableId;
+
+	std::ostringstream ss;
+	ss << "<div class='googft-info-window' style='font-family: sans-serif'>\n"
+		<< "<p><b>{Name}</b></p>\n"
+		<< "<p>Probability of Observing a Lifer: {Probability-" << month << "}</p>\n"
+		<< "<p>Likely Species:</p>\n"
+		<< "<div style=\"\"height:100px;width:200px;border:1px solid #0C0C0C;overflow:auto;\"\">{Species-" << month << "}</div>\n"
+		<< "</div>";
+
+	info.body = ss.str();
+
+	return info;
+}
+
+std::string MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProcessor::FrequencyInfo>& info)
+{
+	std::ostringstream ss;
+	for (const auto& s : info)
+	{
+		if (!ss.str().empty())
+			ss << "<br>";
+		ss << s.species << " (" << s.frequency * 100.0 << ')';
+	}
+
+	return ss.str();
 }

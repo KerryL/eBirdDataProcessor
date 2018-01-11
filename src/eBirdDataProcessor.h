@@ -77,6 +77,7 @@ public:
 
 		std::string locationHint;
 		std::array<double, 12> probabilities;
+		std::array<std::vector<FrequencyInfo>, 12> frequencyInfo;
 	};
 
 private:
@@ -176,7 +177,8 @@ private:
 		bool operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const;
 	};
 
-	std::array<double, 12> ComputeNewSpeciesProbability(const std::string& fileName) const;
+	bool ComputeNewSpeciesProbability(const std::string& fileName,
+		std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const;
 
 	static bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
 		const std::string& googleMapsKey, const std::vector<YearFrequencyInfo>& observationProbabilities,

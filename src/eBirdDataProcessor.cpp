@@ -1166,16 +1166,16 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 	return true;
 }
 
-std::array<double, 12> EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileName) const
+bool EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileName,
+	std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const
 {
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
 	if (!ParseFrequencyFile(fileName, frequencyData, checklistCounts))
-		return std::array<double, 12>();
+		return false;
 
 	EliminateObservedSpecies(frequencyData);
 
-	std::array<double, 12> probabilities;
 	unsigned int i(0);
 	for (auto& p : probabilities)
 	{
@@ -1186,13 +1186,14 @@ std::array<double, 12> EBirdDataProcessor::ComputeNewSpeciesProbability(const st
 			if (entry.frequency < thresholdFrequency)// Ignore rarities
 				continue;
 			product *= (1.0 - entry.frequency / 100.0);
+			species[i].push_back(FrequencyInfo(entry.species, entry.frequency));
 		}
 
 		p = 1.0 - product;
 		++i;
 	}
 
-	return probabilities;
+	return true;
 }
 
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFileName,
@@ -1207,5 +1208,6 @@ void EBirdDataProcessor::ParallelReadFrequencyFile(const ThreadPool::JobInfo& jo
 {
 	const FileReadJob& fileJobInfo(static_cast<const FileReadJob&>(jobInfo));
 	fileJobInfo.frequencyInfo.locationHint = fileJobInfo.fileName;
-	fileJobInfo.frequencyInfo.probabilities = fileJobInfo.self->ComputeNewSpeciesProbability(fileJobInfo.directory + fileJobInfo.fileName);
+	fileJobInfo.self->ComputeNewSpeciesProbability(fileJobInfo.directory + fileJobInfo.fileName,
+		fileJobInfo.frequencyInfo.probabilities, fileJobInfo.frequencyInfo.frequencyInfo);
 }
