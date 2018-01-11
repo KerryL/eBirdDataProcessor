@@ -14,11 +14,25 @@
 #include <iostream>
 #include <thread>
 #include <algorithm>
+#include <cassert>
 
 // TODO:  Comment this out for normal builds - this prevent usage of maps API quota
 //#define DONT_CALL_MAPS_API
 
 const std::string MapPageGenerator::birdProbabilityTableName("Bird Probability Table");
+const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = {
+	NamePair("Jan", "January"),
+	NamePair("Feb", "February"),
+	NamePair("Mar", "March"),
+	NamePair("Apr", "April"),
+	NamePair("May", "May"),
+	NamePair("Jun", "June"),
+	NamePair("Jul", "July"),
+	NamePair("Aug", "August"),
+	NamePair("Sep", "September"),
+	NamePair("Oct", "October"),
+	NamePair("Nov", "November"),
+	NamePair("Dec", "December")};
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey,
@@ -68,24 +82,19 @@ void MapPageGenerator::WriteHeadSection(std::ofstream& f, const Keys& keys,
 
 void MapPageGenerator::WriteBody(std::ofstream& f, const std::vector<unsigned int>& styleIds)
 {
+	assert(styleIds.size() == monthNames.size());
+
 	f << "  <body>\n"
 		<< "    <div id=\"map\"></div>\n"
 		<< "    <div>\n"
     	<< "      <label>Select Month:</label>\n"
-    	<< "      <select id=\"month\">\n"
-    	<< "        <option value=\"" << styleIds[0] << "\">January</option>\n"
-    	<< "        <option value=\"" << styleIds[1] << "\">February</option>\n"
-    	<< "        <option value=\"" << styleIds[2] << "\">March</option>\n"
-    	<< "        <option value=\"" << styleIds[3] << "\">April</option>\n"
-    	<< "        <option value=\"" << styleIds[4] << "\">May</option>\n"
-    	<< "        <option value=\"" << styleIds[5] << "\">June</option>\n"
-    	<< "        <option value=\"" << styleIds[6] << "\">July</option>\n"
-    	<< "        <option value=\"" << styleIds[7] << "\">August</option>\n"
-    	<< "        <option value=\"" << styleIds[8] << "\">September</option>\n"
-    	<< "        <option value=\"" << styleIds[9] << "\">October</option>\n"
-    	<< "        <option value=\"" << styleIds[10] << "\">November</option>\n"
-    	<< "        <option value=\"" << styleIds[11] << "\">December</option>\n"
-    	<< "      </select>\n"
+    	<< "      <select id=\"month\">\n";
+
+    unsigned int i(0);
+    for (const auto& m : monthNames)
+		f << "        <option value=\"" << styleIds[i++] << "\">" << m.longName << "</option>\n";
+
+    f << "      </select>\n"
 		<< "    </div>\n"
 		<< "  </body>\n"
 		<< "</html>";
@@ -131,7 +140,7 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
         << "            from: '" << tableId << "'\n"
 		<< "          },\n"
 		<< "          map: map,\n"
-		<< "          styleId: " << nowTime.tm_mon + 1 << '\n'
+		<< "          styleId: " << styleIds[nowTime.tm_mon] << '\n'
 		<< "        });\n"
 		<< "        countyLayer.setMap(map);\n"
 		<< '\n'
@@ -271,7 +280,8 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 #ifndef DONT_CALL_MAPS_API
 	if (!GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
-		info.neLongitude, info.swLatitude, info.swLongitude, info.name, mapJobInfo.googleMapsKey))
+		info.neLongitude, info.swLatitude, info.swLongitude, info.name,
+		mapJobInfo.googleMapsKey))
 		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationHint << "'\n";
 #endif// DONT_CALL_MAPS_API
 
@@ -309,31 +319,11 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Name", GFTI::ColumnType::String));
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Location", GFTI::ColumnType::Location));
 
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Jan", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Feb", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Mar", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Apr", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-May", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Jun", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Jul", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Aug", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Sep", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Oct", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Nov", GFTI::ColumnType::Number));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-Dec", GFTI::ColumnType::Number));
+	for (const auto& m : monthNames)
+		tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-" + m.shortName, GFTI::ColumnType::Number));
 
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Jan", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Feb", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Mar", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Apr", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-May", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Jun", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Jul", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Aug", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Sep", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Oct", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Nov", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Color-Dec", GFTI::ColumnType::String));
+	for (const auto& m : monthNames)
+		tableInfo.columns.push_back(GFTI::ColumnInfo("Color-" + m.shortName, GFTI::ColumnType::String));
 
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Geometry", GFTI::ColumnType::Location));
 
@@ -345,11 +335,28 @@ bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::stri
 	double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
 	std::string& geographicName, const std::string& googleMapsKey)
 {
-	GoogleMapsInterface gMap("County Lookup Tool", googleMapsKey);
-	if (!gMap.LookupCoordinates(county + " " + state, geographicName,
-		latitude, longitude, neLatitude, neLongitude, swLatitude, swLongitude,
-		"County"))
+	const unsigned int maxAttempts(5);
+	unsigned int i;
+	for (i = 0; i < maxAttempts; ++i)
+	{
+		// According to Google docs, if we get this error, another attempt
+		// may succeed.  In practice, this seems to be true.
+		const std::string unknownErrorStatus("UNKNOWN_ERROR");
+		std::string status;
+		GoogleMapsInterface gMap("County Lookup Tool", googleMapsKey);
+		if (gMap.LookupCoordinates(county + " " + state, geographicName,
+			latitude, longitude, neLatitude, neLongitude, swLatitude, swLongitude,
+			"County", &status))
+			break;
+		else if (status.compare(unknownErrorStatus) != 0 || i == maxAttempts - 1)
+			return false;
+	}
+
+	if (geographicName.empty())
+	{
+		std::cerr << "Invalid data (empty name) returned from coordinate lookup for " << county << ", " << state << '\n';
 		return false;
+	}
 
 	// TODO:  Check address string to make sure its a good match
 
@@ -581,18 +588,8 @@ bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTabl
 	}
 
 	styles.clear();
-	styles.push_back(CreateStyle(tableId, "Jan", 1));
-	styles.push_back(CreateStyle(tableId, "Feb", 2));
-	styles.push_back(CreateStyle(tableId, "Mar", 3));
-	styles.push_back(CreateStyle(tableId, "Apr", 4));
-	styles.push_back(CreateStyle(tableId, "May", 5));
-	styles.push_back(CreateStyle(tableId, "Jun", 6));
-	styles.push_back(CreateStyle(tableId, "Jul", 7));
-	styles.push_back(CreateStyle(tableId, "Aug", 8));
-	styles.push_back(CreateStyle(tableId, "Sep", 9));
-	styles.push_back(CreateStyle(tableId, "Oct", 10));
-	styles.push_back(CreateStyle(tableId, "Nov", 11));
-	styles.push_back(CreateStyle(tableId, "Dec", 12));
+	for (const auto& m : monthNames)
+		styles.push_back(CreateStyle(tableId, m.shortName));
 
 	styleIds.resize(styles.size());
 	auto idIt(styleIds.begin());
@@ -608,12 +605,11 @@ bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTabl
 }
 
 GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const std::string& tableId,
-	const std::string& month, const unsigned int& id)
+	const std::string& month)
 {
 	GoogleFusionTablesInterface::StyleInfo style;
 	style.name = month;
 	style.hasPolygonOptions = true;
-	style.styleId = id;
 	style.tableId = tableId;
 
 	GoogleFusionTablesInterface::StyleInfo::Options polygonOptions;

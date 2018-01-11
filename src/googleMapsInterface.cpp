@@ -322,7 +322,7 @@ bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 	std::string& formattedAddress, double& latitude, double& longitude,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
-	const std::string& preferNameContaining) const
+	const std::string& preferNameContaining, std::string* statusRet) const
 {
 	const std::string requestURL(apiRoot + geocodeEndPoint
 		+ "?address=" + SanitizeAddress(searchString) + "&key=" + apiKey);
@@ -334,7 +334,7 @@ bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 	}
 
 	std::vector<GeocodeInfo> info;
-	if (!ProcessGeocodeResponse(response, info))
+	if (!ProcessGeocodeResponse(response, info, statusRet))
 		return false;
 
 	assert(info.size() > 0);
@@ -368,7 +368,7 @@ bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 }
 
 bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
-	std::vector<GeocodeInfo>& info) const
+	std::vector<GeocodeInfo>& info, std::string* statusRet) const
 {
 	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
@@ -386,9 +386,12 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 		return false;
 	}
 
+	if (statusRet)
+		*statusRet = status;
+
 	if (status.compare(okStatus) != 0)
 	{
-		std::cerr << "Geocode request response is not OK.  Status = " << status << '\n';// TODO:  If status = "UNKNOWN_ERROR" maybe we should try again?
+		std::cerr << "Geocode request response is not OK.  Status = " << status << '\n';
 
 		std::string errorMessage;
 		if (ReadJSON(root, errorMessageKey, errorMessage))

@@ -48,7 +48,7 @@ void ThreadPool::WaitForAllJobsComplete() const
 	std::unique_lock<std::mutex> lock(queueMutex);
 	jobCompleteCondition.wait(lock, [this]()
 	{
-		return jobQueue.empty();
+		return jobQueue.empty() && pendingJobCount == 0;
 	});
 }
 
@@ -67,6 +67,7 @@ void ThreadPool::ThreadEntry()
 			});
 
 			thisJob = std::move(jobQueue.front());
+			++pendingJobCount;
 			jobQueue.pop();
 
 			if (minRequestDelta > std::chrono::milliseconds(0))
@@ -85,6 +86,15 @@ void ThreadPool::ThreadEntry()
 
 		std::this_thread::sleep_for(sleepTime);
 		thisJob->jobFunction(*thisJob);
+
+		{
+			std::lock_guard<std::mutex> lock(queueMutex);
+			--pendingJobCount;
+		}
+
 		jobCompleteCondition.notify_one();
 	}
+
+	std::lock_guard<std::mutex> lock(queueMutex);
+	--pendingJobCount;
 }

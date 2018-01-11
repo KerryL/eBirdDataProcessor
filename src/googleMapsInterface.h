@@ -60,7 +60,7 @@ public:
 		double& latitude, double& longitude,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
-		const std::string& preferNameContaining = "") const;
+		const std::string& preferNameContaining = "", std::string* statusRet = nullptr) const;
 
 private:
 	const std::string apiKey;
@@ -142,7 +142,7 @@ private:
 		std::vector<std::string> types;
 	};
 
-	bool ProcessGeocodeResponse(const std::string& response, std::vector<GeocodeInfo>& info) const;
+	bool ProcessGeocodeResponse(const std::string& response, std::vector<GeocodeInfo>& info, std::string* statusRet) const;
 	bool ProcessAddressComponents(cJSON* results, std::vector<GeocodeInfo::ComponentInfo>& components) const;
 	bool ProcessGeometry(cJSON* results, GeocodeInfo& info) const;
 	bool ReadLatLongPair(cJSON* json, GeocodeInfo::LatLongPair& latLong) const;

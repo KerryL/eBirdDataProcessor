@@ -24,6 +24,19 @@ public:
 
 private:
 	static const std::string birdProbabilityTableName;
+
+	struct NamePair
+	{
+		NamePair() = default;
+		NamePair(const std::string& shortName, const std::string& longName)
+			: shortName(shortName), longName(longName) {}
+
+		std::string shortName;
+		std::string longName;
+	};
+
+	static const std::array<NamePair, 12> monthNames;
+
 	struct Keys
 	{
 		Keys(const std::string& googleMapsKey, const std::string& clientId,
@@ -131,7 +144,7 @@ private:
 	static bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
 		const std::string& tableId, std::vector<unsigned int>& styleIds);
 	static GoogleFusionTablesInterface::StyleInfo CreateStyle(const std::string& tableId,
-		const std::string& month, const unsigned int& id);
+		const std::string& month);
 };
 
 #endif// MAP_PAGE_GENERATOR_H_
