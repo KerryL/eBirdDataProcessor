@@ -76,40 +76,9 @@ bool EBirdDataProcessor::Parse(const std::string& dataFile)
 	return true;
 }
 
-std::string EBirdDataProcessor::Sanitize(const std::string& line)
-{
-	std::string s(line);
-	std::string::size_type nextQuote(0);
-	while (nextQuote = s.find('"', nextQuote), nextQuote != std::string::npos)
-	{
-		s.erase(nextQuote, 1);
-		const std::string::size_type endQuote(s.find('"', nextQuote));
-		s.erase(endQuote, 1);
-		if (endQuote != std::string::npos)
-		{
-			std::string::size_type nextComma(nextQuote);
-			while (nextComma = s.find(',', nextComma + 1), nextComma != std::string::npos && nextComma < endQuote)
-				s.replace(nextComma, 1, commaPlaceholder);
-		}
-		nextQuote = endQuote;
-	}
-
-	return s;
-}
-
-std::string EBirdDataProcessor::Desanitize(const std::string& token)
-{
-	std::string s(token);
-	std::string::size_type nextPlaceholder(0);
-	while (nextPlaceholder = s.find(commaPlaceholder, nextPlaceholder + 1), nextPlaceholder != std::string::npos)
-		s.replace(nextPlaceholder, commaPlaceholder.length(), ",");
-
-	return s;
-}
-
 bool EBirdDataProcessor::ParseLine(const std::string& line, Entry& entry)
 {
-	std::istringstream lineStream(Sanitize(line));
+	std::istringstream lineStream(line);
 
 	if (!ParseToken(lineStream, "Submission ID", entry.submissionID))
 		return false;

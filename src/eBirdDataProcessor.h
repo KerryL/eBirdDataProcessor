@@ -132,9 +132,6 @@ private:
 	static bool ParseDateTimeToken(std::istringstream& lineStream, const std::string& fieldName,
 		std::tm& target, const std::string& format);
 
-	static std::string Sanitize(const std::string& line);
-	static std::string Desanitize(const std::string& token);
-
 	template<typename T1, typename T2>
 	static std::vector<std::pair<T1, T2>> Zip(const std::vector<T1>& v1, const std::vector<T2>& v2);
 	template<typename T>
@@ -206,7 +203,26 @@ bool EBirdDataProcessor::ParseToken(std::istringstream& lineStream, const std::s
 	std::string token;
 	std::istringstream tokenStream;
 
-	if (!std::getline(lineStream, token, ','))
+	if (lineStream.peek() == static_cast<int>('"'))// target string may contain commas
+	{
+		lineStream.ignore();// Skip the first quote
+
+		do// In a loop, so we can properly handle escaped double quotes.
+		{
+			std::string tempToken;
+			if (!std::getline(lineStream, tempToken, '"'))
+				return false;
+			token.append(tempToken);
+			if (lineStream.peek() == static_cast<int>('"'))
+			{
+				token.append("\"");
+				lineStream.ignore();
+			}
+		} while (lineStream.peek() == -1 && lineStream.peek() == static_cast<int>(','));
+
+		lineStream.ignore();// Skip the next comma
+	}
+	else if (!std::getline(lineStream, token, ','))
 	{
 		/*std::cerr << "Failed to read token for " << fieldName << '\n';
 		return false;*/
@@ -221,7 +237,7 @@ bool EBirdDataProcessor::ParseToken(std::istringstream& lineStream, const std::s
 		return true;
 	}
 
-	tokenStream.str(Desanitize(token));
+	tokenStream.str(token);
 	return InterpretToken(tokenStream, fieldName, target);
 }
 
