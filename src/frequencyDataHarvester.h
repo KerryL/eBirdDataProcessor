@@ -10,7 +10,6 @@
 #include <string>
 #include <vector>
 #include <array>
-#include <chrono>
 
 // for cURL
 typedef void CURL;
@@ -33,7 +32,6 @@ private:
 	static const std::string userAgent;
 	static const bool verbose;
 	static const std::string cookieFile;
-	static const std::chrono::steady_clock::duration eBirdCrawlDelay;
 
 	CURL* curl = nullptr;
 	struct curl_slist* headerList = nullptr;
