@@ -29,12 +29,18 @@
 #include <fstream>
 #include <cctype>
 #include <algorithm>
+#include <thread>
 
 const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
 const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
 const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en");
 const bool FrequencyDataHarvester::verbose(false);
 const std::string FrequencyDataHarvester::cookieFile("ebdp.cookies");
+
+using namespace std::chrono_literals;
+// crawl delay determined by manually visiting www.ebird.org/robots.txt - should periodically
+// check this to make sure we comply, or we should include a robots.txt parser here to automatically update
+const std::chrono::steady_clock::duration FrequencyDataHarvester::eBirdCrawlDelay(std::chrono::steady_clock::duration(30s));
 
 FrequencyDataHarvester::FrequencyDataHarvester()
 {
@@ -106,9 +112,11 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
 	std::array<FrequencyData, 12>& frequencyData)
 {
+
 	unsigned int month;
 	for (month = 1; month <= 12; ++month)
 	{
+		const std::chrono::steady_clock::time_point lastAccessTime(std::chrono::steady_clock::now());
 		std::string response;
 		if (!DoCURLGet(BuildTargetSpeciesURL(regionString, month, month, ListTimeFrame::Day), response))
 		{
@@ -127,6 +135,8 @@ bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
 			std::cerr << "Failed to parse HTML to extract frequency data\n";
 			return false;
 		}
+
+		std::this_thread::sleep_until(lastAccessTime + eBirdCrawlDelay);// Obey robots.txt crawl-delay
 	}
 
 	return true;
