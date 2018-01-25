@@ -442,8 +442,9 @@ bool FrequencyDataHarvester::ExtractFrequencyData(const std::string& htmlData, F
 	std::string checklistCountString;
 	if (!ExtractTextBetweenTags(htmlData, checklistCountTagStart, checklistCountTagEnd, checklistCountString, currentOffset))
 	{
-		std::cerr << "Failed to extract checklist count from HTML\n";
-		return false;
+		std::cerr << "Failed to extract checklist count from HTML; assuming no data available for this county and month\n";
+		//return false;
+		return true;// Allow execution to continue - assume we reach this point due to lack of data for this county-month combo
 	}
 
 	std::istringstream ss(checklistCountString);
