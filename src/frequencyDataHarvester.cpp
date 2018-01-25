@@ -91,8 +91,6 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 
 	for (const auto& county : countyList)
 	{
-		const std::chrono::steady_clock::time_point lastAccessTime(std::chrono::steady_clock::now());
-
 		std::cout << county.name << " (FIPS = " << county.fipsCode << ")..." << std::endl;
 		std::array<FrequencyData, 12> data;
 		if (!PullFrequencyData(BuildRegionString(country, state, county.fipsCode), data))
@@ -106,8 +104,6 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 
 		if (!WriteFrequencyDataToFile(targetPath + Clean(county.name) + state + "FrequencyData.csv", data))
 			break;
-
-		std::this_thread::sleep_until(lastAccessTime + eBirdCrawlDelay);// Obey robots.txt crawl-delay
 	}
 
 	return true;
@@ -140,7 +136,11 @@ bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
 			return false;
 		}
 
-		std::this_thread::sleep_until(lastAccessTime + eBirdCrawlDelay);// Obey robots.txt crawl-delay
+		// Tried using sleep_until, but it seems to have a bug (at least under MSVC) that can
+		// cause infinite sleep when the above takes longer than eBirdCrawlDelay
+		const auto finishTime(std::chrono::steady_clock::now());
+		if (finishTime < lastAccessTime + eBirdCrawlDelay)
+			std::this_thread::sleep_for(eBirdCrawlDelay - (finishTime - lastAccessTime));// Obey robots.txt crawl-delay
 	}
 
 	return true;
