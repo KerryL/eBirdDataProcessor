@@ -91,6 +91,8 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 
 	for (const auto& county : countyList)
 	{
+		const std::chrono::steady_clock::time_point lastAccessTime(std::chrono::steady_clock::now());
+
 		std::cout << county.name << " (FIPS = " << county.fipsCode << ")..." << std::endl;
 		std::array<FrequencyData, 12> data;
 		if (!PullFrequencyData(BuildRegionString(country, state, county.fipsCode), data))
@@ -104,6 +106,8 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 
 		if (!WriteFrequencyDataToFile(targetPath + Clean(county.name) + state + "FrequencyData.csv", data))
 			break;
+
+		std::this_thread::sleep_until(lastAccessTime + eBirdCrawlDelay);// Obey robots.txt crawl-delay
 	}
 
 	return true;
