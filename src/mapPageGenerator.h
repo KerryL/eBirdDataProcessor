@@ -116,7 +116,9 @@ private:
 	static bool GetExistingCountyData(std::vector<CountyInfo>& data,
 		GFTI& fusionTables, const std::string& tableId);
 	static bool ReadExistingCountyData(cJSON* row, CountyInfo& data);
-	static bool ReadDouble(cJSON* item, double& d);
+
+	template<typename T>
+	static bool Read(cJSON* item, T& value);
 
 	static Color InterpolateColor(const Color& minColor, const Color& maxColor, const double& value);
 	static std::string ColorToHexString(const Color& c);
@@ -163,5 +165,13 @@ private:
 	static GoogleFusionTablesInterface::TemplateInfo CreateTemplate(const std::string& tableId,
 		const std::string& month);
 };
+
+template<typename T>
+bool MapPageGenerator::Read(cJSON* item, T& value)
+{
+	std::istringstream ss;
+	ss.str(item->valuestring);
+	return !(ss >> value).fail();
+}
 
 #endif// MAP_PAGE_GENERATOR_H_

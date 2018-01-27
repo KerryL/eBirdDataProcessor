@@ -18,9 +18,6 @@
 #include <algorithm>
 #include <cassert>
 
-// TODO:  Comment this out for normal builds - this prevent usage of maps API quota
-//#define DONT_CALL_MAPS_API
-
 const std::string MapPageGenerator::birdProbabilityTableName("Bird Probability Table");
 const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = {
 	NamePair("Jan", "January"),
@@ -307,13 +304,11 @@ bool MapPageGenerator::CreateFusionTable(
 		ss << '\n';
 	}
 
-#ifndef DONT_CALL_MAPS_API
-	if (!fusionTables.Import(tableId, ss.str()))// TODO:  Update instead of import?
+	if (!fusionTables.Import(tableId, ss.str()))
 	{
 		std::cerr << "Failed to import data\n";
 		return false;
 	}
-#endif// DONT_CALL_MAPS_API
 
 	if (!VerifyTableStyles(fusionTables, tableId, styleIds))
 	{
@@ -334,7 +329,7 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 	GFTI& fusionTables, const std::string& tableId)
 {
 	cJSON* root(nullptr);
-	const std::string query("SELECT ROWID,'State-County',Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId + "&typed=false");
+	const std::string query("SELECT ROWID,State,County,Name,Location,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId + "&typed=false");
 	if (!fusionTables.SubmitQuery(query, root))
 		return false;
 
@@ -373,22 +368,25 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 {
 	cJSON* rowID(cJSON_GetArrayItem(row, 0));
-	cJSON* stateCounty(cJSON_GetArrayItem(row, 1));
-	cJSON* kml(cJSON_GetArrayItem(row, 2));
-	cJSON* jan(cJSON_GetArrayItem(row, 3));
-	cJSON* feb(cJSON_GetArrayItem(row, 4));
-	cJSON* mar(cJSON_GetArrayItem(row, 5));
-	cJSON* apr(cJSON_GetArrayItem(row, 6));
-	cJSON* may(cJSON_GetArrayItem(row, 7));
-	cJSON* jun(cJSON_GetArrayItem(row, 8));
-	cJSON* jul(cJSON_GetArrayItem(row, 9));
-	cJSON* aug(cJSON_GetArrayItem(row, 10));
-	cJSON* sep(cJSON_GetArrayItem(row, 11));
-	cJSON* oct(cJSON_GetArrayItem(row, 12));
-	cJSON* nov(cJSON_GetArrayItem(row, 13));
-	cJSON* dec(cJSON_GetArrayItem(row, 14));
+	cJSON* state(cJSON_GetArrayItem(row, 1));
+	cJSON* county(cJSON_GetArrayItem(row, 2));
+	cJSON* name(cJSON_GetArrayItem(row, 3));
+	cJSON* location(cJSON_GetArrayItem(row, 4));
+	cJSON* kml(cJSON_GetArrayItem(row, 5));
+	cJSON* jan(cJSON_GetArrayItem(row, 6));
+	cJSON* feb(cJSON_GetArrayItem(row, 7));
+	cJSON* mar(cJSON_GetArrayItem(row, 8));
+	cJSON* apr(cJSON_GetArrayItem(row, 9));
+	cJSON* may(cJSON_GetArrayItem(row, 10));
+	cJSON* jun(cJSON_GetArrayItem(row, 11));
+	cJSON* jul(cJSON_GetArrayItem(row, 12));
+	cJSON* aug(cJSON_GetArrayItem(row, 13));
+	cJSON* sep(cJSON_GetArrayItem(row, 14));
+	cJSON* oct(cJSON_GetArrayItem(row, 15));
+	cJSON* nov(cJSON_GetArrayItem(row, 16));
+	cJSON* dec(cJSON_GetArrayItem(row, 17));
 
-	if (!rowID || !stateCounty || !kml ||
+	if (!rowID || !state || !county || !name || !location || !kml ||
 		!jan || !feb || !mar || !apr || !may || !jun ||
 		!jul || !aug || !sep || !oct || !nov || !dec)
 	{
@@ -396,36 +394,60 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 		return false;
 	}
 
-	std::string stateCountyString(stateCounty->valuestring);
-	data.state = stateCountyString.substr(0, 2);
-	data.county = stateCountyString.substr(3);
+	data.state = state->valuestring;
+	data.county = county->valuestring;
 	data.geometryKML = kml->valuestring;
+	data.name = name->valuestring;
 
-	if (!ReadDouble(jan, data.probabilities[0]) ||
-		!ReadDouble(feb, data.probabilities[1]) ||
-		!ReadDouble(mar, data.probabilities[2]) ||
-		!ReadDouble(apr, data.probabilities[3]) ||
-		!ReadDouble(may, data.probabilities[4]) ||
-		!ReadDouble(jun, data.probabilities[5]) ||
-		!ReadDouble(jul, data.probabilities[6]) ||
-		!ReadDouble(aug, data.probabilities[7]) ||
-		!ReadDouble(sep, data.probabilities[8]) ||
-		!ReadDouble(oct, data.probabilities[9]) ||
-		!ReadDouble(nov, data.probabilities[10]) ||
-		!ReadDouble(dec, data.probabilities[11]))
+	if (!Read(rowID, data.rowId))
+	{
+		std::cerr << "Failed to read row ID\n";
+		return false;
+	}
+
+	if (!Read(jan, data.probabilities[0]) ||
+		!Read(feb, data.probabilities[1]) ||
+		!Read(mar, data.probabilities[2]) ||
+		!Read(apr, data.probabilities[3]) ||
+		!Read(may, data.probabilities[4]) ||
+		!Read(jun, data.probabilities[5]) ||
+		!Read(jul, data.probabilities[6]) ||
+		!Read(aug, data.probabilities[7]) ||
+		!Read(sep, data.probabilities[8]) ||
+		!Read(oct, data.probabilities[9]) ||
+		!Read(nov, data.probabilities[10]) ||
+		!Read(dec, data.probabilities[11]))
 	{
 		std::cerr << "Failed to read existing probability\n";
 		return false;
 	}
 
-	return true;
-}
+	std::istringstream locationStream(location->valuestring);
+	std::string s;
+	std::getline(locationStream, s, ' ');
+	std::istringstream ss(s);
+	if ((ss >> data.latitude).fail())
+	{
+		std::cerr << "Failed to read latitude\n";
+		return false;
+	}
 
-bool MapPageGenerator::ReadDouble(cJSON* item, double& d)
-{
-	std::istringstream ss;
-	ss.str(item->valuestring);
-	return !(ss >> d).fail();
+	std::getline(locationStream, s, ' ');
+	ss.clear();
+	ss.str(s);
+	if ((ss >> data.longitude).fail())
+	{
+		std::cerr << "Failed to read longitude\n";
+		return false;
+	}
+
+	// TODO:  Can this be improved?  Parse KML?
+	data.neLatitude = data.latitude;
+	data.neLongitude = data.longitude;
+	data.swLatitude = data.latitude;
+	data.swLongitude = data.longitude;
+
+	return true;
 }
 
 void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo)
