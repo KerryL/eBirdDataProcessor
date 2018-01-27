@@ -216,6 +216,7 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	tableId.clear();
+	std::vector<CountyInfo> existingData;
 	for (const auto& t : tableList)
 	{
 		if (t.name.compare(birdProbabilityTableName) == 0 && t.columns.size() == 42)// TODO:  Better check necessary?
@@ -223,11 +224,10 @@ bool MapPageGenerator::CreateFusionTable(
 			std::cout << "Found existing table " << t.tableId << std::endl;
 			tableId = t.tableId;
 
-#ifndef DONT_CALL_MAPS_API
-			if (!fusionTables.DeleteAllRows(t.tableId))// TODO:  Don't do this any more?
-				std::cerr << "Warning:  Failed to delete existing rows from table\n";
-#endif// DONT_CALL_MAPS_API
-			break;
+			if (GetExistingCountyData(existingData, fusionTables, tableId))
+				break;
+
+			tableId.clear();
 		}
 	}
 
@@ -245,6 +245,15 @@ bool MapPageGenerator::CreateFusionTable(
 		if (!fusionTables.SetTableAccess(tableInfo.tableId, GoogleFusionTablesInterface::TableAccess::Public))
 			std::cerr << "Failed to make table public\n";
 	}
+
+	// TODO:  At this point:
+	// 1.  Delete rows from table if they don't have a corresponding entry in observationProbabilities
+	// 2.  If did any deleting, get table data again (or test to ensure rowIDs didn't change)
+	// 3.  Split data into "data for updating existing rows" and "data for importing new rows"
+	// 4.  For all updating data, check to see if we need to get geometry
+	// 5.  Get geometry for all new rows and for all that popped in #4
+	// 6.  Update probabilities for existing rows
+	// 7.  Do full "Get name, location, etc" for all new rows
 
 	std::vector<CountyGeometry> geometry;
 	if (!GetCountyGeometry(fusionTables, geometry))// TODO:  Only if necessary?
@@ -319,6 +328,104 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	return true;
+}
+
+bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
+	GFTI& fusionTables, const std::string& tableId)
+{
+	cJSON* root(nullptr);
+	const std::string query("SELECT ROWID,'State-County',Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId + "&typed=false");
+	if (!fusionTables.SubmitQuery(query, root))
+		return false;
+
+	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
+	if (!rowsArray)
+	{
+		std::cerr << "Failed to get rows array\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	data.resize(cJSON_GetArraySize(rowsArray));
+	unsigned int i(0);
+	for (auto& row : data)
+	{
+		cJSON* rowRoot(cJSON_GetArrayItem(rowsArray, i++));
+		if (!rowRoot)
+		{
+			cJSON_Delete(root);
+			std::cerr << "Failed to read existing row\n";
+			return false;
+		}
+
+		if (!ReadExistingCountyData(rowRoot, row))
+		{
+			cJSON_Delete(root);
+			return false;
+		}
+	}
+
+	cJSON_Delete(root);
+
+	return true;
+}
+
+bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
+{
+	cJSON* rowID(cJSON_GetArrayItem(row, 0));
+	cJSON* stateCounty(cJSON_GetArrayItem(row, 1));
+	cJSON* kml(cJSON_GetArrayItem(row, 2));
+	cJSON* jan(cJSON_GetArrayItem(row, 3));
+	cJSON* feb(cJSON_GetArrayItem(row, 4));
+	cJSON* mar(cJSON_GetArrayItem(row, 5));
+	cJSON* apr(cJSON_GetArrayItem(row, 6));
+	cJSON* may(cJSON_GetArrayItem(row, 7));
+	cJSON* jun(cJSON_GetArrayItem(row, 8));
+	cJSON* jul(cJSON_GetArrayItem(row, 9));
+	cJSON* aug(cJSON_GetArrayItem(row, 10));
+	cJSON* sep(cJSON_GetArrayItem(row, 11));
+	cJSON* oct(cJSON_GetArrayItem(row, 12));
+	cJSON* nov(cJSON_GetArrayItem(row, 13));
+	cJSON* dec(cJSON_GetArrayItem(row, 14));
+
+	if (!rowID || !stateCounty || !kml ||
+		!jan || !feb || !mar || !apr || !may || !jun ||
+		!jul || !aug || !sep || !oct || !nov || !dec)
+	{
+		std::cerr << "Failed to get county information from existing row\n";
+		return false;
+	}
+
+	std::string stateCountyString(stateCounty->valuestring);
+	data.state = stateCountyString.substr(0, 2);
+	data.county = stateCountyString.substr(3);
+	data.geometryKML = kml->valuestring;
+
+	if (!ReadDouble(jan, data.probabilities[0]) ||
+		!ReadDouble(feb, data.probabilities[1]) ||
+		!ReadDouble(mar, data.probabilities[2]) ||
+		!ReadDouble(apr, data.probabilities[3]) ||
+		!ReadDouble(may, data.probabilities[4]) ||
+		!ReadDouble(jun, data.probabilities[5]) ||
+		!ReadDouble(jul, data.probabilities[6]) ||
+		!ReadDouble(aug, data.probabilities[7]) ||
+		!ReadDouble(sep, data.probabilities[8]) ||
+		!ReadDouble(oct, data.probabilities[9]) ||
+		!ReadDouble(nov, data.probabilities[10]) ||
+		!ReadDouble(dec, data.probabilities[11]))
+	{
+		std::cerr << "Failed to read existing probability\n";
+		return false;
+	}
+
+	return true;
+}
+
+bool MapPageGenerator::ReadDouble(cJSON* item, double& d)
+{
+	std::istringstream ss;
+	ss.str(item->valuestring);
+	return !(ss >> d).fail();
 }
 
 void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo)

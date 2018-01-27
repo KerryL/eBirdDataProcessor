@@ -102,6 +102,8 @@ private:
 
 		std::array<double, 12> probabilities;
 		std::array<std::vector<EBirdDataProcessor::FrequencyInfo>, 12> frequencyInfo;
+
+		unsigned int rowId = 0;
 	};
 
 	struct CountyGeometry
@@ -110,6 +112,11 @@ private:
 		std::string county;
 		std::string kml;
 	};
+
+	static bool GetExistingCountyData(std::vector<CountyInfo>& data,
+		GFTI& fusionTables, const std::string& tableId);
+	static bool ReadExistingCountyData(cJSON* row, CountyInfo& data);
+	static bool ReadDouble(cJSON* item, double& d);
 
 	static Color InterpolateColor(const Color& minColor, const Color& maxColor, const double& value);
 	static std::string ColorToHexString(const Color& c);
