@@ -255,8 +255,10 @@ void EBirdDataProcessor::FilterPartialIDs()
 {
 	data.erase(std::remove_if(data.begin(), data.end(), [](const Entry& entry)
 	{
-		return (entry.commonName.find(" sp.") != std::string::npos) ||// Eliminate Spuhs
-			(entry.commonName.find('/') != std::string::npos);// Eliminate species1/species2 type entries
+		return entry.commonName.find(" sp.") != std::string::npos ||// Eliminate Spuhs
+			entry.commonName.find('/') != std::string::npos ||// Eliminate species1/species2 type entries
+			entry.commonName.find("hybrid") != std::string::npos ||// Eliminate hybrids
+			entry.commonName.find("Domestic") != std::string::npos;// Eliminate domestic birds
 	}), data.end());
 }
 
@@ -1120,8 +1122,8 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 		return a.probabilities[currentMonth] > b.probabilities[currentMonth];
 	});
 
-	for (const auto& location : newSightingProbability)
-		std::cout << location.locationHint << " : " << location.probabilities[currentMonth] * 100.0 << std::endl;
+	/*for (const auto& location : newSightingProbability)
+		std::cout << location.locationHint << " : " << location.probabilities[currentMonth] * 100.0 << std::endl;*/
 
 	if (!googleMapsKey.empty())
 	{
