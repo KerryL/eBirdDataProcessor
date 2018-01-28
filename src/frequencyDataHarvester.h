@@ -27,6 +27,8 @@ public:
 	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state,
 		const std::string& targetPath, const std::string& censusKey);
 
+	static std::string GenerateFrequencyFileName(const std::string& state, const std::string& county);
+
 private:
 	static const std::string targetSpeciesURLBase;
 	static const std::string eBirdLoginURL;

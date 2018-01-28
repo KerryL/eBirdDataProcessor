@@ -102,11 +102,17 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		if (DataIsEmpty(data))
 			continue;
 
-		if (!WriteFrequencyDataToFile(targetPath + Clean(county.name) + state + "FrequencyData.csv", data))
+		if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(state, county.name), data))
 			break;
 	}
 
 	return true;
+}
+
+std::string FrequencyDataHarvester::GenerateFrequencyFileName(
+	const std::string& state, const std::string& county)
+{
+	return Clean(county) + state + "FrequencyData.csv";
 }
 
 bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
@@ -184,7 +190,7 @@ void FrequencyDataHarvester::GetUserNameAndPassword(std::string& userName, std::
 	std::cout << "Password:  ";
 
 #ifdef _WIN32
-	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE); 
+	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
 	DWORD mode = 0;
 	GetConsoleMode(hStdin, &mode);
 	SetConsoleMode(hStdin, mode & (~ENABLE_ECHO_INPUT));
@@ -631,7 +637,7 @@ std::string FrequencyDataHarvester::ExtractCountyNameFromPage(const std::string&
 	std::string::size_type offset(0);
 	if (!ExtractTextBetweenTags(htmlData, matchStart, matchEnd, countyName, offset))
 		return std::string();
-	
+
 	return countyName;
 }
 
