@@ -243,32 +243,30 @@ bool MapPageGenerator::CreateFusionTable(
 			std::cerr << "Failed to make table public\n";
 	}
 
-	// TODO:  At this point:
-	// 1.  Delete rows from table if they don't have a corresponding entry in observationProbabilities
-	// 2.  If did any deleting, get table data again (or test to ensure rowIDs didn't change)
-	// 3.  Split data into "data for updating existing rows" and "data for importing new rows"
-	// 4.  For all updating data, check to see if we need to get geometry
-	// 5.  Get geometry for all new rows and for all that popped in #4
-	// 6.  Update probabilities for existing rows
-	// 7.  Do full "Get name, location, etc" for all new rows
+	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
+
+	for (const auto& row : rowsToDelete)
+		fusionTables.DeleteRow(tableId, row);
+
+	// TODO: If did any deleting, get table data again (or test to ensure rowIDs didn't change)
 
 	std::vector<CountyGeometry> geometry;
-	if (!GetCountyGeometry(fusionTables, geometry))// TODO:  Only if necessary?
+	if (!GetCountyGeometry(fusionTables, geometry))
 		return false;
 
 	// NOTE:  Google maps geocoding API has rate limit of 50 queries per sec, and usage limit of 2500 queries per day
-	// In order to prevent exceeding the daily query limit, we should only update the data in the rows,
-	// and not touch the name, geometry or location columns unless it's necessary. (TODO)
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
-	const unsigned int rateLimit(25);// Half of published limit to give us some buffer
+	const unsigned int rateLimit(50);// queries per second
 	GoogleMapsThreadPool pool(std::thread::hardware_concurrency() * 2, rateLimit);
 	auto countyIt(countyInfo.begin());
 	for (const auto& entry : observationProbabilities)
 	{
-		// TODO:  Populate known info here?  So we don't have to contact Google Maps if we don't have to?  Only update probability data?
 		countyIt->frequencyInfo = std::move(entry.frequencyInfo);
-		pool.AddJob(std::make_unique<GoogleMapsThreadPool::MapJobInfo>(
-			PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, geometry));
+		countyIt->probabilities = std::move(entry.probabilities);
+		if (!CopyExistingDataForCounty(entry, existingData, *countyIt))
+			pool.AddJob(std::make_unique<GoogleMapsThreadPool::MapJobInfo>(
+				PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, geometry));
+
 		++countyIt;
 	}
 
@@ -450,6 +448,46 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 	return true;
 }
 
+std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
+	std::vector<CountyInfo>& existingData, const std::vector<ObservationInfo>& newData)
+{
+	return std::vector<unsigned int>();
+	// At this point:
+	// existingData will be culled to only include entries that have corresponding data in observationProbabilities
+	// Rows that get removed from exisingData have their IDs added to return vector
+}
+
+bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
+	const std::vector<CountyInfo>& existingData, CountyInfo& newData)
+{
+	for (const auto& existing : existingData)
+	{
+		// TODO:  Call same method in eBirdProcessor to generate location hint from county and state?
+		if (someFunc(existing.state, existing.county).compare(entry.locationHint) == 0)
+		{
+			newData.name = existing.name;
+			newData.state = existing.state;
+			newData.county = existing.county;
+
+			newData.latitude = existing.latitude;
+			newData.longitude = existing.longitude;
+			newData.neLatitude = existing.neLatitude;
+			newData.neLongitude = existing.neLongitude;
+			newData.swLatitude = existing.swLatitude;
+			newData.swLongitude = existing.swLongitude;
+
+			newData.geometryKML = std::move(existing.geometryKML);
+			newData.
+
+			if (newData.geometryKML.empty())
+
+			return true;
+		}
+	}
+
+	return false;
+}
+
 void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo)
 {
 	const GoogleMapsThreadPool::MapJobInfo& mapJobInfo(static_cast<const GoogleMapsThreadPool::MapJobInfo&>(jobInfo));
@@ -462,21 +500,17 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 	if (!GetCountyNameFromFileName(frequencyInfo.locationHint, info.county))
 		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationHint << "'\n";
 
-#ifndef DONT_CALL_MAPS_API
-	// TODO:  Only if necessary?
 	if (!GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
 		info.neLongitude, info.swLatitude, info.swLongitude, info.name,
 		mapJobInfo.googleMapsKey))
 		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationHint << "'\n";
-#endif// DONT_CALL_MAPS_API
 
 	const std::string::size_type saintStart(info.name.find("St "));
 	if (saintStart != std::string::npos)
 		info.name.insert(saintStart + 2, ".");
 
 	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
-	info.probabilities = std::move(frequencyInfo.probabilities);
 
 	for (const auto& g : mapJobInfo.geometry)// TODO:  Only if necessary?
 	{

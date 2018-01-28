@@ -668,6 +668,19 @@ bool GoogleFusionTablesInterface::DeleteAllRows(const std::string& tableId)
 	return true;
 }
 
+bool GoogleFusionTablesInterface::DeleteRow(const std::string& tableId, const unsigned int& rowId)
+{
+	std::ostringstream ss;
+	ss << rowId;
+	const std::string deleteCommand("DELETE FROM " + tableId + " WHERE ROWID = " + ss.str());
+	cJSON* root(nullptr);
+	if (!SubmitQuery(deleteCommand, root))
+		return false;
+
+	cJSON_Delete(root);
+	return true;
+}
+
 bool GoogleFusionTablesInterface::SetTableAccess(const std::string& tableId, const TableAccess& access)
 {
 	// TODO:  implement

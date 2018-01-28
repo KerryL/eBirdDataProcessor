@@ -116,6 +116,10 @@ private:
 	static bool GetExistingCountyData(std::vector<CountyInfo>& data,
 		GFTI& fusionTables, const std::string& tableId);
 	static bool ReadExistingCountyData(cJSON* row, CountyInfo& data);
+	static std::vector<unsigned int> DetermineDeleteUpdateAdd(
+		std::vector<CountyInfo>& existingData, const std::vector<ObservationInfo>& newData);
+	static bool CopyExistingDataForCounty(const ObservationInfo& entry,
+		const std::vector<CountyInfo>& existingData, CountyInfo& newData);
 
 	template<typename T>
 	static bool Read(cJSON* item, T& value);

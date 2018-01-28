@@ -57,6 +57,7 @@ public:
 	bool ListColumns(const std::string& tableId,
 		std::vector<TableInfo::ColumnInfo>& columnInfo);
 	bool DeleteAllRows(const std::string& tableId);
+	bool DeleteRow(const std::string& tableId, const unsigned int& rowId);
 
 	struct StyleInfo
 	{
