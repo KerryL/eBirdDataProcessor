@@ -120,6 +120,9 @@ private:
 		std::vector<CountyInfo>& existingData, const std::vector<ObservationInfo>& newData);
 	static bool CopyExistingDataForCounty(const ObservationInfo& entry,
 		const std::vector<CountyInfo>& existingData, CountyInfo& newData);
+	static std::vector<ObservationInfo>::const_iterator NewDataIncludesMatchForCounty(
+		const std::vector<ObservationInfo>& newData, const CountyInfo& county);
+	static bool ProbabilityDataHasChanged(const ObservationInfo& newData, const CountyInfo& existingData);
 
 	template<typename T>
 	static bool Read(cJSON* item, T& value);

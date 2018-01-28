@@ -8,6 +8,7 @@
 // Local headers
 #include "mapPageGenerator.h"
 #include "googleMapsInterface.h"
+#include "frequencyDataHarvester.h"
 
 // Standard C++ headers
 #include <sstream>
@@ -244,11 +245,8 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
-
 	for (const auto& row : rowsToDelete)
 		fusionTables.DeleteRow(tableId, row);
-
-	// TODO: If did any deleting, get table data again (or test to ensure rowIDs didn't change)
 
 	std::vector<CountyGeometry> geometry;
 	if (!GetCountyGeometry(fusionTables, geometry))
@@ -256,7 +254,7 @@ bool MapPageGenerator::CreateFusionTable(
 
 	// NOTE:  Google maps geocoding API has rate limit of 50 queries per sec, and usage limit of 2500 queries per day
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
-	const unsigned int rateLimit(50);// queries per second
+	const unsigned int rateLimit(25);// queries per second
 	GoogleMapsThreadPool pool(std::thread::hardware_concurrency() * 2, rateLimit);
 	auto countyIt(countyInfo.begin());
 	for (const auto& entry : observationProbabilities)
@@ -448,13 +446,66 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 	return true;
 }
 
+// For each row in existingData, there are three possible outcomes:
+// 1.  newData has no entry corresponding to existing row -> Delete row
+//     -> Delete row from table and delete entry from existingData
+// 2.  newData and row have corresponding entries, probability data is the same -> Leave row as-is
+//     -> Delete entry from existingData, but do not delete from table
+// 3.  newData and row have corresponding entries, probability data is different -> Update row (Delete + re-import)
+//     -> Delete row from table, but do not delete from existingData
 std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 	std::vector<CountyInfo>& existingData, const std::vector<ObservationInfo>& newData)
 {
-	return std::vector<unsigned int>();
-	// At this point:
-	// existingData will be culled to only include entries that have corresponding data in observationProbabilities
-	// Rows that get removed from exisingData have their IDs added to return vector
+	std::vector<unsigned int> deletedRows;
+	existingData.erase(std::remove_if(existingData.begin(), existingData.end(),
+		[&deletedRows, &newData](const CountyInfo& c)
+		{
+			auto matchingEntry(NewDataIncludesMatchForCounty(newData, c));
+			if (matchingEntry == newData.end())
+			{
+				// Need to delete row, and we can also remove row from existingData (Case #1)
+				deletedRows.push_back(c.rowId);
+				return true;
+			}
+
+			if (!ProbabilityDataHasChanged(*matchingEntry, c))
+				return true;// Leave row as-is (Case #2)
+
+			// Need to delete row, but don't remove it from exisingData (Case #3)
+			deletedRows.push_back(c.rowId);
+			return false;
+		}), existingData.end());
+
+	return deletedRows;
+}
+
+std::vector<MapPageGenerator::ObservationInfo>::const_iterator
+	MapPageGenerator::NewDataIncludesMatchForCounty(
+	const std::vector<ObservationInfo>& newData, const CountyInfo& county)
+{
+	auto it(newData.begin());
+	for (; it != newData.end(); ++it)
+	{
+		if (FrequencyDataHarvester::GenerateFrequencyFileName(
+			county.state, county.county).compare(it->locationHint) == 0)
+			break;
+	}
+
+	return it;
+}
+
+bool MapPageGenerator::ProbabilityDataHasChanged(
+	const ObservationInfo& newData, const CountyInfo& existingData)
+{
+	unsigned int i;
+	for (i = 0; i < 12; ++i)
+	{
+		const double probabilityTolerance(0.1);// [%]
+		if (fabs(newData.probabilities[i] * 100.0 - existingData.probabilities[i]) > probabilityTolerance)
+			return true;
+	}
+
+	return false;
 }
 
 bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
@@ -462,8 +513,8 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 {
 	for (const auto& existing : existingData)
 	{
-		// TODO:  Call same method in eBirdProcessor to generate location hint from county and state?
-		if (someFunc(existing.state, existing.county).compare(entry.locationHint) == 0)
+		if (FrequencyDataHarvester::GenerateFrequencyFileName(
+			existing.state, existing.county).compare(entry.locationHint) == 0)
 		{
 			newData.name = existing.name;
 			newData.state = existing.state;
@@ -477,9 +528,11 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 			newData.swLongitude = existing.swLongitude;
 
 			newData.geometryKML = std::move(existing.geometryKML);
-			newData.
 
 			if (newData.geometryKML.empty())
+			{
+				// TODO:  Get geometry?
+			}
 
 			return true;
 		}
