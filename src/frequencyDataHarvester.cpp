@@ -69,8 +69,11 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	return WriteFrequencyDataToFile(frequencyFileName, frequencyData);
 }
 
+// fipsStart argument can be used to resume a failed bulk harvest without needing
+// to re-harvest the data for the specified state which was successfully harvested
 bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
-	const std::string &state, const std::string& targetPath, const std::string& censusKey)
+	const std::string &state, const std::string& targetPath, const std::string& censusKey,
+	const unsigned int& fipsStart)
 {
 	std::cout << "Harvesting frequency data for " << state << ", " << country << std::endl;
 	std::cout << "Frequency files will be stored in " << targetPath << std::endl;
@@ -87,10 +90,16 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 	USCensusInterface censusInterface(censusKey);
 	std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
 
-	std::cout << "Beginning harvest for " << countyList.size() << " counties" << std::endl;
+	std::cout << "Beginning harvest for " << countyList.size() << " counties";
+	if (fipsStart > 0)
+		std::cout << " (skipping counties with FIPS < " << fipsStart << ')';
+	std::cout << std::endl;
 
 	for (const auto& county : countyList)
 	{
+		if (county.fipsCode < fipsStart)
+			continue;
+
 		std::cout << county.name << " (FIPS = " << county.fipsCode << ")..." << std::endl;
 		std::array<FrequencyData, 12> data;
 		if (!PullFrequencyData(BuildRegionString(country, state, county.fipsCode), data))

@@ -17,6 +17,7 @@ struct EBDPConfig
 	std::string locationFilter;
 
 	std::string bulkFrequencyUpdate;
+	unsigned int fipsStart;
 
 	enum class ListType : int
 	{

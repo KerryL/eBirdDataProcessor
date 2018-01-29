@@ -38,6 +38,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("CALENDAR", config.generateTargetCalendar);
 	AddConfigItem("HARVEST_FREQUENCY", config.harvestFrequencyData);
 	AddConfigItem("BULK_FREQUENCY_UPDATE", config.bulkFrequencyUpdate);
+	AddConfigItem("FIPS_START", config.fipsStart);
 	AddConfigItem("TOP_COUNT", config.topBirdCount);
 	AddConfigItem("FREQUENCY_FILE", config.frequencyFileName);
 	AddConfigItem("TARGET_INFO_FILE_NAME", config.targetInfoFileName);
@@ -76,6 +77,8 @@ void EBDPConfigFile::AssignDefaults()
 	config.recentObservationPeriod = 15;
 
 	config.showOnlyPhotoNeeds = false;
+
+	config.fipsStart = 0;
 }
 
 bool EBDPConfigFile::ConfigIsOK()
@@ -196,6 +199,12 @@ bool EBDPConfigFile::ConfigIsOK()
 	{
 		std::cerr << GetKey(config.findMaxNeedsLocations) << " requires "
 			<< GetKey(config.oAuthClientId) << " and " << GetKey(config.oAuthClientSecret) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.fipsStart > 0 && config.bulkFrequencyUpdate.empty())
+	{
+		std::cerr << GetKey(config.fipsStart) << " requires " << GetKey(config.bulkFrequencyUpdate) << '\n';
 		configurationOK = false;
 	}
 

@@ -25,7 +25,7 @@ public:
 		const std::string &county, const std::string &frequencyFileName);
 
 	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state,
-		const std::string& targetPath, const std::string& censusKey);
+		const std::string& targetPath, const std::string& censusKey, const unsigned int& fipsStart);
 
 	static std::string GenerateFrequencyFileName(const std::string& state, const std::string& county);
 

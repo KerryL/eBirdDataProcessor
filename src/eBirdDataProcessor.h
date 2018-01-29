@@ -147,8 +147,6 @@ private:
 	static std::string StripParentheses(std::string s);
 	static std::string Trim(std::string s);
 
-	static const std::string commaPlaceholder;
-
 	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
 	typedef std::array<double, 12> DoubleYear;
 

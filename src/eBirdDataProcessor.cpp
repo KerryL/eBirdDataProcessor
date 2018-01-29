@@ -34,7 +34,6 @@ const std::string EBirdDataProcessor::headerLine("Submission ID,Common Name,Scie
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
 	"Protocol,Duration (Min),All Obs Reported,Distance Traveled (km),Area Covered (ha),"
 	"Number of Observers,Breeding Code,Species Comments,Checklist Comments");
-const std::string EBirdDataProcessor::commaPlaceholder("%&!COMMA!&%");
 
 bool EBirdDataProcessor::Parse(const std::string& dataFile)
 {
