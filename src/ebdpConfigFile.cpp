@@ -37,7 +37,7 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem("CALENDAR", config.generateTargetCalendar);
 	AddConfigItem("HARVEST_FREQUENCY", config.harvestFrequencyData);
-	AddConfigItem("BULD_FREQUENCY_UPDATE", config.bulkFrequencyUpdate);
+	AddConfigItem("BULK_FREQUENCY_UPDATE", config.bulkFrequencyUpdate);
 	AddConfigItem("TOP_COUNT", config.topBirdCount);
 	AddConfigItem("FREQUENCY_FILE", config.frequencyFileName);
 	AddConfigItem("TARGET_INFO_FILE_NAME", config.targetInfoFileName);
