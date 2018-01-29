@@ -18,6 +18,8 @@ public:
 	GoogleFusionTablesInterface(const std::string& userAgent,
 		const std::string& oAuthClientId, const std::string& oAuthClientSecret);
 
+	static const unsigned int writeRequestRateLimit;// [requests per minute]
+
 	struct TableInfo
 	{
 		std::string description;

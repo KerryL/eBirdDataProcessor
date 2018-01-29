@@ -10,6 +10,7 @@
 #include "eBirdDataProcessor.h"
 #include "googleFusionTablesInterface.h"
 #include "threadPool.h"
+#include "throttledSection.h"
 
 // Standard C++ headers
 #include <fstream>
@@ -17,9 +18,10 @@
 class MapPageGenerator
 {
 public:
+	MapPageGenerator();
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
-	static bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
+	bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
 		const std::string& googleMapsKey,
 		const std::vector<ObservationInfo>& observationInfo,
 		const std::string& clientId, const std::string& clientSecret);
@@ -52,24 +54,30 @@ private:
 
 	typedef GoogleFusionTablesInterface GFTI;
 
-	static void WriteHeadSection(std::ofstream& f, const Keys& keys,
+	static const unsigned int mapsAPIRateLimit;
+	static const ThrottledSection::Clock::duration mapsAPIMinDuration;
+	static const ThrottledSection::Clock::duration fusionTablesAPIMinDuration;
+	ThrottledSection mapsAPIRateLimiter;
+	ThrottledSection fusionTablesAPIRateLimiter;
+
+	void WriteHeadSection(std::ofstream& f, const Keys& keys,
 		const std::vector<ObservationInfo>& observationProbabilities);
 	static void WriteBody(std::ofstream& f);
-	static void WriteScripts(std::ofstream& f, const Keys& keys,
+	void WriteScripts(std::ofstream& f, const Keys& keys,
 		const std::vector<ObservationInfo>& observationProbabilities);
-	static bool CreateFusionTable(
+	bool CreateFusionTable(
 		const std::vector<ObservationInfo>& observationProbabilities,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
 		std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
 		std::vector<unsigned int>& templateIds);
-	static bool GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
+	bool GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 		const std::string& county, double& latitude, double& longitude,
 		double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
-		std::string& geographicName, const std::string& googleMapsKey,
-		const std::chrono::steady_clock::duration& minLoopTime);
+		std::string& geographicName, const std::string& googleMapsKey);
 	static bool GetStateAbbreviationFromFileName(const std::string& fileName, std::string& state);
 	static bool GetCountyNameFromFileName(const std::string& fileName, std::string& county);
+	static bool CountyNamesMatch(const std::string& a, const std::string& b);
 
 	static std::string StripCountyFromName(const std::string& s);
 	static std::string CleanQueryString(const std::string& s);
@@ -125,6 +133,7 @@ private:
 	static std::vector<ObservationInfo>::const_iterator NewDataIncludesMatchForCounty(
 		const std::vector<ObservationInfo>& newData, const CountyInfo& county);
 	static bool ProbabilityDataHasChanged(const ObservationInfo& newData, const CountyInfo& existingData);
+	static std::vector<unsigned int> FindDuplicatesAndBlanksToRemove(std::vector<CountyInfo>& existingData);
 
 	static void LookupAndAssignKML(const std::vector<CountyGeometry>& geometry, CountyInfo& data);
 
@@ -142,37 +151,36 @@ private:
 
 	static bool GetCountyGeometry(GoogleFusionTablesInterface& fusionTables, std::vector<CountyGeometry>& geometry);
 
-	class GoogleMapsThreadPool : public ThreadPool
+	class GoogleMapsThreadPool : public ThreadPool<MapPageGenerator>
 	{
 	public:
 		GoogleMapsThreadPool(const unsigned int& threadCount, const unsigned int& rateLimit)
-			: ThreadPool(threadCount, rateLimit) {}
+			: ThreadPool<MapPageGenerator>(threadCount, rateLimit) {}
 
 		struct MapJobInfo : public JobInfo
 		{
 			MapJobInfo() = default;
 			MapJobInfo(JobFunction jobFunction, CountyInfo& info,
 				const ObservationInfo& frequencyInfo, const std::string& googleMapsKey,
-				const std::vector<CountyGeometry>& geometry, const unsigned int& rateLimit)
+				const std::vector<CountyGeometry>& geometry)
 				: JobInfo(jobFunction), info(info), frequencyInfo(frequencyInfo),
-				googleMapsKey(googleMapsKey), geometry(geometry), rateLimit(rateLimit) {}
+				googleMapsKey(googleMapsKey), geometry(geometry) {}
 
 			CountyInfo& info;
 			const ObservationInfo& frequencyInfo;
 			const std::string& googleMapsKey;
 			const std::vector<CountyGeometry>& geometry;
-			const unsigned int rateLimit;
 		};
 	};
 
-	static void PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo);
+	void PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo);
 
-	static bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
+	bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
 		const std::string& tableId, std::vector<unsigned int>& styleIds);
 	static GoogleFusionTablesInterface::StyleInfo CreateStyle(const std::string& tableId,
 		const std::string& month);
 
-	static bool VerifyTableTemplates(GoogleFusionTablesInterface& fusionTables,
+	bool VerifyTableTemplates(GoogleFusionTablesInterface& fusionTables,
 		const std::string& tableId, std::vector<unsigned int>& templateIds);
 	static GoogleFusionTablesInterface::TemplateInfo CreateTemplate(const std::string& tableId,
 		const std::string& month);

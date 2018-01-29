@@ -34,6 +34,14 @@ const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = 
 	NamePair("Nov", "November"),
 	NamePair("Dec", "December")};
 
+const unsigned int MapPageGenerator::mapsAPIRateLimit(50);// [requests per sec]
+const ThrottledSection::Clock::duration MapPageGenerator::mapsAPIMinDuration(std::chrono::milliseconds(static_cast<long long>(1000.0 / mapsAPIRateLimit)));// 50 requests per second
+const ThrottledSection::Clock::duration MapPageGenerator::fusionTablesAPIMinDuration(std::chrono::milliseconds(static_cast<long long>(60000.0 / GFTI::writeRequestRateLimit)));// 30 requests per minute
+
+MapPageGenerator::MapPageGenerator() : mapsAPIRateLimiter(mapsAPIMinDuration), fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration)
+{
+}
+
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
 	const std::string& googleMapsKey,
 	const std::vector<ObservationInfo>& observationProbabilities,
@@ -232,6 +240,7 @@ bool MapPageGenerator::CreateFusionTable(
 	if (tableId.empty())
 	{
 		GFTI::TableInfo tableInfo(BuildTableLayout());
+		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.CreateTable(tableInfo))
 		{
 			std::cerr << "Failed to create fusion table\n";
@@ -240,13 +249,25 @@ bool MapPageGenerator::CreateFusionTable(
 
 		tableId = tableInfo.tableId;
 		std::cout << "Created new fusion table " << tableId << std::endl;
+		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.SetTableAccess(tableInfo.tableId, GoogleFusionTablesInterface::TableAccess::Public))
 			std::cerr << "Failed to make table public\n";
 	}
 
+	const auto duplicateRowsToDelete(FindDuplicatesAndBlanksToRemove(existingData));
+	std::cout << "Deleting " << duplicateRowsToDelete.size() << " containing duplicate entires" << std::endl;
+	for (const auto& row : duplicateRowsToDelete)
+	{
+		fusionTablesAPIRateLimiter.Wait();
+		fusionTables.DeleteRow(tableId, row);
+	}
+
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
 	for (const auto& row : rowsToDelete)
+	{
+		fusionTablesAPIRateLimiter.Wait();
 		fusionTables.DeleteRow(tableId, row);
+	}
 
 	std::vector<CountyGeometry> geometry;
 	if (!GetCountyGeometry(fusionTables, geometry))
@@ -254,8 +275,7 @@ bool MapPageGenerator::CreateFusionTable(
 
 	// NOTE:  Google maps geocoding API has rate limit of 50 queries per sec, and usage limit of 2500 queries per day
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
-	const unsigned int rateLimit(25);// queries per second
-	GoogleMapsThreadPool pool(std::thread::hardware_concurrency() * 2, rateLimit);
+	GoogleMapsThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
 	auto countyIt(countyInfo.begin());
 	for (const auto& entry : observationProbabilities)
 	{
@@ -263,13 +283,12 @@ bool MapPageGenerator::CreateFusionTable(
 		countyIt->probabilities = std::move(entry.probabilities);
 		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, geometry))
 			pool.AddJob(std::make_unique<GoogleMapsThreadPool::MapJobInfo>(
-				PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, geometry, rateLimit));
+				&MapPageGenerator::PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, geometry), this);
 
 		++countyIt;
 	}
 
 	pool.WaitForAllJobsComplete();
-	exit(1);// TODO TODO TODO:  Remove
 
 	std::ostringstream ss;
 	for (const auto& c : countyInfo)
@@ -301,6 +320,7 @@ bool MapPageGenerator::CreateFusionTable(
 		ss << '\n';
 	}
 
+	fusionTablesAPIRateLimiter.Wait();// TODO TODO TODO:  Need to check to see above if we need to break up import (limit of 1MB or 10,000 cells)
 	if (!fusionTables.Import(tableId, ss.str()))
 	{
 		std::cerr << "Failed to import data\n";
@@ -480,6 +500,58 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 	return deletedRows;
 }
 
+//
+std::vector<unsigned int> MapPageGenerator::FindDuplicatesAndBlanksToRemove(std::vector<CountyInfo>& existingData)
+{
+	std::vector<unsigned int> deletedRows;
+	auto startIterator(existingData.begin());
+	for (const auto item : existingData)
+	{
+		bool deletedSelf(false);
+		auto it(++startIterator);
+		for (; it != existingData.end(); ++it)
+		{
+			if (item.state.empty() || item.county.empty() ||
+				(item.latitude == 0.0 && item.longitude == 0.0 && item.neLatitude == 0.0 &&
+				item.swLatitude == 0.0 && item.neLongitude == 0.0 && item.swLongitude == 0.0))
+			{
+				deletedRows.push_back(item.rowId);
+				continue;
+			}
+
+			if (it->state.compare(item.state) != 0)
+				continue;
+			else if (!CountyNamesMatch(item.county, it->county))
+				continue;
+
+			deletedRows.push_back(it->rowId);// Always delete the second row
+			// If geometry matches, allow the first one in the list to remain, otherwise delete self, too (not sure which set of data is right)
+			if (!deletedSelf &&
+				(item.latitude != it->latitude || item.longitude != it->longitude ||
+				item.neLatitude != it->neLatitude || item.neLongitude != it->neLongitude ||
+				item.swLatitude != it->swLatitude || item.swLongitude != it->swLongitude))
+			{
+				deletedRows.push_back(item.rowId);
+				deletedSelf = true;
+			}
+		}
+	}
+
+	existingData.erase(std::remove_if(existingData.begin(), existingData.end(),
+		[&deletedRows](const CountyInfo& c)
+		{
+			for (const auto& r : deletedRows)
+			{
+				if (c.rowId == r)
+					return true;
+			}
+
+			return false;
+		}), existingData.end());
+
+	return deletedRows;
+}
+
 std::vector<MapPageGenerator::ObservationInfo>::const_iterator
 	MapPageGenerator::NewDataIncludesMatchForCounty(
 	const std::vector<ObservationInfo>& newData, const CountyInfo& county)
@@ -513,7 +585,6 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 	const std::vector<CountyInfo>& existingData, CountyInfo& newData,
 	const std::vector<CountyGeometry>& geometry)
 {
-	// TODO TODO TODO:  Is this not working?  Always returns false?
 	for (const auto& existing : existingData)
 	{
 		if (FrequencyDataHarvester::GenerateFrequencyFileName(
@@ -570,11 +641,10 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 	if (!GetCountyNameFromFileName(frequencyInfo.locationHint, info.county))
 		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationHint << "'\n";
 
-	const auto minLoopTime(std::chrono::milliseconds(static_cast<long long>(1000.0 / mapJobInfo.rateLimit)));
 	if (!GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
 		info.neLongitude, info.swLatitude, info.swLongitude, info.name,
-		mapJobInfo.googleMapsKey, minLoopTime))
+		mapJobInfo.googleMapsKey))
 		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationHint << "'\n";
 
 	const std::string::size_type saintStart(info.name.find("St "));
@@ -583,6 +653,22 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 
 	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
 	LookupAndAssignKML(mapJobInfo.geometry, info);
+}
+
+bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string& b)
+{
+	if (a.compare(b) == 0)
+		return true;
+
+	std::string cleanA(StripCountyFromName(a));
+	std::string cleanB(StripCountyFromName(b));
+	if (cleanA.compare(cleanB) == 0)
+		return true;
+
+	if (CleanFileName(cleanA).compare(CleanFileName(cleanB)) == 0)
+		return true;
+
+	return false;
 }
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
@@ -612,8 +698,7 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 	const std::string& county, double& latitude, double& longitude,
 	double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
-	std::string& geographicName, const std::string& googleMapsKey,
-	const std::chrono::steady_clock::duration& minLoopTime)
+	std::string& geographicName, const std::string& googleMapsKey)
 {
 	const unsigned int maxAttempts(5);
 	unsigned int i;
@@ -625,16 +710,13 @@ bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::stri
 		const std::string unknownErrorStatus("UNKNOWN_ERROR");
 		std::string status;
 		GoogleMapsInterface gMap("County Lookup Tool", googleMapsKey);
+		mapsAPIRateLimiter.Wait();
 		if (gMap.LookupCoordinates(county + " " + state, geographicName,
 			latitude, longitude, neLatitude, neLongitude, swLatitude, swLongitude,
 			"County", &status))
 			break;
 		else if (status.compare(unknownErrorStatus) != 0 || i == maxAttempts - 1)
 			return false;
-
-		const std::chrono::steady_clock::time_point stop(std::chrono::steady_clock::now());
-		if (stop - start < minLoopTime)
-			std::this_thread::sleep_for(minLoopTime - (stop - start));
 	}
 
 	if (geographicName.empty())
@@ -797,7 +879,8 @@ std::string MapPageGenerator::CleanFileName(const std::string& s)
 	{
 		if (std::isspace(c) ||
 			c == '\'' ||
-			c == '.')
+			c == '.' ||
+			c == '-')
 			return true;
 
 		return false;
@@ -868,6 +951,7 @@ bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTabl
 
 	for (const auto& s : styles)
 	{
+		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.DeleteStyle(tableId, s.styleId))
 			return false;
 	}
@@ -880,6 +964,7 @@ bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTabl
 	auto idIt(styleIds.begin());
 	for (auto& s : styles)
 	{
+		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.CreateStyle(tableId, s))
 			return false;
 		*idIt = s.styleId;
@@ -897,12 +982,17 @@ GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const std::
 	style.hasPolygonOptions = true;
 	style.tableId = tableId;
 
-	GoogleFusionTablesInterface::StyleInfo::Options polygonOptions;
-	polygonOptions.type = GoogleFusionTablesInterface::StyleInfo::Options::Type::Complex;
-	polygonOptions.key = "fillColorStyler";
-	polygonOptions.c.push_back(GoogleFusionTablesInterface::StyleInfo::Options("columnName", "Color-" + month));
-	style.polygonOptions.push_back(polygonOptions);
-	// TODO:  Set opacity
+	GoogleFusionTablesInterface::StyleInfo::Options fillColorOption;
+	fillColorOption.type = GoogleFusionTablesInterface::StyleInfo::Options::Type::Complex;
+	fillColorOption.key = "fillColorStyler";
+	fillColorOption.c.push_back(GoogleFusionTablesInterface::StyleInfo::Options("columnName", "Color-" + month));
+	style.polygonOptions.push_back(fillColorOption);
+
+	GoogleFusionTablesInterface::StyleInfo::Options opacityOption;
+	opacityOption.type = GoogleFusionTablesInterface::StyleInfo::Options::Type::Number;
+	opacityOption.key = "fillOpacity";
+	opacityOption.n = 0.2;
+	style.polygonOptions.push_back(opacityOption);
 
 	return style;
 }
@@ -919,6 +1009,7 @@ bool MapPageGenerator::VerifyTableTemplates(GoogleFusionTablesInterface& fusionT
 
 	for (const auto& t : templates)
 	{
+		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.DeleteTemplate(tableId, t.templateId))
 			return false;
 	}
@@ -931,6 +1022,7 @@ bool MapPageGenerator::VerifyTableTemplates(GoogleFusionTablesInterface& fusionT
 	auto idIt(templateIds.begin());
 	for (auto& t : templates)
 	{
+		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.CreateTemplate(tableId, t))
 			return false;
 		*idIt = t.templateId;

@@ -81,7 +81,7 @@
     <ClCompile Include="..\src\googleFusionTablesInterface.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\threadPool.cpp">
+    <ClCompile Include="..\src\throttledSection.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
   </ItemGroup>
@@ -138,6 +138,9 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\threadPool.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\throttledSection.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
