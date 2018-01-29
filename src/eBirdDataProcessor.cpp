@@ -1150,6 +1150,13 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileNam
 	unsigned int i(0);
 	for (auto& p : probabilities)
 	{
+		const unsigned int thresholdObservationCount(50);// TODO:  Don't hardcode
+		if (checklistCounts[i] < thresholdObservationCount)// Ignore counties which have very few observations (due to unreliable data)
+		{
+			p = 0.0;
+			continue;
+		}
+
 		const double thresholdFrequency(5.0);// TODO:  Don't hardcode
 		double product(1.0);
 		for (const auto& entry : frequencyData[i])
