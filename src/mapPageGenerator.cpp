@@ -261,14 +261,15 @@ bool MapPageGenerator::CreateFusionTable(
 	{
 		countyIt->frequencyInfo = std::move(entry.frequencyInfo);
 		countyIt->probabilities = std::move(entry.probabilities);
-		if (!CopyExistingDataForCounty(entry, existingData, *countyIt))
+		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, geometry))
 			pool.AddJob(std::make_unique<GoogleMapsThreadPool::MapJobInfo>(
-				PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, geometry));
+				PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, geometry, rateLimit));
 
 		++countyIt;
 	}
 
 	pool.WaitForAllJobsComplete();
+	exit(1);// TODO TODO TODO:  Remove
 
 	std::ostringstream ss;
 	for (const auto& c : countyInfo)
@@ -509,8 +510,10 @@ bool MapPageGenerator::ProbabilityDataHasChanged(
 }
 
 bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
-	const std::vector<CountyInfo>& existingData, CountyInfo& newData)
+	const std::vector<CountyInfo>& existingData, CountyInfo& newData,
+	const std::vector<CountyGeometry>& geometry)
 {
+	// TODO TODO TODO:  Is this not working?  Always returns false?
 	for (const auto& existing : existingData)
 	{
 		if (FrequencyDataHarvester::GenerateFrequencyFileName(
@@ -530,15 +533,29 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 			newData.geometryKML = std::move(existing.geometryKML);
 
 			if (newData.geometryKML.empty())
-			{
-				// TODO:  Get geometry?
-			}
+				LookupAndAssignKML(geometry, newData);
 
 			return true;
 		}
 	}
 
 	return false;
+}
+
+void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geometry, CountyInfo& data)
+{
+	for (const auto& g : geometry)
+	{
+		std::string countyString(StripCountyFromName(data.county));
+		if (g.state.compare(data.state) == 0 && g.county.compare(countyString) == 0)
+		{
+			data.geometryKML = g.kml;
+			break;
+		}
+	}
+
+	if (data.geometryKML.empty())
+		std::cerr << "Warning:  Geometry not found for '" << data.name << "'\n";
 }
 
 void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo)
@@ -553,10 +570,11 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 	if (!GetCountyNameFromFileName(frequencyInfo.locationHint, info.county))
 		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationHint << "'\n";
 
+	const auto minLoopTime(std::chrono::milliseconds(static_cast<long long>(1000.0 / mapJobInfo.rateLimit)));
 	if (!GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
 		info.neLongitude, info.swLatitude, info.swLongitude, info.name,
-		mapJobInfo.googleMapsKey))
+		mapJobInfo.googleMapsKey, minLoopTime))
 		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationHint << "'\n";
 
 	const std::string::size_type saintStart(info.name.find("St "));
@@ -564,19 +582,7 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 		info.name.insert(saintStart + 2, ".");
 
 	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
-
-	for (const auto& g : mapJobInfo.geometry)// TODO:  Only if necessary?
-	{
-		std::string countyString(StripCountyFromName(info.county));
-		if (g.state.compare(info.state) == 0 && g.county.compare(countyString) == 0)
-		{
-			info.geometryKML = g.kml;
-			break;
-		}
-	}
-
-	if (info.geometryKML.empty())
-		std::cerr << "Warning:  Geometry not found for '" << info.name << "'\n";
+	LookupAndAssignKML(mapJobInfo.geometry, info);
 }
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
@@ -606,12 +612,14 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 	const std::string& county, double& latitude, double& longitude,
 	double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
-	std::string& geographicName, const std::string& googleMapsKey)
+	std::string& geographicName, const std::string& googleMapsKey,
+	const std::chrono::steady_clock::duration& minLoopTime)
 {
 	const unsigned int maxAttempts(5);
 	unsigned int i;
 	for (i = 0; i < maxAttempts; ++i)
 	{
+		const std::chrono::steady_clock::time_point start(std::chrono::steady_clock::now());
 		// According to Google docs, if we get this error, another attempt
 		// may succeed.  In practice, this seems to be true.
 		const std::string unknownErrorStatus("UNKNOWN_ERROR");
@@ -623,6 +631,10 @@ bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::stri
 			break;
 		else if (status.compare(unknownErrorStatus) != 0 || i == maxAttempts - 1)
 			return false;
+
+		const std::chrono::steady_clock::time_point stop(std::chrono::steady_clock::now());
+		if (stop - start < minLoopTime)
+			std::this_thread::sleep_for(minLoopTime - (stop - start));
 	}
 
 	if (geographicName.empty())
@@ -890,6 +902,7 @@ GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const std::
 	polygonOptions.key = "fillColorStyler";
 	polygonOptions.c.push_back(GoogleFusionTablesInterface::StyleInfo::Options("columnName", "Color-" + month));
 	style.polygonOptions.push_back(polygonOptions);
+	// TODO:  Set opacity
 
 	return style;
 }

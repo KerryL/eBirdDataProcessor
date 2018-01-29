@@ -66,7 +66,8 @@ private:
 	static bool GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 		const std::string& county, double& latitude, double& longitude,
 		double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
-		std::string& geographicName, const std::string& googleMapsKey);
+		std::string& geographicName, const std::string& googleMapsKey,
+		const std::chrono::steady_clock::duration& minLoopTime);
 	static bool GetStateAbbreviationFromFileName(const std::string& fileName, std::string& state);
 	static bool GetCountyNameFromFileName(const std::string& fileName, std::string& county);
 
@@ -119,10 +120,13 @@ private:
 	static std::vector<unsigned int> DetermineDeleteUpdateAdd(
 		std::vector<CountyInfo>& existingData, const std::vector<ObservationInfo>& newData);
 	static bool CopyExistingDataForCounty(const ObservationInfo& entry,
-		const std::vector<CountyInfo>& existingData, CountyInfo& newData);
+		const std::vector<CountyInfo>& existingData, CountyInfo& newData,
+		const std::vector<CountyGeometry>& geometry);
 	static std::vector<ObservationInfo>::const_iterator NewDataIncludesMatchForCounty(
 		const std::vector<ObservationInfo>& newData, const CountyInfo& county);
 	static bool ProbabilityDataHasChanged(const ObservationInfo& newData, const CountyInfo& existingData);
+
+	static void LookupAndAssignKML(const std::vector<CountyGeometry>& geometry, CountyInfo& data);
 
 	template<typename T>
 	static bool Read(cJSON* item, T& value);
@@ -149,14 +153,15 @@ private:
 			MapJobInfo() = default;
 			MapJobInfo(JobFunction jobFunction, CountyInfo& info,
 				const ObservationInfo& frequencyInfo, const std::string& googleMapsKey,
-				const std::vector<CountyGeometry>& geometry)
+				const std::vector<CountyGeometry>& geometry, const unsigned int& rateLimit)
 				: JobInfo(jobFunction), info(info), frequencyInfo(frequencyInfo),
-				googleMapsKey(googleMapsKey), geometry(geometry) {}
+				googleMapsKey(googleMapsKey), geometry(geometry), rateLimit(rateLimit) {}
 
 			CountyInfo& info;
 			const ObservationInfo& frequencyInfo;
 			const std::string& googleMapsKey;
 			const std::vector<CountyGeometry>& geometry;
+			const unsigned int rateLimit;
 		};
 	};
 

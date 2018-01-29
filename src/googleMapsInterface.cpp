@@ -318,12 +318,20 @@ std::string GoogleMapsInterface::SanitizeAddress(const std::string& s)
 	return address;
 }
 
+#include <chrono>
+auto lastCall(std::chrono::high_resolution_clock::now());
 bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 	std::string& formattedAddress, double& latitude, double& longitude,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
 	const std::string& preferNameContaining, std::string* statusRet) const
 {
+	const auto now(std::chrono::high_resolution_clock::now());
+	const auto freq(1000.0 / std::chrono::duration<double, std::milli>(now - lastCall).count());
+	if (freq > 25.0)
+		std::cerr << "exceeded call freq at " <<  freq << std::endl;
+	lastCall = now;
+return true;
 	const std::string requestURL(apiRoot + geocodeEndPoint
 		+ "?address=" + SanitizeAddress(searchString) + "&key=" + apiKey);
 	std::string response;
