@@ -20,5 +20,5 @@ void ThrottledSection::Wait()
 	if (now - lastAccess < minAccessDelta)
 		std::this_thread::sleep_for(minAccessDelta - (now - lastAccess));
 
-	lastAccess = now;
+	lastAccess = Clock::now();
 }
