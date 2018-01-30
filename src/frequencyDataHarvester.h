@@ -101,6 +101,7 @@ private:
 		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
 		const unsigned int& stateFIPSCode, const std::string& censusKey);
 	static std::string ExtractStateFromFileName(const std::string& fileName);
+	static std::string StripDirectory(const std::string& s);
 
 	static const std::string endOfName;
 };

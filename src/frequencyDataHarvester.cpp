@@ -37,7 +37,7 @@ const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
 const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en");
 const bool FrequencyDataHarvester::verbose(false);
 const std::string FrequencyDataHarvester::cookieFile("ebdp.cookies");
-const std::string FrequencyDataHarvester::endOfName("FrequencyInfo.csv");
+const std::string FrequencyDataHarvester::endOfName("FrequencyData.csv");
 
 using namespace std::chrono_literals;
 // crawl delay determined by manually visiting www.ebird.org/robots.txt - should periodically
@@ -473,6 +473,8 @@ bool FrequencyDataHarvester::ExtractFrequencyData(const std::string& htmlData, F
 	std::string checklistCountString;
 	if (!ExtractTextBetweenTags(htmlData, checklistCountTagStart, checklistCountTagEnd, checklistCountString, currentOffset))
 	{
+		data.checklistCount = 0;
+		data.frequencies.clear();
 		std::cerr << "Failed to extract checklist count from HTML; assuming no data available for this county and month\n";
 		//return false;
 		return true;// Allow execution to continue - assume we reach this point due to lack of data for this county-month combo
@@ -747,13 +749,16 @@ std::vector<unsigned int> FrequencyDataHarvester::FindMissingCounties(const std:
 	for (const auto& f : freqInfo)
 	{
 		if (ExtractStateFromFileName(f.locationHint).compare(state) == 0)
-			countiesInDataset.push_back(f.locationHint.substr(0, f.locationHint.length() - endOfName.size()));
+			countiesInDataset.push_back(StripDirectory(f.locationHint.substr(0, f.locationHint.length() - endOfName.size() - 2)));
 	}
 
 	USCensusInterface censusInterface(censusKey);
 	std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
 
 	std::vector<unsigned int> missingCounties(countyList.size() - countiesInDataset.size());
+	if (missingCounties.size() == 0)
+		return missingCounties;
+
 	auto mIt(missingCounties.begin());
 	for (const auto& c : countyList)
 	{
@@ -768,7 +773,11 @@ std::vector<unsigned int> FrequencyDataHarvester::FindMissingCounties(const std:
 		}
 
 		if (!found)
+		{
 			*mIt++ = c.fipsCode;
+			if (mIt == missingCounties.end())
+				break;
+		}
 	}
 
 	assert(mIt == missingCounties.end());
@@ -780,4 +789,18 @@ std::string FrequencyDataHarvester::ExtractStateFromFileName(const std::string& 
 {
 	auto endStart(fileName.find(endOfName));
 	return fileName.substr(endStart - 2, 2);
+}
+
+std::string FrequencyDataHarvester::StripDirectory(const std::string& s)
+{
+	auto lastForwardSlash(s.find_last_of('/'));
+	auto lastBackSlash(s.find_last_of('\\'));
+	if (lastForwardSlash != std::string::npos && lastBackSlash != std::string::npos)
+		return s.substr(std::max(lastForwardSlash, lastBackSlash) + 1);
+	else if (lastForwardSlash != std::string::npos)
+		return s.substr(lastForwardSlash + 1);
+	else if (lastBackSlash != std::string::npos)
+		return s.substr(lastBackSlash + 1);
+
+	return s;
 }
