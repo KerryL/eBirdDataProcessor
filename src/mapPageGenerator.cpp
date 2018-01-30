@@ -38,6 +38,10 @@ const unsigned int MapPageGenerator::mapsAPIRateLimit(50);// [requests per sec]
 const ThrottledSection::Clock::duration MapPageGenerator::mapsAPIMinDuration(std::chrono::milliseconds(static_cast<long long>(1000.0 / mapsAPIRateLimit)));// 50 requests per second
 const ThrottledSection::Clock::duration MapPageGenerator::fusionTablesAPIMinDuration(std::chrono::milliseconds(static_cast<long long>(60000.0 / GFTI::writeRequestRateLimit)));// 30 requests per minute
 
+const unsigned int MapPageGenerator::columnCount(42);
+const unsigned int MapPageGenerator::importCellCountLimit(100000);
+const unsigned int MapPageGenerator::importSizeLimit(1024 * 1024);// 1 MB
+
 MapPageGenerator::MapPageGenerator() : mapsAPIRateLimiter(mapsAPIMinDuration), fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration)
 {
 }
@@ -225,7 +229,7 @@ bool MapPageGenerator::CreateFusionTable(
 	std::vector<CountyInfo> existingData;
 	for (const auto& t : tableList)
 	{
-		if (t.name.compare(birdProbabilityTableName) == 0 && t.columns.size() == 42)// TODO:  Better check necessary?
+		if (t.name.compare(birdProbabilityTableName) == 0 && t.columns.size() == columnCount)// TODO:  Better check necessary?
 		{
 			std::cout << "Found existing table " << t.tableId << std::endl;
 			tableId = t.tableId;
@@ -291,6 +295,8 @@ bool MapPageGenerator::CreateFusionTable(
 	pool.WaitForAllJobsComplete();
 
 	std::ostringstream ss;
+	unsigned int rowCount(0);
+	unsigned int cellCount(0);
 	for (const auto& c : countyInfo)
 	{
 		if (ss.str().empty())
@@ -318,13 +324,29 @@ bool MapPageGenerator::CreateFusionTable(
 			ss << ',' << p * 100.0 << ',' << ComputeColor(p) << ",\"" << BuildSpeciesInfoString(c.frequencyInfo[i++]) << '"';
 
 		ss << '\n';
+
+		++rowCount;
+		cellCount += columnCount;
+
+		const double sizeAllowanceFactor(1.5);
+		const unsigned int averageRowSize(ss.str().length() / rowCount * sizeAllowanceFactor);
+		if (cellCount + columnCount > importCellCountLimit ||
+			ss.str().length() + averageRowSize > importSizeLimit)
+		{
+			if (!UploadBuffer(fusionTables, tableId, ss.str()))
+				return false;
+
+			ss.str("");
+			ss.clear();
+			rowCount = 0;
+			cellCount = 0;
+		}
 	}
 
-	fusionTablesAPIRateLimiter.Wait();// TODO TODO TODO:  Need to check to see above if we need to break up import (limit of 1MB or 10,000 cells)
-	if (!fusionTables.Import(tableId, ss.str()))
+	if (!ss.str().empty())
 	{
-		std::cerr << "Failed to import data\n";
-		return false;
+		if (!UploadBuffer(fusionTables, tableId, ss.str()))
+			return false;
 	}
 
 	if (!VerifyTableStyles(fusionTables, tableId, styleIds))
@@ -340,6 +362,16 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	return true;
+}
+
+bool MapPageGenerator::UploadBuffer(GFTI& fusionTables, const std::string& tableId, const std::string& buffer)
+{
+	fusionTablesAPIRateLimiter.Wait();
+	if (!fusionTables.Import(tableId, buffer))
+	{
+		std::cerr << "Failed to import data\n";
+		return false;
+	}
 }
 
 bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
@@ -691,6 +723,8 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 		tableInfo.columns.push_back(GFTI::ColumnInfo("Color-" + m.shortName, GFTI::ColumnType::String));
 		tableInfo.columns.push_back(GFTI::ColumnInfo("Species-" + m.shortName, GFTI::ColumnType::String));
 	}
+
+	assert(tableInfo.columns.size() == columnCount);
 
 	return tableInfo;
 }

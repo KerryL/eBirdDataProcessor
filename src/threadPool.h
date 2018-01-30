@@ -84,7 +84,7 @@ ThreadPool<Caller>::~ThreadPool()
 }
 
 template<typename Caller>
-void ThreadPool<Caller>::AddJob(std::unique_ptr<JobInfo> job, Caller* caller = nullptr)
+void ThreadPool<Caller>::AddJob(std::unique_ptr<JobInfo> job, Caller* caller)
 {
 	assert((caller && !std::is_same<Caller, void>::value) || (!caller && std::is_same<Caller, void>::value));
 

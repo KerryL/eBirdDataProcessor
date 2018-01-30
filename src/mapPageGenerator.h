@@ -60,6 +60,13 @@ private:
 	ThrottledSection mapsAPIRateLimiter;
 	ThrottledSection fusionTablesAPIRateLimiter;
 
+
+	static const unsigned int columnCount;
+	static const unsigned int importCellCountLimit;
+	static const unsigned int importSizeLimit;// [bytes]
+
+	bool UploadBuffer(GFTI& fusionTables, const std::string& tableId, const std::string& buffer);
+
 	void WriteHeadSection(std::ofstream& f, const Keys& keys,
 		const std::vector<ObservationInfo>& observationProbabilities);
 	static void WriteBody(std::ofstream& f);

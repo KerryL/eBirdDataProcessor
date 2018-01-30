@@ -6,6 +6,9 @@
 // Local headers
 #include "throttledSection.h"
 
+// Standard C++ headers
+#include <thread>
+
 ThrottledSection::ThrottledSection(const Clock::duration& minAccessDelta) : minAccessDelta(minAccessDelta)
 {
 }
