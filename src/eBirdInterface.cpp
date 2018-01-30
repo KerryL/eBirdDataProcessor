@@ -580,7 +580,8 @@ void EBirdInterface::BuildCountryInfo()
 	std::istringstream ss(response);
 	std::string line;
 	std::getline(ss, line);
-	assert(countryInfoListHeading.compare(line) == 0);
+
+	assert(countryInfoListHeading.compare(line) == 0);// This sometimes happens when data is returned in xml format, even though we requested csv
 
 	while (std::getline(ss, line))
 		countryInfo.push_back(ParseCountryInfoLine(line));

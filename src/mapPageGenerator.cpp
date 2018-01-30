@@ -333,7 +333,7 @@ bool MapPageGenerator::CreateFusionTable(
 		cellCount += columnCount;
 
 		const double sizeAllowanceFactor(1.5);
-		const unsigned int averageRowSize(ss.str().length() / rowCount * sizeAllowanceFactor);
+		const unsigned int averageRowSize(static_cast<unsigned int>(ss.str().length() / rowCount * sizeAllowanceFactor));
 		if (cellCount + columnCount > importCellCountLimit ||
 			ss.str().length() + averageRowSize > importSizeLimit)
 		{
@@ -655,8 +655,8 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 {
 	for (const auto& g : geometry)
 	{
-		std::string countyString(StripCountyFromName(data.county));
-		if (g.state.compare(data.state) == 0 && g.county.compare(countyString) == 0)
+		std::string countyString(ToLower(StripCountyFromName(data.county)));
+		if (g.state.compare(data.state) == 0 && ToLower(g.county).compare(countyString) == 0)
 		{
 			data.geometryKML = g.kml;
 			break;
@@ -693,8 +693,8 @@ bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string&
 	if (a.compare(b) == 0)
 		return true;
 
-	std::string cleanA(StripCountyFromName(a));
-	std::string cleanB(StripCountyFromName(b));
+	std::string cleanA(ToLower(StripCountyFromName(a)));
+	std::string cleanB(ToLower(StripCountyFromName(b)));
 	if (cleanA.compare(cleanB) == 0)
 		return true;
 
@@ -702,6 +702,13 @@ bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string&
 		return true;
 
 	return false;
+}
+
+std::string MapPageGenerator::ToLower(const std::string& s)
+{
+	std::string lower(s);
+	std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+	return lower;
 }
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
