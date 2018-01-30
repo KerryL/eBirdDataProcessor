@@ -68,7 +68,7 @@ const std::string GoogleFusionTablesInterface::typeLocationText("LOCATION");
 
 const std::string GoogleFusionTablesInterface::fusionTableRefreshTokenFileName("~ftToken");
 
-const unsigned int GoogleFusionTablesInterface::writeRequestRateLimit(30);// [requests per minute]
+const unsigned int GoogleFusionTablesInterface::writeRequestRateLimit(25);// [requests per minute] (actual limit is 30/min)
 
 GoogleFusionTablesInterface::GoogleFusionTablesInterface(
 	const std::string& userAgent, const std::string& oAuthClientId,

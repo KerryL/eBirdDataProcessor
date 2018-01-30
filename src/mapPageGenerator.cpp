@@ -34,7 +34,7 @@ const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = 
 	NamePair("Nov", "November"),
 	NamePair("Dec", "December")};
 
-const unsigned int MapPageGenerator::mapsAPIRateLimit(50);// [requests per sec]
+const unsigned int MapPageGenerator::mapsAPIRateLimit(45);// [requests per sec] (actual limit is 50/sec, but our algorithm isn't perfect...)
 const ThrottledSection::Clock::duration MapPageGenerator::mapsAPIMinDuration(std::chrono::milliseconds(static_cast<long long>(1000.0 / mapsAPIRateLimit)));// 50 requests per second
 const ThrottledSection::Clock::duration MapPageGenerator::fusionTablesAPIMinDuration(std::chrono::milliseconds(static_cast<long long>(60000.0 / GFTI::writeRequestRateLimit)));// 30 requests per minute
 
@@ -259,7 +259,7 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	const auto duplicateRowsToDelete(FindDuplicatesAndBlanksToRemove(existingData));
-	std::cout << "Deleting " << duplicateRowsToDelete.size() << " containing duplicate entires" << std::endl;
+	std::cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate entires" << std::endl;
 	for (const auto& row : duplicateRowsToDelete)
 	{
 		fusionTablesAPIRateLimiter.Wait();
