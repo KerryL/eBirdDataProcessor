@@ -8,6 +8,7 @@
 
 // Local headers
 #include "eBirdDataProcessor.h"
+#include "throttledSection.h"
 
 // Standard C++ headers
 #include <string>
@@ -42,6 +43,8 @@ private:
 	static const std::string cookieFile;
 	static const std::chrono::steady_clock::duration eBirdCrawlDelay;
 
+	ThrottledSection rateLimiter;
+
 	CURL* curl = nullptr;
 	struct curl_slist* headerList = nullptr;
 
@@ -68,17 +71,12 @@ private:
 
 	struct FrequencyData
 	{
-		struct SpeciesFrequency
-		{
-			std::string species;
-			double frequency;
-		};
-
 		unsigned int checklistCount;
-		std::vector<SpeciesFrequency> frequencies;
+		std::vector<EBirdDataProcessor::FrequencyInfo> frequencies;
 	};
 
 	bool PullFrequencyData(const std::string& regionString, std::array<FrequencyData, 12>& frequencyData);
+	bool HarvestMonthData(const std::string& regionString, const unsigned int& month, FrequencyData& frequencyData);
 	bool PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage);
 	static bool EBirdLoginSuccessful(const std::string& htmlData);
 	static void GetUserNameAndPassword(std::string& userName, std::string& password);
@@ -97,7 +95,7 @@ private:
 	static bool DataIsEmpty(const std::array<FrequencyData, 12>& frequencyData);
 
 	static std::vector<std::string> GetStates(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo);
-	static std::vector<unsigned int> FindMissingCounties(const std::string& state,
+	static std::vector<std::pair<unsigned int, std::string>> FindMissingCounties(const std::string& state,
 		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
 		const unsigned int& stateFIPSCode, const std::string& censusKey);
 	static std::string ExtractStateFromFileName(const std::string& fileName);

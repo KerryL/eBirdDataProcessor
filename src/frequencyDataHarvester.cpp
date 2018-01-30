@@ -44,7 +44,7 @@ using namespace std::chrono_literals;
 // check this to make sure we comply, or we should include a robots.txt parser here to automatically update
 const std::chrono::steady_clock::duration FrequencyDataHarvester::eBirdCrawlDelay(std::chrono::steady_clock::duration(30s));
 
-FrequencyDataHarvester::FrequencyDataHarvester()
+FrequencyDataHarvester::FrequencyDataHarvester() : rateLimiter(eBirdCrawlDelay)
 {
 	DoGeneralCurlConfiguration();
 }
@@ -131,33 +131,36 @@ bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
 {
 
 	unsigned int month;
-	for (month = 1; month <= 12; ++month)
+	for (month = 0; month < 12; ++month)
 	{
-		const std::chrono::steady_clock::time_point lastAccessTime(std::chrono::steady_clock::now());
-		std::string response;
-		if (!DoCURLGet(BuildTargetSpeciesURL(regionString, month, month, ListTimeFrame::Day), response))
-		{
-			std::cerr << "Failed to read target species web page\n";
+		if (!HarvestMonthData(regionString, month + 1, frequencyData[month]))
 			return false;
-		}
+	}
 
-		if (ExtractCountyNameFromPage(regionString, response).compare("null") == 0)
-		{
-			std::cerr << "Warning:  Found null county data for region string '" << regionString << "'\n";
-			return true;
-		}
+	return true;
+}
 
-		if (!ExtractFrequencyData(response, frequencyData[month - 1]))
-		{
-			std::cerr << "Failed to parse HTML to extract frequency data\n";
-			return false;
-		}
+bool FrequencyDataHarvester::HarvestMonthData(const std::string& regionString,
+	const unsigned int& month, FrequencyData& frequencyData)
+{
+	assert(month > 0 && month <= 12);
+	std::string response;
+	if (!DoCURLGet(BuildTargetSpeciesURL(regionString, month, month, ListTimeFrame::Day), response))
+	{
+		std::cerr << "Failed to read target species web page\n";
+		return false;
+	}
 
-		// Tried using sleep_until, but it seems to have a bug (at least under MSVC) that can
-		// cause infinite sleep when the above takes longer than eBirdCrawlDelay
-		const auto finishTime(std::chrono::steady_clock::now());
-		if (finishTime < lastAccessTime + eBirdCrawlDelay)
-			std::this_thread::sleep_for(eBirdCrawlDelay - (finishTime - lastAccessTime));// Obey robots.txt crawl-delay
+	if (ExtractCountyNameFromPage(regionString, response).compare("null") == 0)
+	{
+		std::cerr << "Warning:  Found null county data for region string '" << regionString << "'\n";
+		return true;
+	}
+
+	if (!ExtractFrequencyData(response, frequencyData))
+	{
+		std::cerr << "Failed to parse HTML to extract frequency data\n";
+		return false;
 	}
 
 	return true;
@@ -431,6 +434,7 @@ bool FrequencyDataHarvester::DoCURLGet(const std::string& url, std::string &resp
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()), "Failed to set URL"))
 		return false;
 
+	rateLimiter.Wait();
 	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), "Failed issuing https GET"))
 		return false;
 	return true;
@@ -493,7 +497,7 @@ bool FrequencyDataHarvester::ExtractFrequencyData(const std::string& htmlData, F
 	const std::string frequencyTagStart("<td headers=\"freq\" class=\"num\">");
 	const std::string frequencyTagEnd("</td>");
 
-	FrequencyData::SpeciesFrequency entry;
+	EBirdDataProcessor::FrequencyInfo entry;
 	while (ExtractTextBetweenTags(htmlData, speciesTagStart, speciesTagEnd, entry.species, currentOffset))
 	{
 		std::string frequencyString;
@@ -698,16 +702,65 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 	if (!DoEBirdLogin())
 		return false;
 
+	const std::string countyCode("US");// TODO:  Don't hardcode
+
+	std::string targetPath(freqInfo.front().locationHint);
+	auto lastForwardSlash(targetPath.find('/'));
+	auto lastBackSlash(targetPath.find('\\'));
+	if (lastForwardSlash != std::string::npos && lastBackSlash != std::string::npos)
+		targetPath.substr(0, std::max(lastForwardSlash, lastBackSlash));
+	else if (lastForwardSlash != std::string::npos)
+		targetPath.substr(0, lastForwardSlash);
+	else if (lastBackSlash != std::string::npos)
+		targetPath.substr(0, lastBackSlash);
+
 	for (const auto& f : freqInfo)
 	{
 		unsigned int i;
+		bool updated(false);
+		std::string regionString;
+		std::array<FrequencyData, 12> frequencyData;
 		for (i = 0; i < 12; ++i)
 		{
 			if (f.probabilities[i] > 0.0 && f.frequencyInfo[i].size() == 0)// "probabilities" is actually checklist count for the month
 			{
 				std::cout << "Suspect missing data in " << f.locationHint << " for month " << i + 1 << "; Updating..." << std::endl;
-				// TODO:  Should update this file for month i
+
+				if (regionString.empty())
+				{
+					const std::string state(ExtractStateFromFileName(f.locationHint));
+					unsigned int stateFIPSCode;
+					if (!USCensusInterface::GetStateFIPSCode(state, stateFIPSCode))
+						return false;
+
+					USCensusInterface censusInterface(censusKey);
+					std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
+					for (const auto& county : countyList)
+					{
+						if (MapPageGenerator::CountyNamesMatch(StripDirectory(
+							f.locationHint.substr(0, f.locationHint.length() - endOfName.size() - 2)), f.locationHint))
+							regionString = BuildRegionString(countyCode, state, county.fipsCode);
+					}
+
+					unsigned int j;
+					for (j = 0; j < frequencyData.size(); ++j)
+					{
+						frequencyData[j].checklistCount = static_cast<unsigned int>(f.probabilities[j]);
+						frequencyData[j].frequencies = f.frequencyInfo[j];
+					}
+				}
+
+				if (!HarvestMonthData(regionString, i + 1, frequencyData[i]))
+					break;
+
+				updated = true;
 			}
+		}
+
+		if (updated)
+		{
+			if (!WriteFrequencyDataToFile(f.locationHint, frequencyData))
+				continue;
 		}
 	}
 
@@ -721,8 +774,17 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 		auto missingCounties(FindMissingCounties(s, freqInfo, stateFIPSCode, censusKey));
 		for (const auto& fips : missingCounties)
 		{
-			std::cout << "Missing county with FIPS = " << fips << " in " << s << "; Updating..." << std::endl;
-			// TODO:  Update all months for county fips
+			std::cout << "Missing county with FIPS = " << fips.first << " in " << s << "; Updating..." << std::endl;
+
+			std::array<FrequencyData, 12> data;
+			if (!PullFrequencyData(BuildRegionString(countyCode, s, fips.first), data))
+				continue;
+
+			if (DataIsEmpty(data))
+				continue;
+
+			if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(s, fips.second), data))
+				continue;
 		}
 	}
 
@@ -741,7 +803,7 @@ std::vector<std::string> FrequencyDataHarvester::GetStates(const std::vector<EBi
 	return states;
 }
 
-std::vector<unsigned int> FrequencyDataHarvester::FindMissingCounties(const std::string& state,
+std::vector<std::pair<unsigned int, std::string>> FrequencyDataHarvester::FindMissingCounties(const std::string& state,
 	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
 	const unsigned int& stateFIPSCode, const std::string& censusKey)
 {
@@ -755,7 +817,7 @@ std::vector<unsigned int> FrequencyDataHarvester::FindMissingCounties(const std:
 	USCensusInterface censusInterface(censusKey);
 	std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
 
-	std::vector<unsigned int> missingCounties(countyList.size() - countiesInDataset.size());
+	std::vector<std::pair<unsigned int, std::string>> missingCounties(countyList.size() - countiesInDataset.size());
 	if (missingCounties.size() == 0)
 		return missingCounties;
 
@@ -774,7 +836,9 @@ std::vector<unsigned int> FrequencyDataHarvester::FindMissingCounties(const std:
 
 		if (!found)
 		{
-			*mIt++ = c.fipsCode;
+			mIt->first = c.fipsCode;
+			mIt->second = c.name;
+			++mIt;
 			if (mIt == missingCounties.end())
 				break;
 		}
