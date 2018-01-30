@@ -264,14 +264,14 @@ bool MapPageGenerator::CreateFusionTable(
 	{
 		fusionTablesAPIRateLimiter.Wait();
 		fusionTables.DeleteRow(tableId, row);
-	}
+	}// TODO:  Can we do DELETE WHERE ROWID IN [] ??
 
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
 	std::cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
 	for (const auto& row : rowsToDelete)
 	{
 		fusionTablesAPIRateLimiter.Wait();
-		fusionTables.DeleteRow(tableId, row);
+		fusionTables.DeleteRow(tableId, row);// TODO:  Can we do DELETE WHERE ROWID IN [] ??
 	}// TODO:  Somehow, still getting duplicate entries in table?
 
 	std::cout << "Retrieving geometry data" << std::endl;
