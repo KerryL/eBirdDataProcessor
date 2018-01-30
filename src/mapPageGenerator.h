@@ -158,29 +158,23 @@ private:
 
 	static bool GetCountyGeometry(GoogleFusionTablesInterface& fusionTables, std::vector<CountyGeometry>& geometry);
 
-	class GoogleMapsThreadPool : public ThreadPool<MapPageGenerator>
+	struct MapJobInfo : public ThreadPool::JobInfoBase
 	{
-	public:
-		GoogleMapsThreadPool(const unsigned int& threadCount, const unsigned int& rateLimit)
-			: ThreadPool<MapPageGenerator>(threadCount, rateLimit) {}
+		MapJobInfo() = default;
+		MapJobInfo(CountyInfo& info, const ObservationInfo& frequencyInfo,
+			const std::string& googleMapsKey, const std::vector<CountyGeometry>& geometry,
+			MapPageGenerator& mpg)
+			: info(info), frequencyInfo(frequencyInfo), googleMapsKey(googleMapsKey),
+			geometry(geometry), mpg(mpg) {}
 
-		struct MapJobInfo : public JobInfo
-		{
-			MapJobInfo() = default;
-			MapJobInfo(JobFunction jobFunction, CountyInfo& info,
-				const ObservationInfo& frequencyInfo, const std::string& googleMapsKey,
-				const std::vector<CountyGeometry>& geometry)
-				: JobInfo(jobFunction), info(info), frequencyInfo(frequencyInfo),
-				googleMapsKey(googleMapsKey), geometry(geometry) {}
+		CountyInfo& info;
+		const ObservationInfo& frequencyInfo;
+		const std::string& googleMapsKey;
+		const std::vector<CountyGeometry>& geometry;
+		MapPageGenerator& mpg;
 
-			CountyInfo& info;
-			const ObservationInfo& frequencyInfo;
-			const std::string& googleMapsKey;
-			const std::vector<CountyGeometry>& geometry;
-		};
+		void DoJob() override;
 	};
-
-	void PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo);
 
 	bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
 		const std::string& tableId, std::vector<unsigned int>& styleIds);

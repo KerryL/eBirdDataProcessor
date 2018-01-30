@@ -279,15 +279,15 @@ bool MapPageGenerator::CreateFusionTable(
 
 	// NOTE:  Google maps geocoding API has rate limit of 50 queries per sec, and usage limit of 2500 queries per day
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
-	GoogleMapsThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
+	ThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
 	auto countyIt(countyInfo.begin());
 	for (const auto& entry : observationProbabilities)
 	{
 		countyIt->frequencyInfo = std::move(entry.frequencyInfo);
 		countyIt->probabilities = std::move(entry.probabilities);
 		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, geometry))
-			pool.AddJob(std::make_unique<GoogleMapsThreadPool::MapJobInfo>(
-				&MapPageGenerator::PopulateCountyInfo, *countyIt, entry, keys.googleMapsKey, geometry), this);
+			pool.AddJob(std::make_unique<MapJobInfo>(
+				*countyIt, entry, keys.googleMapsKey, geometry, *this));
 
 		++countyIt;
 	}
@@ -661,22 +661,17 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 		std::cerr << "Warning:  Geometry not found for '" << data.name << "'\n";
 }
 
-void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& jobInfo)
+void MapPageGenerator::MapJobInfo::DoJob()
 {
-	const GoogleMapsThreadPool::MapJobInfo& mapJobInfo(static_cast<const GoogleMapsThreadPool::MapJobInfo&>(jobInfo));
-	CountyInfo& info(mapJobInfo.info);
-	const ObservationInfo& frequencyInfo(mapJobInfo.frequencyInfo);
-
 	if (!GetStateAbbreviationFromFileName(frequencyInfo.locationHint, info.state))
 		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationHint << "'\n";
 
 	if (!GetCountyNameFromFileName(frequencyInfo.locationHint, info.county))
 		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationHint << "'\n";
 
-	if (!GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
+	if (!mpg.GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
-		info.neLongitude, info.swLatitude, info.swLongitude, info.name,
-		mapJobInfo.googleMapsKey))
+		info.neLongitude, info.swLatitude, info.swLongitude, info.name, googleMapsKey))
 		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationHint << "'\n";
 
 	const std::string::size_type saintStart(info.name.find("St "));
@@ -684,7 +679,7 @@ void MapPageGenerator::PopulateCountyInfo(const GoogleMapsThreadPool::JobInfo& j
 		info.name.insert(saintStart + 2, ".");
 
 	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
-	LookupAndAssignKML(mapJobInfo.geometry, info);
+	LookupAndAssignKML(geometry, info);
 }
 
 bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string& b)

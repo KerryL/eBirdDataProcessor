@@ -179,20 +179,28 @@ private:
 		const std::string& googleMapsKey, const std::vector<YearFrequencyInfo>& observationProbabilities,
 		const std::string& clientId, const std::string& clientSecret);
 
-	class FileReadJob : public ThreadPool<>::JobInfo
+	class FileReadJob : public ThreadPool::JobInfoBase
 	{
 	public:
-		FileReadJob(ThreadPool<>::JobFunction jobFunction, YearFrequencyInfo& frequencyInfo,
-			const std::string& fileName, const std::string& directory, const EBirdDataProcessor* self) : JobInfo(jobFunction),
-			frequencyInfo(frequencyInfo), fileName(fileName), directory(directory), self(self) {}
+		FileReadJob(YearFrequencyInfo& frequencyInfo, const std::string& fileName,
+			const std::string& directory, const EBirdDataProcessor& ebdp)
+			: frequencyInfo(frequencyInfo), fileName(fileName), directory(directory), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
 		const std::string& fileName;
 		const std::string& directory;
-		const EBirdDataProcessor* self;
+		const EBirdDataProcessor& ebdp;
+
+		void DoJob() override
+		{
+			frequencyInfo.locationHint = fileName;
+			ebdp.ComputeNewSpeciesProbability(directory + fileName,
+				frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
+		}
 	};
 
-	static void ParallelReadFrequencyFile(const ThreadPool<>::JobInfo& jobInfo);
+	void ParallelReadFrequencyFile(YearFrequencyInfo& frequencyInfo,
+		const std::string& fileName, const std::string& directory) const;
 };
 
 template<typename T>
