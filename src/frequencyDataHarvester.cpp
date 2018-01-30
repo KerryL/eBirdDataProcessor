@@ -34,7 +34,7 @@
 
 const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
 const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
-const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en");
+const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en_US");
 const bool FrequencyDataHarvester::verbose(false);
 const std::string FrequencyDataHarvester::cookieFile("ebdp.cookies");
 const std::string FrequencyDataHarvester::endOfName("FrequencyData.csv");
@@ -317,11 +317,13 @@ bool FrequencyDataHarvester::EBirdLoginSuccessful(const std::string& htmlData)
 {
 	const std::string startTag1("<li ><a href=\"/ebird/myebird\">");
 	const std::string startTag2("<li class=\"selected\"><a href=\"/ebird/myebird\" title=\"My eBird\">");
+	const std::string startTag3("<a href=\"https://secure.birds.cornell.edu/cassso/account/edit?service=https://ebird.org/MyEBird");
 	const std::string endTag("</a>");
 	std::string dummy;
-	std::string::size_type offset1(0), offset2(0);
+	std::string::size_type offset1(0), offset2(0), offset3(0);
 	return ExtractTextBetweenTags(htmlData, startTag1, endTag, dummy, offset1) ||
-		ExtractTextBetweenTags(htmlData, startTag2, endTag, dummy, offset2);
+		ExtractTextBetweenTags(htmlData, startTag2, endTag, dummy, offset2) ||
+		ExtractTextBetweenTags(htmlData, startTag3, endTag, dummy, offset3);
 }
 
 std::string FrequencyDataHarvester::ExtractTokenFromLoginPage(const std::string& htmlData)
@@ -705,14 +707,14 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 	const std::string countyCode("US");// TODO:  Don't hardcode
 
 	std::string targetPath(freqInfo.front().locationHint);
-	auto lastForwardSlash(targetPath.find('/'));
-	auto lastBackSlash(targetPath.find('\\'));
+	auto lastForwardSlash(targetPath.find_last_of('/'));
+	auto lastBackSlash(targetPath.find_last_of('\\'));
 	if (lastForwardSlash != std::string::npos && lastBackSlash != std::string::npos)
-		targetPath.substr(0, std::max(lastForwardSlash, lastBackSlash));
+		targetPath = targetPath.substr(0, std::max(lastForwardSlash, lastBackSlash) + 1);
 	else if (lastForwardSlash != std::string::npos)
-		targetPath.substr(0, lastForwardSlash);
+		targetPath = targetPath.substr(0, lastForwardSlash + 1);
 	else if (lastBackSlash != std::string::npos)
-		targetPath.substr(0, lastBackSlash);
+		targetPath = targetPath.substr(0, lastBackSlash + 1);
 
 	for (const auto& f : freqInfo)
 	{
@@ -738,9 +740,14 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 					for (const auto& county : countyList)
 					{
 						if (MapPageGenerator::CountyNamesMatch(StripDirectory(
-							f.locationHint.substr(0, f.locationHint.length() - endOfName.size() - 2)), f.locationHint))
+							f.locationHint.substr(0, f.locationHint.length() - endOfName.size() - 2)), county.name))
+						{
 							regionString = BuildRegionString(countyCode, state, county.fipsCode);
+							break;
+						}
 					}
+
+					assert(!regionString.empty());
 
 					unsigned int j;
 					for (j = 0; j < frequencyData.size(); ++j)
