@@ -205,7 +205,7 @@ private:
 			: frequencyInfo(frequencyInfo), fileName(fileName) {}
 
 		YearFrequencyInfo& frequencyInfo;
-		const std::string& fileName;
+		const std::string fileName;
 
 		void DoJob() override
 		{

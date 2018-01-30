@@ -701,7 +701,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 		unsigned int i;
 		for (i = 0; i < 12; ++i)
 		{
-			if (f.probabilities[i] > 0.0 && f.frequencyInfo[i].size() > 0)// "probabilities" is actually checklist count for the month
+			if (f.probabilities[i] > 0.0 && f.frequencyInfo[i].size() == 0)// "probabilities" is actually checklist count for the month
 			{
 				std::cout << "Suspect missing data in " << f.locationHint << " for month " << i + 1 << "; Updating..." << std::endl;
 				// TODO:  Should update this file for month i
