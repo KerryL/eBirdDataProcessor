@@ -6,6 +6,9 @@
 #ifndef FREQUENCY_DATA_HARVESTER_H_
 #define FREQUENCY_DATA_HARVESTER_H_
 
+// Local headers
+#include "eBirdDataProcessor.h"
+
 // Standard C++ headers
 #include <string>
 #include <vector>
@@ -26,6 +29,8 @@ public:
 
 	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state,
 		const std::string& targetPath, const std::string& censusKey, const unsigned int& fipsStart);
+
+	bool AuditFrequencyData(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& censusKey);
 
 	static std::string GenerateFrequencyFileName(const std::string& state, const std::string& county);
 
@@ -90,6 +95,14 @@ private:
 
 	static std::string Clean(const std::string& s);
 	static bool DataIsEmpty(const std::array<FrequencyData, 12>& frequencyData);
+
+	static std::vector<std::string> GetStates(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo);
+	static std::vector<unsigned int> FindMissingCounties(const std::string& state,
+		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
+		const unsigned int& stateFIPSCode, const std::string& censusKey);
+	static std::string ExtractStateFromFileName(const std::string& fileName);
+
+	static const std::string endOfName;
 };
 
 #endif// FREQUENCY_DATA_HARVESTER_H_

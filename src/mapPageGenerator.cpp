@@ -272,7 +272,7 @@ bool MapPageGenerator::CreateFusionTable(
 	{
 		fusionTablesAPIRateLimiter.Wait();
 		fusionTables.DeleteRow(tableId, row);
-	}
+	}// TODO:  Somehow, still getting duplicate entries in table?
 
 	std::cout << "Retrieving geometry data" << std::endl;
 	std::vector<CountyGeometry> geometry;

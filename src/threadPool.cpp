@@ -77,7 +77,7 @@ void ThreadPool::ThreadEntry()
 					sleepTime = minRequestDelta - std::chrono::duration_cast<std::chrono::milliseconds>(now - lastRequestTime);
 				else
 					sleepTime = std::chrono::milliseconds(0);
-				lastRequestTime = now;
+				lastRequestTime = now + sleepTime;
 			}
 		}
 

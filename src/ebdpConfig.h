@@ -18,6 +18,7 @@ struct EBDPConfig
 
 	std::string bulkFrequencyUpdate;
 	unsigned int fipsStart;
+	std::string auditFrequencyData;
 
 	enum class ListType : int
 	{

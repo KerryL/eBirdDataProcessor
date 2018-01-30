@@ -26,6 +26,8 @@ public:
 		const std::vector<ObservationInfo>& observationInfo,
 		const std::string& clientId, const std::string& clientSecret);
 
+	static bool CountyNamesMatch(const std::string& a, const std::string& b);
+
 private:
 	static const std::string birdProbabilityTableName;
 
@@ -84,7 +86,6 @@ private:
 		std::string& geographicName, const std::string& googleMapsKey);
 	static bool GetStateAbbreviationFromFileName(const std::string& fileName, std::string& state);
 	static bool GetCountyNameFromFileName(const std::string& fileName, std::string& county);
-	static bool CountyNamesMatch(const std::string& a, const std::string& b);
 
 	static std::string StripCountyFromName(const std::string& s);
 	static std::string CleanQueryString(const std::string& s);

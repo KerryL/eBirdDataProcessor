@@ -8,6 +8,7 @@
 #include "eBirdInterface.h"
 #include "usCensusInterface.h"
 #include "email/curlUtilities.h"
+#include "mapPageGenerator.h"
 
 // OS headers
 #ifdef _WIN32
@@ -36,6 +37,7 @@ const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
 const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en");
 const bool FrequencyDataHarvester::verbose(false);
 const std::string FrequencyDataHarvester::cookieFile("ebdp.cookies");
+const std::string FrequencyDataHarvester::endOfName("FrequencyInfo.csv");
 
 using namespace std::chrono_literals;
 // crawl delay determined by manually visiting www.ebird.org/robots.txt - should periodically
@@ -686,4 +688,96 @@ bool FrequencyDataHarvester::DataIsEmpty(const std::array<FrequencyData, 12>& fr
 	}
 
 	return true;
+}
+
+bool FrequencyDataHarvester::AuditFrequencyData(
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& censusKey)
+{
+	if (!DoEBirdLogin())
+		return false;
+
+	for (const auto& f : freqInfo)
+	{
+		unsigned int i;
+		for (i = 0; i < 12; ++i)
+		{
+			if (f.probabilities[i] > 0.0 && f.frequencyInfo[i].size() > 0)// "probabilities" is actually checklist count for the month
+			{
+				std::cout << "Suspect missing data in " << f.locationHint << " for month " << i + 1 << "; Updating..." << std::endl;
+				// TODO:  Should update this file for month i
+			}
+		}
+	}
+
+	auto states(GetStates(freqInfo));
+	for (const auto& s : states)
+	{
+		unsigned int stateFIPSCode;
+		if (!USCensusInterface::GetStateFIPSCode(s, stateFIPSCode))
+			return false;
+
+		auto missingCounties(FindMissingCounties(s, freqInfo, stateFIPSCode, censusKey));
+		for (const auto& fips : missingCounties)
+		{
+			std::cout << "Missing county with FIPS = " << fips << " in " << s << "; Updating..." << std::endl;
+			// TODO:  Update all months for county fips
+		}
+	}
+
+	return true;
+}
+
+std::vector<std::string> FrequencyDataHarvester::GetStates(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo)
+{
+	std::vector<std::string> states(freqInfo.size());
+	unsigned int i;
+	for (i = 0; i < freqInfo.size(); ++i)
+		states[i] = ExtractStateFromFileName(freqInfo[i].locationHint);
+
+	std::sort(states.begin(), states.end());
+	states.erase(std::unique(states.begin(), states.end()), states.end());
+	return states;
+}
+
+std::vector<unsigned int> FrequencyDataHarvester::FindMissingCounties(const std::string& state,
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
+	const unsigned int& stateFIPSCode, const std::string& censusKey)
+{
+	std::vector<std::string> countiesInDataset;
+	for (const auto& f : freqInfo)
+	{
+		if (ExtractStateFromFileName(f.locationHint).compare(state) == 0)
+			countiesInDataset.push_back(f.locationHint.substr(0, f.locationHint.length() - endOfName.size()));
+	}
+
+	USCensusInterface censusInterface(censusKey);
+	std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
+
+	std::vector<unsigned int> missingCounties(countyList.size() - countiesInDataset.size());
+	auto mIt(missingCounties.begin());
+	for (const auto& c : countyList)
+	{
+		bool found(false);
+		for (const auto& cid : countiesInDataset)
+		{
+			if (MapPageGenerator::CountyNamesMatch(c.name, cid))
+			{
+				found = true;
+				break;
+			}
+		}
+
+		if (!found)
+			*mIt++ = c.fipsCode;
+	}
+
+	assert(mIt == missingCounties.end());
+
+	return missingCounties;
+}
+
+std::string FrequencyDataHarvester::ExtractStateFromFileName(const std::string& fileName)
+{
+	auto endStart(fileName.find(endOfName));
+	return fileName.substr(endStart - 2, 2);
 }

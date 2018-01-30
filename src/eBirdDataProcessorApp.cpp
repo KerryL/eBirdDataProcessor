@@ -77,7 +77,15 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	// TODO:  species count only?
 
-	if (configFile.GetConfig().generateRarityScores)
+	if (!configFile.GetConfig().auditFrequencyData.empty())
+	{
+		if (!EBirdDataProcessor::AuditFrequencyData(configFile.GetConfig().auditFrequencyData, configFile.GetConfig().usCensusAPIKey))
+		{
+			std::cerr << "Audit failed\n";
+			return 1;
+		}
+	}
+	else if (configFile.GetConfig().generateRarityScores)
 		processor.GenerateRarityScores(configFile.GetConfig().frequencyFileName,
 			configFile.GetConfig().listType);
 	else if (!configFile.GetConfig().findMaxNeedsLocations.empty())

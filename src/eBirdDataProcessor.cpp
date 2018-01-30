@@ -8,6 +8,7 @@
 #include "googleMapsInterface.h"
 #include "bestObservationTimeEstimator.h"
 #include "mapPageGenerator.h"
+#include "frequencyDataHarvester.h"
 
 // System headers (added from https://github.com/tronkko/dirent/ for Windows)
 #ifdef _WIN32
@@ -1078,14 +1079,13 @@ bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
 	return true;
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& frequencyFileDirectory,
-	const std::string& googleMapsKey, const std::string& clientId, const std::string& clientSecret) const
+std::vector<std::string> EBirdDataProcessor::ListFilesInDirectory(const std::string& directory)
 {
-	DIR *dir(opendir(frequencyFileDirectory.c_str()));
+	DIR *dir(opendir(directory.c_str()));
 	if (!dir)
 	{
-		std::cerr << "Failed to open directory '" << frequencyFileDirectory << "'\n";
-		return false;
+		std::cerr << "Failed to open directory '" << directory << "'\n";
+		return std::vector<std::string>();
 	}
 
 	std::vector<std::string> fileNames;
@@ -1100,13 +1100,23 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 	}
 	closedir(dir);
 
+	return fileNames;
+}
+
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& frequencyFileDirectory,
+	const std::string& googleMapsKey, const std::string& clientId, const std::string& clientSecret) const
+{
+	auto fileNames(ListFilesInDirectory(frequencyFileDirectory));
+	if (fileNames.size() == 0)
+		return false;
+
 	std::vector<YearFrequencyInfo> newSightingProbability(fileNames.size());// frequency is probability of seeing new species and species is file name of frequency data file
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 
 	auto probEntryIt(newSightingProbability.begin());
 	for (const auto& f : fileNames)
 	{
-		pool.AddJob(std::make_unique<FileReadJob>(*probEntryIt, f, frequencyFileDirectory, *this));
+		pool.AddJob(std::make_unique<FileReadAndCalculateJob>(*probEntryIt, frequencyFileDirectory + f, *this));
 		++probEntryIt;
 	}
 
@@ -1179,4 +1189,26 @@ bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFil
 	MapPageGenerator generator;
 	return generator.WriteBestLocationsViewerPage(htmlFileName,
 		googleMapsKey, observationProbabilities, clientId, clientSecret);
+}
+
+bool EBirdDataProcessor::AuditFrequencyData(const std::string& freqFileDirectory, const std::string& censusKey)
+{
+	auto fileNames(ListFilesInDirectory(freqFileDirectory));
+	if (fileNames.size() == 0)
+		return false;
+
+	std::vector<YearFrequencyInfo> freqInfo(fileNames.size());
+	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
+
+	auto probEntryIt(freqInfo.begin());
+	for (const auto& f : fileNames)
+	{
+		pool.AddJob(std::make_unique<FileReadJob>(*probEntryIt, freqFileDirectory + f));
+		++probEntryIt;
+	}
+
+	pool.WaitForAllJobsComplete();
+
+	FrequencyDataHarvester harvester;
+	return harvester.AuditFrequencyData(freqInfo, censusKey);
 }

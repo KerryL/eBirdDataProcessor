@@ -80,6 +80,8 @@ public:
 		std::array<std::vector<FrequencyInfo>, 12> frequencyInfo;
 	};
 
+	static bool AuditFrequencyData(const std::string& freqFileDirectory, const std::string& censusKey);
+
 private:
 	static const std::string headerLine;
 
@@ -179,28 +181,40 @@ private:
 		const std::string& googleMapsKey, const std::vector<YearFrequencyInfo>& observationProbabilities,
 		const std::string& clientId, const std::string& clientSecret);
 
-	class FileReadJob : public ThreadPool::JobInfoBase
+	class FileReadAndCalculateJob : public ThreadPool::JobInfoBase
 	{
 	public:
-		FileReadJob(YearFrequencyInfo& frequencyInfo, const std::string& fileName,
-			const std::string& directory, const EBirdDataProcessor& ebdp)
-			: frequencyInfo(frequencyInfo), fileName(fileName), directory(directory), ebdp(ebdp) {}
+		FileReadAndCalculateJob(YearFrequencyInfo& frequencyInfo, const std::string& fileName,
+			const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo), fileName(fileName), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
 		const std::string& fileName;
-		const std::string& directory;
 		const EBirdDataProcessor& ebdp;
 
 		void DoJob() override
 		{
 			frequencyInfo.locationHint = fileName;
-			ebdp.ComputeNewSpeciesProbability(directory + fileName,
-				frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
+			ebdp.ComputeNewSpeciesProbability(fileName, frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
 		}
 	};
 
-	void ParallelReadFrequencyFile(YearFrequencyInfo& frequencyInfo,
-		const std::string& fileName, const std::string& directory) const;
+	class FileReadJob : public ThreadPool::JobInfoBase
+	{
+	public:
+		FileReadJob(YearFrequencyInfo& frequencyInfo, const std::string& fileName)
+			: frequencyInfo(frequencyInfo), fileName(fileName) {}
+
+		YearFrequencyInfo& frequencyInfo;
+		const std::string& fileName;
+
+		void DoJob() override
+		{
+			frequencyInfo.locationHint = fileName;
+			ParseFrequencyFile(fileName, frequencyInfo.frequencyInfo, frequencyInfo.probabilities);
+		}
+	};
+
+	static std::vector<std::string> ListFilesInDirectory(const std::string& directory);
 };
 
 template<typename T>
