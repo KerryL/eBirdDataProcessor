@@ -267,16 +267,19 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
+	std::cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
 	for (const auto& row : rowsToDelete)
 	{
 		fusionTablesAPIRateLimiter.Wait();
 		fusionTables.DeleteRow(tableId, row);
 	}
 
+	std::cout << "Retrieving geometry data" << std::endl;
 	std::vector<CountyGeometry> geometry;
 	if (!GetCountyGeometry(fusionTables, geometry))
 		return false;
 
+	std::cout << "Retrieving county location data" << std::endl;
 	// NOTE:  Google maps geocoding API has rate limit of 50 queries per sec, and usage limit of 2500 queries per day
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
@@ -294,6 +297,7 @@ bool MapPageGenerator::CreateFusionTable(
 
 	pool.WaitForAllJobsComplete();
 
+	std::cout << "Preparing data for upload" << std::endl;
 	std::ostringstream ss;
 	unsigned int rowCount(0);
 	unsigned int cellCount(0);
@@ -372,6 +376,8 @@ bool MapPageGenerator::UploadBuffer(GFTI& fusionTables, const std::string& table
 		std::cerr << "Failed to import data\n";
 		return false;
 	}
+
+	return true;
 }
 
 bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
