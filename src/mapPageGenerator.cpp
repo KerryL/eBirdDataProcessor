@@ -262,9 +262,7 @@ bool MapPageGenerator::CreateFusionTable(
 	if (duplicateRowsToDelete.size() > 0)
 	{
 		std::cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate entires" << std::endl;
-		fusionTablesAPIRateLimiter.Wait();
-		// TODO:  Need to limit IN clause size?  633 worked, but 1800 failed
-		if (!fusionTables.DeleteRows(tableId, duplicateRowsToDelete))
+		if (!DeleteRowsBatch(fusionTables, tableId, duplicateRowsToDelete))
 		{
 			std::cerr << "Failed to remove duplicates\n";
 			return false;
@@ -275,9 +273,7 @@ bool MapPageGenerator::CreateFusionTable(
 	if (rowsToDelete.size() > 0)
 	{
 		std::cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
-		fusionTablesAPIRateLimiter.Wait();
-		// TODO:  Need to limit IN clause size?  633 worked, but 1800 failed
-		if (!fusionTables.DeleteRows(tableId, rowsToDelete))
+		if (!DeleteRowsBatch(fusionTables, tableId, rowsToDelete))
 		{
 			std::cerr << "Failed to remove rows for update\n";
 			return false;
@@ -373,6 +369,25 @@ bool MapPageGenerator::CreateFusionTable(
 	{
 		std::cerr << "Failed to verify table templates\n";
 		return false;
+	}
+
+	return true;
+}
+
+bool MapPageGenerator::DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables,
+	const std::string& tableId, const std::vector<unsigned int>& rowIds)
+{
+	const unsigned int maxDeleteSize(500);
+	auto startIt(rowIds.begin());
+	while (startIt != rowIds.end())
+	{
+		const unsigned int batchSize(std::min(maxDeleteSize,
+			static_cast<unsigned int>(std::distance(startIt, rowIds.end()))));
+		auto endIt(rowIds.begin() + batchSize);
+		fusionTablesAPIRateLimiter.Wait();
+		if (!fusionTables.DeleteRows(tableId, std::vector<unsigned int>(startIt, endIt)))
+			return false;
+		startIt = endIt;
 	}
 
 	return true;
@@ -814,9 +829,14 @@ bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, st
 
 std::string MapPageGenerator::StripCountyFromName(const std::string& s)
 {
-	const std::string endString(" County");
+	const std::string endString1(" County");
 	std::string clean(s);
-	std::string::size_type endPosition(clean.find(endString));
+	std::string::size_type endPosition(clean.find(endString1));
+	if (endPosition != std::string::npos)
+		clean = clean.substr(0, endPosition);
+
+	const std::string endString2(" Parish");
+	endPosition = clean.find(endString2);
 	if (endPosition != std::string::npos)
 		clean = clean.substr(0, endPosition);
 

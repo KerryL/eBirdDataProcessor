@@ -188,6 +188,8 @@ private:
 		const std::string& tableId, std::vector<unsigned int>& templateIds);
 	static GoogleFusionTablesInterface::TemplateInfo CreateTemplate(const std::string& tableId,
 		const std::string& month);
+	bool DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables,
+		const std::string& tableId, const std::vector<unsigned int>& rowIds);
 };
 
 template<typename T>
