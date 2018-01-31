@@ -130,7 +130,8 @@ public:
 
 	bool SetTableAccess(const std::string& tableId, const TableAccess& access);
 
-	bool SubmitQuery(const std::string& query, cJSON*& root);
+	bool SubmitQuery(const std::string& query, cJSON*& root, std::string* csvData = nullptr);
+	bool SubmitQueryMediaDownload(const std::string& query, std::string& csvData);
 
 private:
 	static const std::string apiRoot;
@@ -190,6 +191,7 @@ private:
 	};
 
 	static bool ResponseHasError(cJSON* root);
+	static bool ResponseTooLarge(cJSON* root);
 	static bool KindMatches(cJSON* root, const std::string& kind);
 	static bool AddAuthAndDeleteToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
 	static bool AddAuthToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData

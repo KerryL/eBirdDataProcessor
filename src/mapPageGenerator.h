@@ -62,7 +62,6 @@ private:
 	ThrottledSection mapsAPIRateLimiter;
 	ThrottledSection fusionTablesAPIRateLimiter;
 
-
 	static const unsigned int columnCount;
 	static const unsigned int importCellCountLimit;
 	static const unsigned int importSizeLimit;// [bytes]
@@ -132,6 +131,8 @@ private:
 
 	static bool GetExistingCountyData(std::vector<CountyInfo>& data,
 		GFTI& fusionTables, const std::string& tableId);
+	static bool ProcessJSONQueryResponse(cJSON* root, std::vector<CountyInfo>& data);
+	static bool ProcessCSVQueryResponse(const std::string& csvData, std::vector<CountyInfo>& data);
 	static bool ReadExistingCountyData(cJSON* row, CountyInfo& data);
 	static std::vector<unsigned int> DetermineDeleteUpdateAdd(
 		std::vector<CountyInfo>& existingData, const std::vector<ObservationInfo>& newData);

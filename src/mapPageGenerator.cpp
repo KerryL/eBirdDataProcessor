@@ -405,14 +405,8 @@ bool MapPageGenerator::UploadBuffer(GFTI& fusionTables, const std::string& table
 	return true;
 }
 
-bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
-	GFTI& fusionTables, const std::string& tableId)
+bool MapPageGenerator::ProcessJSONQueryResponse(cJSON* root, std::vector<CountyInfo>& data)
 {
-	cJSON* root(nullptr);
-	const std::string query("SELECT ROWID,State,County,Name,Location,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId + "&typed=false");
-	if (!fusionTables.SubmitQuery(query, root))
-		return false;
-
 	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
 	if (!rowsArray)
 	{
@@ -441,8 +435,27 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 	}
 
 	cJSON_Delete(root);
-
 	return true;
+}
+
+bool MapPageGenerator::ProcessCSVQueryResponse(const std::string& csvData, std::vector<CountyInfo>& data)
+{
+	// TODO:  Implement
+	return false;
+}
+
+bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
+	GFTI& fusionTables, const std::string& tableId)
+{
+	cJSON* root(nullptr);
+	std::string csvData;
+	const std::string query("SELECT ROWID,State,County,Name,Location,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId + "&typed=false");
+	if (!fusionTables.SubmitQuery(query, root, &csvData))
+		return false;
+
+	if (root)
+		return ProcessJSONQueryResponse(root, data);
+	return ProcessCSVQueryResponse(csvData, data);
 }
 
 bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)

@@ -368,6 +368,23 @@ bool GoogleFusionTablesInterface::ResponseHasError(cJSON* root)
 	return true;
 }
 
+bool GoogleFusionTablesInterface::ResponseTooLarge(cJSON* root)
+{
+	cJSON* error(cJSON_GetObjectItem(root, errorKey.c_str()));
+	if (!error)
+		return false;
+
+	unsigned int errorCode;
+	std::string errorMessage;
+	if (ReadJSON(error, codeKey, errorCode) && ReadJSON(error, messageKey, errorMessage))
+	{
+		if (errorCode == 503 && errorMessage.find("Please use media download.") != std::string::npos)
+			return true;
+	}
+
+	return false;
+}
+
 bool GoogleFusionTablesInterface::KindMatches(cJSON* root, const std::string& kind)
 {
 	std::string kindString;
@@ -708,7 +725,7 @@ bool GoogleFusionTablesInterface::SetTableAccess(const std::string& tableId, con
 	return false;
 }
 
-bool GoogleFusionTablesInterface::SubmitQuery(const std::string& query, cJSON*& root)
+bool GoogleFusionTablesInterface::SubmitQuery(const std::string& query, cJSON*& root, std::string* csvData)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
@@ -726,6 +743,13 @@ bool GoogleFusionTablesInterface::SubmitQuery(const std::string& query, cJSON*& 
 		return false;
 	}
 
+	if (ResponseTooLarge(root) && csvData)
+	{
+		cJSON_Delete(root);
+		root = nullptr;
+		return SubmitQueryMediaDownload(query, *csvData);
+	}
+
 	if (ResponseHasError(root))
 	{
 		cJSON_Delete(root);
@@ -740,6 +764,19 @@ bool GoogleFusionTablesInterface::SubmitQuery(const std::string& query, cJSON*& 
 	}
 
 	//cJSON_Delete(root);// Caller responsible for freeing root!
+	return true;
+}
+
+bool GoogleFusionTablesInterface::SubmitQueryMediaDownload(const std::string& query, std::string& csvData)
+{
+	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
+	if (!DoCURLGet(apiRoot + queryEndPoint + "?alt=media&sql=" + URLEncode(query),
+		csvData, AddAuthToCurlHeader, &authTokenData))
+	{
+		std::cerr << "Failed to submit query\n";
+		return false;
+	}
+
 	return true;
 }
 
