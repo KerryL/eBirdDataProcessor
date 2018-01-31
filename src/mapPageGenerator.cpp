@@ -259,20 +259,28 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	const auto duplicateRowsToDelete(FindDuplicatesAndBlanksToRemove(existingData));
-	std::cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate entires" << std::endl;
-	for (const auto& row : duplicateRowsToDelete)
+	if (duplicateRowsToDelete.size() > 0)
 	{
+		std::cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate entires" << std::endl;
 		fusionTablesAPIRateLimiter.Wait();
-		fusionTables.DeleteRow(tableId, row);
-	}// TODO:  Can we do DELETE WHERE ROWID IN [] ??
+		if (!fusionTables.DeleteRows(tableId, duplicateRowsToDelete))
+		{
+			std::cerr << "Failed to remove duplicates\n";
+			return false;
+		}
+	}
 
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
-	std::cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
-	for (const auto& row : rowsToDelete)
+	if (rowsToDelete.size() > 0)
 	{
+		std::cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
 		fusionTablesAPIRateLimiter.Wait();
-		fusionTables.DeleteRow(tableId, row);// TODO:  Can we do DELETE WHERE ROWID IN [] ??
-	}// TODO:  Somehow, still getting duplicate entries in table?
+		if (!fusionTables.DeleteRows(tableId, rowsToDelete))
+		{
+			std::cerr << "Failed to remove rows for update\n";
+			return false;
+		}
+	}
 
 	std::cout << "Retrieving geometry data" << std::endl;
 	std::vector<CountyGeometry> geometry;

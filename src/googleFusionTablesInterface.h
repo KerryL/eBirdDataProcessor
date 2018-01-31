@@ -60,6 +60,7 @@ public:
 		std::vector<TableInfo::ColumnInfo>& columnInfo);
 	bool DeleteAllRows(const std::string& tableId);
 	bool DeleteRow(const std::string& tableId, const unsigned int& rowId);
+	bool DeleteRows(const std::string& tableId, const std::vector<unsigned int>& rowIds);
 
 	struct StyleInfo
 	{
