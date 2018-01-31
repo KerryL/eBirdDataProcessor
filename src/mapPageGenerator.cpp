@@ -263,6 +263,7 @@ bool MapPageGenerator::CreateFusionTable(
 	{
 		std::cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate entires" << std::endl;
 		fusionTablesAPIRateLimiter.Wait();
+		// TODO:  Need to limit IN clause size?  633 worked, but 1800 failed
 		if (!fusionTables.DeleteRows(tableId, duplicateRowsToDelete))
 		{
 			std::cerr << "Failed to remove duplicates\n";
@@ -275,6 +276,7 @@ bool MapPageGenerator::CreateFusionTable(
 	{
 		std::cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
 		fusionTablesAPIRateLimiter.Wait();
+		// TODO:  Need to limit IN clause size?  633 worked, but 1800 failed
 		if (!fusionTables.DeleteRows(tableId, rowsToDelete))
 		{
 			std::cerr << "Failed to remove rows for update\n";
@@ -606,7 +608,7 @@ std::vector<MapPageGenerator::ObservationInfo>::const_iterator
 	for (; it != newData.end(); ++it)
 	{
 		if (FrequencyDataHarvester::GenerateFrequencyFileName(
-			county.state, county.county).compare(it->locationHint) == 0)
+			county.state, county.county).compare(FrequencyDataHarvester::StripDirectory(it->locationHint)) == 0)// TODO:  Not really a worse place to put StripDirectory() efficiency-wise...
 			break;
 	}
 
@@ -634,7 +636,7 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 	for (const auto& existing : existingData)
 	{
 		if (FrequencyDataHarvester::GenerateFrequencyFileName(
-			existing.state, existing.county).compare(entry.locationHint) == 0)
+			existing.state, existing.county).compare(FrequencyDataHarvester::StripDirectory(entry.locationHint)) == 0)
 		{
 			newData.name = existing.name;
 			newData.state = existing.state;
@@ -805,7 +807,7 @@ bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, st
 		return false;
 	}
 
-	county = fileName.substr(0, position - 2);
+	county = FrequencyDataHarvester::StripDirectory(fileName.substr(0, position - 2));
 
 	return true;
 }
@@ -1037,12 +1039,6 @@ GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const std::
 	fillColorOption.key = "fillColorStyler";
 	fillColorOption.c.push_back(GoogleFusionTablesInterface::StyleInfo::Options("columnName", "Color-" + month));
 	style.polygonOptions.push_back(fillColorOption);
-
-	GoogleFusionTablesInterface::StyleInfo::Options opacityOption;
-	opacityOption.type = GoogleFusionTablesInterface::StyleInfo::Options::Type::Number;
-	opacityOption.key = "fillOpacity";
-	opacityOption.n = 0.2;
-	style.polygonOptions.push_back(opacityOption);
 
 	return style;
 }

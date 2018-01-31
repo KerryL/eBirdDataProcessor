@@ -34,6 +34,7 @@ public:
 	bool AuditFrequencyData(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& censusKey);
 
 	static std::string GenerateFrequencyFileName(const std::string& state, const std::string& county);
+	static std::string StripDirectory(const std::string& s);
 
 private:
 	static const std::string targetSpeciesURLBase;
@@ -99,7 +100,6 @@ private:
 		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
 		const unsigned int& stateFIPSCode, const std::string& censusKey);
 	static std::string ExtractStateFromFileName(const std::string& fileName);
-	static std::string StripDirectory(const std::string& s);
 
 	static const std::string endOfName;
 };
