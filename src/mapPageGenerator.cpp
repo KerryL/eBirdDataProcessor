@@ -848,7 +848,7 @@ std::string MapPageGenerator::StripCountyFromName(const std::string& s)
 	if (endPosition != std::string::npos)
 		clean = clean.substr(0, endPosition);
 
-	const std::string endString2(" Parish");
+	const std::string endString2("Parish");
 	endPosition = clean.find(endString2);
 	if (endPosition != std::string::npos)
 		clean = clean.substr(0, endPosition);
