@@ -188,7 +188,7 @@ private:
 			const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo), fileName(fileName), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
-		const std::string& fileName;
+		const std::string fileName;
 		const EBirdDataProcessor& ebdp;
 
 		void DoJob() override
