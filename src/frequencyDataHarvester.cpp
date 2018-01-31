@@ -84,7 +84,8 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		return false;
 
 	EBirdInterface ebi(eBirdApiKey);
-	const std::string stateRegionCode(ebi.GetStateCode(country, state));
+	const std::string countryRegionCode(ebi.GetCountryCode(country));
+	const std::string stateRegionCode(ebi.GetStateCode(countryRegionCode, state));
 	auto subRegionList(ebi.GetSubRegions(stateRegionCode, EBirdInterface::RegionType::SubNational2));
 
 	std::cout << "Beginning harvest for " << subRegionList.size() << " counties";
@@ -683,8 +684,6 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 	if (!DoEBirdLogin())
 		return false;
 
-	const std::string countyCode("US");// TODO:  Don't hardcode
-
 	std::string targetPath(freqInfo.front().locationHint);
 	auto lastForwardSlash(targetPath.find_last_of('/'));
 	auto lastBackSlash(targetPath.find_last_of('\\'));
@@ -696,6 +695,8 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 		targetPath = targetPath.substr(0, lastBackSlash + 1);
 
 	EBirdInterface ebi(eBirdApiKey);
+	const std::string countryString("US");// TODO:  Don't hardcode
+	const std::string countryCode(ebi.GetCountryCode(countryString));
 
 	for (const auto& f : freqInfo)
 	{
@@ -712,7 +713,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 				if (regionString.empty())
 				{
 					const std::string state(ExtractStateFromFileName(f.locationHint));
-					const std::string stateCode(ebi.GetStateCode("US", state));// TODO:  Don't hardcode country
+					const std::string stateCode(ebi.GetStateCode(countryCode, state));
 					const auto countyList(ebi.GetSubRegions(stateCode, EBirdInterface::RegionType::SubNational2));
 					for (const auto& county : countyList)
 					{
@@ -751,7 +752,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 	auto states(GetStates(freqInfo));
 	for (const auto& s : states)
 	{
-		const std::string stateCode(ebi.GetStateCode("US", s));// TODO:  Don't hardcode country
+		const std::string stateCode(ebi.GetStateCode(countryCode, s));
 
 		auto missingCounties(FindMissingCounties(stateCode, freqInfo, ebi));
 		for (const auto& county : missingCounties)

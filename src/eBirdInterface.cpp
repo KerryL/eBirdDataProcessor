@@ -478,7 +478,7 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 	unsigned int i(0);
 	for (auto& r : subRegions)
 	{
-		cJSON* item(cJSON_GetArrayItem(root, i));
+		cJSON* item(cJSON_GetArrayItem(root, i++));
 		if (!item)
 		{
 			std::cerr << "Failed to get sub-region array item\n";
@@ -523,7 +523,8 @@ bool EBirdInterface::NameMatchesRegion(const std::string& name, const RegionInfo
 	else if (lowerCode.length() > lowerName.length() && 
 		lowerCode.substr(lowerCode.length() - lowerName.length()).compare(lowerName) == 0)
 		return true;
-	else if (lowerName.substr(lowerName.length() - lowerCode.length()).compare(lowerCode) == 0)
+	else if (lowerName.length() > lowerCode.length() && 
+		lowerName.substr(lowerName.length() - lowerCode.length()).compare(lowerCode) == 0)
 		return true;
 
 	return false;
