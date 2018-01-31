@@ -725,7 +725,11 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 						}
 					}
 
-					assert(!regionString.empty());
+					if (regionString.empty())
+					{
+						std::cerr << "Failed to find region string for '" << f.locationHint << "'\n";
+						break;
+					}
 
 					unsigned int j;
 					for (j = 0; j < frequencyData.size(); ++j)
