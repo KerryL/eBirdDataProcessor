@@ -761,7 +761,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 		auto missingCounties(FindMissingCounties(stateCode, freqInfo, ebi));
 		for (const auto& county : missingCounties)
 		{
-			std::cout << "Missing county " << county.name << "; Updating..." << std::endl;
+			std::cout << "Missing county " << county.name << " for state " << s << "; Updating..." << std::endl;
 
 			std::array<FrequencyData, 12> data;
 			if (!PullFrequencyData(county.code, data))
