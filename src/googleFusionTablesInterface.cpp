@@ -8,9 +8,6 @@
 #include "email/oAuth2Interface.h"
 #include "email/curlUtilities.h"
 
-// cURL headers
-#include <curl/curl.h>
-
 // Standard C++ headers
 #include <iostream>
 #include <fstream>
@@ -405,7 +402,7 @@ bool GoogleFusionTablesInterface::AddAuthAndDeleteToCurlHeader(CURL* curl, const
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
-		std::cerr << "Failed to append auth token to header in ListTables\n";
+		std::cerr << "Failed to append auth token to header\n";
 		return false;
 	}
 
@@ -428,14 +425,14 @@ bool GoogleFusionTablesInterface::AddAuthAndJSONContentTypeToCurlHeader(
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
-		std::cerr << "Failed to append auth token to header in ListTables\n";
+		std::cerr << "Failed to append auth token to header\n";
 		return false;
 	}
 
 	headerList = curl_slist_append(headerList, "Content-Type: application/json");
 	if (!headerList)
 	{
-		std::cerr << "Failed to append content type to header in ListTables\n";
+		std::cerr << "Failed to append content type to header\n";
 		return false;
 	}
 
@@ -454,14 +451,14 @@ bool GoogleFusionTablesInterface::AddAuthAndOctetContentTypeToCurlHeader(
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
-		std::cerr << "Failed to append auth token to header in ListTables\n";
+		std::cerr << "Failed to append auth token to header\n";
 		return false;
 	}
 
 	headerList = curl_slist_append(headerList, "Content-Type: application/octet-stream");
 	if (!headerList)
 	{
-		std::cerr << "Failed to append content type to header in ListTables\n";
+		std::cerr << "Failed to append content type to header\n";
 		return false;
 	}
 

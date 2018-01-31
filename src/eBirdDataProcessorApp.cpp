@@ -79,7 +79,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	if (!configFile.GetConfig().auditFrequencyData.empty())
 	{
-		if (!EBirdDataProcessor::AuditFrequencyData(configFile.GetConfig().auditFrequencyData, configFile.GetConfig().usCensusAPIKey))
+		if (!EBirdDataProcessor::AuditFrequencyData(configFile.GetConfig().auditFrequencyData,
+			configFile.GetConfig().eBirdApiKey))
 		{
 			std::cerr << "Audit failed\n";
 			return 1;
@@ -125,7 +126,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		FrequencyDataHarvester harvester;
 		if (!harvester.DoBulkFrequencyHarvest(configFile.GetConfig().countryFilter,
 			configFile.GetConfig().stateFilter, configFile.GetConfig().bulkFrequencyUpdate,
-			configFile.GetConfig().usCensusAPIKey, configFile.GetConfig().fipsStart))
+			configFile.GetConfig().fipsStart, configFile.GetConfig().eBirdApiKey))
 		{
 			curl_global_cleanup();
 			return 1;
@@ -138,7 +139,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			FrequencyDataHarvester harvester;
 			if (!harvester.GenerateFrequencyFile(configFile.GetConfig().countryFilter,
 				configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
-				configFile.GetConfig().frequencyFileName))
+				configFile.GetConfig().frequencyFileName, configFile.GetConfig().eBirdApiKey))
 			{
 				std::cerr << "Failed to generate frequency file\n";
 				curl_global_cleanup();
@@ -159,7 +160,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 				configFile.GetConfig().outputFileName, configFile.GetConfig().frequencyFileName,
 				configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
 				configFile.GetConfig().recentObservationPeriod,
-				configFile.GetConfig().targetInfoFileName, configFile.GetConfig().homeLocation, configFile.GetConfig().googleMapsAPIKey);
+				configFile.GetConfig().targetInfoFileName, configFile.GetConfig().homeLocation,
+				configFile.GetConfig().googleMapsAPIKey, configFile.GetConfig().eBirdApiKey);
 		}
 	}
 

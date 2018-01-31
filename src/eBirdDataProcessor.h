@@ -55,10 +55,11 @@ public:
 		const std::string& country, const std::string& state, const std::string& county,
 		const unsigned int& recentPeriod,
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
-		const std::string& mapApiKey) const;
+		const std::string& mapApiKey, const std::string& eBirdApiKey) const;
 
 	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
-		const std::string& googleMapsKey, const std::string& clientId, const std::string& clientSecret) const;
+		const std::string& googleMapsKey, const std::string& clientId,
+		const std::string& clientSecret) const;
 
 	struct FrequencyInfo
 	{
@@ -80,7 +81,7 @@ public:
 		std::array<std::vector<FrequencyInfo>, 12> frequencyInfo;
 	};
 
-	static bool AuditFrequencyData(const std::string& freqFileDirectory, const std::string& censusKey);
+	static bool AuditFrequencyData(const std::string& freqFileDirectory, const std::string& eBirdApiKey);
 
 private:
 	static const std::string headerLine;
@@ -164,10 +165,10 @@ private:
 	void RecommendHotspots(const std::set<std::string>& consolidatedSpeciesList,
 		const std::string& country, const std::string& state, const std::string& county, const unsigned int& recentPeriod,
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
-		const std::string& mapApiKey) const;
+		const std::string& mapApiKey, const std::string& eBirdApiKey) const;
 	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>, EBirdInterface::HotspotInfo>>& hotspots,
 		const std::string& hotspotInfoFileName, const std::string& homeLocation, const std::string& mapApiKey,
-		const std::string& regionCode) const;
+		const std::string& regionCode, const std::string& eBirdApiKey) const;
 
 	struct HotspotInfoComparer
 	{

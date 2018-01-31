@@ -137,7 +137,6 @@
     <ClCompile Include="..\src\mapPageGenerator.cpp" />
     <ClCompile Include="..\src\threadPool.cpp" />
     <ClCompile Include="..\src\throttledSection.cpp" />
-    <ClCompile Include="..\src\usCensusInterface.cpp" />
     <ClCompile Include="..\src\utilities\configFile.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -158,7 +157,6 @@
     <ClInclude Include="..\src\mapPageGenerator.h" />
     <ClInclude Include="..\src\threadPool.h" />
     <ClInclude Include="..\src\throttledSection.h" />
-    <ClInclude Include="..\src\usCensusInterface.h" />
     <ClInclude Include="..\src\utilities\configFile.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

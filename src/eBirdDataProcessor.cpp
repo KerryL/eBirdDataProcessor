@@ -468,7 +468,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	const std::string& country, const std::string& state, const std::string& county,
 	const unsigned int& recentPeriod,
 	const std::string& hotspotInfoFileName, const std::string& homeLocation,
-	const std::string& mapApiKey) const
+	const std::string& mapApiKey, const std::string& eBirdApiKey) const
 {
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
@@ -569,7 +569,8 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	}
 	std::cout << std::endl;
 
-	RecommendHotspots(consolidatedSpeciesList, country, state, county, recentPeriod, hotspotInfoFileName, homeLocation, mapApiKey);
+	RecommendHotspots(consolidatedSpeciesList, country, state, county, recentPeriod,
+		hotspotInfoFileName, homeLocation, mapApiKey, eBirdApiKey);
 
 	return true;
 }
@@ -714,11 +715,11 @@ bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDa
 void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolidatedSpeciesList,
 	const std::string& country, const std::string& state, const std::string& county, const unsigned int& recentPeriod,
 	const std::string& hotspotInfoFileName, const std::string& homeLocation,
-	const std::string& mapApiKey) const
+	const std::string& mapApiKey, const std::string& eBirdApiKey) const
 {
 	std::cout << "Checking eBird for recent sightings..." << std::endl;
 
-	EBirdInterface e;
+	EBirdInterface e(eBirdApiKey);
 	const std::string region(e.GetRegionCode(country, state, county));
 	std::set<std::string> recentSpecies;
 
@@ -764,11 +765,13 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 	std::cout << std::endl;
 
 	if (!hotspotInfoFileName.empty())
-		GenerateHotspotInfoFile(sortedHotspots, hotspotInfoFileName, homeLocation, mapApiKey, region);
+		GenerateHotspotInfoFile(sortedHotspots, hotspotInfoFileName, homeLocation, mapApiKey, region, eBirdApiKey);
 }
 
-void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>, EBirdInterface::HotspotInfo>>& hotspots,
-	const std::string& hotspotInfoFileName, const std::string& homeLocation, const std::string& mapApiKey, const std::string& regionCode) const
+void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>,
+	EBirdInterface::HotspotInfo>>& hotspots, const std::string& hotspotInfoFileName,
+	const std::string& homeLocation, const std::string& mapApiKey,
+	const std::string& regionCode, const std::string& eBirdApiKey) const
 {
 	std::cout << "Writing hotspot information to file..." << std::endl;
 
@@ -818,12 +821,12 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 			if (speciesToObservationTimeMap.find(s) == speciesToObservationTimeMap.end() ||
 				speciesToObservationTimeMap[s].empty())
 			{
-				EBirdInterface e;
+				EBirdInterface e(eBirdApiKey);
 				const unsigned int recentPeriod(30);
 				const bool includeProvisional(true);
 				const bool hotspotsOnly(false);
 				std::vector<EBirdInterface::ObservationInfo> observationInfo(e.GetRecentObservationsOfSpeciesInRegion(
-					e.GetScientificNameFromCommonName(s), /*h.second.hotspotID*/regionCode, recentPeriod, includeProvisional, hotspotsOnly));// If we use hotspot ID, we get only the most recent sighting
+					e.GetSpeciesCodeFromCommonName(s), /*h.second.hotspotID*/regionCode, recentPeriod, includeProvisional, hotspotsOnly));// If we use hotspot ID, we get only the most recent sighting
 
 				// Remove entires that don't include time data
 				observationInfo.erase(std::remove_if(observationInfo.begin(), observationInfo.end(), [](const EBirdInterface::ObservationInfo& o)
@@ -1191,7 +1194,8 @@ bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFil
 		googleMapsKey, observationProbabilities, clientId, clientSecret);
 }
 
-bool EBirdDataProcessor::AuditFrequencyData(const std::string& freqFileDirectory, const std::string& censusKey)
+bool EBirdDataProcessor::AuditFrequencyData(const std::string& freqFileDirectory,
+	const std::string& eBirdApiKey)
 {
 	auto fileNames(ListFilesInDirectory(freqFileDirectory));
 	if (fileNames.size() == 0)
@@ -1210,5 +1214,5 @@ bool EBirdDataProcessor::AuditFrequencyData(const std::string& freqFileDirectory
 	pool.WaitForAllJobsComplete();
 
 	FrequencyDataHarvester harvester;
-	return harvester.AuditFrequencyData(freqInfo, censusKey);
+	return harvester.AuditFrequencyData(freqInfo, eBirdApiKey);
 }

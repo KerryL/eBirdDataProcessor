@@ -26,12 +26,13 @@ public:
 	~FrequencyDataHarvester();
 
 	bool GenerateFrequencyFile(const std::string &country, const std::string &state,
-		const std::string &county, const std::string &frequencyFileName);
+		const std::string &county, const std::string &frequencyFileName, const std::string& eBirdApiKey);
 
 	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state,
-		const std::string& targetPath, const std::string& censusKey, const unsigned int& fipsStart);
+		const std::string& targetPath, const unsigned int& fipsStart, const std::string& eBirdApiKey);
 
-	bool AuditFrequencyData(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& censusKey);
+	bool AuditFrequencyData(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
+		const std::string& eBirdApiKey);
 
 	static std::string GenerateFrequencyFileName(const std::string& state, const std::string& county);
 	static std::string StripDirectory(const std::string& s);
@@ -57,10 +58,6 @@ private:
 		Day
 	};
 
-	static std::string BuildRegionString(const std::string &country, const std::string &state,
-		const std::string &county);
-	static std::string BuildRegionString(const std::string &country, const std::string &state,
-		const unsigned int &county);
 	static std::string BuildTargetSpeciesURL(const std::string& regionString,
 		const unsigned int& beginMonth, const unsigned int& endMonth,
 		const ListTimeFrame& timeFrame);
@@ -96,9 +93,8 @@ private:
 	static bool DataIsEmpty(const std::array<FrequencyData, 12>& frequencyData);
 
 	static std::vector<std::string> GetStates(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo);
-	static std::vector<std::pair<unsigned int, std::string>> FindMissingCounties(const std::string& state,
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
-		const unsigned int& stateFIPSCode, const std::string& censusKey);
+	static std::vector<EBirdInterface::RegionInfo> FindMissingCounties(const std::string& stateCode,
+		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, EBirdInterface& ebi);
 	static std::string ExtractStateFromFileName(const std::string& fileName);
 
 	static const std::string endOfName;

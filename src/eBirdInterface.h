@@ -18,6 +18,8 @@
 class EBirdInterface : public JSONInterface
 {
 public:
+	EBirdInterface(const std::string& apiKey) : tokenData(apiKey) {}
+
 	struct HotspotInfo
 	{
 		std::string hotspotName;
@@ -31,6 +33,7 @@ public:
 
 	struct ObservationInfo
 	{
+		std::string speciesCode;
 		std::string commonName;
 		std::string scientificName;
 		std::tm observationDate;
@@ -42,31 +45,48 @@ public:
 		double longitude;
 		bool observationReviewed;
 		bool observationValid;
+		bool locationPrivate;
 
 		bool dateIncludesTimeInfo = true;
 	};
 
-	std::vector<ObservationInfo> GetRecentObservationsOfSpeciesAtHotspot(const std::string& scientificName,
-		const std::string& hotspotID, const unsigned int& recentPeriod, const bool& includeProvisional);
-	std::vector<ObservationInfo> GetRecentObservationsOfSpeciesInRegion(const std::string& scientificName,
+	std::vector<ObservationInfo> GetRecentObservationsOfSpeciesInRegion(const std::string& speciesCode,
 		const std::string& region, const unsigned int& recentPeriod, const bool& includeProvisional, const bool& hotspotsOnly);
 
 	std::string GetScientificNameFromCommonName(const std::string& commonName);
+	std::string GetSpeciesCodeFromCommonName(const std::string& commonName);
+
+	struct RegionInfo
+	{
+		std::string name;
+		std::string code;
+	};
+
+	enum class RegionType
+	{
+		Country,
+		SubNational1,
+		SubNational2
+	};
+
+	std::vector<RegionInfo> GetSubRegions(const std::string& regionCode, const RegionType& type);
 
 	std::string GetRegionCode(const std::string& country, const std::string& state = "", const std::string& county = "");
 
+	// Returned codes are fully descriptive, i.e. state codes include country info, etc.
 	std::string GetCountryCode(const std::string& country);
 	std::string GetStateCode(const std::string& countryCode, const std::string& state);
 	std::string GetCountyCode(const std::string& stateCode, const std::string& county);
 
 private:
 	static const std::string apiRoot;
-	static const std::string recentObservationsOfSpeciesInRegionURL;
-	static const std::string recentObservationsOfSpeciesAtHotspotsURL;
-	static const std::string taxonomyLookupURL;
-	static const std::string locationFindURL;
-	static const std::string locationListURL;
+	static const std::string recentObservationsOfSpeciesInRegionURLv1;
+	static const std::string observationDataPath;
+	static const std::string recentPath;
+	static const std::string taxonomyLookupEndpoint;
+	static const std::string regionReferenceEndpoint;
 
+	static const std::string speciesCodeTag;
 	static const std::string commonNameTag;
 	static const std::string scientificNameTag;
 	static const std::string locationNameTag;
@@ -77,71 +97,59 @@ private:
 	static const std::string isNotHotspotTag;
 	static const std::string isReviewedTag;
 	static const std::string isValidTag;
+	static const std::string locationPrivateTag;
 
-	static const std::string countryInfoListHeading;
-	static const std::string stateInfoListHeading;
-	static const std::string countyInfoListHeading;
+	static const std::string countryTypeName;
+	static const std::string subNational1TypeName;
+	static const std::string subNational2TypeName;
 
+	static const std::string nameTag;
+	static const std::string codeTag;
+
+	static const std::string eBirdTokenHeader;
+
+	bool FetchEBirdNameData();
 	void BuildNameMaps(cJSON* root);
-	static std::unordered_map<std::string, std::string> commonToScientificMap;
+	struct NameInfo
+	{
+		NameInfo() = default;
+		NameInfo(const std::string& scientificName, const std::string& code)
+			: scientificName(scientificName), code(code) {}
+		std::string scientificName;
+		std::string code;
+	};
+	static std::unordered_map<std::string, NameInfo> commonToScientificMap;
 	static std::unordered_map<std::string, std::string> scientificToCommonMap;
 
 	static bool ReadJSONObservationData(cJSON* item, ObservationInfo& info);
 
 	static std::string GetUserInputOnResponse(const std::string& s, const std::string& field);
 
-	struct CountryInfo
+	struct SubNational1Info : public RegionInfo
 	{
-		std::string code;
-		std::string name;
-		std::string longName;
-		std::string localAbbreviation;
+		std::vector<RegionInfo> subnational2Info;
 	};
-	std::vector<CountryInfo> countryInfo;
+
+	struct CountryInfo : public RegionInfo
+	{
+		std::vector<SubNational1Info> subnational1Info;
+	};
+
+	std::vector<CountryInfo> storedRegionInfo;
 	void BuildCountryInfo();
-	static CountryInfo ParseCountryInfoLine(const std::string& line);
+	std::vector<SubNational1Info> BuildSubNational1Info(const std::string& countryCode);
 
-	struct StateInfo
+	static bool NameMatchesRegion(const std::string& name, const RegionInfo& region);
+
+	struct TokenData : public ModificationData
 	{
-		std::string countryCode;
-		std::string code;
-		std::string name;
-		std::string localAbbreviation;
-
-		bool operator==(const StateInfo& s) const
-		{
-			return countryCode.compare(s.countryCode) == 0 &&
-				code.compare(s.code) == 0 &&
-				name.compare(s.name) == 0 &&
-				localAbbreviation.compare(s.localAbbreviation) == 0;
-		}
-
-		bool operator!=(const StateInfo& s) const { return !(*this == s); }
+		TokenData(const std::string& token) : token(token) {}
+		std::string token;
 	};
 
-	std::vector<StateInfo> BuildStateInfo(const std::string& countryCode);
-	static StateInfo ParseStateInfoLine(const std::string& line);
+	const TokenData tokenData;
 
-	struct CountyInfo
-	{
-		std::string countryCode;
-		std::string stateCode;
-		std::string code;
-		std::string name;
-
-		bool operator==(const CountyInfo& s) const
-		{
-			return countryCode.compare(s.countryCode) == 0 &&
-				stateCode.compare(s.stateCode) == 0 &&
-				code.compare(s.code) == 0 &&
-				name.compare(s.name) == 0;
-		}
-
-		bool operator!=(const CountyInfo& s) const { return !(*this == s); }
-	};
-
-	std::vector<CountyInfo> BuildCountyInfo(const std::string& stateCode);
-	static CountyInfo ParseCountyInfoLine(const std::string& line);
+	static bool AddTokenToCurlHeader(CURL* curl, const ModificationData* data);// Expects TokenData
 };
 
 #endif// EBIRD_INTERFACE_H_

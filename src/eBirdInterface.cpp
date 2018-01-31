@@ -7,6 +7,7 @@
 #include "eBirdInterface.h"
 #include "bestObservationTimeEstimator.h"
 #include "email/cJSON/cJSON.h"
+#include "email/curlUtilities.h"
 
 // Standard C++ headers
 #include <sstream>
@@ -17,13 +18,14 @@
 #include <cassert>
 #include <iomanip>
 
-const std::string EBirdInterface::apiRoot("http://ebird.org/ws1.1/");
-const std::string EBirdInterface::recentObservationsOfSpeciesInRegionURL("data/obs/region_spp/recent");
-const std::string EBirdInterface::recentObservationsOfSpeciesAtHotspotsURL("data/obs/hotspot_spp/recent");
-const std::string EBirdInterface::taxonomyLookupURL("ref/taxa/ebird");
-const std::string EBirdInterface::locationFindURL("ref/location/find");
-const std::string EBirdInterface::locationListURL("ref/location/list");
+const std::string EBirdInterface::apiRoot("https://ebird.org/ws2.0/");
+const std::string EBirdInterface::recentObservationsOfSpeciesInRegionURLv1("http://ebird.org/ws1.1/data/obs/region_spp/recent");
+const std::string EBirdInterface::observationDataPath("data/obs/");
+const std::string EBirdInterface::recentPath("recent/");
+const std::string EBirdInterface::taxonomyLookupEndpoint("ref/taxonomy/ebird");
+const std::string EBirdInterface::regionReferenceEndpoint("ref/region/list/");
 
+const std::string EBirdInterface::speciesCodeTag("speciesCode");
 const std::string EBirdInterface::commonNameTag("comName");
 const std::string EBirdInterface::scientificNameTag("sciName");
 const std::string EBirdInterface::locationNameTag("locName");
@@ -34,12 +36,18 @@ const std::string EBirdInterface::observationDateTag("obsDt");
 const std::string EBirdInterface::isNotHotspotTag("locationPrivate");
 const std::string EBirdInterface::isReviewedTag("obsReviewed");
 const std::string EBirdInterface::isValidTag("obsValid");
+const std::string EBirdInterface::locationPrivateTag("locationPrivate");
 
-const std::string EBirdInterface::countryInfoListHeading("COUNTRY_CODE,COUNTRY_NAME,COUNTRY_NAME_LONG,LOCAL_ABBREVIATION");
-const std::string EBirdInterface::stateInfoListHeading("COUNTRY_CODE,SUBNATIONAL1_CODE,SUBNATIONAL1_NAME,LOCAL_ABBREVIATION");
-const std::string EBirdInterface::countyInfoListHeading("COUNTRY_CODE,SUBNATIONAL1_CODE,SUBNATIONAL2_CODE,SUBNATIONAL2_NAME");
+const std::string EBirdInterface::countryTypeName("country");
+const std::string EBirdInterface::subNational1TypeName("subnational1");
+const std::string EBirdInterface::subNational2TypeName("subnational2");
 
-std::unordered_map<std::string, std::string> EBirdInterface::commonToScientificMap;
+const std::string EBirdInterface::nameTag("name");
+const std::string EBirdInterface::codeTag("code");
+
+const std::string EBirdInterface::eBirdTokenHeader("X-eBirdApiToken: ");
+
+std::unordered_map<std::string, EBirdInterface::NameInfo> EBirdInterface::commonToScientificMap;
 std::unordered_map<std::string, std::string> EBirdInterface::scientificToCommonMap;
 
 std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentObservationsOf(
@@ -49,7 +57,7 @@ std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentOb
 	const bool hotspotsOnly(true);
 
 	std::ostringstream request;
-	request << apiRoot << recentObservationsOfSpeciesInRegionURL << "?r="
+	request << recentObservationsOfSpeciesInRegionURLv1 << "?r="// TODO:  Still using v1.1 (no good replacement yet)
 		<< region
 		<< "&sci=" << scientificName
 		<< "&back=" << recentPeriod
@@ -128,63 +136,14 @@ std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentOb
 	return hotspots;
 }
 
-std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservationsOfSpeciesAtHotspot(
-	const std::string& scientificName, const std::string& hotspotID, const unsigned int& recentPeriod,
-	const bool& includeProvisional)
-{
-	std::ostringstream request;
-	request << apiRoot << recentObservationsOfSpeciesAtHotspotsURL << "?r="
-		<< hotspotID
-		<< "&sci=" << scientificName
-		<< "&back=" << recentPeriod
-		<< "&fmt=json&detail=full&includeProvisional=";
-
-	if (includeProvisional)
-		request << "true";
-	else
-		request << "false";
-
-	std::string response;
-	if (!DoCURLGet(URLEncode(request.str()), response))
-		return std::vector<ObservationInfo>();
-
-	cJSON *root(cJSON_Parse(response.c_str()));
-	if (!root)
-	{
-		std::cerr << "Failed to parse returned string (GetRecentObservationsOfSpeciesAtHotspot())\n";
-		std::cerr << response << '\n';
-		return std::vector<ObservationInfo>();
-	}
-
-	std::vector<ObservationInfo> observations;
-	const unsigned int arraySize(cJSON_GetArraySize(root));
-	unsigned int i;
-	for (i = 0; i < arraySize; ++i)
-	{
-		cJSON* item(cJSON_GetArrayItem(root, i));
-		if (!item)
-		{
-			std::cerr << "Failed to get observation array item\n";
-			observations.clear();
-			break;
-		}
-
-		ObservationInfo info;
-		if (!ReadJSONObservationData(item, info))
-		{
-			observations.clear();
-			break;
-		}
-
-		observations.push_back(info);
-	}
-
-	cJSON_Delete(root);
-	return observations;
-}
-
 bool EBirdInterface::ReadJSONObservationData(cJSON* item, ObservationInfo& info)
 {
+	if (!ReadJSON(item, speciesCodeTag, info.speciesCode))
+	{
+		std::cerr << "Failed to get species code\n";
+		return false;
+	}
+
 	if (!ReadJSON(item, commonNameTag, info.commonName))
 	{
 		std::cerr << "Failed to get common name for item\n";
@@ -265,19 +224,23 @@ bool EBirdInterface::ReadJSONObservationData(cJSON* item, ObservationInfo& info)
 		return false;
 	}
 
+	if (!ReadJSON(item, locationPrivateTag, info.locationPrivate))
+	{
+		std::cerr << "Failed to get location private flag\n";
+		return false;
+	}
+
 	return true;
 }
 
 std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservationsOfSpeciesInRegion(
-	const std::string& scientificName, const std::string& region, const unsigned int& recentPeriod,
+	const std::string& speciesCode, const std::string& region, const unsigned int& recentPeriod,
 	const bool& includeProvisional, const bool& hotspotsOnly)
 {
 	std::ostringstream request;
-	request << apiRoot << recentObservationsOfSpeciesInRegionURL << "?r="
-		<< region
-		<< "&sci=" << scientificName
-		<< "&back=" << recentPeriod
-		<< "&fmt=json&includeProvisional=";
+	request << apiRoot << observationDataPath << region << '/' << recentPath << '/'
+		<< speciesCode << "?back=" << recentPeriod
+		<< "&includeProvisional=";
 
 	if (includeProvisional)
 		request << "true";
@@ -291,7 +254,7 @@ std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservatio
 		request << "false";
 
 	std::string response;
-	if (!DoCURLGet(URLEncode(request.str()), response))
+	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
 		return std::vector<ObservationInfo>();
 
 	cJSON *root(cJSON_Parse(response.c_str()));
@@ -329,32 +292,75 @@ std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservatio
 	return observations;
 }
 
+bool EBirdInterface::AddTokenToCurlHeader(CURL* curl, const ModificationData* data)
+{
+	curl_slist* headerList(nullptr);
+	headerList = curl_slist_append(headerList, std::string(eBirdTokenHeader
+		+ static_cast<const TokenData*>(data)->token).c_str());
+	if (!headerList)
+	{
+		std::cerr << "Failed to append token to header in AddTokenToCurlHeader\n";
+		return false;
+	}
+
+	headerList = curl_slist_append(headerList, "Content-Type: application/json");
+	if (!headerList)
+	{
+		std::cerr << "Failed to append content type to header in ListTables\n";
+		return false;
+	}
+
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
+		CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+		return false;
+
+	return true;
+}
+
 std::string EBirdInterface::GetScientificNameFromCommonName(const std::string& commonName)
 {
 	if (commonToScientificMap.empty())
 	{
-		std::ostringstream request;
-		request << apiRoot << taxonomyLookupURL << "?cat=species"
-			<< "&locale=en_US"
-			<< "&fmt=json";
-
-		std::string response;
-		if (!DoCURLGet(request.str(), response))
+		if (!FetchEBirdNameData())
 			return std::string();
-
-		cJSON *root(cJSON_Parse(response.c_str()));
-		if (!root)
-		{
-			std::cerr << "Failed to parse returned string (GetScientificNameFromCommonName())\n";
-			std::cerr << response << '\n';
-			return std::string();
-		}
-
-		BuildNameMaps(root);
-		cJSON_Delete(root);
 	}
 
-	return commonToScientificMap[commonName];
+	return commonToScientificMap[commonName].scientificName;
+}
+
+bool EBirdInterface::FetchEBirdNameData()
+{
+	std::ostringstream request;
+	request << apiRoot << taxonomyLookupEndpoint << "?cat=species"
+		<< "&locale=en"
+		<< "&fmt=json";
+
+	std::string response;
+	if (!DoCURLGet(request.str(), response))
+		return false;
+
+	cJSON *root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		std::cerr << "Failed to parse returned string (GetScientificNameFromCommonName())\n";
+		std::cerr << response << '\n';
+		return false;
+	}
+
+	BuildNameMaps(root);
+	cJSON_Delete(root);
+	return true;
+}
+
+std::string EBirdInterface::GetSpeciesCodeFromCommonName(const std::string& commonName)
+{
+	if (commonToScientificMap.empty())
+	{
+		if (!FetchEBirdNameData())
+			return std::string();
+	}
+
+	return commonToScientificMap[commonName].code;
 }
 
 void EBirdInterface::BuildNameMaps(cJSON* root)
@@ -379,7 +385,14 @@ void EBirdInterface::BuildNameMaps(cJSON* root)
 			continue;
 		}
 
-		commonToScientificMap[commonName] = scientificName;
+		std::string code;
+		if (!ReadJSON(nameInfo, speciesCodeTag, code))
+		{
+			std::cerr << "Failed to read species code\n";
+			continue;
+		}
+
+		commonToScientificMap[commonName] = NameInfo(scientificName, code);
 		scientificToCommonMap[scientificName] = commonName;
 	}
 }
@@ -393,7 +406,7 @@ std::string EBirdInterface::GetRegionCode(const std::string& country,
 
 	if (!state.empty())
 	{
-		std::string stateCode(GetStateCode(countryCode, state));
+		const std::string stateCode(GetStateCode(countryCode, state));
 		if (stateCode.empty())
 			return std::string();
 
@@ -434,236 +447,193 @@ std::string EBirdInterface::GetUserInputOnResponse(const std::string& s, const s
 	return selectionMap[selection];
 }
 
-std::string EBirdInterface::GetCountryCode(const std::string& country)
+std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
+	const std::string& regionCode, const RegionType& type)
 {
-	if (countryInfo.empty())
-		BuildCountryInfo();
-
-	std::string lowerCaseCountry(country);
-	std::transform(lowerCaseCountry.begin(), lowerCaseCountry.end(), lowerCaseCountry.begin(), ::tolower);
-	for (const auto& c : countryInfo)
+	const std::string regionTypeString([&type]()
 	{
-		CountryInfo lowerCaseInfo(c);
-		std::transform(lowerCaseInfo.code.begin(), lowerCaseInfo.code.end(), lowerCaseInfo.code.begin(), ::tolower);
-		std::transform(lowerCaseInfo.name.begin(), lowerCaseInfo.name.end(), lowerCaseInfo.name.begin(), ::tolower);
-		std::transform(lowerCaseInfo.longName.begin(), lowerCaseInfo.longName.end(), lowerCaseInfo.longName.begin(), ::tolower);
-		std::transform(lowerCaseInfo.localAbbreviation.begin(), lowerCaseInfo.localAbbreviation.end(), lowerCaseInfo.localAbbreviation.begin(), ::tolower);
-
-		if (lowerCaseInfo.code.compare(lowerCaseCountry) == 0 ||
-			lowerCaseInfo.name.compare(lowerCaseCountry) == 0 ||
-			lowerCaseInfo.longName.compare(lowerCaseCountry) == 0 ||
-			lowerCaseInfo.localAbbreviation.compare(lowerCaseCountry) == 0)
-			return c.code;
-	}
-
+		if (type == RegionType::Country)
+			return "country";
+		else if (type == RegionType::SubNational1)
+			return "subnational1";
+		else// if (type == RegionType::SubNational2)
+			return "subnational2";
+	}());
 	std::ostringstream request;
-	request << apiRoot << locationFindURL << "?rtype=country&fmt=csv&match=" << country;
+	request << apiRoot << regionReferenceEndpoint << regionTypeString << '/' << regionCode << ".json";
 
 	std::string response;
-	if (!DoCURLGet(URLEncode(request.str()), response))
-		return std::string();
+	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
+		return std::vector<RegionInfo>();
 
-	if (response.length() == 2)
-		return response;
+	cJSON *root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		std::cerr << "Failed to parse returned string (GetSubRegions())\n";
+		std::cerr << response << '\n';
+		return std::vector<RegionInfo>();
+	}
 
-	return ParseCountryInfoLine(GetUserInputOnResponse(response, "country")).code;
+	std::vector<RegionInfo> subRegions(cJSON_GetArraySize(root));
+	unsigned int i(0);
+	for (auto& r : subRegions)
+	{
+		cJSON* item(cJSON_GetArrayItem(root, i));
+		if (!item)
+		{
+			std::cerr << "Failed to get sub-region array item\n";
+			subRegions.clear();
+			break;
+		}
+
+		if (!ReadJSON(item, nameTag, r.name))
+		{
+			std::cerr << "Failed to read sub-region name\n";
+			subRegions.clear();
+			break;
+		}
+
+		if (!ReadJSON(item, codeTag, r.code))
+		{
+			std::cerr << "Failed to read sub-region code\n";
+			subRegions.clear();
+			break;
+		}
+	}
+
+	cJSON_Delete(root);
+	return subRegions;
 }
 
-std::string EBirdInterface::GetStateCode(const std::string& countryCode,
-	const std::string& state)
+bool EBirdInterface::NameMatchesRegion(const std::string& name, const RegionInfo& region)
 {
-	std::vector<StateInfo> stateInfo(BuildStateInfo(countryCode));
+	assert(name.length() > 0 && region.name.length() > 0 && region.code.length() > 0);
 
-	std::string lowerCaseState(state);
-	std::transform(lowerCaseState.begin(), lowerCaseState.end(), lowerCaseState.begin(), ::tolower);
-	for (const auto& s : stateInfo)
+	std::string lowerName(name);
+	std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+	std::string lowerRegion(region.name);
+	std::transform(lowerRegion.begin(), lowerRegion.end(), lowerRegion.begin(), ::tolower);
+	std::string lowerCode(region.code);
+	std::transform(lowerCode.begin(), lowerCode.end(), lowerCode.begin(), ::tolower);
+
+	if (lowerName.compare(lowerRegion) == 0)
+		return true;
+	else if (lowerName.compare(lowerCode) == 0)
+		return true;
+	else if (lowerCode.length() > lowerName.length() && 
+		lowerCode.substr(lowerCode.length() - lowerName.length()).compare(lowerName) == 0)
+		return true;
+	else if (lowerName.substr(lowerName.length() - lowerCode.length()).compare(lowerCode) == 0)
+		return true;
+
+	return false;
+}
+
+std::string EBirdInterface::GetCountryCode(const std::string& country)
+{
+	if (storedRegionInfo.empty())
+		BuildCountryInfo();
+
+	for (const auto& r : storedRegionInfo)
 	{
-		StateInfo lowerCaseInfo(s);
-		std::transform(lowerCaseInfo.code.begin(), lowerCaseInfo.code.end(), lowerCaseInfo.code.begin(), ::tolower);
-		std::transform(lowerCaseInfo.name.begin(), lowerCaseInfo.name.end(), lowerCaseInfo.name.begin(), ::tolower);
-		std::transform(lowerCaseInfo.localAbbreviation.begin(), lowerCaseInfo.localAbbreviation.end(), lowerCaseInfo.localAbbreviation.begin(), ::tolower);
-
-		if (lowerCaseInfo.code.compare(lowerCaseState) == 0 ||
-			lowerCaseInfo.name.compare(lowerCaseState) == 0 ||
-			lowerCaseInfo.localAbbreviation.compare(lowerCaseState) == 0)
-			return s.code;
+		if (NameMatchesRegion(country, r))
+			return r.code;
 	}
 
-	std::ostringstream request;
-	request << apiRoot << locationFindURL << "?rtype=subnational1&fmt=csv&match=" << state;
+	std::cerr << "Failed to find country code for '" << country << "'\n";
+	return std::string();
+}
 
-	std::string response;
-	if (!DoCURLGet(URLEncode(request.str()), response))
-		return std::string();
-
-	if (response.length() == 2)
-		return response;
-
-	std::istringstream ss(response);
-	std::string line;
-	std::getline(ss, line);
-	assert(stateInfoListHeading.compare(line) == 0);
-
-	std::vector<StateInfo> matchStateInfo;
-	while (std::getline(ss, line))
-		matchStateInfo.push_back(ParseStateInfoLine(line));
-
-	stateInfo.erase(std::remove_if(stateInfo.begin(), stateInfo.end(), [&matchStateInfo](const StateInfo& s)
+std::string EBirdInterface::GetStateCode(const std::string& countryCode, const std::string& state)
+{
+	CountryInfo* countryInfo(nullptr);
+	for (auto& r : storedRegionInfo)
 	{
-		return std::find(matchStateInfo.begin(), matchStateInfo.end(), s) == matchStateInfo.end();
-	}), stateInfo.end());
+		if (r.code.compare(countryCode) == 0)
+		{
+			countryInfo = &r;
+			break;
+		}
+	}
 
-	std::string reducedResponse(stateInfoListHeading);
-	for (const auto& s : stateInfo)
-		reducedResponse.append('\n' + s.countryCode + ',' + s.code + ',' + s.name + ',' + s.localAbbreviation);
+	if (!countryInfo)
+	{
+		std::cerr << "Failed to find matching entry for country code '" << countryCode << "'\n";
+		return std::string();
+	}
 
-	return ParseStateInfoLine(GetUserInputOnResponse(reducedResponse, "state")).code;
+	if (countryInfo->subnational1Info.empty())
+		countryInfo->subnational1Info = std::move(BuildSubNational1Info(countryInfo->code));
+
+	for (const auto& r : countryInfo->subnational1Info)
+	{
+		if (NameMatchesRegion(state, r))
+			return r.code;
+	}
+
+	std::cerr << "Failed to find state code for '" << state << "' in '" << countryCode << "'\n";
+	return std::string();
 }
 
 std::string EBirdInterface::GetCountyCode(const std::string& stateCode, const std::string& county)
 {
-	std::vector<CountyInfo> countyInfo(BuildCountyInfo(stateCode));
-
-	std::string lowerCaseCounty(county);
-	std::transform(lowerCaseCounty.begin(), lowerCaseCounty.end(), lowerCaseCounty.begin(), ::tolower);
-	for (const auto& c : countyInfo)
+	SubNational1Info* subNational1Info(nullptr);
+	for (auto& country : storedRegionInfo)
 	{
-		CountyInfo lowerCaseInfo(c);
-		std::transform(lowerCaseInfo.code.begin(), lowerCaseInfo.code.end(), lowerCaseInfo.code.begin(), ::tolower);
-		std::transform(lowerCaseInfo.name.begin(), lowerCaseInfo.name.end(), lowerCaseInfo.name.begin(), ::tolower);
+		for (auto& r : country.subnational1Info)
+		{
+			if (r.code.compare(stateCode) == 0)
+			{
+				subNational1Info = &r;
+				break;
+			}
+		}
 
-		if (lowerCaseInfo.code.compare(lowerCaseCounty) == 0 ||
-			lowerCaseInfo.name.compare(lowerCaseCounty) == 0)
-			return c.code;
+		if (subNational1Info)
+			break;
 	}
 
-	std::ostringstream request;
-	request << apiRoot << locationFindURL << "?rtype=subnational2&fmt=csv&match=" << county;
-
-	std::string response;
-	if (!DoCURLGet(URLEncode(request.str()), response))
-		return std::string();
-
-	if (response.length() == 2)
-		return response;
-
-	std::istringstream ss(response);
-	std::string line;
-	std::getline(ss, line);
-	assert(countyInfoListHeading.compare(line) == 0);
-
-	std::vector<CountyInfo> matchCountyInfo;
-	while (std::getline(ss, line))
-		matchCountyInfo.push_back(ParseCountyInfoLine(line));
-
-	countyInfo.erase(std::remove_if(countyInfo.begin(), countyInfo.end(), [&matchCountyInfo](const CountyInfo& s)
+	if (!subNational1Info)
 	{
-		return std::find(matchCountyInfo.begin(), matchCountyInfo.end(), s) == matchCountyInfo.end();
-	}), countyInfo.end());
+		std::cerr << "Failed to find matching entry for state code '" << stateCode << "'\n";
+		return std::string();
+	}
 
-	std::string reducedResponse(countyInfoListHeading);
-	for (const auto& s : countyInfo)
-		reducedResponse.append('\n' + s.countryCode + ',' + s.stateCode + ',' + s.code + ',' + s.name);
+	if (subNational1Info->subnational2Info.empty())
+		subNational1Info->subnational2Info = std::move(GetSubRegions(subNational1Info->code, RegionType::SubNational2));
 
-	return ParseCountyInfoLine(GetUserInputOnResponse(reducedResponse, "county")).code;
+	for (const auto& r : subNational1Info->subnational2Info)
+	{
+		if (NameMatchesRegion(county, r))
+			return r.code;
+	}
+
+	std::cerr << "Failed to find county code for '" << county << "' in '" << stateCode << "'\n";
+	return std::string();
 }
 
 void EBirdInterface::BuildCountryInfo()
 {
-	std::ostringstream request;
-	request << apiRoot << locationListURL << "?rtype=country&fmt=csv";
-
-	std::string response;
-	if (!DoCURLGet(URLEncode(request.str()), response))
-		return;
-
-	std::istringstream ss(response);
-	std::string line;
-	std::getline(ss, line);
-
-	assert(countryInfoListHeading.compare(line) == 0);// This sometimes happens when data is returned in xml format, even though we requested csv
-
-	while (std::getline(ss, line))
-		countryInfo.push_back(ParseCountryInfoLine(line));
+	auto regions(GetSubRegions("world", RegionType::Country));
+	storedRegionInfo.resize(regions.size());
+	unsigned int i;
+	for (i = 0; i < storedRegionInfo.size(); ++i)
+	{
+		storedRegionInfo[i].code = regions[i].code;
+		storedRegionInfo[i].name = regions[i].name;
+	}
 }
 
-std::vector<EBirdInterface::StateInfo> EBirdInterface::BuildStateInfo(const std::string& countryCode)
+std::vector<EBirdInterface::SubNational1Info> EBirdInterface::BuildSubNational1Info(const std::string& countryCode)
 {
-	std::ostringstream request;
-	request << apiRoot << locationListURL << "?rtype=subnational1&fmt=csv&countryCode=" << countryCode;
-
-	std::string response;
-	if (!DoCURLGet(URLEncode(request.str()), response))
-		return std::vector<StateInfo>();
-
-	std::istringstream ss(response);
-	std::string line;
-	std::getline(ss, line);
-	assert(stateInfoListHeading.compare(line) == 0);
-
-	std::vector<StateInfo> stateInfo;
-	while (std::getline(ss, line))
-		stateInfo.push_back(ParseStateInfoLine(line));
-
-	return stateInfo;
-}
-
-std::vector<EBirdInterface::CountyInfo> EBirdInterface::BuildCountyInfo(const std::string& stateCode)
-{
-	std::ostringstream request;
-	request << apiRoot << locationListURL << "?rtype=subnational2&fmt=csv&subnational1Code=" << stateCode;
-
-	std::string response;
-	if (!DoCURLGet(URLEncode(request.str()), response))
-		return std::vector<CountyInfo>();
-
-	std::istringstream ss(response);
-	std::string line;
-	std::getline(ss, line);
-	assert(countyInfoListHeading.compare(line) == 0);
-
-	std::vector<CountyInfo> countyInfo;
-	while (std::getline(ss, line))
-		countyInfo.push_back(ParseCountyInfoLine(line));
-
-	return countyInfo;
-}
-
-EBirdInterface::CountryInfo EBirdInterface::ParseCountryInfoLine(const std::string& line)
-{
-	CountryInfo info;
-
-	std::istringstream ss(line);
-	std::getline(ss, info.code, ',');
-	std::getline(ss, info.name, ',');
-	std::getline(ss, info.longName, ',');
-	std::getline(ss, info.localAbbreviation, ',');
-
-	return info;
-}
-
-EBirdInterface::StateInfo EBirdInterface::ParseStateInfoLine(const std::string& line)
-{
-	StateInfo info;
-
-	std::istringstream ss(line);
-	std::getline(ss, info.countryCode, ',');
-	std::getline(ss, info.code, ',');
-	std::getline(ss, info.name, ',');
-	std::getline(ss, info.localAbbreviation, ',');
-
-	return info;
-}
-
-EBirdInterface::CountyInfo EBirdInterface::ParseCountyInfoLine(const std::string& line)
-{
-	CountyInfo info;
-
-	std::istringstream ss(line);
-	std::getline(ss, info.countryCode, ',');
-	std::getline(ss, info.stateCode, ',');
-	std::getline(ss, info.code, ',');
-	std::getline(ss, info.name, ',');
+	auto regions(GetSubRegions(countryCode, RegionType::SubNational1));
+	std::vector<EBirdInterface::SubNational1Info> info(regions.size());
+	unsigned int i;
+	for (i = 0; i < info.size(); ++i)
+	{
+		info[i].code = regions[i].code;
+		info[i].name = regions[i].name;
+	}
 
 	return info;
 }

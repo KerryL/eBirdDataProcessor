@@ -47,7 +47,7 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem("GOOGLE_MAPS_KEY", config.googleMapsAPIKey);
 	AddConfigItem("HOME_LOCATION", config.homeLocation);
-	AddConfigItem("CENSUS_KEY", config.usCensusAPIKey);
+	AddConfigItem("EBIRD_API_KEY", config.eBirdApiKey);
 
 	AddConfigItem("FIND_MAX_NEEDS", config.findMaxNeedsLocations);
 

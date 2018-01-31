@@ -6,7 +6,6 @@
 // Local headers
 #include "frequencyDataHarvester.h"
 #include "eBirdInterface.h"
-#include "usCensusInterface.h"
 #include "email/curlUtilities.h"
 #include "mapPageGenerator.h"
 
@@ -59,13 +58,14 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 }
 
 bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
-	const std::string &state, const std::string &county, const std::string &frequencyFileName)
+	const std::string &state, const std::string &county, const std::string &frequencyFileName, const std::string& eBirdApiKey)
 {
 	if (!DoEBirdLogin())
 		return false;
 
+	EBirdInterface ebi(eBirdApiKey);
 	std::array<FrequencyData, 12> frequencyData;
-	if (!PullFrequencyData(BuildRegionString(country, state, county), frequencyData))
+	if (!PullFrequencyData(ebi.GetRegionCode(country, state, county), frequencyData))
 		return false;
 
 	return WriteFrequencyDataToFile(frequencyFileName, frequencyData);
@@ -74,8 +74,8 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 // fipsStart argument can be used to resume a failed bulk harvest without needing
 // to re-harvest the data for the specified state which was successfully harvested
 bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
-	const std::string &state, const std::string& targetPath, const std::string& censusKey,
-	const unsigned int& fipsStart)
+	const std::string &state, const std::string& targetPath,
+	const unsigned int& fipsStart, const std::string& eBirdApiKey)
 {
 	std::cout << "Harvesting frequency data for " << state << ", " << country << std::endl;
 	std::cout << "Frequency files will be stored in " << targetPath << std::endl;
@@ -83,28 +83,44 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 	if (!DoEBirdLogin())
 		return false;
 
-	assert(country.compare("US") == 0 && "Cannot perform bulk frequency harvesting outside of US");
+	EBirdInterface ebi(eBirdApiKey);
+	const std::string stateRegionCode(ebi.GetStateCode(country, state));
+	auto subRegionList(ebi.GetSubRegions(stateRegionCode, EBirdInterface::RegionType::SubNational2));
 
-	unsigned int stateFIPSCode;
-	if (!USCensusInterface::GetStateFIPSCode(state, stateFIPSCode))
-		return false;
+	std::cout << "Beginning harvest for " << subRegionList.size() << " counties";
+	std::sort(subRegionList.begin(), subRegionList.end(), [](const EBirdInterface::RegionInfo& a, const EBirdInterface::RegionInfo& b)
+	{
+		return a.code.compare(b.code) < 0;
+	});
 
-	USCensusInterface censusInterface(censusKey);
-	std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
-
-	std::cout << "Beginning harvest for " << countyList.size() << " counties";
 	if (fipsStart > 0)
 		std::cout << " (skipping counties with FIPS < " << fipsStart << ')';
 	std::cout << std::endl;
 
-	for (const auto& county : countyList)
+	for (const auto& r : subRegionList)
 	{
-		if (county.fipsCode < fipsStart)
-			continue;
+		if (fipsStart > 0)
+		{
+			auto lastDash(r.code.find_last_of('-'));
+			if (lastDash != std::string::npos)
+			{
+				std::istringstream fips(r.code.substr(lastDash + 1));
+				unsigned int thisFips;
+				if (!(fips >> thisFips).fail())
+				{
+					if (thisFips < fipsStart)
+						continue;
+				}
+				else
+					std::cerr << "Failed to interpret FIPS code to determine if we should ignore (so we will include it)\n";
+			}
+			else
+				std::cerr << "Failed to extract FIPS code to determine if we should ignore (so we will include it)\n";
+		}
 
-		std::cout << county.name << " (FIPS = " << county.fipsCode << ")..." << std::endl;
+		std::cout << r.name << " (" << r.code << ")..." << std::endl;
 		std::array<FrequencyData, 12> data;
-		if (!PullFrequencyData(BuildRegionString(country, state, county.fipsCode), data))
+		if (!PullFrequencyData(r.code, data))
 			break;
 
 		// Some independent cities (i.e. "Baltimore city") are recognized in census data as "county equivalents,"
@@ -113,7 +129,7 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		if (DataIsEmpty(data))
 			continue;
 
-		if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(state, county.name), data))
+		if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(state, r.name), data))
 			break;
 	}
 
@@ -347,43 +363,6 @@ std::string FrequencyDataHarvester::BuildEBirdLoginInfo(const std::string&userNa
 		+ "&lt=" + token
 		+ "&execution=e1s1"
 		+ "&_eventId=submit";
-}
-
-std::string FrequencyDataHarvester::BuildRegionString(const std::string &country, const std::string &state,
-	const std::string &county)
-{
-	EBirdInterface ebi;
-	const std::string countryCode(ebi.GetCountryCode(country));
-	if (countryCode.empty())
-		return std::string();
-
-	if (state.empty())
-		return countryCode;
-
-	const std::string stateCode(ebi.GetStateCode(countryCode, state));
-	if (stateCode.empty())
-		return std::string();
-
-	if (county.empty())
-		return stateCode;
-
-	const std::string countyCode(ebi.GetCountyCode(stateCode, county));
-	if (countyCode.empty())
-		return std::string();
-
-	return countyCode;
-}
-
-std::string FrequencyDataHarvester::BuildRegionString(const std::string &country, const std::string &state,
-	const unsigned int &county)
-{
-	const std::string countryAndStateCode(BuildRegionString(country, state, std::string()));
-	if (county == 0)
-		return countryAndStateCode;
-
-	std::ostringstream ss;
-	ss << countryAndStateCode << '-' << std::setfill('0') << std::setw(3) << county;
-	return ss.str();
 }
 
 std::string FrequencyDataHarvester::BuildTargetSpeciesURL(const std::string& regionString,
@@ -699,7 +678,7 @@ bool FrequencyDataHarvester::DataIsEmpty(const std::array<FrequencyData, 12>& fr
 }
 
 bool FrequencyDataHarvester::AuditFrequencyData(
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& censusKey)
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& eBirdApiKey)
 {
 	if (!DoEBirdLogin())
 		return false;
@@ -716,6 +695,8 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 	else if (lastBackSlash != std::string::npos)
 		targetPath = targetPath.substr(0, lastBackSlash + 1);
 
+	EBirdInterface ebi(eBirdApiKey);
+
 	for (const auto& f : freqInfo)
 	{
 		unsigned int i;
@@ -731,18 +712,14 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 				if (regionString.empty())
 				{
 					const std::string state(ExtractStateFromFileName(f.locationHint));
-					unsigned int stateFIPSCode;
-					if (!USCensusInterface::GetStateFIPSCode(state, stateFIPSCode))
-						return false;
-
-					USCensusInterface censusInterface(censusKey);
-					std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
+					const std::string stateCode(ebi.GetStateCode("US", state));// TODO:  Don't hardcode country
+					const auto countyList(ebi.GetSubRegions(stateCode, EBirdInterface::RegionType::SubNational2));
 					for (const auto& county : countyList)
 					{
 						if (MapPageGenerator::CountyNamesMatch(StripDirectory(
 							f.locationHint.substr(0, f.locationHint.length() - endOfName.size() - 2)), county.name))
 						{
-							regionString = BuildRegionString(countyCode, state, county.fipsCode);
+							regionString = county.code;
 							break;
 						}
 					}
@@ -774,23 +751,21 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 	auto states(GetStates(freqInfo));
 	for (const auto& s : states)
 	{
-		unsigned int stateFIPSCode;
-		if (!USCensusInterface::GetStateFIPSCode(s, stateFIPSCode))
-			return false;
+		const std::string stateCode(ebi.GetStateCode("US", s));// TODO:  Don't hardcode country
 
-		auto missingCounties(FindMissingCounties(s, freqInfo, stateFIPSCode, censusKey));
-		for (const auto& fips : missingCounties)
+		auto missingCounties(FindMissingCounties(stateCode, freqInfo, ebi));
+		for (const auto& county : missingCounties)
 		{
-			std::cout << "Missing county with FIPS = " << fips.first << " in " << s << "; Updating..." << std::endl;
+			std::cout << "Missing county " << county.name << "; Updating..." << std::endl;
 
 			std::array<FrequencyData, 12> data;
-			if (!PullFrequencyData(BuildRegionString(countyCode, s, fips.first), data))
+			if (!PullFrequencyData(county.code, data))
 				continue;
 
 			if (DataIsEmpty(data))
 				continue;
 
-			if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(s, fips.second), data))
+			if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(s, county.name), data))// TODO:  county.name correct argument to use here?
 				continue;
 		}
 	}
@@ -810,21 +785,19 @@ std::vector<std::string> FrequencyDataHarvester::GetStates(const std::vector<EBi
 	return states;
 }
 
-std::vector<std::pair<unsigned int, std::string>> FrequencyDataHarvester::FindMissingCounties(const std::string& state,
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
-	const unsigned int& stateFIPSCode, const std::string& censusKey)
+std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCounties(const std::string& stateCode,
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, EBirdInterface& ebi)
 {
 	std::vector<std::string> countiesInDataset;
 	for (const auto& f : freqInfo)
 	{
-		if (ExtractStateFromFileName(f.locationHint).compare(state) == 0)
+		if (ExtractStateFromFileName(f.locationHint).compare(stateCode.substr(stateCode.length() - 2)) == 0)
 			countiesInDataset.push_back(StripDirectory(f.locationHint.substr(0, f.locationHint.length() - endOfName.size() - 2)));
 	}
 
-	USCensusInterface censusInterface(censusKey);
-	std::vector<USCensusInterface::FIPSNamePair> countyList(censusInterface.GetCountyCodesInState(stateFIPSCode));
+	auto countyList(ebi.GetSubRegions(stateCode, EBirdInterface::RegionType::SubNational2));
 
-	std::vector<std::pair<unsigned int, std::string>> missingCounties(countyList.size() - countiesInDataset.size());
+	std::vector<EBirdInterface::RegionInfo> missingCounties(countyList.size() - countiesInDataset.size());
 	if (missingCounties.size() == 0)
 		return missingCounties;
 
@@ -843,8 +816,7 @@ std::vector<std::pair<unsigned int, std::string>> FrequencyDataHarvester::FindMi
 
 		if (!found)
 		{
-			mIt->first = c.fipsCode;
-			mIt->second = c.name;
+			*mIt = c;
 			++mIt;
 			if (mIt == missingCounties.end())
 				break;
