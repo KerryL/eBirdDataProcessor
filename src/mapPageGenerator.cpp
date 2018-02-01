@@ -268,7 +268,7 @@ bool MapPageGenerator::CreateFusionTable(
 			return false;
 		}
 	}
-exit(1);
+exit(1);// TODO:  Remove - still need to determine why we end up with duplicate rows...
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
 	if (rowsToDelete.size() > 0)
 	{
