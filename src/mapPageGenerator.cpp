@@ -268,7 +268,7 @@ bool MapPageGenerator::CreateFusionTable(
 			return false;
 		}
 	}
-
+exit(1);
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
 	if (rowsToDelete.size() > 0)
 	{
@@ -440,7 +440,74 @@ bool MapPageGenerator::ProcessJSONQueryResponse(cJSON* root, std::vector<CountyI
 
 bool MapPageGenerator::ProcessCSVQueryResponse(const std::string& csvData, std::vector<CountyInfo>& data)
 {
-	// TODO:  Implement
+	std::istringstream inData(csvData);
+	std::string line;
+	const std::string headingLine("rowid,State,County,Name,Location,Geometry,Probability-Jan,Probability-Feb,Probability-Mar,Probability-Apr,Probability-May,Probability-Jun,Probability-Jul,Probability-Aug,Probability-Sep,Probability-Oct,Probability-Nov,Probability-Dec");
+	std::getline(inData, line);
+	if (line.compare(headingLine) != 0)
+	{
+		std::cerr << "Heading line does not match expected response\n";
+		return false;
+	}
+
+	while (std::getline(inData, line))
+	{
+		CountyInfo info;
+		if (!ProcessCSVQueryLine(line, info))
+			return false;
+		data.push_back(info);
+	}
+
+	return true;
+}
+
+bool MapPageGenerator::ProcessCSVQueryLine(const std::string& line, CountyInfo& info)
+{
+	std::istringstream ss(line);
+	if (!EBirdDataProcessor::ParseToken(ss, "row ID", info.rowId))
+		return false;
+
+	if (!EBirdDataProcessor::ParseToken(ss, "state", info.state))
+		return false;
+
+	if (!EBirdDataProcessor::ParseToken(ss, "county", info.county))
+		return false;
+
+	if (!EBirdDataProcessor::ParseToken(ss, "name", info.name))
+		return false;
+
+	std::string location;
+	if (!EBirdDataProcessor::ParseToken(ss, "location", location))
+		return false;
+	std::istringstream tokenStream(location);
+	if ((tokenStream >> info.latitude).fail())
+	{
+		std::cerr << "Failed to parse latitude\n";
+		return false;
+	}
+	else if ((tokenStream >> info.longitude).fail())
+	{
+		std::cerr << "Failed to parse longitude\n";
+		return false;
+	}
+
+	if (!EBirdDataProcessor::ParseToken(ss, "geometry", info.geometryKML))
+		return false;
+
+	info.neLatitude = 0.0;
+	info.neLongitude = 0.0;
+	info.swLatitude = 0.0;
+	info.swLongitude = 0.0;
+
+	for (auto& p : info.probabilities)
+	{
+		if (!EBirdDataProcessor::ParseToken(ss, "probability", p))
+			return false;
+	}
+
+	for (auto& f : info.frequencyInfo)
+		f.clear();
+
 	return false;
 }
 

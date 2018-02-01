@@ -83,6 +83,9 @@ public:
 
 	static bool AuditFrequencyData(const std::string& freqFileDirectory, const std::string& eBirdApiKey);
 
+	template<typename T>
+	static bool ParseToken(std::istringstream& lineStream, const std::string& fieldName, T& target);
+
 private:
 	static const std::string headerLine;
 
@@ -126,8 +129,6 @@ private:
 
 	static int DoComparison(const Entry& a, const Entry& b, const EBDPConfig::SortBy& sortBy);
 
-	template<typename T>
-	static bool ParseToken(std::istringstream& lineStream, const std::string& fieldName, T& target);
 	template<typename T>
 	static bool InterpretToken(std::istringstream& tokenStream, const std::string& fieldName, T& target);
 	static bool InterpretToken(std::istringstream& tokenStream, const std::string& fieldName, std::string& target);

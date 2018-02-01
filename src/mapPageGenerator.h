@@ -133,6 +133,7 @@ private:
 		GFTI& fusionTables, const std::string& tableId);
 	static bool ProcessJSONQueryResponse(cJSON* root, std::vector<CountyInfo>& data);
 	static bool ProcessCSVQueryResponse(const std::string& csvData, std::vector<CountyInfo>& data);
+	static bool ProcessCSVQueryLine(const std::string& line, CountyInfo& info);
 	static bool ReadExistingCountyData(cJSON* row, CountyInfo& data);
 	static std::vector<unsigned int> DetermineDeleteUpdateAdd(
 		std::vector<CountyInfo>& existingData, const std::vector<ObservationInfo>& newData);
