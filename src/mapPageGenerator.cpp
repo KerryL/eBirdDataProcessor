@@ -789,6 +789,7 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 {
 	for (const auto& g : geometry)
 	{
+		// TODO:  Need to strip accents from both strings prior to making comparison
 		std::string countyString(ToLower(StripCountyFromName(data.county)));
 		if (g.state.compare(data.state) == 0 && ToLower(g.county).compare(countyString) == 0)
 		{
@@ -884,12 +885,13 @@ bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::stri
 		// According to Google docs, if we get this error, another attempt
 		// may succeed.  In practice, this seems to be true.
 		const std::string unknownErrorStatus("UNKNOWN_ERROR");
+		const std::vector<std::string> preferredMatches({ "County", "Parish" });
 		std::string status;
 		GoogleMapsInterface gMap("County Lookup Tool", googleMapsKey);
 		mapsAPIRateLimiter.Wait();
 		if (gMap.LookupCoordinates(county + " " + state, geographicName,
 			latitude, longitude, neLatitude, neLongitude, swLatitude, swLongitude,
-			"County", &status))
+			preferredMatches, &status))
 			break;
 		else if (status.compare(unknownErrorStatus) != 0 || i == maxAttempts - 1)
 			return false;

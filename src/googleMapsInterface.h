@@ -62,6 +62,12 @@ public:
 		double& southwestLatitude, double& southwestLongitude,
 		const std::string& preferNameContaining = "", std::string* statusRet = nullptr) const;
 
+	bool LookupCoordinates(const std::string& searchString, std::string& formattedAddress,
+		double& latitude, double& longitude,
+		double& northeastLatitude, double& northeastLongitude,
+		double& southwestLatitude, double& southwestLongitude,
+		const std::vector<std::string>& preferNamesContaining = std::vector<std::string>(), std::string* statusRet = nullptr) const;
+
 private:
 	const std::string apiKey;
 

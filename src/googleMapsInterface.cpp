@@ -324,6 +324,21 @@ bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 	double& southwestLatitude, double& southwestLongitude,
 	const std::string& preferNameContaining, std::string* statusRet) const
 {
+	std::vector<std::string> names;
+	if (!preferNameContaining.empty())
+		names.push_back(preferNameContaining);
+
+	return LookupCoordinates(searchString, formattedAddress, latitude, longitude,
+		northeastLatitude, northeastLongitude, southwestLatitude, southwestLongitude,
+		names, statusRet);
+}
+
+bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
+	std::string& formattedAddress, double& latitude, double& longitude,
+	double& northeastLatitude, double& northeastLongitude,
+	double& southwestLatitude, double& southwestLongitude,
+	const std::vector<std::string>& preferNamesContaining, std::string* statusRet) const
+{
 	const std::string requestURL(apiRoot + geocodeEndPoint
 		+ "?address=" + SanitizeAddress(searchString) + "&key=" + apiKey);
 	std::string response;
@@ -341,15 +356,18 @@ bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 	if (info.size() > 1)
 		std::cerr << "Warning:  Multiple results found for '" << searchString << "' - using first result\n";
 
-	if (!preferNameContaining.empty() &&
-		info.front().formattedAddress.find(preferNameContaining) == std::string::npos)
+	if (!preferNamesContaining.empty())
 	{
-		for (const auto& component : info.front().addressComponents)
+		for (const auto& name : preferNamesContaining)
 		{
-			if (component.longName.find(preferNameContaining) != std::string::npos)
+			for (const auto& component : info.front().addressComponents)
 			{
-				formattedAddress = component.longName;
-				break;
+				if (component.longName.find(name) != std::string::npos ||
+					component.shortName.find(name) != std::string::npos)
+				{
+					formattedAddress = component.longName;
+					break;
+				}
 			}
 		}
 	}
