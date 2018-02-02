@@ -522,7 +522,27 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 
 	if (root)
 		return ProcessJSONQueryResponse(root, data);
-	return ProcessCSVQueryResponse(csvData, data);
+
+	// Apparent bug in Fusion Table media download - rowid field is ignored.
+	// So if we hit a limit (have a populated csvData and no root), use LIMIT
+	// and OFFSET to modify the query, piecing together the data until we have
+	// all of it.
+	if (!csvData.empty())
+		return false;
+
+	const unsigned int batchSize(1000);
+	unsigned int count(0);
+	do
+	{
+		std::ostringstream offsetAndLimit;
+		offsetAndLimit << " OFFSET " << count * batchSize << " LIMIT " << batchSize;
+		if (!fusionTables.SubmitQuery(query + offsetAndLimit.str(), root))
+			return false;
+		++count;
+
+	} while (data.size() == count * batchSize);
+	return true;
+	//return ProcessCSVQueryResponse(csvData, data);
 }
 
 bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
