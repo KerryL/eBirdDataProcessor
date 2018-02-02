@@ -770,7 +770,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 			if (DataIsEmpty(data))
 				continue;
 
-			if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(s, county.name), data))// TODO:  county.name correct argument to use here?
+			if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(s, county.name), data))
 				continue;
 		}
 	}
