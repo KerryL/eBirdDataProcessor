@@ -74,7 +74,7 @@ private:
 	void WriteScripts(std::ofstream& f, const Keys& keys,
 		const std::vector<ObservationInfo>& observationProbabilities);
 	bool CreateFusionTable(
-		const std::vector<ObservationInfo>& observationProbabilities,
+		std::vector<ObservationInfo> observationProbabilities,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
 		std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
@@ -136,7 +136,7 @@ private:
 	static bool ProcessCSVQueryLine(const std::string& line, CountyInfo& info);
 	static bool ReadExistingCountyData(cJSON* row, CountyInfo& data);
 	static std::vector<unsigned int> DetermineDeleteUpdateAdd(
-		std::vector<CountyInfo>& existingData, const std::vector<ObservationInfo>& newData);
+		std::vector<CountyInfo>& existingData, std::vector<ObservationInfo>& newData);
 	static bool CopyExistingDataForCounty(const ObservationInfo& entry,
 		const std::vector<CountyInfo>& existingData, CountyInfo& newData,
 		const std::vector<CountyGeometry>& geometry);

@@ -6,6 +6,10 @@
 // Local headers
 #include "threadPool.h"
 
+// Standard C++ headers
+#include <iostream>
+#include <iomanip>
+
 ThreadPool::ThreadPool(const unsigned int& threadCount, const unsigned int& rateLimit)
 	: minRequestDelta(rateLimit > 0 ? std::chrono::milliseconds(static_cast<long long>(1000.0 / rateLimit)) : std::chrono::milliseconds(0))
 {
@@ -46,10 +50,19 @@ void ThreadPool::AddJob(std::unique_ptr<JobInfoBase> job)
 void ThreadPool::WaitForAllJobsComplete() const
 {
 	std::unique_lock<std::mutex> lock(queueMutex);
-	jobCompleteCondition.wait(lock, [this]()
+    unsigned int maxJobQueueSize(jobQueue.size());
+    const auto originalPrecision(std::cout.precision());
+    std::cout.precision(1);
+	jobCompleteCondition.wait(lock, [this, &maxJobQueueSize]()
 	{
+        if (jobQueue.size() > maxJobQueueSize)
+            maxJobQueueSize = jobQueue.size();
+        const double fraction(static_cast<double>(maxJobQueueSize - jobQueue.size()) / maxJobQueueSize * 100.0);
+        std::cout << std::fixed << '\r' << fraction << '%';
 		return jobQueue.empty() && pendingJobCount == 0;
 	});
+    std::cout.precision(originalPrecision);
+    std::cout << std::endl;
 }
 
 void ThreadPool::ThreadEntry()

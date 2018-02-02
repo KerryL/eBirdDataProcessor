@@ -211,7 +211,7 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 }
 
 bool MapPageGenerator::CreateFusionTable(
-	const std::vector<ObservationInfo>& observationProbabilities,
+	std::vector<ObservationInfo> observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
 	std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
@@ -638,13 +638,13 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 
 // For each row in existingData, there are three possible outcomes:
 // 1.  newData has no entry corresponding to existing row -> Delete row
-//     -> Delete row from table and delete entry from existingData
+//     -> Delete row from table and delete entry from existingData (already does not exist in newData)
 // 2.  newData and row have corresponding entries, probability data is the same -> Leave row as-is
-//     -> Delete entry from existingData, but do not delete from table
+//     -> Delete entry from existingData and newData, but do not delete from table
 // 3.  newData and row have corresponding entries, probability data is different -> Update row (Delete + re-import)
-//     -> Delete row from table, but do not delete from existingData
+//     -> Delete row from table, but do not delete from existingData or newData
 std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
-	std::vector<CountyInfo>& existingData, const std::vector<ObservationInfo>& newData)
+	std::vector<CountyInfo>& existingData, std::vector<ObservationInfo>& newData)
 {
 	std::vector<unsigned int> deletedRows;
 	existingData.erase(std::remove_if(existingData.begin(), existingData.end(),
@@ -659,7 +659,10 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 			}
 
 			if (!ProbabilityDataHasChanged(*matchingEntry, c))
+			{
+				newData.erase(matchingEntry);
 				return true;// Leave row as-is (Case #2)
+			}
 
 			// Need to delete row, but don't remove it from exisingData (Case #3)
 			deletedRows.push_back(c.rowId);
