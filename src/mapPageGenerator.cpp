@@ -268,7 +268,7 @@ bool MapPageGenerator::CreateFusionTable(
 			return false;
 		}
 	}
-exit(1);// TODO:  Remove - still need to determine why we end up with duplicate rows...
+
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
 	if (rowsToDelete.size() > 0)
 	{
@@ -383,7 +383,7 @@ bool MapPageGenerator::DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables
 	{
 		const unsigned int batchSize(std::min(maxDeleteSize,
 			static_cast<unsigned int>(std::distance(startIt, rowIds.end()))));
-		auto endIt(rowIds.begin() + batchSize);
+		auto endIt(startIt + batchSize);
 		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.DeleteRows(tableId, std::vector<unsigned int>(startIt, endIt)))
 			return false;
