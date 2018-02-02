@@ -415,9 +415,9 @@ bool MapPageGenerator::ProcessJSONQueryResponse(cJSON* root, std::vector<CountyI
 		return false;
 	}
 
-	data.resize(cJSON_GetArraySize(rowsArray));
+	std::vector<CountyInfo> newData(cJSON_GetArraySize(rowsArray));
 	unsigned int i(0);
-	for (auto& row : data)
+	for (auto& row : newData)
 	{
 		cJSON* rowRoot(cJSON_GetArrayItem(rowsArray, i++));
 		if (!rowRoot)
@@ -434,6 +434,7 @@ bool MapPageGenerator::ProcessJSONQueryResponse(cJSON* root, std::vector<CountyI
 		}
 	}
 
+	data.insert(data.end(), newData.begin(), newData.end());
 	cJSON_Delete(root);
 	return true;
 }
@@ -516,8 +517,9 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 {
 	cJSON* root(nullptr);
 	std::string csvData;
-	const std::string query("SELECT ROWID,State,County,Name,Location,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId + "&typed=false");
-	if (!fusionTables.SubmitQuery(query, root, &csvData))
+	const std::string query("SELECT ROWID,State,County,Name,Location,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId);
+	const std::string nonTypedOption("&typed=false");
+	if (!fusionTables.SubmitQuery(query + nonTypedOption, root, &csvData))
 		return false;
 
 	if (root)
@@ -527,7 +529,7 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 	// So if we hit a limit (have a populated csvData and no root), use LIMIT
 	// and OFFSET to modify the query, piecing together the data until we have
 	// all of it.
-	if (!csvData.empty())
+	if (csvData.empty())// Shouldn't have no root and also no csvData
 		return false;
 
 	const unsigned int batchSize(1000);
@@ -536,10 +538,14 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 	{
 		std::ostringstream offsetAndLimit;
 		offsetAndLimit << " OFFSET " << count * batchSize << " LIMIT " << batchSize;
-		if (!fusionTables.SubmitQuery(query + offsetAndLimit.str(), root))
+		if (!fusionTables.SubmitQuery(query + offsetAndLimit.str() + nonTypedOption, root))
 			return false;
-		++count;
 
+		if (!ProcessJSONQueryResponse(root, data))
+			return false;
+
+		root = nullptr;
+		++count;
 	} while (data.size() == count * batchSize);
 	return true;
 	//return ProcessCSVQueryResponse(csvData, data);
