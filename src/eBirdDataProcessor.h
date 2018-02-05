@@ -86,6 +86,8 @@ public:
 	template<typename T>
 	static bool ParseToken(std::istringstream& lineStream, const std::string& fieldName, T& target);
 
+	static std::string Trim(std::string s);
+
 private:
 	static const std::string headerLine;
 
@@ -149,7 +151,6 @@ private:
 
 	static bool CommonNamesMatch(std::string a, std::string b);
 	static std::string StripParentheses(std::string s);
-	static std::string Trim(std::string s);
 
 	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
 	typedef std::array<double, 12> DoubleYear;

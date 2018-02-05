@@ -261,7 +261,7 @@ bool MapPageGenerator::CreateFusionTable(
 	const auto duplicateRowsToDelete(FindDuplicatesAndBlanksToRemove(existingData));
 	if (duplicateRowsToDelete.size() > 0)
 	{
-		std::cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate entires" << std::endl;
+		std::cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate or blank entires" << std::endl;
 		if (!DeleteRowsBatch(fusionTables, tableId, duplicateRowsToDelete))
 		{
 			std::cerr << "Failed to remove duplicates\n";
@@ -672,25 +672,24 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 	return deletedRows;
 }
 
-//
 std::vector<unsigned int> MapPageGenerator::FindDuplicatesAndBlanksToRemove(std::vector<CountyInfo>& existingData)
 {
 	std::vector<unsigned int> deletedRows;
 	auto startIterator(existingData.begin());
 	for (const auto item : existingData)
 	{
+		if (item.state.empty() || item.county.empty() || item.geometryKML.empty() ||
+			(item.latitude == 0.0 && item.longitude == 0.0 && item.neLatitude == 0.0 &&
+			item.swLatitude == 0.0 && item.neLongitude == 0.0 && item.swLongitude == 0.0))
+		{
+			deletedRows.push_back(item.rowId);
+			continue;
+		}
+
 		bool deletedSelf(false);
 		auto it(++startIterator);
 		for (; it != existingData.end(); ++it)
 		{
-			if (item.state.empty() || item.county.empty() ||
-				(item.latitude == 0.0 && item.longitude == 0.0 && item.neLatitude == 0.0 &&
-				item.swLatitude == 0.0 && item.neLongitude == 0.0 && item.swLongitude == 0.0))
-			{
-				deletedRows.push_back(item.rowId);
-				continue;
-			}
-
 			if (it->state.compare(item.state) != 0)
 				continue;
 			else if (!CountyNamesMatch(item.county, it->county))
@@ -790,7 +789,7 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 	for (const auto& g : geometry)
 	{
 		// TODO:  Need to strip accents from both strings prior to making comparison
-		std::string countyString(ToLower(StripCountyFromName(data.county)));
+		std::string countyString(EBirdDataProcessor::Trim(ToLower(StripCountyFromName(data.county))));
 		if (g.state.compare(data.state) == 0 && ToLower(g.county).compare(countyString) == 0)
 		{
 			data.geometryKML = g.kml;
