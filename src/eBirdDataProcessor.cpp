@@ -1125,7 +1125,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 
 	pool.WaitForAllJobsComplete();
 
-	time_t now(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
+	/*time_t now(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
 	const struct tm nowTime(*localtime(&now));
 	const int currentMonth(nowTime.tm_mon);
 	std::sort(newSightingProbability.begin(), newSightingProbability.end(), [&currentMonth](const YearFrequencyInfo& a, const YearFrequencyInfo& b)
@@ -1133,7 +1133,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 		return a.probabilities[currentMonth] > b.probabilities[currentMonth];
 	});
 
-	/*for (const auto& location : newSightingProbability)
+	for (const auto& location : newSightingProbability)
 		std::cout << location.locationHint << " : " << location.probabilities[currentMonth] * 100.0 << std::endl;*/
 
 	if (!googleMapsKey.empty())
