@@ -678,7 +678,7 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 				return true;
 			}
 
-			if (!ProbabilityDataHasChanged(*matchingEntry, c))
+			if (SpeciesDataIsValid(c) && !ProbabilityDataHasChanged(*matchingEntry, c))
 			{
 				newData.erase(matchingEntry);
 				return true;// Leave row as-is (Case #2)
@@ -690,6 +690,20 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 		}), existingData.end());
 
 	return deletedRows;
+}
+
+bool MapPageGenerator::SpeciesDataIsValid(const CountyInfo& c)
+{
+	for (const auto& month : c.frequencyInfo)
+	{
+		for (const auto& species : month)
+		{
+			if (species.frequency == 0.0 || species.species.compare("(0.00%)") == 0)
+				return false;
+		}
+	}
+
+	return true;
 }
 
 std::vector<unsigned int> MapPageGenerator::FindDuplicatesAndBlanksToRemove(std::vector<CountyInfo>& existingData)

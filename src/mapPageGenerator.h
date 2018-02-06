@@ -194,6 +194,7 @@ private:
 		const std::string& tableId, const std::vector<unsigned int>& rowIds);
 
 	static bool GetConfirmationFromUser();
+	static bool SpeciesDataIsValid(const CountyInfo& c);
 };
 
 template<typename T>
