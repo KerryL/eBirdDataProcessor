@@ -255,6 +255,20 @@ bool MapPageGenerator::CreateFusionTable(
 			std::cerr << "Failed to make table public\n";
 	}
 
+	const auto invalidSpeciesDataRowsToDelete(FindInvalidSpeciesDataToRemove(fusionTables, tableId));
+	if (invalidSpeciesDataRowsToDelete.size() > 0)
+	{
+		std::cout << "Deleting " << invalidSpeciesDataRowsToDelete.size() << " rows with invalid species data" << std::endl;
+		if (!GetConfirmationFromUser())
+			return false;
+
+		if (!DeleteRowsBatch(fusionTables, tableId, invalidSpeciesDataRowsToDelete))
+		{
+			std::cerr << "Failed to remove rows with invalid species data\n";
+			return false;
+		}
+	}
+
 	const auto duplicateRowsToDelete(FindDuplicatesAndBlanksToRemove(existingData));
 	if (duplicateRowsToDelete.size() > 0)
 	{
@@ -678,12 +692,6 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 				return true;
 			}
 
-			if (SpeciesDataIsValid(c) && !ProbabilityDataHasChanged(*matchingEntry, c))
-			{
-				newData.erase(matchingEntry);
-				return true;// Leave row as-is (Case #2)
-			}
-
 			// Need to delete row, but don't remove it from exisingData (Case #3)
 			deletedRows.push_back(c.rowId);
 			return false;
@@ -692,17 +700,96 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 	return deletedRows;
 }
 
-bool MapPageGenerator::SpeciesDataIsValid(const CountyInfo& c)
+std::vector<unsigned int> MapPageGenerator::FindInvalidSpeciesDataToRemove(
+	GFTI& fusionTables, const std::string& tableId)
 {
-	for (const auto& month : c.frequencyInfo)
+	std::vector<unsigned int> invalidRows;
+	for (const auto& month : monthNames)
 	{
-		for (const auto& species : month)
+		cJSON* root(nullptr);
+		std::string csvData;
+		const std::string query("SELECT ROWID FROM " + tableId + " WHERE 'Species-" + month.shortName + "' MATCHES '(0.00%)'");
+		const std::string nonTypedOption("&typed=false");
+		if (!fusionTables.SubmitQuery(query + nonTypedOption, root, &csvData))
+			break;
+
+		if (root)
 		{
-			if (species.frequency == 0.0 || species.species.compare("(0.00%)") == 0)
-				return false;
+			FindInvalidSpeciesDataInJSONResponse(root, invalidRows);
+			continue;
+		}
+
+		// Apparent bug in Fusion Table media download - rowid field is ignored.
+		// So if we hit a limit (have a populated csvData and no root), use LIMIT
+		// and OFFSET to modify the query, piecing together the data until we have
+		// all of it.
+		if (csvData.empty())// Shouldn't have no root and also no csvData
+			return invalidRows;
+
+		std::vector<unsigned int> additionalRows;
+		const unsigned int batchSize(100);
+		unsigned int count(0);
+		do
+		{
+			std::ostringstream offsetAndLimit;
+			offsetAndLimit << " OFFSET " << count * batchSize << " LIMIT " << batchSize;
+			if (!fusionTables.SubmitQuery(query + offsetAndLimit.str() + nonTypedOption, root))
+				break;
+
+			if (!FindInvalidSpeciesDataInJSONResponse(root, additionalRows))
+				break;
+
+			root = nullptr;
+			++count;
+		} while (additionalRows.size() == count * batchSize);
+		invalidRows.insert(invalidRows.end(), additionalRows.begin(), additionalRows.end());
+	}
+
+	std::sort(invalidRows.begin(), invalidRows.end());
+	invalidRows.erase(std::unique(invalidRows.begin(), invalidRows.end()), invalidRows.end());
+	return invalidRows;
+}
+
+bool MapPageGenerator::FindInvalidSpeciesDataInJSONResponse(cJSON* root, std::vector<unsigned int>& invalidRows)
+{
+	assert(root);
+	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
+	if (!rowsArray)
+	{
+		std::cerr << "Failed to get rows array\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	std::vector<unsigned int> newData(cJSON_GetArraySize(rowsArray));
+	unsigned int i(0);
+	for (auto& row : newData)
+	{
+		cJSON* rowRoot(cJSON_GetArrayItem(rowsArray, i++));
+		if (!rowRoot)
+		{
+			cJSON_Delete(root);
+			std::cerr << "Failed to read existing row\n";
+			return false;
+		}
+
+		cJSON* rowIdItem(cJSON_GetArrayItem(rowRoot, 0));
+		if (!rowIdItem)
+		{
+			cJSON_Delete(root);
+			std::cerr << "Failed to read item from row\n";
+			return false;
+		}
+
+		if (!Read(rowIdItem, row))
+		{
+			cJSON_Delete(root);
+			return false;
 		}
 	}
 
+	invalidRows.insert(invalidRows.end(), newData.begin(), newData.end());
+	cJSON_Delete(root);
 	return true;
 }
 

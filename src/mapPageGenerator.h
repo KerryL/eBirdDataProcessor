@@ -28,7 +28,7 @@ public:
 
 	static bool CountyNamesMatch(const std::string& a, const std::string& b);
 
-private:
+//private:
 	static const std::string birdProbabilityTableName;
 
 	struct NamePair
@@ -194,7 +194,8 @@ private:
 		const std::string& tableId, const std::vector<unsigned int>& rowIds);
 
 	static bool GetConfirmationFromUser();
-	static bool SpeciesDataIsValid(const CountyInfo& c);
+	static std::vector<unsigned int> FindInvalidSpeciesDataToRemove(GFTI& fusionTables, const std::string& tableId);
+	static bool FindInvalidSpeciesDataInJSONResponse(cJSON* root, std::vector<unsigned int>& invalidRows);
 };
 
 template<typename T>
