@@ -192,6 +192,8 @@ private:
 		const std::string& month);
 	bool DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables,
 		const std::string& tableId, const std::vector<unsigned int>& rowIds);
+
+	static bool GetConfirmationFromUser();
 };
 
 template<typename T>

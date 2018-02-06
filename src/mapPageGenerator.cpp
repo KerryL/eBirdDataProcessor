@@ -262,6 +262,9 @@ bool MapPageGenerator::CreateFusionTable(
 	if (duplicateRowsToDelete.size() > 0)
 	{
 		std::cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate or blank entires" << std::endl;
+		if (!GetConfirmationFromUser())
+			return false;
+
 		if (!DeleteRowsBatch(fusionTables, tableId, duplicateRowsToDelete))
 		{
 			std::cerr << "Failed to remove duplicates\n";
@@ -273,6 +276,9 @@ bool MapPageGenerator::CreateFusionTable(
 	if (rowsToDelete.size() > 0)
 	{
 		std::cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
+		if (!GetConfirmationFromUser())
+			return false;
+
 		if (!DeleteRowsBatch(fusionTables, tableId, rowsToDelete))
 		{
 			std::cerr << "Failed to remove rows for update\n";
@@ -372,6 +378,23 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	return true;
+}
+
+bool MapPageGenerator::GetConfirmationFromUser()
+{
+	std::cout << "Continue? (y/n) ";
+	std::string response;
+	while (response.empty())
+	{
+		std::cin >> response;
+		if (ToLower(response).compare("y") == 0)
+			return true;
+		if (ToLower(response).compare("n") == 0)
+			break;
+		response.clear();
+	}
+
+	return false;
 }
 
 bool MapPageGenerator::DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables,
