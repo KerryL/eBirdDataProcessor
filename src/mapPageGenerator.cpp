@@ -804,6 +804,7 @@ std::vector<unsigned int> MapPageGenerator::FindDuplicatesAndBlanksToRemove(std:
 	auto startIterator(existingData.begin());
 	for (const auto item : existingData)
 	{
+		auto it(++startIterator);
 		if (item.state.empty() || item.county.empty() || item.geometryKML.empty() ||
 			(item.latitude == 0.0 && item.longitude == 0.0 && item.neLatitude == 0.0 &&
 			item.swLatitude == 0.0 && item.neLongitude == 0.0 && item.swLongitude == 0.0))
@@ -813,7 +814,6 @@ std::vector<unsigned int> MapPageGenerator::FindDuplicatesAndBlanksToRemove(std:
 		}
 
 		bool deletedSelf(false);
-		auto it(++startIterator);
 		for (; it != existingData.end(); ++it)
 		{
 			if (it->state.compare(item.state) != 0)
