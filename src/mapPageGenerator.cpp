@@ -51,21 +51,23 @@ bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileN
 	const std::vector<ObservationInfo>& observationProbabilities,
 	const std::string& clientId, const std::string& clientSecret)
 {
+	std::ostringstream contents;
+	const Keys keys(googleMapsKey, clientId, clientSecret);
+	WriteHeadSection(contents, keys, observationProbabilities);
+	WriteBody(contents);
+
 	std::ofstream file(htmlFileName.c_str());
 	if (!file.is_open() || !file.good())
 	{
 		std::cerr << "Failed to open '" << htmlFileName << "' for output\n";
 		return false;
 	}
-
-	const Keys keys(googleMapsKey, clientId, clientSecret);
-	WriteHeadSection(file, keys, observationProbabilities);
-	WriteBody(file);
+	file << contents.str();
 
 	return true;
 }
 
-void MapPageGenerator::WriteHeadSection(std::ofstream& f, const Keys& keys,
+void MapPageGenerator::WriteHeadSection(std::ostream& f, const Keys& keys,
 	const std::vector<ObservationInfo>& observationProbabilities)
 {
 	f << "<!DOCTYPE html>\n"
@@ -90,7 +92,7 @@ void MapPageGenerator::WriteHeadSection(std::ofstream& f, const Keys& keys,
 	f << "  </head>\n";
 }
 
-void MapPageGenerator::WriteBody(std::ofstream& f)
+void MapPageGenerator::WriteBody(std::ostream& f)
 {
 	f << "  <body>\n"
 		<< "    <div id=\"map\"></div>\n"
@@ -109,7 +111,7 @@ void MapPageGenerator::WriteBody(std::ofstream& f)
 		<< "</html>";
 }
 
-void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
+void MapPageGenerator::WriteScripts(std::ostream& f, const Keys& keys,
 	const std::vector<ObservationInfo>& observationProbabilities)
 {
 	double northeastLatitude, northeastLongitude;
@@ -121,7 +123,10 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 	if (!CreateFusionTable(observationProbabilities, northeastLatitude,
 		northeastLongitude, southwestLatitude, southwestLongitude, tableId,
 		keys, styleIds, templateIds))
-		std::cerr << "Failed to create fusion table; continuing to write HTML file...\n";
+	{
+		std::cerr << "Failed to create fusion table\n";
+		return;
+	}
 
 	const double centerLatitude(0.5 * (northeastLatitude + southwestLatitude));
 	const double centerLongitude(0.5 * (northeastLongitude + southwestLongitude));
@@ -1355,6 +1360,8 @@ std::string MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdData
 	ss << std::setprecision(2) << std::fixed;
 	for (const auto& s : info)
 	{
+		if (s.species.empty())
+			std::cout << "Found one!" << std::endl;
 		if (!ss.str().empty())
 			ss << "<br>";
 		ss << s.species << " (" << s.frequency << "%)";

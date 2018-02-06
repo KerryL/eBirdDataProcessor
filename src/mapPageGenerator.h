@@ -28,7 +28,7 @@ public:
 
 	static bool CountyNamesMatch(const std::string& a, const std::string& b);
 
-//private:
+private:
 	static const std::string birdProbabilityTableName;
 
 	struct NamePair
@@ -68,10 +68,10 @@ public:
 
 	bool UploadBuffer(GFTI& fusionTables, const std::string& tableId, const std::string& buffer);
 
-	void WriteHeadSection(std::ofstream& f, const Keys& keys,
+	void WriteHeadSection(std::ostream& f, const Keys& keys,
 		const std::vector<ObservationInfo>& observationProbabilities);
-	static void WriteBody(std::ofstream& f);
-	void WriteScripts(std::ofstream& f, const Keys& keys,
+	static void WriteBody(std::ostream& f);
+	void WriteScripts(std::ostream& f, const Keys& keys,
 		const std::vector<ObservationInfo>& observationProbabilities);
 	bool CreateFusionTable(
 		std::vector<ObservationInfo> observationProbabilities,
