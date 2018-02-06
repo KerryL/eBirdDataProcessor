@@ -121,10 +121,7 @@ void MapPageGenerator::WriteScripts(std::ofstream& f, const Keys& keys,
 	if (!CreateFusionTable(observationProbabilities, northeastLatitude,
 		northeastLongitude, southwestLatitude, southwestLongitude, tableId,
 		keys, styleIds, templateIds))
-	{
-		std::cerr << "Failed to create fusion table\n";
-		return;
-	}
+		std::cerr << "Failed to create fusion table; continuing to write HTML file...\n";
 
 	const double centerLatitude(0.5 * (northeastLatitude + southwestLatitude));
 	const double centerLongitude(0.5 * (northeastLongitude + southwestLongitude));
