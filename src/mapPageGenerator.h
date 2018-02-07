@@ -14,6 +14,7 @@
 
 // Standard C++ headers
 #include <fstream>
+#include <map>
 
 class MapPageGenerator
 {
@@ -22,11 +23,9 @@ public:
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
 	bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
-		const std::string& googleMapsKey,
+		const std::string& googleMapsKey, const std::string& eBirdAPIKey,
 		const std::vector<ObservationInfo>& observationInfo,
 		const std::string& clientId, const std::string& clientSecret);
-
-	static bool CountyNamesMatch(const std::string& a, const std::string& b);
 
 private:
 	static const std::string birdProbabilityTableName;
@@ -45,11 +44,12 @@ private:
 
 	struct Keys
 	{
-		Keys(const std::string& googleMapsKey, const std::string& clientId,
-			const std::string& clientSecret) : googleMapsKey(googleMapsKey),
+		Keys(const std::string& googleMapsKey, const std::string& eBirdAPIKey, const std::string& clientId,
+			const std::string& clientSecret) : googleMapsKey(googleMapsKey), eBirdAPIKey(eBirdAPIKey),
 			clientId(clientId), clientSecret(clientSecret) {}
 
 		const std::string googleMapsKey;
+		const std::string eBirdAPIKey;
 		const std::string clientId;
 		const std::string clientSecret;
 	};
@@ -79,16 +79,8 @@ private:
 		double& southwestLatitude, double& southwestLongitude,
 		std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
 		std::vector<unsigned int>& templateIds);
-	bool GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
-		const std::string& county, double& latitude, double& longitude,
-		double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
-		std::string& geographicName, const std::string& googleMapsKey);
-	static bool GetStateAbbreviationFromFileName(const std::string& fileName, std::string& state);
-	static bool GetCountyNameFromFileName(const std::string& fileName, std::string& county);
 
-	static std::string StripCountyFromName(const std::string& s);
 	static std::string CleanQueryString(const std::string& s);
-	static std::string CleanFileName(const std::string& s);
 	static std::string ComputeColor(const double& frequency);
 
 	struct Color
@@ -106,13 +98,8 @@ private:
 		std::string name;
 		std::string state;
 		std::string county;
-
-		double latitude;
-		double longitude;
-		double neLatitude;
-		double neLongitude;
-		double swLatitude;
-		double swLongitude;
+		std::string country;
+		std::string code;
 
 		std::string geometryKML;
 
@@ -165,19 +152,21 @@ private:
 	{
 		MapJobInfo() = default;
 		MapJobInfo(CountyInfo& info, const ObservationInfo& frequencyInfo,
-			const std::string& googleMapsKey, const std::vector<CountyGeometry>& geometry,
+			const std::vector<EBirdInterface::RegionInfo>& regionNames, const std::vector<CountyGeometry>& geometry,
 			MapPageGenerator& mpg)
-			: info(info), frequencyInfo(frequencyInfo), googleMapsKey(googleMapsKey),
+			: info(info), frequencyInfo(frequencyInfo), regionNames(regionNames),
 			geometry(geometry), mpg(mpg) {}
 
 		CountyInfo& info;
 		const ObservationInfo& frequencyInfo;
-		const std::string& googleMapsKey;
+		const std::vector<EBirdInterface::RegionInfo>& regionNames;
 		const std::vector<CountyGeometry>& geometry;
 		MapPageGenerator& mpg;
 
 		void DoJob() override;
 	};
+
+	std::map<std::string, std::vector<EBirdInterface::RegionInfo>> countryRegionInfoMap;
 
 	bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
 		const std::string& tableId, std::vector<unsigned int>& styleIds);
@@ -194,6 +183,8 @@ private:
 	static bool GetConfirmationFromUser();
 	static std::vector<unsigned int> FindInvalidSpeciesDataToRemove(GFTI& fusionTables, const std::string& tableId);
 	static bool FindInvalidSpeciesDataInJSONResponse(cJSON* root, std::vector<unsigned int>& invalidRows);
+
+	static std::vector<std::string> GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities);
 };
 
 template<typename T>

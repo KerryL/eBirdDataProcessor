@@ -19,6 +19,7 @@
 #include <thread>
 #include <algorithm>
 #include <cassert>
+#include <set>
 
 const std::string MapPageGenerator::birdProbabilityTableName("Bird Probability Table");
 const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = {
@@ -48,12 +49,12 @@ MapPageGenerator::MapPageGenerator() : mapsAPIRateLimiter(mapsAPIMinDuration), f
 }
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
-	const std::string& googleMapsKey,
+	const std::string& googleMapsKey, const std::string& eBirdAPIKey,
 	const std::vector<ObservationInfo>& observationProbabilities,
 	const std::string& clientId, const std::string& clientSecret)
 {
 	std::ostringstream contents;
-	const Keys keys(googleMapsKey, clientId, clientSecret);
+	const Keys keys(googleMapsKey, eBirdAPIKey, clientId, clientSecret);
 	WriteHeadSection(contents, keys, observationProbabilities);
 	WriteBody(contents);
 
@@ -309,7 +310,11 @@ bool MapPageGenerator::CreateFusionTable(
 		return false;
 
 	std::cout << "Retrieving county location data" << std::endl;
-	// NOTE:  Google maps geocoding API has rate limit of 50 queries per sec, and usage limit of 2500 queries per day
+	EBirdInterface ebi(keys.eBirdAPIKey);
+	const auto countryCodes(GetCountryCodeList(observationProbabilities));
+	for (const auto& c : countryCodes)
+		countryRegionInfoMap[c] = ebi.GetSubRegions(c, EBirdInterface::RegionType::SubNational2);
+
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
 	auto countyIt(countyInfo.begin());
@@ -319,12 +324,14 @@ bool MapPageGenerator::CreateFusionTable(
 		countyIt->probabilities = std::move(entry.probabilities);
 		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, geometry))
 			pool.AddJob(std::make_unique<MapJobInfo>(
-				*countyIt, entry, keys.googleMapsKey, geometry, *this));
+				*countyIt, entry, countryRegionInfoMap.find(entry.locationCode.substr(0, 2))->second, geometry, *this));
 
 		++countyIt;
 	}
 
 	pool.WaitForAllJobsComplete();
+
+	// TODO:  Use eBird API to get lat/long range to send to map html
 
 	std::cout << "Preparing data for upload" << std::endl;
 	std::ostringstream ss;
@@ -332,25 +339,8 @@ bool MapPageGenerator::CreateFusionTable(
 	unsigned int cellCount(0);
 	for (const auto& c : countyInfo)
 	{
-		if (ss.str().empty())
-		{
-			northeastLatitude = c.latitude;
-			northeastLongitude = c.longitude;
-			southwestLatitude = c.latitude;
-			southwestLongitude = c.longitude;
-		}
-
-		if (c.neLatitude > northeastLatitude)
-			northeastLatitude = c.neLatitude;
-		if (c.neLongitude > northeastLongitude)
-			northeastLongitude = c.neLongitude;
-		if (c.swLatitude < southwestLatitude)
-			southwestLatitude = c.swLatitude;
-		if (c.swLongitude < southwestLongitude)
-			southwestLongitude = c.swLongitude;
-
 		ss << c.state << ',' << c.county << ',' << c.state + '-' + c.county << ",\"" << c.name << "\","
-			<< c.latitude << ' ' << c.longitude << ",\"" << c.geometryKML << '"';
+			<< c.code << ",\"" << c.geometryKML << '"';
 
 		unsigned int i(0);
 		for (const auto& p : c.probabilities)
@@ -395,6 +385,23 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	return true;
+}
+
+std::vector<std::string> MapPageGenerator::GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities)
+{
+	std::set<std::string> codes;
+	for (const auto& o : observationProbabilities)
+		codes.insert(o.locationCode.substr(0, 2));
+
+	std::vector<std::string> codesVector(codes.size());
+	auto it(codesVector.begin());
+	for (const auto& c : codes)
+	{
+		*it = c;
+		++it;
+	}
+
+	return codesVector;
 }
 
 bool MapPageGenerator::GetConfirmationFromUser()
@@ -483,7 +490,7 @@ bool MapPageGenerator::ProcessCSVQueryResponse(const std::string& csvData, std::
 {
 	std::istringstream inData(csvData);
 	std::string line;
-	const std::string headingLine("rowid,State,County,Name,Location,Geometry,Probability-Jan,Probability-Feb,Probability-Mar,Probability-Apr,Probability-May,Probability-Jun,Probability-Jul,Probability-Aug,Probability-Sep,Probability-Oct,Probability-Nov,Probability-Dec");
+	const std::string headingLine("rowid,State,County,Name,Code,Geometry,Probability-Jan,Probability-Feb,Probability-Mar,Probability-Apr,Probability-May,Probability-Jun,Probability-Jul,Probability-Aug,Probability-Sep,Probability-Oct,Probability-Nov,Probability-Dec");
 	std::getline(inData, line);
 	if (line.compare(headingLine) != 0)
 	{
@@ -514,31 +521,17 @@ bool MapPageGenerator::ProcessCSVQueryLine(const std::string& line, CountyInfo& 
 	if (!EBirdDataProcessor::ParseToken(ss, "county", info.county))
 		return false;
 
+	if (!EBirdDataProcessor::ParseToken(ss, "country", info.country))
+		return false;
+
 	if (!EBirdDataProcessor::ParseToken(ss, "name", info.name))
 		return false;
 
-	std::string location;
-	if (!EBirdDataProcessor::ParseToken(ss, "location", location))
+	if (!EBirdDataProcessor::ParseToken(ss, "code", info.code))
 		return false;
-	std::istringstream tokenStream(location);
-	if ((tokenStream >> info.latitude).fail())
-	{
-		std::cerr << "Failed to parse latitude\n";
-		return false;
-	}
-	else if ((tokenStream >> info.longitude).fail())
-	{
-		std::cerr << "Failed to parse longitude\n";
-		return false;
-	}
 
 	if (!EBirdDataProcessor::ParseToken(ss, "geometry", info.geometryKML))
 		return false;
-
-	info.neLatitude = 0.0;
-	info.neLongitude = 0.0;
-	info.swLatitude = 0.0;
-	info.swLongitude = 0.0;
 
 	for (auto& p : info.probabilities)
 	{
@@ -557,7 +550,7 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 {
 	cJSON* root(nullptr);
 	std::string csvData;
-	const std::string query("SELECT ROWID,State,County,Name,Location,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId);
+	const std::string query("SELECT ROWID,State,County,Country,Name,Code,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId);
 	const std::string nonTypedOption("&typed=false");
 	if (!fusionTables.SubmitQuery(query + nonTypedOption, root, &csvData))
 		return false;
@@ -596,23 +589,24 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 	cJSON* rowID(cJSON_GetArrayItem(row, 0));
 	cJSON* state(cJSON_GetArrayItem(row, 1));
 	cJSON* county(cJSON_GetArrayItem(row, 2));
-	cJSON* name(cJSON_GetArrayItem(row, 3));
-	cJSON* location(cJSON_GetArrayItem(row, 4));
-	cJSON* kml(cJSON_GetArrayItem(row, 5));
-	cJSON* jan(cJSON_GetArrayItem(row, 6));
-	cJSON* feb(cJSON_GetArrayItem(row, 7));
-	cJSON* mar(cJSON_GetArrayItem(row, 8));
-	cJSON* apr(cJSON_GetArrayItem(row, 9));
-	cJSON* may(cJSON_GetArrayItem(row, 10));
-	cJSON* jun(cJSON_GetArrayItem(row, 11));
-	cJSON* jul(cJSON_GetArrayItem(row, 12));
-	cJSON* aug(cJSON_GetArrayItem(row, 13));
-	cJSON* sep(cJSON_GetArrayItem(row, 14));
-	cJSON* oct(cJSON_GetArrayItem(row, 15));
-	cJSON* nov(cJSON_GetArrayItem(row, 16));
-	cJSON* dec(cJSON_GetArrayItem(row, 17));
+	cJSON* country(cJSON_GetArrayItem(row, 3));
+	cJSON* name(cJSON_GetArrayItem(row, 4));
+	cJSON* code(cJSON_GetArrayItem(row, 5));
+	cJSON* kml(cJSON_GetArrayItem(row, 6));
+	cJSON* jan(cJSON_GetArrayItem(row, 7));
+	cJSON* feb(cJSON_GetArrayItem(row, 8));
+	cJSON* mar(cJSON_GetArrayItem(row, 9));
+	cJSON* apr(cJSON_GetArrayItem(row, 10));
+	cJSON* may(cJSON_GetArrayItem(row, 11));
+	cJSON* jun(cJSON_GetArrayItem(row, 12));
+	cJSON* jul(cJSON_GetArrayItem(row, 13));
+	cJSON* aug(cJSON_GetArrayItem(row, 14));
+	cJSON* sep(cJSON_GetArrayItem(row, 15));
+	cJSON* oct(cJSON_GetArrayItem(row, 16));
+	cJSON* nov(cJSON_GetArrayItem(row, 17));
+	cJSON* dec(cJSON_GetArrayItem(row, 18));
 
-	if (!rowID || !state || !county || !name || !location || !kml ||
+	if (!rowID || !state || !county || !country || !name || !code || !kml ||
 		!jan || !feb || !mar || !apr || !may || !jun ||
 		!jul || !aug || !sep || !oct || !nov || !dec)
 	{
@@ -622,8 +616,10 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 
 	data.state = state->valuestring;
 	data.county = county->valuestring;
-	data.geometryKML = kml->valuestring;
+	data.county = country->valuestring;
 	data.name = name->valuestring;
+	data.code = code->valuestring;
+	data.geometryKML = kml->valuestring;
 
 	if (!Read(rowID, data.rowId))
 	{
@@ -647,31 +643,6 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 		std::cerr << "Failed to read existing probability\n";
 		return false;
 	}
-
-	std::istringstream locationStream(location->valuestring);
-	std::string s;
-	std::getline(locationStream, s, ' ');
-	std::istringstream ss(s);
-	if ((ss >> data.latitude).fail())
-	{
-		std::cerr << "Failed to read latitude\n";
-		return false;
-	}
-
-	std::getline(locationStream, s, ' ');
-	ss.clear();
-	ss.str(s);
-	if ((ss >> data.longitude).fail())
-	{
-		std::cerr << "Failed to read longitude\n";
-		return false;
-	}
-
-	// TODO:  Can this be improved?  Parse KML?
-	data.neLatitude = data.latitude;
-	data.neLongitude = data.longitude;
-	data.swLatitude = data.latitude;
-	data.swLongitude = data.longitude;
 
 	return true;
 }
@@ -806,9 +777,7 @@ std::vector<unsigned int> MapPageGenerator::FindDuplicatesAndBlanksToRemove(std:
 	for (const auto item : existingData)
 	{
 		auto it(++startIterator);
-		if (item.state.empty() || item.county.empty() || item.geometryKML.empty() ||
-			(item.latitude == 0.0 && item.longitude == 0.0 && item.neLatitude == 0.0 &&
-			item.swLatitude == 0.0 && item.neLongitude == 0.0 && item.swLongitude == 0.0))
+		if (item.state.empty() || item.county.empty() || item.geometryKML.empty() || item.code.empty())
 		{
 			deletedRows.push_back(item.rowId);
 			continue;
@@ -817,17 +786,11 @@ std::vector<unsigned int> MapPageGenerator::FindDuplicatesAndBlanksToRemove(std:
 		bool deletedSelf(false);
 		for (; it != existingData.end(); ++it)
 		{
-			if (it->state.compare(item.state) != 0)
-				continue;
-			else if (!CountyNamesMatch(item.county, it->county))
+			if (item.code.compare(it->code) != 0)
 				continue;
 
-			deletedRows.push_back(it->rowId);// Always delete the second row
-			// If geometry matches, allow the first one in the list to remain, otherwise delete self, too (not sure which set of data is right)
-			if (!deletedSelf &&
-				(item.latitude != it->latitude || item.longitude != it->longitude ||
-				item.neLatitude != it->neLatitude || item.neLongitude != it->neLongitude ||
-				item.swLatitude != it->swLatitude || item.swLongitude != it->swLongitude))
+			deletedRows.push_back(it->rowId);
+			if (!deletedSelf)
 			{
 				deletedRows.push_back(item.rowId);
 				deletedSelf = true;
@@ -920,7 +883,7 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 	for (const auto& g : geometry)
 	{
 		// TODO:  Need to strip accents from both strings prior to making comparison
-		std::string countyString(StringUtilities::Trim(StringUtilities::ToLower(StripCountyFromName(data.county))));
+		std::string countyString(StringUtilities::Trim(StringUtilities::ToLower(data.county)));
 		if (g.state.compare(data.state) == 0 && StringUtilities::ToLower(g.county).compare(countyString) == 0)
 		{
 			data.geometryKML = g.kml;
@@ -934,7 +897,17 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 
 void MapPageGenerator::MapJobInfo::DoJob()
 {
-	if (!GetStateAbbreviationFromFileName(frequencyInfo.locationCode, info.state))
+	info.country = frequencyInfo.locationCode.substr(0, 2);
+	info.state = frequencyInfo.locationCode.substr(3, 2);
+	for (const auto& r : regionNames)
+	{
+		if (r.code.compare(frequencyInfo.locationCode) == 0)
+		{
+			info.county = r.name;
+			break;
+		}
+	}
+	/*if (!GetStateAbbreviationFromFileName(frequencyInfo.locationCode, info.state))
 		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationCode << "'\n";
 
 	if (!GetCountyNameFromFileName(frequencyInfo.locationCode, info.county))
@@ -945,16 +918,17 @@ void MapPageGenerator::MapJobInfo::DoJob()
 		info.latitude, info.longitude, info.neLatitude,
 		info.neLongitude, info.swLatitude, info.swLongitude, info.name, googleMapsKey))
 		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationCode << "'\n";
+	// TODO:  Do we need lat/long info for each county?
 
 	const std::string::size_type saintStart(info.name.find("St "));
 	if (saintStart != std::string::npos)
 		info.name.insert(saintStart + 2, ".");
 
-	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust
+	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust*/
 	LookupAndAssignKML(geometry, info);
 }
 
-bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string& b)
+/*bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string& b)
 {
 	if (a.compare(b) == 0)
 		return true;
@@ -968,7 +942,7 @@ bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string&
 		return true;
 
 	return false;
-}
+}*/
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 {
@@ -979,9 +953,9 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 
 	tableInfo.columns.push_back(GFTI::ColumnInfo("State", GFTI::ColumnType::String));
 	tableInfo.columns.push_back(GFTI::ColumnInfo("County", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("State-County", GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Country", GFTI::ColumnType::String));
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Name", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Location", GFTI::ColumnType::Location));
+	tableInfo.columns.push_back(GFTI::ColumnInfo("Code", GFTI::ColumnType::String));
 	tableInfo.columns.push_back(GFTI::ColumnInfo("Geometry", GFTI::ColumnType::Location));
 
 	for (const auto& m : monthNames)
@@ -996,7 +970,7 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 	return tableInfo;
 }
 
-bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
+/*bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
 	const std::string& county, double& latitude, double& longitude,
 	double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
 	std::string& geographicName, const std::string& googleMapsKey)
@@ -1060,7 +1034,7 @@ bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, st
 
 	county = FrequencyDataHarvester::StripDirectory(fileName.substr(0, position - 2));*/
 
-	return true;
+	/*return true;
 }
 
 std::string MapPageGenerator::StripCountyFromName(const std::string& s)
@@ -1077,7 +1051,7 @@ std::string MapPageGenerator::StripCountyFromName(const std::string& s)
 		clean = clean.substr(0, endPosition);
 
 	return clean;
-}
+}*/
 
 std::string MapPageGenerator::CleanQueryString(const std::string& s)
 {
@@ -1180,7 +1154,7 @@ MapPageGenerator::Color MapPageGenerator::ColorFromHSV(
 		return Color(c + m, m, x + m);
 }
 
-std::string MapPageGenerator::CleanFileName(const std::string& s)
+/*std::string MapPageGenerator::CleanFileName(const std::string& s)
 {
 	std::string cleanString(s);
 	cleanString.erase(std::remove_if(cleanString.begin(), cleanString.end(), [](const char& c)
@@ -1195,7 +1169,7 @@ std::string MapPageGenerator::CleanFileName(const std::string& s)
 	}), cleanString.end());
 
 	return cleanString;
-}
+}*/
 
 bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTables,
 	std::vector<CountyGeometry>& geometry)

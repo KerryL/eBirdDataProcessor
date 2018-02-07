@@ -58,8 +58,8 @@ public:
 		const std::string& mapApiKey, const std::string& eBirdApiKey) const;
 
 	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
-		const std::string& googleMapsKey, const std::string& clientId,
-		const std::string& clientSecret) const;
+		const std::string& googleMapsKey, const std::string& eBirdAPIKey,
+		const std::string& clientId, const std::string& clientSecret) const;
 
 	struct FrequencyInfo
 	{
@@ -179,7 +179,8 @@ private:
 		std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const;
 
 	static bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
-		const std::string& googleMapsKey, const std::vector<YearFrequencyInfo>& observationProbabilities,
+		const std::string& googleMapsKey, const std::string& eBirdAPIKey,
+		const std::vector<YearFrequencyInfo>& observationProbabilities,
 		const std::string& clientId, const std::string& clientSecret);
 
 	static std::string StripExtension(const std::string& fileName);

@@ -1099,7 +1099,7 @@ std::vector<std::string> EBirdDataProcessor::ListFilesInDirectory(const std::str
 }
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& frequencyFileDirectory,
-	const std::string& googleMapsKey, const std::string& clientId, const std::string& clientSecret) const
+	const std::string& googleMapsKey, const std::string& eBirdAPIKey, const std::string& clientId, const std::string& clientSecret) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFileDirectory));
 	if (fileNames.size() == 0)
@@ -1131,7 +1131,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 	if (!googleMapsKey.empty())
 	{
 		const std::string fileName("bestLocations.html");// TODO:  Don't hardcode
-		if (!WriteBestLocationsViewerPage(fileName, googleMapsKey, newSightingProbability, clientId, clientSecret))
+		if (!WriteBestLocationsViewerPage(fileName, googleMapsKey, eBirdAPIKey, newSightingProbability, clientId, clientSecret))
 		{
 			std::cerr << "Faild to create Google Maps best locations page\n";
 		}
@@ -1178,12 +1178,13 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileNam
 }
 
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFileName,
-	const std::string& googleMapsKey, const std::vector<YearFrequencyInfo>& observationProbabilities,
+	const std::string& googleMapsKey, const std::string& eBirdAPIKey,
+	const std::vector<YearFrequencyInfo>& observationProbabilities,
 	const std::string& clientId, const std::string& clientSecret)
 {
 	MapPageGenerator generator;
 	return generator.WriteBestLocationsViewerPage(htmlFileName,
-		googleMapsKey, observationProbabilities, clientId, clientSecret);
+		googleMapsKey, eBirdAPIKey, observationProbabilities, clientId, clientSecret);
 }
 
 bool EBirdDataProcessor::AuditFrequencyData(const std::string& freqFileDirectory,
