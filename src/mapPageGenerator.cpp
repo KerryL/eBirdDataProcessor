@@ -324,9 +324,10 @@ bool MapPageGenerator::CreateFusionTable(
 		countyIt->probabilities = std::move(entry.probabilities);
 		countyIt->code = entry.locationCode;
 
-		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, geometry))
+		const auto& nameLookupData(countryRegionInfoMap.find(entry.locationCode.substr(0, 2))->second);
+		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, geometry, nameLookupData))
 			pool.AddJob(std::make_unique<MapJobInfo>(
-				*countyIt, entry, countryRegionInfoMap.find(entry.locationCode.substr(0, 2))->second, geometry, *this));
+				*countyIt, entry, nameLookupData, geometry, *this));
 
 		++countyIt;
 	}
@@ -341,6 +342,7 @@ bool MapPageGenerator::CreateFusionTable(
 	unsigned int cellCount(0);
 	for (const auto& c : countyInfo)
 	{
+		assert(!c.state.empty() && !c.country.empty() && !c.county.empty() && !c.name.empty() && !c.code.empty());
 		ss << c.state << ',' << c.county << ',' << c.country << ",\"" << c.name << "\","
 			<< c.code << ",\"" << c.geometryKML << '"';
 
@@ -492,7 +494,7 @@ bool MapPageGenerator::ProcessCSVQueryResponse(const std::string& csvData, std::
 {
 	std::istringstream inData(csvData);
 	std::string line;
-	const std::string headingLine("rowid,State,County,Name,Code,Geometry,Probability-Jan,Probability-Feb,Probability-Mar,Probability-Apr,Probability-May,Probability-Jun,Probability-Jul,Probability-Aug,Probability-Sep,Probability-Oct,Probability-Nov,Probability-Dec");
+	const std::string headingLine("rowid,State,County,Country,Name,Code,Geometry,Probability-Jan,Probability-Feb,Probability-Mar,Probability-Apr,Probability-May,Probability-Jun,Probability-Jul,Probability-Aug,Probability-Sep,Probability-Oct,Probability-Nov,Probability-Dec");
 	std::getline(inData, line);
 	if (line.compare(headingLine) != 0)
 	{
@@ -671,6 +673,10 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 				return true;
 			}
 
+			if (!ProbabilityDataHasChanged(*matchingEntry, c) &&
+				!c.name.empty() && !c.state.empty() && !c.country.empty())
+				return true;// Leave row as-is (Case #2)
+
 			// Need to delete row, but don't remove it from exisingData (Case #3)
 			deletedRows.push_back(c.rowId);
 			return false;
@@ -779,7 +785,7 @@ std::vector<unsigned int> MapPageGenerator::FindDuplicatesAndBlanksToRemove(std:
 	for (const auto item : existingData)
 	{
 		auto it(++startIterator);
-		if (item.state.empty() || item.county.empty() || item.geometryKML.empty() || item.code.empty())
+		if (item.code.empty())// If anything else is empty, treat it as an update rather than deleting a blank
 		{
 			deletedRows.push_back(item.rowId);
 			continue;
@@ -845,16 +851,34 @@ bool MapPageGenerator::ProbabilityDataHasChanged(
 
 bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 	const std::vector<CountyInfo>& existingData, CountyInfo& newData,
-	const std::vector<CountyGeometry>& geometry)
+	const std::vector<CountyGeometry>& geometry, const std::vector<EBirdInterface::RegionInfo>& regionInfo)
 {
 	for (const auto& existing : existingData)
 	{
 		if (existing.code.compare(entry.locationCode) == 0)
 		{
-			newData.name = existing.name;
-			newData.state = existing.state;
-			newData.county = existing.county;
-			newData.country = existing.country;
+			if (existing.name.empty() || existing.state.empty() ||
+				existing.country.empty() || existing.county.empty())
+			{
+				for (const auto& r : regionInfo)
+				{
+					if (r.code.compare(entry.locationCode) == 0)
+					{
+						newData.country = r.code.substr(0, 2);
+						newData.state = r.code.substr(3, 2);
+						newData.county = r.name;
+						newData.name = AssembleCountyName(newData.county, newData.state, newData.county);
+						break;
+					}
+				}
+			}
+			else
+			{
+				newData.country = existing.country;
+				newData.state = existing.state;
+				newData.county = existing.county;
+				newData.name = existing.name;
+			}
 
 			newData.geometryKML = std::move(existing.geometryKML);
 
@@ -866,6 +890,11 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 	}
 
 	return false;
+}
+
+std::string MapPageGenerator::AssembleCountyName(const std::string& country, const std::string& state, const std::string& county)
+{
+	return county + ", " + state + ", " + country;
 }
 
 std::string MapPageGenerator::BuildUSLocationCode(const std::string& state, const std::string& countyNumber)
@@ -902,7 +931,7 @@ void MapPageGenerator::MapJobInfo::DoJob()
 		if (r.code.compare(frequencyInfo.locationCode) == 0)
 		{
 			info.county = r.name;
-			info.name = r.name + ", " + info.state + ", " + info.country;
+			info.name = AssembleCountyName(info.country, info.state, info.county);
 			break;
 		}
 	}

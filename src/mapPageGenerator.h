@@ -125,7 +125,8 @@ public:
 		std::vector<CountyInfo>& existingData, std::vector<ObservationInfo>& newData);
 	static bool CopyExistingDataForCounty(const ObservationInfo& entry,
 		const std::vector<CountyInfo>& existingData, CountyInfo& newData,
-		const std::vector<CountyGeometry>& geometry);
+		const std::vector<CountyGeometry>& geometry,
+		const std::vector<EBirdInterface::RegionInfo>& regionInfo);
 	static std::vector<ObservationInfo>::const_iterator NewDataIncludesMatchForCounty(
 		const std::vector<ObservationInfo>& newData, const CountyInfo& county);
 	static bool ProbabilityDataHasChanged(const ObservationInfo& newData, const CountyInfo& existingData);
@@ -186,6 +187,7 @@ public:
 	static bool FindInvalidSpeciesDataInJSONResponse(cJSON* root, std::vector<unsigned int>& invalidRows);
 
 	static std::vector<std::string> GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities);
+	static std::string AssembleCountyName(const std::string& country, const std::string& state, const std::string& county);
 };
 
 template<typename T>
