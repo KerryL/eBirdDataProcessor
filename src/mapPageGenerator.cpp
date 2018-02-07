@@ -902,7 +902,7 @@ void MapPageGenerator::MapJobInfo::DoJob()
 		if (r.code.compare(frequencyInfo.locationCode) == 0)
 		{
 			info.county = r.name;
-			// TODO:  info.name?
+			info.name = r.name + ", " + info.state + ", " + info.country;
 			break;
 		}
 	}
