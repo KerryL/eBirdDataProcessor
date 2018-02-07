@@ -322,6 +322,8 @@ bool MapPageGenerator::CreateFusionTable(
 	{
 		countyIt->frequencyInfo = std::move(entry.frequencyInfo);
 		countyIt->probabilities = std::move(entry.probabilities);
+		countyIt->code = entry.locationCode;
+
 		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, geometry))
 			pool.AddJob(std::make_unique<MapJobInfo>(
 				*countyIt, entry, countryRegionInfoMap.find(entry.locationCode.substr(0, 2))->second, geometry, *this));
@@ -339,7 +341,7 @@ bool MapPageGenerator::CreateFusionTable(
 	unsigned int cellCount(0);
 	for (const auto& c : countyInfo)
 	{
-		ss << c.state << ',' << c.county << ',' << c.state + '-' + c.county << ",\"" << c.name << "\","
+		ss << c.state << ',' << c.county << ',' << c.country << ",\"" << c.name << "\","
 			<< c.code << ",\"" << c.geometryKML << '"';
 
 		unsigned int i(0);
@@ -457,9 +459,9 @@ bool MapPageGenerator::ProcessJSONQueryResponse(cJSON* root, std::vector<CountyI
 	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
 	if (!rowsArray)
 	{
-		std::cerr << "Failed to get rows array\n";
+		//std::cerr << "Failed to get rows array\n";
 		cJSON_Delete(root);
-		return false;
+		return true;// Don't fail if there's no rows array - likely empty table
 	}
 
 	std::vector<CountyInfo> newData(cJSON_GetArraySize(rowsArray));
@@ -733,9 +735,9 @@ bool MapPageGenerator::FindInvalidSpeciesDataInJSONResponse(cJSON* root, std::ve
 	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
 	if (!rowsArray)
 	{
-		std::cerr << "Failed to get rows array\n";
+		//std::cerr << "Failed to get rows array\n";
 		cJSON_Delete(root);
-		return false;
+		return true;// Don't fail if there's no rows array - likely empty table
 	}
 
 	std::vector<unsigned int> newData(cJSON_GetArraySize(rowsArray));
@@ -853,7 +855,6 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 			newData.state = existing.state;
 			newData.county = existing.county;
 			newData.country = existing.country;
-			newData.code = existing.code;
 
 			newData.geometryKML = std::move(existing.geometryKML);
 
@@ -881,7 +882,7 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 {
 	for (const auto& g : geometry)
 	{
-		if (BuildUSLocationCode(data.state, g.countyNumber).compare(data.code) == 0)
+		if (g.code.compare(data.code) == 0)
 		{
 			data.geometryKML = g.kml;
 			break;
@@ -889,7 +890,7 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 	}
 
 	if (data.geometryKML.empty())
-		std::cerr << "Warning:  Geometry not found for '" << data.name << "'\n";
+		std::cerr << "\rWarning:  Geometry not found for '" << data.code << "'\n";
 }
 
 void MapPageGenerator::MapJobInfo::DoJob()
@@ -901,6 +902,7 @@ void MapPageGenerator::MapJobInfo::DoJob()
 		if (r.code.compare(frequencyInfo.locationCode) == 0)
 		{
 			info.county = r.name;
+			// TODO:  info.name?
 			break;
 		}
 	}
@@ -1049,7 +1051,7 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 	{
 		std::cerr << "Failed to get rows array\n";
 		cJSON_Delete(root);
-		return false;
+		return false;// Unlike other cases, we DO want to fail on this case, because this response should never be empty
 	}
 
 	geometry.resize(cJSON_GetArraySize(rowsArray));
@@ -1074,8 +1076,7 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 			return false;
 		}
 
-		g.state = state->valuestring;
-		g.countyNumber = county->valuestring;
+		g.code = BuildUSLocationCode(state->valuestring, county->valuestring);
 		g.kml = kml->valuestring;
 
 		++i;

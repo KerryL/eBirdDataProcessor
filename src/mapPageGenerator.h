@@ -111,8 +111,7 @@ public:
 
 	struct CountyGeometry
 	{
-		std::string state;
-		std::string countyNumber;
+		std::string code;
 		std::string kml;
 	};
 
