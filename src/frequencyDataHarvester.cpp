@@ -36,7 +36,6 @@ const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
 const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en_US");
 const bool FrequencyDataHarvester::verbose(false);
 const std::string FrequencyDataHarvester::cookieFile("ebdp.cookies");
-const std::string FrequencyDataHarvester::endOfName("FrequencyData.csv");
 
 using namespace std::chrono_literals;
 // crawl delay determined by manually visiting www.ebird.org/robots.txt - should periodically
@@ -58,7 +57,7 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 }
 
 bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
-	const std::string &state, const std::string &county, const std::string& eBirdApiKey)
+	const std::string &state, const std::string &county, const std::string &frequencyFilePath, const std::string& eBirdApiKey)
 {
 	if (!DoEBirdLogin())
 		return false;
@@ -69,7 +68,7 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 	if (!PullFrequencyData(regionCode, frequencyData))
 		return false;
 
-	return WriteFrequencyDataToFile(regionCode + ".csv", frequencyData);// TODO:  Include path?
+	return WriteFrequencyDataToFile(frequencyFilePath + regionCode + ".csv", frequencyData);
 }
 
 // fipsStart argument can be used to resume a failed bulk harvest without needing
@@ -131,17 +130,11 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		if (DataIsEmpty(data))
 			continue;
 
-		if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(state, r.name), data))
+		if (!WriteFrequencyDataToFile(targetPath + r.code + ".csv", data))
 			break;
 	}
 
 	return true;
-}
-
-std::string FrequencyDataHarvester::GenerateFrequencyFileName(
-	const std::string& state, const std::string& county)
-{
-	return Clean(county) + state + "FrequencyData.csv";
 }
 
 bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
@@ -679,21 +672,14 @@ bool FrequencyDataHarvester::DataIsEmpty(const std::array<FrequencyData, 12>& fr
 	return true;
 }
 
-bool FrequencyDataHarvester::AuditFrequencyData(
+bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFilePath,
 	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& eBirdApiKey)
 {
 	if (!DoEBirdLogin())
 		return false;
 
-	std::string targetPath(freqInfo.front().locationCode);
-	auto lastForwardSlash(targetPath.find_last_of('/'));
-	auto lastBackSlash(targetPath.find_last_of('\\'));
-	if (lastForwardSlash != std::string::npos && lastBackSlash != std::string::npos)
-		targetPath = targetPath.substr(0, std::max(lastForwardSlash, lastBackSlash) + 1);
-	else if (lastForwardSlash != std::string::npos)
-		targetPath = targetPath.substr(0, lastForwardSlash + 1);
-	else if (lastBackSlash != std::string::npos)
-		targetPath = targetPath.substr(0, lastBackSlash + 1);
+	// TODO:  Can re-work this to be able to process regions in different countries
+	// Imagining something like ExtractCountryCode(), then split freqInfo into sets for each country, then loop over below
 
 	EBirdInterface ebi(eBirdApiKey);
 	const std::string countryString("US");// TODO:  Don't hardcode
@@ -718,8 +704,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 					const auto countyList(ebi.GetSubRegions(stateCode, EBirdInterface::RegionType::SubNational2));
 					for (const auto& county : countyList)
 					{
-						if (MapPageGenerator::CountyNamesMatch(StripDirectory(
-							f.locationCode.substr(0, f.locationCode.length() - endOfName.size() - 2)), county.name))
+						if (f.locationCode.compare(county.code) == 0)
 						{
 							regionString = county.code;
 							break;
@@ -749,7 +734,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 
 		if (updated)
 		{
-			if (!WriteFrequencyDataToFile(f.locationCode + ".csv", frequencyData))// TODO:  Include path?
+			if (!WriteFrequencyDataToFile(frequencyFilePath + f.locationCode + ".csv", frequencyData))
 				continue;
 		}
 	}
@@ -771,7 +756,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 			if (DataIsEmpty(data))
 				continue;
 
-			if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(s, county.name), data))// TODO:  Generate method?
+			if (!WriteFrequencyDataToFile(frequencyFilePath + county.code + ".csv", data))
 				continue;
 		}
 	}
@@ -798,7 +783,7 @@ std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCount
 	for (const auto& f : freqInfo)
 	{
 		if (ExtractStateFromFileName(f.locationCode).compare(stateCode.substr(stateCode.length() - 2)) == 0)
-			countiesInDataset.push_back(StripDirectory(f.locationCode.substr(0, f.locationCode.length() - endOfName.size() - 2)));
+			countiesInDataset.push_back(f.locationCode);
 	}
 
 	auto countyList(ebi.GetSubRegions(stateCode, EBirdInterface::RegionType::SubNational2));
@@ -813,7 +798,7 @@ std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCount
 		bool found(false);
 		for (const auto& cid : countiesInDataset)
 		{
-			if (MapPageGenerator::CountyNamesMatch(c.name, cid))
+			if (c.code.compare(cid) == 0)
 			{
 				found = true;
 				break;
@@ -836,20 +821,5 @@ std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCount
 
 std::string FrequencyDataHarvester::ExtractStateFromFileName(const std::string& fileName)
 {
-	auto endStart(fileName.find(endOfName));
-	return fileName.substr(endStart - 2, 2);
-}
-
-std::string FrequencyDataHarvester::StripDirectory(const std::string& s)
-{
-	auto lastForwardSlash(s.find_last_of('/'));
-	auto lastBackSlash(s.find_last_of('\\'));
-	if (lastForwardSlash != std::string::npos && lastBackSlash != std::string::npos)
-		return s.substr(std::max(lastForwardSlash, lastBackSlash) + 1);
-	else if (lastForwardSlash != std::string::npos)
-		return s.substr(lastForwardSlash + 1);
-	else if (lastBackSlash != std::string::npos)
-		return s.substr(lastBackSlash + 1);
-
-	return s;
+	return fileName.substr(3, 2);
 }

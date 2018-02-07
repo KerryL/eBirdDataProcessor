@@ -8,6 +8,8 @@
 
 // Standard C++ headers
 #include <algorithm>
+#include <cctype>
+#include <functional>
 
 std::string StringUtilities::Trim(std::string s)
 {

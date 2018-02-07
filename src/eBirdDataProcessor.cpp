@@ -26,8 +26,6 @@
 #include <iostream>
 #include <iomanip>
 #include <locale>
-#include <cctype>
-#include <functional>
 #include <map>
 #include <regex>
 #include <chrono>
@@ -454,15 +452,17 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() co
 }
 
 bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount,
-	const std::string& outputFileName, const std::string& frequencyFileName,
+	const std::string& outputFileName, const std::string& frequencyFilePath,
 	const std::string& country, const std::string& state, const std::string& county,
 	const unsigned int& recentPeriod,
 	const std::string& hotspotInfoFileName, const std::string& homeLocation,
 	const std::string& mapApiKey, const std::string& eBirdApiKey) const
 {
+	EBirdInterface ebi(eBirdApiKey);
+	const std::string fileName(ebi.GetRegionCode(country, state, county) + ".csv");
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
-	if (!ParseFrequencyFile(frequencyFileName, frequencyData, checklistCounts))
+	if (!ParseFrequencyFile(frequencyFilePath + fileName, frequencyData, checklistCounts))
 		return false;
 
 	//GuessChecklistCounts(frequencyData, checklistCounts);
@@ -1111,7 +1111,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 	auto probEntryIt(newSightingProbability.begin());
 	for (const auto& f : fileNames)
 	{
-		pool.AddJob(std::make_unique<FileReadAndCalculateJob>(*probEntryIt, frequencyFileDirectory + f, *this));
+		pool.AddJob(std::make_unique<FileReadAndCalculateJob>(*probEntryIt, frequencyFileDirectory, f, *this));
 		++probEntryIt;
 	}
 
@@ -1199,12 +1199,18 @@ bool EBirdDataProcessor::AuditFrequencyData(const std::string& freqFileDirectory
 	auto probEntryIt(freqInfo.begin());
 	for (const auto& f : fileNames)
 	{
-		pool.AddJob(std::make_unique<FileReadJob>(*probEntryIt, freqFileDirectory + f));
+		pool.AddJob(std::make_unique<FileReadJob>(*probEntryIt, freqFileDirectory, f));
 		++probEntryIt;
 	}
 
 	pool.WaitForAllJobsComplete();
 
 	FrequencyDataHarvester harvester;
-	return harvester.AuditFrequencyData(freqInfo, eBirdApiKey);
+	return harvester.AuditFrequencyData(freqFileDirectory, freqInfo, eBirdApiKey);
+}
+
+std::string EBirdDataProcessor::StripExtension(const std::string& fileName)
+{
+	const std::string extension(".csv");
+	return fileName.substr(0, fileName.length() - extension.length());
 }

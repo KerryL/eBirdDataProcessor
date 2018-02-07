@@ -857,9 +857,11 @@ std::vector<MapPageGenerator::ObservationInfo>::const_iterator
 	auto it(newData.begin());
 	for (; it != newData.end(); ++it)
 	{
-		if (FrequencyDataHarvester::GenerateFrequencyFileName(
-			county.state, county.county).compare(FrequencyDataHarvester::StripDirectory(it->locationHint)) == 0)// TODO:  Not really a worse place to put StripDirectory() efficiency-wise...
-			break;
+		assert(false);
+		// TODO:  Need to update this as a temporary "updated exisitng data" method, then again as permanent solution
+		/*if (FrequencyDataHarvester::GenerateFrequencyFileName(
+			county.state, county.county).compare(FrequencyDataHarvester::StripDirectory(it->locationCode)) == 0)// TODO:  Not really a worse place to put StripDirectory() efficiency-wise...
+			break;*/
 	}
 
 	return it;
@@ -885,8 +887,10 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 {
 	for (const auto& existing : existingData)
 	{
-		if (FrequencyDataHarvester::GenerateFrequencyFileName(
-			existing.state, existing.county).compare(FrequencyDataHarvester::StripDirectory(entry.locationHint)) == 0)
+		assert(false);
+		// TODO:  Need to update this as a temporary "updated exisitng data" method, then again as permanent solution
+		/*if (FrequencyDataHarvester::GenerateFrequencyFileName(
+			existing.state, existing.county).compare(FrequencyDataHarvester::StripDirectory(entry.locationCode)) == 0)
 		{
 			newData.name = existing.name;
 			newData.state = existing.state;
@@ -905,7 +909,7 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 				LookupAndAssignKML(geometry, newData);
 
 			return true;
-		}
+		}*/
 	}
 
 	return false;
@@ -930,18 +934,17 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 
 void MapPageGenerator::MapJobInfo::DoJob()
 {
-	if (!GetStateAbbreviationFromFileName(frequencyInfo.locationHint, info.state))
-		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationHint << "'\n";
+	if (!GetStateAbbreviationFromFileName(frequencyInfo.locationCode, info.state))
+		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationCode << "'\n";
 
-	if (!GetCountyNameFromFileName(frequencyInfo.locationHint, info.county))
-		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationHint << "'\n";
+	if (!GetCountyNameFromFileName(frequencyInfo.locationCode, info.county))
+		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationCode << "'\n";
 
 	// TODO:  Change to use eBird location lookup to get name instead of maps API
-	// Also - consider changing naming conventions for frequency data files to use eBird-style codes (US-PA-0017, for example)
 	if (!mpg.GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
 		info.neLongitude, info.swLatitude, info.swLongitude, info.name, googleMapsKey))
-		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationHint << "'\n";
+		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationCode << "'\n";
 
 	const std::string::size_type saintStart(info.name.find("St "));
 	if (saintStart != std::string::npos)
@@ -1046,7 +1049,8 @@ bool MapPageGenerator::GetStateAbbreviationFromFileName(const std::string& fileN
 
 bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, std::string& county)
 {
-	const std::string searchString("FrequencyData.csv");
+	assert(false);
+	/*const std::string searchString("FrequencyData.csv");
 	const std::string::size_type position(fileName.find(searchString));
 	if (position == std::string::npos || position < 3)
 	{
@@ -1054,7 +1058,7 @@ bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, st
 		return false;
 	}
 
-	county = FrequencyDataHarvester::StripDirectory(fileName.substr(0, position - 2));
+	county = FrequencyDataHarvester::StripDirectory(fileName.substr(0, position - 2));*/
 
 	return true;
 }

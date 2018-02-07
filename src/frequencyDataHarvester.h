@@ -26,16 +26,13 @@ public:
 	~FrequencyDataHarvester();
 
 	bool GenerateFrequencyFile(const std::string &country, const std::string &state,
-		const std::string &county, const std::string &frequencyFileName, const std::string& eBirdApiKey);
+		const std::string &county, const std::string &frequencyFilePath, const std::string& eBirdApiKey);
 
 	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state,
 		const std::string& targetPath, const unsigned int& fipsStart, const std::string& eBirdApiKey);
 
-	bool AuditFrequencyData(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo,
-		const std::string& eBirdApiKey);
-
-	static std::string GenerateFrequencyFileName(const std::string& state, const std::string& county);
-	static std::string StripDirectory(const std::string& s);
+	bool AuditFrequencyData(const std::string& frequencyFilePath,
+		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& eBirdApiKey);
 
 private:
 	static const std::string targetSpeciesURLBase;
@@ -96,8 +93,6 @@ private:
 	static std::vector<EBirdInterface::RegionInfo> FindMissingCounties(const std::string& stateCode,
 		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, EBirdInterface& ebi);
 	static std::string ExtractStateFromFileName(const std::string& fileName);
-
-	static const std::string endOfName;
 };
 
 #endif// FREQUENCY_DATA_HARVESTER_H_

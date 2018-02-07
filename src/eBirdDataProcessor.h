@@ -51,7 +51,7 @@ public:
 	std::string GenerateList(const EBDPConfig::ListType& type, const bool& withoutPhotosOnly) const;
 
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
-		const std::string& outputFileName, const std::string& frequencyFileName,
+		const std::string& outputFileName, const std::string& frequencyFilePath,
 		const std::string& country, const std::string& state, const std::string& county,
 		const unsigned int& recentPeriod,
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
@@ -182,37 +182,39 @@ private:
 		const std::string& googleMapsKey, const std::vector<YearFrequencyInfo>& observationProbabilities,
 		const std::string& clientId, const std::string& clientSecret);
 
+	static std::string StripExtension(const std::string& fileName);
 	class FileReadAndCalculateJob : public ThreadPool::JobInfoBase
 	{
 	public:
-		FileReadAndCalculateJob(YearFrequencyInfo& frequencyInfo, const std::string& fileName,
-			const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo), fileName(fileName), ebdp(ebdp) {}
+		FileReadAndCalculateJob(YearFrequencyInfo& frequencyInfo, const std::string& path, const std::string& fileName,
+			const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo), path(path), fileName(fileName), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
+		const std::string path;
 		const std::string fileName;
 		const EBirdDataProcessor& ebdp;
 
 		void DoJob() override
 		{
-			const std::string extension(".csv");
-			frequencyInfo.locationCode = fileName.substr(0, fileName.length() - extension.length());
-			ebdp.ComputeNewSpeciesProbability(fileName, frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
+			frequencyInfo.locationCode = StripExtension(fileName);
+			ebdp.ComputeNewSpeciesProbability(path + fileName, frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
 		}
 	};
 
 	class FileReadJob : public ThreadPool::JobInfoBase
 	{
 	public:
-		FileReadJob(YearFrequencyInfo& frequencyInfo, const std::string& fileName)
-			: frequencyInfo(frequencyInfo), fileName(fileName) {}
+		FileReadJob(YearFrequencyInfo& frequencyInfo, const std::string& path, const std::string& fileName)
+			: frequencyInfo(frequencyInfo), path(path), fileName(fileName) {}
 
 		YearFrequencyInfo& frequencyInfo;
+		const std::string path;
 		const std::string fileName;
 
 		void DoJob() override
 		{
-			frequencyInfo.locationCode = fileName;
-			ParseFrequencyFile(fileName, frequencyInfo.frequencyInfo, frequencyInfo.probabilities);
+			frequencyInfo.locationCode = StripExtension(fileName);
+			ParseFrequencyFile(path + fileName, frequencyInfo.frequencyInfo, frequencyInfo.probabilities);
 		}
 	};
 

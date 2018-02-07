@@ -16,9 +16,9 @@ struct EBDPConfig
 	std::string countyFilter;
 	std::string locationFilter;
 
-	std::string bulkFrequencyUpdate;
+	bool bulkFrequencyUpdate;
 	unsigned int fipsStart;
-	std::string auditFrequencyData;
+	bool auditFrequencyData;
 
 	enum class ListType : int
 	{
@@ -67,7 +67,7 @@ struct EBDPConfig
 	bool harvestFrequencyData;
 	unsigned int topBirdCount;
 	unsigned int recentObservationPeriod;// [days]
-	std::string frequencyFileName;
+	std::string frequencyFilePath;
 	std::string targetInfoFileName;
 
 	bool showOnlyPhotoNeeds;
@@ -77,7 +77,7 @@ struct EBDPConfig
 	std::string homeLocation;
 	std::string eBirdApiKey;
 
-	std::string findMaxNeedsLocations;
+	bool findMaxNeedsLocations;
 
 	std::string oAuthClientId;
 	std::string oAuthClientSecret;
