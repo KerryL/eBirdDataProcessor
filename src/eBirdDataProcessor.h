@@ -73,10 +73,10 @@ public:
 	struct YearFrequencyInfo
 	{
 		YearFrequencyInfo() = default;
-		YearFrequencyInfo(const std::string& locationHint,
-			const std::array<double, 12>& probabilities) : locationHint(locationHint), probabilities(probabilities) {}
+		YearFrequencyInfo(const std::string& locationCode,
+			const std::array<double, 12>& probabilities) : locationCode(locationCode), probabilities(probabilities) {}
 
-		std::string locationHint;
+		std::string locationCode;
 		std::array<double, 12> probabilities;
 		std::array<std::vector<FrequencyInfo>, 12> frequencyInfo;
 	};
@@ -194,7 +194,8 @@ private:
 
 		void DoJob() override
 		{
-			frequencyInfo.locationHint = fileName;
+			const std::string extension(".csv");
+			frequencyInfo.locationCode = fileName.substr(0, fileName.length() - extension.length());
 			ebdp.ComputeNewSpeciesProbability(fileName, frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
 		}
 	};
@@ -210,7 +211,7 @@ private:
 
 		void DoJob() override
 		{
-			frequencyInfo.locationHint = fileName;
+			frequencyInfo.locationCode = fileName;
 			ParseFrequencyFile(fileName, frequencyInfo.frequencyInfo, frequencyInfo.probabilities);
 		}
 	};

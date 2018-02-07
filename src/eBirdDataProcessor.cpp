@@ -1126,7 +1126,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 	});
 
 	for (const auto& location : newSightingProbability)
-		std::cout << location.locationHint << " : " << location.probabilities[currentMonth] * 100.0 << std::endl;*/
+		std::cout << location.locationCode << " : " << location.probabilities[currentMonth] * 100.0 << std::endl;*/
 
 	if (!googleMapsKey.empty())
 	{

@@ -58,17 +58,18 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 }
 
 bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
-	const std::string &state, const std::string &county, const std::string &frequencyFileName, const std::string& eBirdApiKey)
+	const std::string &state, const std::string &county, const std::string& eBirdApiKey)
 {
 	if (!DoEBirdLogin())
 		return false;
 
 	EBirdInterface ebi(eBirdApiKey);
 	std::array<FrequencyData, 12> frequencyData;
-	if (!PullFrequencyData(ebi.GetRegionCode(country, state, county), frequencyData))
+	const std::string regionCode(ebi.GetRegionCode(country, state, county));
+	if (!PullFrequencyData(regionCode, frequencyData))
 		return false;
 
-	return WriteFrequencyDataToFile(frequencyFileName, frequencyData);
+	return WriteFrequencyDataToFile(regionCode + ".csv", frequencyData);// TODO:  Include path?
 }
 
 // fipsStart argument can be used to resume a failed bulk harvest without needing
@@ -684,7 +685,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 	if (!DoEBirdLogin())
 		return false;
 
-	std::string targetPath(freqInfo.front().locationHint);
+	std::string targetPath(freqInfo.front().locationCode);
 	auto lastForwardSlash(targetPath.find_last_of('/'));
 	auto lastBackSlash(targetPath.find_last_of('\\'));
 	if (lastForwardSlash != std::string::npos && lastBackSlash != std::string::npos)
@@ -708,17 +709,17 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 		{
 			if (f.probabilities[i] > 0.0 && f.frequencyInfo[i].size() == 0)// "probabilities" is actually checklist count for the month
 			{
-				std::cout << "Suspect missing data in " << f.locationHint << " for month " << i + 1 << "; Updating..." << std::endl;
+				std::cout << "Suspect missing data in " << f.locationCode << " for month " << i + 1 << "; Updating..." << std::endl;
 
 				if (regionString.empty())
 				{
-					const std::string state(ExtractStateFromFileName(f.locationHint));
+					const std::string state(ExtractStateFromFileName(f.locationCode));
 					const std::string stateCode(ebi.GetStateCode(countryCode, state));
 					const auto countyList(ebi.GetSubRegions(stateCode, EBirdInterface::RegionType::SubNational2));
 					for (const auto& county : countyList)
 					{
 						if (MapPageGenerator::CountyNamesMatch(StripDirectory(
-							f.locationHint.substr(0, f.locationHint.length() - endOfName.size() - 2)), county.name))
+							f.locationCode.substr(0, f.locationCode.length() - endOfName.size() - 2)), county.name))
 						{
 							regionString = county.code;
 							break;
@@ -727,7 +728,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 
 					if (regionString.empty())
 					{
-						std::cerr << "Failed to find region string for '" << f.locationHint << "'\n";
+						std::cerr << "Failed to find region string for '" << f.locationCode << "'\n";
 						break;
 					}
 
@@ -748,7 +749,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 
 		if (updated)
 		{
-			if (!WriteFrequencyDataToFile(f.locationHint, frequencyData))
+			if (!WriteFrequencyDataToFile(f.locationCode + ".csv", frequencyData))// TODO:  Include path?
 				continue;
 		}
 	}
@@ -770,7 +771,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(
 			if (DataIsEmpty(data))
 				continue;
 
-			if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(s, county.name), data))
+			if (!WriteFrequencyDataToFile(targetPath + GenerateFrequencyFileName(s, county.name), data))// TODO:  Generate method?
 				continue;
 		}
 	}
@@ -783,7 +784,7 @@ std::vector<std::string> FrequencyDataHarvester::GetStates(const std::vector<EBi
 	std::vector<std::string> states(freqInfo.size());
 	unsigned int i;
 	for (i = 0; i < freqInfo.size(); ++i)
-		states[i] = ExtractStateFromFileName(freqInfo[i].locationHint);
+		states[i] = ExtractStateFromFileName(freqInfo[i].locationCode);
 
 	std::sort(states.begin(), states.end());
 	states.erase(std::unique(states.begin(), states.end()), states.end());
@@ -796,8 +797,8 @@ std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCount
 	std::vector<std::string> countiesInDataset;
 	for (const auto& f : freqInfo)
 	{
-		if (ExtractStateFromFileName(f.locationHint).compare(stateCode.substr(stateCode.length() - 2)) == 0)
-			countiesInDataset.push_back(StripDirectory(f.locationHint.substr(0, f.locationHint.length() - endOfName.size() - 2)));
+		if (ExtractStateFromFileName(f.locationCode).compare(stateCode.substr(stateCode.length() - 2)) == 0)
+			countiesInDataset.push_back(StripDirectory(f.locationCode.substr(0, f.locationCode.length() - endOfName.size() - 2)));
 	}
 
 	auto countyList(ebi.GetSubRegions(stateCode, EBirdInterface::RegionType::SubNational2));
