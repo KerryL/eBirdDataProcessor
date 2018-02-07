@@ -620,7 +620,7 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 
 	data.state = state->valuestring;
 	data.county = county->valuestring;
-	data.county = country->valuestring;
+	data.country = country->valuestring;
 	data.name = name->valuestring;
 	data.code = code->valuestring;
 	data.geometryKML = kml->valuestring;
