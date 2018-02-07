@@ -86,8 +86,6 @@ public:
 	template<typename T>
 	static bool ParseToken(std::istringstream& lineStream, const std::string& fieldName, T& target);
 
-	static std::string Trim(std::string s);
-
 private:
 	static const std::string headerLine;
 

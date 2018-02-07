@@ -9,6 +9,7 @@
 #include "mapPageGenerator.h"
 #include "googleMapsInterface.h"
 #include "frequencyDataHarvester.h"
+#include "stringUtilities.h"
 
 // Standard C++ headers
 #include <sstream>
@@ -403,9 +404,9 @@ bool MapPageGenerator::GetConfirmationFromUser()
 	while (response.empty())
 	{
 		std::cin >> response;
-		if (ToLower(response).compare("y") == 0)
+		if (StringUtilities::ToLower(response).compare("y") == 0)
 			return true;
-		if (ToLower(response).compare("n") == 0)
+		if (StringUtilities::ToLower(response).compare("n") == 0)
 			break;
 		response.clear();
 	}
@@ -915,8 +916,8 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 	for (const auto& g : geometry)
 	{
 		// TODO:  Need to strip accents from both strings prior to making comparison
-		std::string countyString(EBirdDataProcessor::Trim(ToLower(StripCountyFromName(data.county))));
-		if (g.state.compare(data.state) == 0 && ToLower(g.county).compare(countyString) == 0)
+		std::string countyString(StringUtilities::Trim(StringUtilities::ToLower(StripCountyFromName(data.county))));
+		if (g.state.compare(data.state) == 0 && StringUtilities::ToLower(g.county).compare(countyString) == 0)
 		{
 			data.geometryKML = g.kml;
 			break;
@@ -955,8 +956,8 @@ bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string&
 	if (a.compare(b) == 0)
 		return true;
 
-	std::string cleanA(ToLower(StripCountyFromName(a)));
-	std::string cleanB(ToLower(StripCountyFromName(b)));
+	std::string cleanA(StringUtilities::ToLower(StripCountyFromName(a)));
+	std::string cleanB(StringUtilities::ToLower(StripCountyFromName(b)));
 	if (cleanA.compare(cleanB) == 0)
 		return true;
 
@@ -964,13 +965,6 @@ bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string&
 		return true;
 
 	return false;
-}
-
-std::string MapPageGenerator::ToLower(const std::string& s)
-{
-	std::string lower(s);
-	std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
-	return lower;
 }
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()

@@ -179,8 +179,6 @@ private:
 		void DoJob() override;
 	};
 
-	static std::string ToLower(const std::string& s);
-
 	bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
 		const std::string& tableId, std::vector<unsigned int>& styleIds);
 	static GoogleFusionTablesInterface::StyleInfo CreateStyle(const std::string& tableId,

@@ -9,6 +9,7 @@
 #include "bestObservationTimeEstimator.h"
 #include "mapPageGenerator.h"
 #include "frequencyDataHarvester.h"
+#include "stringUtilities.h"
 
 // System headers (added from https://github.com/tronkko/dirent/ for Windows)
 #ifdef _WIN32
@@ -355,7 +356,7 @@ std::string EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type, c
 
 bool EBirdDataProcessor::CommonNamesMatch(std::string a, std::string b)
 {
-	return Trim(StripParentheses(a)).compare(Trim(StripParentheses(b))) == 0;
+	return StringUtilities::Trim(StripParentheses(a)).compare(StringUtilities::Trim(StripParentheses(b))) == 0;
 }
 
 std::string EBirdDataProcessor::StripParentheses(std::string s)
@@ -367,17 +368,6 @@ std::string EBirdDataProcessor::StripParentheses(std::string s)
 		if (closeParen != std::string::npos)
 			s.erase(s.begin() + openParen, s.begin() + closeParen + 1);
 	}
-
-	return s;
-}
-
-std::string EBirdDataProcessor::Trim(std::string s)
-{
-	s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-		std::not1(std::ptr_fun<int, int>(std::isspace))));
-
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-		std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
 
 	return s;
 }
@@ -628,7 +618,8 @@ void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyDa
 		{
 			const auto& speciesIterator(std::find_if(data.begin(), data.end(), [f](const Entry& e)
 			{
-				return Trim(StripParentheses(f.species)).compare(Trim(StripParentheses(e.commonName))) == 0;
+				return StringUtilities::Trim(StripParentheses(f.species)).compare(
+					StringUtilities::Trim(StripParentheses(e.commonName))) == 0;
 			}));
 			return speciesIterator != data.end();
 		}), month.end());
