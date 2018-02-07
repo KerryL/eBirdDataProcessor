@@ -27,7 +27,7 @@ public:
 		const std::vector<ObservationInfo>& observationInfo,
 		const std::string& clientId, const std::string& clientSecret);
 
-private:
+//private:
 	static const std::string birdProbabilityTableName;
 
 	struct NamePair
@@ -112,7 +112,7 @@ private:
 	struct CountyGeometry
 	{
 		std::string state;
-		std::string county;
+		std::string countyNumber;
 		std::string kml;
 	};
 
@@ -165,6 +165,8 @@ private:
 
 		void DoJob() override;
 	};
+
+	static std::string BuildUSLocationCode(const std::string& state, const std::string& countyNumber);
 
 	std::map<std::string, std::vector<EBirdInterface::RegionInfo>> countryRegionInfoMap;
 

@@ -820,11 +820,8 @@ std::vector<MapPageGenerator::ObservationInfo>::const_iterator
 	auto it(newData.begin());
 	for (; it != newData.end(); ++it)
 	{
-		assert(false);
-		// TODO:  Need to update this as a temporary "updated exisitng data" method, then again as permanent solution
-		/*if (FrequencyDataHarvester::GenerateFrequencyFileName(
-			county.state, county.county).compare(FrequencyDataHarvester::StripDirectory(it->locationCode)) == 0)// TODO:  Not really a worse place to put StripDirectory() efficiency-wise...
-			break;*/
+		if (it->locationCode.compare(county.code) == 0)
+			break;
 	}
 
 	return it;
@@ -850,21 +847,13 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 {
 	for (const auto& existing : existingData)
 	{
-		assert(false);
-		// TODO:  Need to update this as a temporary "updated exisitng data" method, then again as permanent solution
-		/*if (FrequencyDataHarvester::GenerateFrequencyFileName(
-			existing.state, existing.county).compare(FrequencyDataHarvester::StripDirectory(entry.locationCode)) == 0)
+		if (existing.code.compare(entry.locationCode) == 0)
 		{
 			newData.name = existing.name;
 			newData.state = existing.state;
 			newData.county = existing.county;
-
-			newData.latitude = existing.latitude;
-			newData.longitude = existing.longitude;
-			newData.neLatitude = existing.neLatitude;
-			newData.neLongitude = existing.neLongitude;
-			newData.swLatitude = existing.swLatitude;
-			newData.swLongitude = existing.swLongitude;
+			newData.country = existing.country;
+			newData.code = existing.code;
 
 			newData.geometryKML = std::move(existing.geometryKML);
 
@@ -872,19 +861,27 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 				LookupAndAssignKML(geometry, newData);
 
 			return true;
-		}*/
+		}
 	}
 
 	return false;
+}
+
+std::string MapPageGenerator::BuildUSLocationCode(const std::string& state, const std::string& countyNumber)
+{
+	std::istringstream iss(countyNumber);
+	unsigned int countyNumberInt;
+	iss >> countyNumberInt;// TODO:  Check for failure?
+	std::ostringstream oss;
+	oss << "US-" << state << '-' << std::setfill('0') << std::setw(3) << countyNumberInt;
+	return oss.str();
 }
 
 void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geometry, CountyInfo& data)
 {
 	for (const auto& g : geometry)
 	{
-		// TODO:  Need to strip accents from both strings prior to making comparison
-		std::string countyString(StringUtilities::Trim(StringUtilities::ToLower(data.county)));
-		if (g.state.compare(data.state) == 0 && StringUtilities::ToLower(g.county).compare(countyString) == 0)
+		if (BuildUSLocationCode(data.state, g.countyNumber).compare(data.code) == 0)
 		{
 			data.geometryKML = g.kml;
 			break;
@@ -907,42 +904,9 @@ void MapPageGenerator::MapJobInfo::DoJob()
 			break;
 		}
 	}
-	/*if (!GetStateAbbreviationFromFileName(frequencyInfo.locationCode, info.state))
-		std::cerr << "Warning:  Failed to get state abberviation for '" << frequencyInfo.locationCode << "'\n";
 
-	if (!GetCountyNameFromFileName(frequencyInfo.locationCode, info.county))
-		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationCode << "'\n";
-
-	// TODO:  Change to use eBird location lookup to get name instead of maps API
-	if (!mpg.GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
-		info.latitude, info.longitude, info.neLatitude,
-		info.neLongitude, info.swLatitude, info.swLongitude, info.name, googleMapsKey))
-		std::cerr << "Warning:  Failed to get location information for '" << frequencyInfo.locationCode << "'\n";
-	// TODO:  Do we need lat/long info for each county?
-
-	const std::string::size_type saintStart(info.name.find("St "));
-	if (saintStart != std::string::npos)
-		info.name.insert(saintStart + 2, ".");
-
-	info.county = info.name.substr(0, info.name.find(','));// TODO:  Make robust*/
 	LookupAndAssignKML(geometry, info);
 }
-
-/*bool MapPageGenerator::CountyNamesMatch(const std::string& a, const std::string& b)
-{
-	if (a.compare(b) == 0)
-		return true;
-
-	std::string cleanA(StringUtilities::ToLower(StripCountyFromName(a)));
-	std::string cleanB(StringUtilities::ToLower(StripCountyFromName(b)));
-	if (cleanA.compare(cleanB) == 0)
-		return true;
-
-	if (CleanFileName(cleanA).compare(CleanFileName(cleanB)) == 0)
-		return true;
-
-	return false;
-}*/
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 {
@@ -969,89 +933,6 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 
 	return tableInfo;
 }
-
-/*bool MapPageGenerator::GetLatitudeAndLongitudeFromCountyAndState(const std::string& state,
-	const std::string& county, double& latitude, double& longitude,
-	double& neLatitude, double& neLongitude, double& swLatitude, double& swLongitude,
-	std::string& geographicName, const std::string& googleMapsKey)
-{
-	const unsigned int maxAttempts(5);
-	unsigned int i;
-	for (i = 0; i < maxAttempts; ++i)
-	{
-		const std::chrono::steady_clock::time_point start(std::chrono::steady_clock::now());
-		// According to Google docs, if we get this error, another attempt
-		// may succeed.  In practice, this seems to be true.
-		const std::string unknownErrorStatus("UNKNOWN_ERROR");
-		const std::vector<std::string> preferredMatches({ "County", "Parish" });
-		std::string status;
-		GoogleMapsInterface gMap("County Lookup Tool", googleMapsKey);
-		mapsAPIRateLimiter.Wait();
-		if (gMap.LookupCoordinates(county + " " + state, geographicName,
-			latitude, longitude, neLatitude, neLongitude, swLatitude, swLongitude,
-			preferredMatches, &status))
-			break;
-		else if (status.compare(unknownErrorStatus) != 0 || i == maxAttempts - 1)
-			return false;
-	}
-
-	if (geographicName.empty())
-	{
-		std::cerr << "Invalid data (empty name) returned from coordinate lookup for " << county << ", " << state << '\n';
-		return false;
-	}
-
-	// TODO:  Check address string to make sure its a good match
-
-	return true;
-}
-
-bool MapPageGenerator::GetStateAbbreviationFromFileName(const std::string& fileName, std::string& state)
-{
-	const std::string searchString("FrequencyData.csv");
-	const std::string::size_type position(fileName.find(searchString));
-	if (position == std::string::npos || position < 2)
-	{
-		std::cerr << "Failed to extract state abbreviation from '" << fileName << "'\n";
-		return false;
-	}
-
-	state = fileName.substr(position - 2, 2);
-
-	return true;
-}
-
-bool MapPageGenerator::GetCountyNameFromFileName(const std::string& fileName, std::string& county)
-{
-	assert(false);
-	/*const std::string searchString("FrequencyData.csv");
-	const std::string::size_type position(fileName.find(searchString));
-	if (position == std::string::npos || position < 3)
-	{
-		std::cerr << "Failed to extract county name from '" << fileName << "'\n";
-		return false;
-	}
-
-	county = FrequencyDataHarvester::StripDirectory(fileName.substr(0, position - 2));*/
-
-	/*return true;
-}
-
-std::string MapPageGenerator::StripCountyFromName(const std::string& s)
-{
-	const std::string endString1(" County");
-	std::string clean(s);
-	std::string::size_type endPosition(clean.find(endString1));
-	if (endPosition != std::string::npos)
-		clean = clean.substr(0, endPosition);
-
-	const std::string endString2("Parish");
-	endPosition = clean.find(endString2);
-	if (endPosition != std::string::npos)
-		clean = clean.substr(0, endPosition);
-
-	return clean;
-}*/
 
 std::string MapPageGenerator::CleanQueryString(const std::string& s)
 {
@@ -1154,28 +1035,11 @@ MapPageGenerator::Color MapPageGenerator::ColorFromHSV(
 		return Color(c + m, m, x + m);
 }
 
-/*std::string MapPageGenerator::CleanFileName(const std::string& s)
-{
-	std::string cleanString(s);
-	cleanString.erase(std::remove_if(cleanString.begin(), cleanString.end(), [](const char& c)
-	{
-		if (std::isspace(c) ||
-			c == '\'' ||
-			c == '.' ||
-			c == '-')
-			return true;
-
-		return false;
-	}), cleanString.end());
-
-	return cleanString;
-}*/
-
 bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTables,
 	std::vector<CountyGeometry>& geometry)
 {
 	const std::string usCountyBoundaryTableId("1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa");
-	const std::string query("SELECT 'State Abbr','County Name',geometry FROM " + usCountyBoundaryTableId + "&typed=false");
+	const std::string query("SELECT 'State Abbr','COUNTY num',geometry FROM " + usCountyBoundaryTableId + "&typed=false");
 	cJSON* root;
 	if (!fusionTables.SubmitQuery(query, root))
 		return false;
@@ -1211,7 +1075,7 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 		}
 
 		g.state = state->valuestring;
-		g.county = county->valuestring;
+		g.countyNumber = county->valuestring;
 		g.kml = kml->valuestring;
 
 		++i;
