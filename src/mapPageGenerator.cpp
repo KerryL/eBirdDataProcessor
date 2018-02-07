@@ -885,6 +885,7 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 			if (newData.geometryKML.empty())
 				LookupAndAssignKML(geometry, newData);
 
+			assert(!newData.state.empty() && !newData.country.empty() && !newData.county.empty() && !newData.name.empty() && !newData.code.empty());
 			return true;
 		}
 	}
@@ -936,6 +937,7 @@ void MapPageGenerator::MapJobInfo::DoJob()
 		}
 	}
 
+	assert(!info.state.empty() && !info.country.empty() && !info.county.empty() && !info.name.empty() && !info.code.empty());
 	LookupAndAssignKML(geometry, info);
 }
 
