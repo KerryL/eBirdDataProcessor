@@ -20,16 +20,21 @@ class EBirdInterface : public JSONInterface
 public:
 	EBirdInterface(const std::string& apiKey) : tokenData(apiKey) {}
 
-	struct HotspotInfo
+	struct LocationInfo
 	{
-		std::string hotspotName;
-		std::string hotspotID;
+		std::string name;
+		std::string id;
 		double latitude;
 		double longitude;
+		std::string countryCode;
+		std::string subnational1Code;
+		std::string subnational2Code;
 	};
 
-	std::vector<HotspotInfo> GetHotspotsWithRecentObservationsOf(
-		const std::string& scientificName, const std::string& region, const unsigned int& recentPeriod);
+	std::vector<LocationInfo> GetHotspotsInRegion(const std::string& region);
+
+	std::vector<LocationInfo> GetHotspotsWithRecentObservationsOf(
+		const std::string& speciesCode, const std::string& region, const unsigned int& recentPeriod);
 
 	struct ObservationInfo
 	{
@@ -80,11 +85,11 @@ public:
 
 private:
 	static const std::string apiRoot;
-	static const std::string recentObservationsOfSpeciesInRegionURLv1;
 	static const std::string observationDataPath;
 	static const std::string recentPath;
 	static const std::string taxonomyLookupEndpoint;
 	static const std::string regionReferenceEndpoint;
+	static const std::string hotspotReferenceEndpoint;
 
 	static const std::string speciesCodeTag;
 	static const std::string commonNameTag;
@@ -93,6 +98,9 @@ private:
 	static const std::string locationIDTag;
 	static const std::string latitudeTag;
 	static const std::string longitudeTag;
+	static const std::string countryCodeTag;
+	static const std::string subnational1CodeTag;
+	static const std::string subnational2CodeTag;
 	static const std::string observationDateTag;
 	static const std::string isNotHotspotTag;
 	static const std::string isReviewedTag;

@@ -19,11 +19,11 @@
 #include <iomanip>
 
 const std::string EBirdInterface::apiRoot("https://ebird.org/ws2.0/");
-const std::string EBirdInterface::recentObservationsOfSpeciesInRegionURLv1("http://ebird.org/ws1.1/data/obs/region_spp/recent");
 const std::string EBirdInterface::observationDataPath("data/obs/");
 const std::string EBirdInterface::recentPath("recent/");
 const std::string EBirdInterface::taxonomyLookupEndpoint("ref/taxonomy/ebird");
 const std::string EBirdInterface::regionReferenceEndpoint("ref/region/list/");
+const std::string EBirdInterface::hotspotReferenceEndpoint("ref/hotspot/");
 
 const std::string EBirdInterface::speciesCodeTag("speciesCode");
 const std::string EBirdInterface::commonNameTag("comName");
@@ -32,6 +32,9 @@ const std::string EBirdInterface::locationNameTag("locName");
 const std::string EBirdInterface::locationIDTag("locID");
 const std::string EBirdInterface::latitudeTag("lat");
 const std::string EBirdInterface::longitudeTag("lng");
+const std::string EBirdInterface::countryCodeTag("countryCode");
+const std::string EBirdInterface::subnational1CodeTag("subnational1Code");
+const std::string EBirdInterface::subnational2CodeTag("subnational2Code");
 const std::string EBirdInterface::observationDateTag("obsDt");
 const std::string EBirdInterface::isNotHotspotTag("locationPrivate");
 const std::string EBirdInterface::isReviewedTag("obsReviewed");
@@ -50,47 +53,52 @@ const std::string EBirdInterface::eBirdTokenHeader("X-eBirdApiToken: ");
 std::unordered_map<std::string, EBirdInterface::NameInfo> EBirdInterface::commonToScientificMap;
 std::unordered_map<std::string, std::string> EBirdInterface::scientificToCommonMap;
 
-std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentObservationsOf(
-	const std::string& scientificName, const std::string& region, const unsigned int& recentPeriod)
+std::vector<EBirdInterface::LocationInfo> EBirdInterface::GetHotspotsWithRecentObservationsOf(
+	const std::string& speciesCode, const std::string& region, const unsigned int& recentPeriod)
 {
 	const bool allowProvisional(true);
 	const bool hotspotsOnly(true);
 
+	const auto recentObservations(GetRecentObservationsOfSpeciesInRegion(speciesCode, region,
+		recentPeriod, allowProvisional, hotspotsOnly));
+	const auto hotspots(GetHotspotsInRegion(region));
+
+	std::vector<LocationInfo> hotspotsWithObservations;
+	for (const auto& o : recentObservations)
+	{
+		for (const auto& h : hotspots)
+		{
+			if (o.locationID.compare(h.id) == 0)
+			{
+				hotspotsWithObservations.push_back(h);
+				break;
+			}
+		}
+	}
+
+	return hotspotsWithObservations;
+}
+
+std::vector<EBirdInterface::LocationInfo> EBirdInterface::GetHotspotsInRegion(const std::string& region)
+{
 	std::ostringstream request;
-	request << recentObservationsOfSpeciesInRegionURLv1 << "?r="// TODO:  Still using v1.1 (no good replacement yet)
-		<< region
-		<< "&sci=" << scientificName
-		<< "&back=" << recentPeriod
-		<< "&fmt=json&includeProvisional=";
-
-	if (allowProvisional)
-		request << "true";
-	else
-		request << "false";
-
-	request << "&hotspot=";
-
-	if (hotspotsOnly)
-		request << "true";
-	else
-		request << "false";
+	request << apiRoot << hotspotReferenceEndpoint << region << "?fmt=json";
 
 	std::string response;
-	if (!DoCURLGet(URLEncode(request.str()), response))
-		return std::vector<HotspotInfo>();
+	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
+		return std::vector<LocationInfo>();
 
 	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse returned string (GetHotspotsWithRecentObservationsOf())\n";
+		std::cerr << "Failed to parse returned string (GetHotspotsInRegion())\n";
 		std::cerr << response << '\n';
-		return std::vector<HotspotInfo>();
+		return std::vector<LocationInfo>();
 	}
 
-	std::vector<HotspotInfo> hotspots;
-	const unsigned int arraySize(cJSON_GetArraySize(root));
-	unsigned int i;
-	for (i = 0; i < arraySize; ++i)
+	std::vector<LocationInfo> hotspots(cJSON_GetArraySize(root));
+	unsigned int i(0);
+	for (auto& h : hotspots)
 	{
 		cJSON* item(cJSON_GetArrayItem(root, i));
 		if (!item)
@@ -100,36 +108,56 @@ std::vector<EBirdInterface::HotspotInfo> EBirdInterface::GetHotspotsWithRecentOb
 			break;
 		}
 
-		HotspotInfo info;
-		if (!ReadJSON(item, locationNameTag, info.hotspotName))
+		if (!ReadJSON(item, locationNameTag, h.name))
 		{
 			std::cerr << "Failed to get hotspot name for item " << i << '\n';
 			hotspots.clear();
 			break;
 		}
 
-		if (!ReadJSON(item, locationIDTag, info.hotspotID))
+		if (!ReadJSON(item, locationIDTag, h.id))
 		{
 			std::cerr << "Failed to get hotspot id for item " << i << '\n';
 			hotspots.clear();
 			break;
 		}
 
-		if (!ReadJSON(item, latitudeTag, info.latitude))
+		if (!ReadJSON(item, latitudeTag, h.latitude))
 		{
 			std::cerr << "Failed to get hotspot latitude for item " << i << '\n';
 			hotspots.clear();
 			break;
 		}
 
-		if (!ReadJSON(item, longitudeTag, info.longitude))
+		if (!ReadJSON(item, longitudeTag, h.longitude))
 		{
 			std::cerr << "Failed to get hotspot longitude for item " << i << '\n';
 			hotspots.clear();
 			break;
 		}
 
-		hotspots.push_back(info);
+		if (!ReadJSON(item, countryCodeTag, h.countryCode))
+		{
+			std::cerr << "Failed to get hotspot country code for item " << i << '\n';
+			hotspots.clear();
+			break;
+		}
+
+		if (!ReadJSON(item, subnational1CodeTag, h.subnational1Code))
+		{
+			std::cerr << "Failed to get hotspot subnational 1 code for item " << i << '\n';
+			hotspots.clear();
+			break;
+		}
+
+		if (!ReadJSON(item, subnational2CodeTag, h.subnational2Code))
+		{
+			std::cerr << "Failed to get hotspot subnational 2 code for item " << i << '\n';
+			hotspots.clear();
+			break;
+		}
+
+		++i;
 	}
 
 	cJSON_Delete(root);
@@ -520,10 +548,10 @@ bool EBirdInterface::NameMatchesRegion(const std::string& name, const RegionInfo
 		return true;
 	else if (lowerName.compare(lowerCode) == 0)
 		return true;
-	else if (lowerCode.length() > lowerName.length() && 
+	else if (lowerCode.length() > lowerName.length() &&
 		lowerCode.substr(lowerCode.length() - lowerName.length()).compare(lowerName) == 0)
 		return true;
-	else if (lowerName.length() > lowerCode.length() && 
+	else if (lowerName.length() > lowerCode.length() &&
 		lowerName.substr(lowerName.length() - lowerCode.length()).compare(lowerCode) == 0)
 		return true;
 

@@ -168,13 +168,13 @@ private:
 		const std::string& country, const std::string& state, const std::string& county, const unsigned int& recentPeriod,
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
 		const std::string& mapApiKey, const std::string& eBirdApiKey) const;
-	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>, EBirdInterface::HotspotInfo>>& hotspots,
+	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>, EBirdInterface::LocationInfo>>& hotspots,
 		const std::string& hotspotInfoFileName, const std::string& homeLocation, const std::string& mapApiKey,
 		const std::string& regionCode, const std::string& eBirdApiKey) const;
 
 	struct HotspotInfoComparer
 	{
-		bool operator()(const EBirdInterface::HotspotInfo& a, const EBirdInterface::HotspotInfo& b) const;
+		bool operator()(const EBirdInterface::LocationInfo& a, const EBirdInterface::LocationInfo& b) const;
 	};
 
 	bool ComputeNewSpeciesProbability(const std::string& fileName,
