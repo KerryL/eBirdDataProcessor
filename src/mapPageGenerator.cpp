@@ -935,6 +935,8 @@ void MapPageGenerator::MapJobInfo::DoJob()
 	if (!GetCountyNameFromFileName(frequencyInfo.locationHint, info.county))
 		std::cerr << "Warning:  Failed to get county name for '" << frequencyInfo.locationHint << "'\n";
 
+	// TODO:  Change to use eBird location lookup to get name instead of maps API
+	// Also - consider changing naming conventions for frequency data files to use eBird-style codes (US-PA-0017, for example)
 	if (!mpg.GetLatitudeAndLongitudeFromCountyAndState(info.state, info.county + " County",
 		info.latitude, info.longitude, info.neLatitude,
 		info.neLongitude, info.swLatitude, info.swLongitude, info.name, googleMapsKey))
