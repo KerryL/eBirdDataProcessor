@@ -47,7 +47,9 @@ public:
 	void SortData(const EBDPConfig::SortBy& primarySort, const EBDPConfig::SortBy& secondarySort);
 
 	void GenerateUniqueObservationsReport(const EBDPConfig::UniquenessType& type);
-	void GenerateRarityScores(const std::string& frequencyFileName, const EBDPConfig::ListType& listType);
+	void GenerateRarityScores(const std::string& frequencyFilePath,
+		const EBDPConfig::ListType& listType, const std::string& eBirdAPIKey,
+		const std::string& country, const std::string& state, const std::string& county);
 	std::string GenerateList(const EBDPConfig::ListType& type, const bool& withoutPhotosOnly) const;
 
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
@@ -57,7 +59,7 @@ public:
 		const std::string& hotspotInfoFileName, const std::string& homeLocation,
 		const std::string& mapApiKey, const std::string& eBirdApiKey) const;
 
-	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFileDirectory,
+	bool FindBestLocationsForNeededSpecies(const std::string& frequencyFilePath,
 		const std::string& googleMapsKey, const std::string& eBirdAPIKey,
 		const std::string& clientId, const std::string& clientSecret) const;
 

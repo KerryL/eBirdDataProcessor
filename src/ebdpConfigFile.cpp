@@ -91,6 +91,124 @@ void EBDPConfigFile::AssignDefaults()
 bool EBDPConfigFile::ConfigIsOK()
 {
 	bool configurationOK(true);
+
+	if (!GeneralConfigIsOK())
+		configurationOK = false;
+
+	if (!FrequencyHarvestConfigIsOK())
+		configurationOK = false;
+
+	if (!TargetCalendarConfigIsOK())
+		configurationOK = false;
+
+	if (!FindMaxNeedsConfigIsOK())
+		configurationOK = false;
+
+	if (!RaritiesConfigIsOK())
+		configurationOK = false;
+
+	return configurationOK;
+}
+
+bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
+{
+	bool configurationOK(true);
+
+	if (config.fipsStart > 0 && !config.bulkFrequencyUpdate)
+	{
+		std::cerr << GetKey(config.fipsStart) << " requires " << GetKey(config.bulkFrequencyUpdate) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.bulkFrequencyUpdate && config.frequencyFilePath.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.auditFrequencyData && config.frequencyFilePath.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.auditFrequencyData) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.findMaxNeedsLocations && config.frequencyFilePath.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.findMaxNeedsLocations) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.harvestFrequencyData && config.countryFilter.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.harvestFrequencyData) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.bulkFrequencyUpdate && config.harvestFrequencyData)
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.bulkFrequencyUpdate) << " and " << GetKey(config.harvestFrequencyData) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.bulkFrequencyUpdate && config.countryFilter.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.bulkFrequencyUpdate && config.stateFilter.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.stateFilter) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
+		configurationOK = false;
+	}
+
+	return configurationOK;
+}
+
+bool EBDPConfigFile::TargetCalendarConfigIsOK()
+{
+	bool configurationOK(true);
+
+	if (config.generateTargetCalendar && config.frequencyFilePath.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.generateTargetCalendar) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.generateTargetCalendar && config.eBirdApiKey.empty())
+	{
+		std::cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.generateTargetCalendar) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.generateTargetCalendar && config.uniqueObservations != EBDPConfig::UniquenessType::None)
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.generateTargetCalendar) << " and " << GetKey(config.uniqueObservations) << '\n';
+		configurationOK = false;
+	}
+
+	return configurationOK;
+}
+
+bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
+{
+	bool configurationOK(true);
+
+	if (config.findMaxNeedsLocations &&
+		(config.oAuthClientId.empty() || config.oAuthClientSecret.empty()))
+	{
+		std::cerr << GetKey(config.findMaxNeedsLocations) << " requires "
+			<< GetKey(config.oAuthClientId) << " and " << GetKey(config.oAuthClientSecret) << '\n';
+		configurationOK = false;
+	}
+
+	return configurationOK;
+}
+
+bool EBDPConfigFile::GeneralConfigIsOK()
+{
+	bool configurationOK(true);
+
 	if (config.dataFileName.empty())
 	{
 		std::cerr << "Must specify '" << GetKey(config.dataFileName) << "'\n";
@@ -129,83 +247,17 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 	}
 
-/*	if (!config.googleMapsAPIKey.empty() && config.homeLocation.empty())
-	{
-		std::cerr << "Must specify " << GetKey(config.homeLocation) << " when using " << GetKey(config.googleMapsAPIKey) << '\n';
-		configurationOK = false;
-	}*/
-
 	if (config.recentObservationPeriod < 1 || config.recentObservationPeriod > 30)
 	{
 		std::cerr << GetKey(config.recentObservationPeriod) << " must be between 1 and 30\n";
 		configurationOK = false;
 	}
 
-	if (config.harvestFrequencyData && config.countryFilter.empty())
+	/*if (!config.googleMapsAPIKey.empty() && config.homeLocation.empty())
 	{
-		std::cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.harvestFrequencyData) << '\n';
+		std::cerr << "Must specify " << GetKey(config.homeLocation) << " when using " << GetKey(config.googleMapsAPIKey) << '\n';
 		configurationOK = false;
-	}
-
-	if (config.bulkFrequencyUpdate && config.harvestFrequencyData)
-	{
-		std::cerr << "Cannot specify both " << GetKey(config.bulkFrequencyUpdate) << " and " << GetKey(config.harvestFrequencyData) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.bulkFrequencyUpdate && config.countryFilter.empty())
-	{
-		std::cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.bulkFrequencyUpdate && config.stateFilter.empty())
-	{
-		std::cerr << "Must specify " << GetKey(config.stateFilter) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.generateRarityScores && config.frequencyFilePath.empty())
-	{
-		std::cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.generateRarityScores) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.bulkFrequencyUpdate && config.frequencyFilePath.empty())
-	{
-		std::cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.auditFrequencyData && config.frequencyFilePath.empty())
-	{
-		std::cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.auditFrequencyData) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.findMaxNeedsLocations && config.frequencyFilePath.empty())
-	{
-		std::cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.findMaxNeedsLocations) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.generateRarityScores && config.generateTargetCalendar)
-	{
-		std::cerr << "Cannot specify both " << GetKey(config.generateRarityScores) << " and " << GetKey(config.generateTargetCalendar) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.generateRarityScores && config.uniqueObservations != EBDPConfig::UniquenessType::None)
-	{
-		std::cerr << "Cannot specify both " << GetKey(config.generateRarityScores) << " and " << GetKey(config.uniqueObservations) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.generateTargetCalendar && config.uniqueObservations != EBDPConfig::UniquenessType::None)
-	{
-		std::cerr << "Cannot specify both " << GetKey(config.generateTargetCalendar) << " and " << GetKey(config.uniqueObservations) << '\n';
-		configurationOK = false;
-	}
+	}*/
 
 	if (config.uniqueObservations != EBDPConfig::UniquenessType::None && !config.countryFilter.empty())
 	{
@@ -219,17 +271,34 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (config.findMaxNeedsLocations &&
-		(config.oAuthClientId.empty() || config.oAuthClientSecret.empty()))
+	return configurationOK;
+}
+
+bool EBDPConfigFile::RaritiesConfigIsOK()
+{
+	bool configurationOK(true);
+
+	if (config.generateRarityScores && config.frequencyFilePath.empty())
 	{
-		std::cerr << GetKey(config.findMaxNeedsLocations) << " requires "
-			<< GetKey(config.oAuthClientId) << " and " << GetKey(config.oAuthClientSecret) << '\n';
+		std::cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.generateRarityScores) << '\n';
 		configurationOK = false;
 	}
 
-	if (config.fipsStart > 0 && !config.bulkFrequencyUpdate)
+	if (config.generateRarityScores && config.eBirdApiKey.empty())
 	{
-		std::cerr << GetKey(config.fipsStart) << " requires " << GetKey(config.bulkFrequencyUpdate) << '\n';
+		std::cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.generateRarityScores) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.generateRarityScores && config.generateTargetCalendar)
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.generateRarityScores) << " and " << GetKey(config.generateTargetCalendar) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.generateRarityScores && config.uniqueObservations != EBDPConfig::UniquenessType::None)
+	{
+		std::cerr << "Cannot specify both " << GetKey(config.generateRarityScores) << " and " << GetKey(config.uniqueObservations) << '\n';
 		configurationOK = false;
 	}
 

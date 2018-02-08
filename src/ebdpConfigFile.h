@@ -24,6 +24,12 @@ private:
 	void BuildConfigItems() override;
 	void AssignDefaults() override;
 	bool ConfigIsOK() override;
+
+	bool FrequencyHarvestConfigIsOK();
+	bool TargetCalendarConfigIsOK();
+	bool FindMaxNeedsConfigIsOK();
+	bool GeneralConfigIsOK();
+	bool RaritiesConfigIsOK();
 };
 
 #endif// EBDP_CONFIG_FILE_H_

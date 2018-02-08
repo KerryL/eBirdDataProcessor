@@ -88,7 +88,9 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	}
 	else if (configFile.GetConfig().generateRarityScores)
 		processor.GenerateRarityScores(configFile.GetConfig().frequencyFilePath,
-			configFile.GetConfig().listType);
+			configFile.GetConfig().listType, configFile.GetConfig().eBirdApiKey,
+			configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter,
+			configFile.GetConfig().countyFilter);
 	else if (configFile.GetConfig().findMaxNeedsLocations)
 	{
 		if (!processor.FindBestLocationsForNeededSpecies(

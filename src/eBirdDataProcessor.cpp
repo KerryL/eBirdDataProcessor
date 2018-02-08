@@ -936,11 +936,15 @@ void EBirdDataProcessor::GenerateUniqueObservationsReport(const EBDPConfig::Uniq
 		std::cout << "County:\n";
 }
 
-void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFileName, const EBDPConfig::ListType& listType)
+void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFilePath,
+	const EBDPConfig::ListType& listType, const std::string& eBirdAPIKey,
+	const std::string& country, const std::string& state, const std::string& county)
 {
+	EBirdInterface ebi(eBirdAPIKey);
+	const std::string frequencyFileName(ebi.GetRegionCode(country, state, county) + ".csv");
 	FrequencyDataYear monthFrequencyData;
 	DoubleYear checklistCounts;
-	if (!ParseFrequencyFile(frequencyFileName, monthFrequencyData, checklistCounts))
+	if (!ParseFrequencyFile(frequencyFilePath + frequencyFileName, monthFrequencyData, checklistCounts))
 		return;
 
 	std::vector<EBirdDataProcessor::FrequencyInfo> yearFrequencyData(
@@ -1100,10 +1104,10 @@ std::vector<std::string> EBirdDataProcessor::ListFilesInDirectory(const std::str
 	return fileNames;
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& frequencyFileDirectory,
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& frequencyFilePath,
 	const std::string& googleMapsKey, const std::string& eBirdAPIKey, const std::string& clientId, const std::string& clientSecret) const
 {
-	auto fileNames(ListFilesInDirectory(frequencyFileDirectory));
+	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
 		return false;
 
@@ -1113,7 +1117,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 	auto probEntryIt(newSightingProbability.begin());
 	for (const auto& f : fileNames)
 	{
-		pool.AddJob(std::make_unique<FileReadAndCalculateJob>(*probEntryIt, frequencyFileDirectory, f, *this));
+		pool.AddJob(std::make_unique<FileReadAndCalculateJob>(*probEntryIt, frequencyFilePath, f, *this));
 		++probEntryIt;
 	}
 
