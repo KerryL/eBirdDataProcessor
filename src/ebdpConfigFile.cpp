@@ -73,10 +73,9 @@ void EBDPConfigFile::AssignDefaults()
 	config.uniqueObservations = EBDPConfig::UniquenessType::None;
 
 	config.targetNeedArea = EBDPConfig::TargetNeedArea::None;
-	config.harvestFrequencyData = false;
 	config.generateTargetCalendar = false;
 	config.generateRarityScores = false;
-	config.topBirdCount = false;
+	config.topBirdCount = 20;
 	config.recentObservationPeriod = 15;
 
 	config.showOnlyPhotoNeeds = false;
@@ -84,6 +83,7 @@ void EBDPConfigFile::AssignDefaults()
 	config.auditFrequencyData = false;
 	config.bulkFrequencyUpdate = false;
 	config.harvestFrequencyData = false;
+	config.findMaxNeedsLocations = false;
 
 	config.fipsStart = 0;
 }
