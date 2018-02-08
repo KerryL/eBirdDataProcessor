@@ -304,6 +304,13 @@ bool MapPageGenerator::CreateFusionTable(
 		}
 	}
 
+	if (observationProbabilities.size() == 0)
+	{
+		// TODO:  Wouldn't have populated lat/lon stuff yet.
+		std::cout << "All data up-to-date" << std::endl;
+		return true;
+	}
+
 	std::cout << "Retrieving geometry data" << std::endl;
 	std::vector<CountyGeometry> geometry;
 	if (!GetCountyGeometry(fusionTables, geometry))
@@ -334,7 +341,7 @@ bool MapPageGenerator::CreateFusionTable(
 
 	pool.WaitForAllJobsComplete();
 
-	// TODO:  Use eBird API to get lat/long range to send to map html
+	// TODO:  Use eBird API to get lat/lon range to send to map html
 
 	std::cout << "Preparing data for upload" << std::endl;
 	std::ostringstream ss;
@@ -675,7 +682,10 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 
 			if (!ProbabilityDataHasChanged(*matchingEntry, c) &&
 				!c.name.empty() && !c.state.empty() && !c.country.empty())
+			{
+				newData.erase(matchingEntry);
 				return true;// Leave row as-is (Case #2)
+			}
 
 			// Need to delete row, but don't remove it from exisingData (Case #3)
 			deletedRows.push_back(c.rowId);

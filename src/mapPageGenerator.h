@@ -27,7 +27,7 @@ public:
 		const std::vector<ObservationInfo>& observationInfo,
 		const std::string& clientId, const std::string& clientSecret);
 
-//private:
+private:
 	static const std::string birdProbabilityTableName;
 
 	struct NamePair
