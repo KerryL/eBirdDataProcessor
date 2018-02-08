@@ -63,7 +63,17 @@ struct EBDPConfig
 
 	UniquenessType uniqueObservations;
 
+	enum class TargetNeedArea : int
+	{
+		None = 0,
+		Region,
+		Subnational1,
+		Country,
+		World
+	};
+
 	bool generateTargetCalendar;
+	TargetNeedArea targetNeedArea;
 	bool harvestFrequencyData;
 	unsigned int topBirdCount;
 	unsigned int recentObservationPeriod;// [days]

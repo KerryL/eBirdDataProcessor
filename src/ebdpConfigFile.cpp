@@ -36,6 +36,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("SHOW_UNIQUE_OBS", config.uniqueObservations);
 
 	AddConfigItem("CALENDAR", config.generateTargetCalendar);
+	AddConfigItem("TARGET_AREA", config.targetNeedArea);
 	AddConfigItem("HARVEST_FREQUENCY", config.harvestFrequencyData);
 	AddConfigItem("BULK_FREQUENCY_UPDATE", config.bulkFrequencyUpdate);
 	AddConfigItem("AUDIT_FREQUENCY_DATA", config.auditFrequencyData);
@@ -71,6 +72,7 @@ void EBDPConfigFile::AssignDefaults()
 
 	config.uniqueObservations = EBDPConfig::UniquenessType::None;
 
+	config.targetNeedArea = EBDPConfig::TargetNeedArea::None;
 	config.harvestFrequencyData = false;
 	config.generateTargetCalendar = false;
 	config.generateRarityScores = false;

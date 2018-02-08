@@ -45,15 +45,15 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		processor.GenerateUniqueObservationsReport(configFile.GetConfig().uniqueObservations);
 
 	// Remove entires that don't fall withing the specified locations
-	if (!configFile.GetConfig().locationFilter.empty())
+	if (!configFile.GetConfig().locationFilter.empty() && configFile.GetConfig().targetNeedArea == EBDPConfig::TargetNeedArea::None)
 		processor.FilterLocation(configFile.GetConfig().locationFilter, configFile.GetConfig().countyFilter,
 			configFile.GetConfig().stateFilter, configFile.GetConfig().countryFilter);
-	else if (!configFile.GetConfig().countyFilter.empty())
+	else if (!configFile.GetConfig().countyFilter.empty() && configFile.GetConfig().targetNeedArea <= EBDPConfig::TargetNeedArea::Region)
 		processor.FilterCounty(configFile.GetConfig().countyFilter, configFile.GetConfig().stateFilter,
 			configFile.GetConfig().countryFilter);
-	else if (!configFile.GetConfig().stateFilter.empty())
+	else if (!configFile.GetConfig().stateFilter.empty() && configFile.GetConfig().targetNeedArea <= EBDPConfig::TargetNeedArea::Subnational1)
 		processor.FilterState(configFile.GetConfig().stateFilter, configFile.GetConfig().countryFilter);
-	else if (!configFile.GetConfig().countryFilter.empty())
+	else if (!configFile.GetConfig().countryFilter.empty() && configFile.GetConfig().targetNeedArea <= EBDPConfig::TargetNeedArea::Country)
 		processor.FilterCountry(configFile.GetConfig().countryFilter);
 
 	// Remove entries that don't fall within the specified dates
