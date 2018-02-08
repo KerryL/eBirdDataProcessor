@@ -681,7 +681,7 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 			}
 
 			if (!ProbabilityDataHasChanged(*matchingEntry, c) &&
-				!c.name.empty() && !c.state.empty() && !c.country.empty())
+				!c.name.empty() && !c.state.empty() && !c.country.empty())// Could also consider checking for empty geometry here?
 			{
 				newData.erase(matchingEntry);
 				return true;// Leave row as-is (Case #2)
