@@ -127,6 +127,8 @@ bool EBirdDataProcessor::ParseLine(const std::string& line, Entry& entry)
 		return false;
 
 	// Make sure the data stored in the tm structure is consistent
+	entry.dateTime.tm_sec = 0;
+	entry.dateTime.tm_isdst = -1;// Let locale determine if DST is in effect
 	mktime(&entry.dateTime);
 	return true;
 }
