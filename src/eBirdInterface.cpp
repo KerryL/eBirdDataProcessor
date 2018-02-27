@@ -498,7 +498,8 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 	if (!root)
 	{
 		std::cerr << "Failed to parse returned string (GetSubRegions())\n";
-		std::cerr << response << '\n';
+		std::cerr << "Request was: " << request.str() << '\n';
+		std::cerr << "Response was: " << response << '\n';
 		return std::vector<RegionInfo>();
 	}
 

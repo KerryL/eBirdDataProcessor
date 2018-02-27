@@ -342,6 +342,11 @@ bool MapPageGenerator::CreateFusionTable(
 	pool.WaitForAllJobsComplete();
 
 	// TODO:  Use eBird API to get lat/lon range to send to map html
+	// This hack will work for now...
+	northeastLatitude = 71.5;
+	northeastLongitude = -66.26;
+	southwestLatitude = 18.79;
+	southwestLongitude = 171.7;
 
 	std::cout << "Preparing data for upload" << std::endl;
 	std::ostringstream ss;
