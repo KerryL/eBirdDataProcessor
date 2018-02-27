@@ -9,7 +9,6 @@
 #include "bestObservationTimeEstimator.h"
 #include "mapPageGenerator.h"
 #include "frequencyDataHarvester.h"
-#include "stringUtilities.h"
 
 // System headers (added from https://github.com/tronkko/dirent/ for Windows)
 #ifdef _WIN32
@@ -130,6 +129,9 @@ bool EBirdDataProcessor::ParseLine(const std::string& line, Entry& entry)
 	entry.dateTime.tm_sec = 0;
 	entry.dateTime.tm_isdst = -1;// Let locale determine if DST is in effect
 	mktime(&entry.dateTime);
+
+	entry.compareString = StringUtilities::Trim(StripParentheses(entry.commonName));
+
 	return true;
 }
 
@@ -620,8 +622,7 @@ void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyDa
 		{
 			const auto& speciesIterator(std::find_if(data.begin(), data.end(), [f](const Entry& e)
 			{
-				return StringUtilities::Trim(StripParentheses(f.species)).compare(
-					StringUtilities::Trim(StripParentheses(e.commonName))) == 0;
+				return f.compareString.compare(e.compareString) == 0;
 			}));
 			return speciesIterator != data.end();
 		}), month.end());

@@ -10,6 +10,7 @@
 #include "eBirdInterface.h"
 #include "ebdpConfig.h"
 #include "threadPool.h"
+#include "stringUtilities.h"
 
 // Standard C++ headers
 #include <string>
@@ -67,9 +68,10 @@ public:
 	{
 		std::string species;
 		double frequency = 0.0;
+		std::string compareString;// Huge boost in efficiency if we pre-compute this
 
 		FrequencyInfo() = default;
-		FrequencyInfo(const std::string& species, const double& frequency) : species(species), frequency(frequency) {}
+		FrequencyInfo(const std::string& species, const double& frequency) : species(species), frequency(frequency), compareString(StringUtilities::Trim(StripParentheses(species))) {}
 	};
 
 	struct YearFrequencyInfo
@@ -115,6 +117,8 @@ private:
 		std::string checklistComments;
 
 		bool hasPhoto = false;
+
+		std::string compareString;// Huge boost in efficiency if we pre-compute this
 	};
 
 	std::vector<Entry> data;
