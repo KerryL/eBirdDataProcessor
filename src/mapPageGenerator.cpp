@@ -342,6 +342,7 @@ bool MapPageGenerator::CreateFusionTable(
 	pool.WaitForAllJobsComplete();
 
 	// TODO:  Use eBird API to get lat/lon range to send to map html
+	// What about parsing KML to find extents?
 	// This hack will work for now...
 	northeastLatitude = 71.5;
 	northeastLongitude = -66.26;
@@ -1086,6 +1087,9 @@ MapPageGenerator::Color MapPageGenerator::ColorFromHSV(
 bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTables,
 	std::vector<CountyGeometry>& geometry)
 {
+	// TODO:  Instead of this, maybe ask user to download kmz files from http://www.gadm.org/country (or download automatically if missing?)
+	// Then, unzip, parse file to find matching placemark names
+	// Would need user to specify kmz directory
 	const std::string usCountyBoundaryTableId("1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa");
 	const std::string query("SELECT 'State Abbr','COUNTY num',geometry FROM " + usCountyBoundaryTableId + "&typed=false");
 	cJSON* root;
