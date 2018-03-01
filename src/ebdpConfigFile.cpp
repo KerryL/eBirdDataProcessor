@@ -223,9 +223,9 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 	}
 
 	if (!config.stateFilter.empty() &&
-		config.stateFilter.length() != 2)
+		(config.stateFilter.length() < 2 || config.stateFilter.length() > 3))
 	{
-		std::cerr << "State/providence (" << GetKey(config.stateFilter) << ") must be specified using 2-digit abbreviation\n";
+		std::cerr << "State/providence (" << GetKey(config.stateFilter) << ") must be specified using 2- or 3-digit abbreviation\n";
 		configurationOK = false;
 	}
 

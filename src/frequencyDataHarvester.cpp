@@ -88,6 +88,14 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 	const std::string stateRegionCode(ebi.GetStateCode(countryRegionCode, state));
 	auto subRegionList(ebi.GetSubRegions(stateRegionCode, EBirdInterface::RegionType::SubNational2));
 
+	// NOTE:  Some places (Australia Captial Territory) do not have subregions beyond level 1.  In that case, need special handling:
+	if (subRegionList.size() == 0)
+	{
+		EBirdInterface::RegionInfo regionInfo;
+		regionInfo.code = stateRegionCode;
+		subRegionList.push_back(regionInfo);
+	}
+
 	std::cout << "Beginning harvest for " << subRegionList.size() << " counties";
 	std::sort(subRegionList.begin(), subRegionList.end(), [](const EBirdInterface::RegionInfo& a, const EBirdInterface::RegionInfo& b)
 	{
@@ -821,5 +829,10 @@ std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCount
 
 std::string FrequencyDataHarvester::ExtractStateFromFileName(const std::string& fileName)
 {
-	return fileName.substr(3, 2);
+	// For US, states abbreviations are all 2 characters, but this isn't universal.  Need to find the hyphen.
+	// eBird does guarantee that country abbreviation are two characters, however.
+	const std::string::size_type start(3);
+	const std::string::size_type length(fileName.find('-', start) - start);
+	assert(length != std::string::npos);
+	return fileName.substr(start, length);
 }
