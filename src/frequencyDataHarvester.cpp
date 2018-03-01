@@ -85,16 +85,25 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 
 	EBirdInterface ebi(eBirdApiKey);
 	const std::string countryRegionCode(ebi.GetCountryCode(country));
-	const std::string stateRegionCode(ebi.GetStateCode(countryRegionCode, state));
-	auto subRegionList(ebi.GetSubRegions(stateRegionCode, EBirdInterface::RegionType::SubNational2));
 
-	// NOTE:  Some places (Australia Captial Territory) do not have subregions beyond level 1.  In that case, need special handling:
-	if (subRegionList.size() == 0)
+	// We want to be able to handle two things here:  Places which do not have sub-regions
+	// beyond level 1 and pulling state-level data by specifying only the country abbreviation.
+	auto subRegionList([&state, &countryRegionCode, &ebi]()
 	{
-		EBirdInterface::RegionInfo regionInfo;
-		regionInfo.code = stateRegionCode;
-		subRegionList.push_back(regionInfo);
-	}
+		if (state.empty())
+			return ebi.GetSubRegions(countryRegionCode, EBirdInterface::RegionType::SubNational1);
+
+		const std::string stateRegionCode(ebi.GetStateCode(countryRegionCode, state));
+		auto subRegionList(ebi.GetSubRegions(stateRegionCode, EBirdInterface::RegionType::SubNational2));
+		if (subRegionList.empty())
+		{
+			EBirdInterface::RegionInfo regionInfo;
+			regionInfo.code = stateRegionCode;
+			subRegionList.push_back(regionInfo);
+		}
+
+		return subRegionList;
+	}());
 
 	std::cout << "Beginning harvest for " << subRegionList.size() << " counties";
 	std::sort(subRegionList.begin(), subRegionList.end(), [](const EBirdInterface::RegionInfo& a, const EBirdInterface::RegionInfo& b)
