@@ -772,8 +772,9 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 			if (!PullFrequencyData(county.code, data))
 				continue;
 
-			if (DataIsEmpty(data))
-				continue;
+			// See comment in DoBulkFrequencyHarvest()
+			/*if (DataIsEmpty(data))
+				continue;*/
 
 			if (!WriteFrequencyDataToFile(frequencyFilePath + county.code + ".csv", data))
 				continue;
