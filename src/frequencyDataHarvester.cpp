@@ -695,12 +695,9 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 	if (!DoEBirdLogin())
 		return false;
 
-	// TODO:  Can re-work this to be able to process regions in different countries
-	// Imagining something like ExtractCountryCode(), then split freqInfo into sets for each country, then loop over below
+	// TODO:  Should extend this to handle states where country has no further subdivisions
 
 	EBirdInterface ebi(eBirdApiKey);
-	const std::string countryString("US");// TODO:  Don't hardcode
-	const std::string countryCode(ebi.GetCountryCode(countryString));
 
 	for (const auto& f : freqInfo)
 	{
@@ -716,6 +713,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 
 				if (regionString.empty())
 				{
+					const std::string countryCode(ExtractCountryFromFileName(f.locationCode));
 					const std::string state(ExtractStateFromFileName(f.locationCode));
 					const std::string stateCode(ebi.GetStateCode(countryCode, state));
 					const auto countyList(ebi.GetSubRegions(stateCode, EBirdInterface::RegionType::SubNational2));
@@ -756,15 +754,15 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 		}
 	}
 
-	auto states(GetStates(freqInfo));
-	for (const auto& s : states)
+	auto statesAndCountries(GetCountriesAndStates(freqInfo));
+	for (const auto& sc : statesAndCountries)
 	{
-		const std::string stateCode(ebi.GetStateCode(countryCode, s));
+		const std::string stateCode(ebi.GetStateCode(sc.country, sc.state));
 
 		auto missingCounties(FindMissingCounties(stateCode, freqInfo, ebi));
 		for (const auto& county : missingCounties)
 		{
-			std::cout << "Missing county " << county.name << " for state " << s << "; Updating..." << std::endl;
+			std::cout << "Missing county " << county.name << " for state " << sc.state << ", " << sc.country << "; Updating..." << std::endl;
 
 			std::array<FrequencyData, 12> data;
 			if (!PullFrequencyData(county.code, data))
@@ -781,16 +779,20 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 	return true;
 }
 
-std::vector<std::string> FrequencyDataHarvester::GetStates(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo)
+std::vector<FrequencyDataHarvester::StateCountryCode> FrequencyDataHarvester::GetCountriesAndStates(
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo)
 {
-	std::vector<std::string> states(freqInfo.size());
+	std::vector<StateCountryCode> statesCountries(freqInfo.size());
 	unsigned int i;
 	for (i = 0; i < freqInfo.size(); ++i)
-		states[i] = ExtractStateFromFileName(freqInfo[i].locationCode);
+	{
+		statesCountries[i].country = ExtractCountryFromFileName(freqInfo[i].locationCode);
+		statesCountries[i].state = ExtractStateFromFileName(freqInfo[i].locationCode);
+	}
 
-	std::sort(states.begin(), states.end());
-	states.erase(std::unique(states.begin(), states.end()), states.end());
-	return states;
+	std::sort(statesCountries.begin(), statesCountries.end());
+	statesCountries.erase(std::unique(statesCountries.begin(), statesCountries.end()), statesCountries.end());
+	return statesCountries;
 }
 
 std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCounties(const std::string& stateCode,
@@ -834,6 +836,11 @@ std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCount
 	assert(mIt == missingCounties.end());
 
 	return missingCounties;
+}
+
+std::string FrequencyDataHarvester::ExtractCountryFromFileName(const std::string& fileName)
+{
+	return fileName.substr(0, 2);
 }
 
 std::string FrequencyDataHarvester::ExtractStateFromFileName(const std::string& fileName)

@@ -89,9 +89,30 @@ private:
 	static std::string Clean(const std::string& s);
 	static bool DataIsEmpty(const std::array<FrequencyData, 12>& frequencyData);
 
-	static std::vector<std::string> GetStates(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo);
+	struct StateCountryCode
+	{
+		std::string state;
+		std::string country;
+
+		bool operator==(const StateCountryCode& other) const
+		{
+			return state.compare(other.state) == 0 && country.compare(other.country) == 0;
+		}
+
+		bool operator<(const StateCountryCode& other) const
+		{
+			if (country < other.country)
+				return true;
+			else if (country.compare(other.country) == 0)
+				return state < other.state;
+			return false;
+		}
+	};
+
+	static std::vector<StateCountryCode> GetCountriesAndStates(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo);
 	static std::vector<EBirdInterface::RegionInfo> FindMissingCounties(const std::string& stateCode,
 		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, EBirdInterface& ebi);
+	static std::string ExtractCountryFromFileName(const std::string& fileName);
 	static std::string ExtractStateFromFileName(const std::string& fileName);
 };
 
