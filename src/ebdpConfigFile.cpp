@@ -40,7 +40,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem("HARVEST_FREQUENCY", config.harvestFrequencyData);
 	AddConfigItem("BULK_FREQUENCY_UPDATE", config.bulkFrequencyUpdate);
 	AddConfigItem("AUDIT_FREQUENCY_DATA", config.auditFrequencyData);
-	AddConfigItem("FIPS_START", config.fipsStart);
+	AddConfigItem("FIRST_SUB_REGION", config.firstSubRegion);
 	AddConfigItem("TOP_COUNT", config.topBirdCount);
 	AddConfigItem("FREQUENCY_FILES", config.frequencyFilePath);
 	AddConfigItem("TARGET_INFO_FILE_NAME", config.targetInfoFileName);
@@ -84,8 +84,6 @@ void EBDPConfigFile::AssignDefaults()
 	config.bulkFrequencyUpdate = false;
 	config.harvestFrequencyData = false;
 	config.findMaxNeedsLocations = false;
-
-	config.fipsStart = 0;
 }
 
 bool EBDPConfigFile::ConfigIsOK()
@@ -114,9 +112,9 @@ bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 {
 	bool configurationOK(true);
 
-	if (config.fipsStart > 0 && !config.bulkFrequencyUpdate)
+	if (config.firstSubRegion.empty() && !config.bulkFrequencyUpdate)
 	{
-		std::cerr << GetKey(config.fipsStart) << " requires " << GetKey(config.bulkFrequencyUpdate) << '\n';
+		std::cerr << GetKey(config.firstSubRegion) << " requires " << GetKey(config.bulkFrequencyUpdate) << '\n';
 		configurationOK = false;
 	}
 

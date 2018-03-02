@@ -128,7 +128,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		FrequencyDataHarvester harvester;
 		if (!harvester.DoBulkFrequencyHarvest(configFile.GetConfig().countryFilter,
 			configFile.GetConfig().stateFilter, configFile.GetConfig().frequencyFilePath,
-			configFile.GetConfig().fipsStart, configFile.GetConfig().eBirdApiKey))
+			configFile.GetConfig().firstSubRegion, configFile.GetConfig().eBirdApiKey))
 		{
 			curl_global_cleanup();
 			return 1;

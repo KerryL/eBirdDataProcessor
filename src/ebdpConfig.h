@@ -17,7 +17,7 @@ struct EBDPConfig
 	std::string locationFilter;
 
 	bool bulkFrequencyUpdate;
-	unsigned int fipsStart;
+	std::string firstSubRegion;
 	bool auditFrequencyData;
 
 	enum class ListType : int

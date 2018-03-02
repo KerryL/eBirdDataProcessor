@@ -29,7 +29,7 @@ public:
 		const std::string &county, const std::string &frequencyFilePath, const std::string& eBirdApiKey);
 
 	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state,
-		const std::string& targetPath, const unsigned int& fipsStart, const std::string& eBirdApiKey);
+		const std::string& targetPath, const std::string& firstSubRegion, const std::string& eBirdApiKey);
 
 	bool AuditFrequencyData(const std::string& frequencyFilePath,
 		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& eBirdApiKey);

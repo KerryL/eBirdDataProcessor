@@ -75,7 +75,7 @@ bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
 // to re-harvest the data for the specified state which was successfully harvested
 bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 	const std::string &state, const std::string& targetPath,
-	const unsigned int& fipsStart, const std::string& eBirdApiKey)
+	const std::string& firstSubRegion, const std::string& eBirdApiKey)
 {
 	std::cout << "Harvesting frequency data for " << state << ", " << country << std::endl;
 	std::cout << "Frequency files will be stored in " << targetPath << std::endl;
@@ -111,29 +111,23 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		return a.code.compare(b.code) < 0;
 	});
 
-	if (fipsStart > 0)
-		std::cout << " (skipping counties with FIPS < " << fipsStart << ')';
+	if (!firstSubRegion.empty())
+		std::cout << " (skipping regions that occur before " << firstSubRegion << ')';
 	std::cout << std::endl;
 
 	for (const auto& r : subRegionList)
 	{
-		if (fipsStart > 0)
+		if (!firstSubRegion.empty())
 		{
 			auto lastDash(r.code.find_last_of('-'));
 			if (lastDash != std::string::npos)
 			{
-				std::istringstream fips(r.code.substr(lastDash + 1));
-				unsigned int thisFips;
-				if (!(fips >> thisFips).fail())
-				{
-					if (thisFips < fipsStart)
-						continue;
-				}
-				else
-					std::cerr << "Failed to interpret FIPS code to determine if we should ignore (so we will include it)\n";
+				const std::string currentRegionCode(r.code.substr(lastDash + 1));
+				if (currentRegionCode.compare(firstSubRegion) < 0)
+					continue;
 			}
 			else
-				std::cerr << "Failed to extract FIPS code to determine if we should ignore (so we will include it)\n";
+				std::cerr << "Failed to extract code to determine if we should ignore (so we will include it)\n";
 		}
 
 		std::cout << r.name << " (" << r.code << ")..." << std::endl;
