@@ -141,11 +141,15 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		if (!PullFrequencyData(r.code, data))
 			break;
 
+		// Used to be true:
 		// Some independent cities (i.e. "Baltimore city") are recognized in census data as "county equivalents,"
 		// but are apparently combined with a neighboring county by eBird.  When this happens, data will be empty,
 		// but we return true to allow processing to continue.
-		if (DataIsEmpty(data))
-			continue;
+		//
+		// Now:  We're pulling list of sub regions directly from eBird, so an empty data set only means that there
+		// are no observations yet for that area (YES - this IS possible!).
+		/*if (DataIsEmpty(data))
+			continue;*/
 
 		if (!WriteFrequencyDataToFile(targetPath + r.code + ".csv", data))
 			break;
