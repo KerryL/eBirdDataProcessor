@@ -1082,7 +1082,7 @@ bool EBirdDataProcessor::ReadPhotoList(const String& photoFileName)
 
 std::vector<String> EBirdDataProcessor::ListFilesInDirectory(const String& directory)
 {
-	DIR *dir(opendir(UString::ToNarrowString<String>(directory).c_str()));
+	DIR *dir(opendir(UString::ToNarrowString(directory).c_str()));
 	if (!dir)
 	{
 		Cerr << "Failed to open directory '" << directory << "'\n";

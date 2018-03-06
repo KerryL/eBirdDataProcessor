@@ -87,7 +87,7 @@ std::vector<EBirdInterface::LocationInfo> EBirdInterface::GetHotspotsInRegion(co
 	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
 		return std::vector<LocationInfo>();
 
-	cJSON *root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON *root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse returned string (GetHotspotsInRegion())\n";
@@ -284,7 +284,7 @@ std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservatio
 	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
 		return std::vector<ObservationInfo>();
 
-	cJSON *root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON *root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse returned string (GetRecentObservationsOfSpeciesInRegion())\n";
@@ -322,7 +322,7 @@ std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservatio
 bool EBirdInterface::AddTokenToCurlHeader(CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, UString::ToNarrowString<String>(String(eBirdTokenHeader
+	headerList = curl_slist_append(headerList, UString::ToNarrowString(String(eBirdTokenHeader
 		+ static_cast<const TokenData*>(data)->token)).c_str());
 	if (!headerList)
 	{
@@ -366,7 +366,7 @@ bool EBirdInterface::FetchEBirdNameData()
 	if (!DoCURLGet(request.str(), response))
 		return false;
 
-	cJSON *root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON *root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse returned string (GetScientificNameFromCommonName())\n";
@@ -493,7 +493,7 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
 		return std::vector<RegionInfo>();
 
-	cJSON *root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON *root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse returned string (GetSubRegions())\n";

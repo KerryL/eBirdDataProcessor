@@ -203,7 +203,7 @@ bool FrequencyDataHarvester::DoEBirdLogin()
 
 		String eBirdUserName, eBirdPassword;
 		GetUserNameAndPassword(eBirdUserName, eBirdPassword);
-		char* urlEncodedPassword(curl_easy_escape(curl, UString::ToNarrowString<String>(eBirdPassword).c_str(), eBirdPassword.length()));
+		char* urlEncodedPassword(curl_easy_escape(curl, UString::ToNarrowString(eBirdPassword).c_str(), eBirdPassword.length()));
 		if (!urlEncodedPassword)
 			Cerr << "Failed to URL-encode password\n";
 		eBirdPassword = UString::ToStringType(urlEncodedPassword);
@@ -268,12 +268,12 @@ bool FrequencyDataHarvester::DoGeneralCurlConfiguration()
 		CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L), _T("Failed to set verbose output"));// Don't fail for this one
 
 	/*if (!caCertificatePath.empty())
-		curl_easy_setopt(curl, CURLOPT_CAPATH, UString::ToNarrowString<String>(caCertificatePath).c_str());*/
+		curl_easy_setopt(curl, CURLOPT_CAPATH, UString::ToNarrowString(caCertificatePath).c_str());*/
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL), _T("Failed to enable SSL")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_USERAGENT, UString::ToNarrowString<String>(userAgent).c_str()), _T("Failed to set user agent")))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_USERAGENT, UString::ToNarrowString(userAgent).c_str()), _T("Failed to set user agent")))
 		return false;
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L), _T("Failed to enable location following")))
@@ -289,10 +289,10 @@ bool FrequencyDataHarvester::DoGeneralCurlConfiguration()
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList), _T("Failed to set header")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEFILE, UString::ToNarrowString<String>(cookieFile).c_str()), _T("Failed to load the cookie file")))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEFILE, UString::ToNarrowString(cookieFile).c_str()), _T("Failed to load the cookie file")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEJAR, UString::ToNarrowString<String>(cookieFile).c_str()), _T("Failed to enable saving cookies")))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEJAR, UString::ToNarrowString(cookieFile).c_str()), _T("Failed to enable saving cookies")))
 		return false;
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FrequencyDataHarvester::CURLWriteCallback), _T("Failed to set the write callback")))
@@ -329,7 +329,7 @@ Cout << "=============END COOKIES=========" << std::endl;// TODO:  Remove*/
 		return false;
 
 	const String loginInfo(BuildEBirdLoginInfo(userName, password, token));
-	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, UString::ToNarrowString<String>(loginInfo).c_str());
+	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, UString::ToNarrowString(loginInfo).c_str());
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), _T("Failed issuding https POST (login)")))
 		return false;
@@ -420,7 +420,7 @@ bool FrequencyDataHarvester::DoCURLGet(const String& url, String &response)
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POST, 0L), _T("Failed to set action to GET")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_URL, UString::ToNarrowString<String>(url).c_str()), _T("Failed to set URL")))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_URL, UString::ToNarrowString(url).c_str()), _T("Failed to set URL")))
 		return false;
 
 	rateLimiter.Wait();

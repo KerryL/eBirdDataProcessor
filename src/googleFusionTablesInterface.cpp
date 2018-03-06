@@ -108,7 +108,7 @@ bool GoogleFusionTablesInterface::CreateTable(TableInfo& info)
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse create table response\n";
@@ -141,7 +141,7 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse table list response\n";
@@ -164,7 +164,7 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 	// TODO:  Add support for nextPageToken in order to support long result lists
 
 	tables.clear();
-	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(itemsKey).c_str()));
+	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString(itemsKey).c_str()));
 	if (items)// May not be items, if no tables exist
 	{
 		tables.resize(cJSON_GetArraySize(items));
@@ -217,7 +217,7 @@ bool GoogleFusionTablesInterface::CopyTable(const String& tableId, TableInfo& in
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse copy table response\n";
@@ -252,7 +252,7 @@ bool GoogleFusionTablesInterface::Import(const String& tableId,
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse copy import response\n";
@@ -298,7 +298,7 @@ bool GoogleFusionTablesInterface::ListColumns(const String& tableId,
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse column list response\n";
@@ -320,7 +320,7 @@ bool GoogleFusionTablesInterface::ListColumns(const String& tableId,
 
 	// TODO:  Add support for nextPageToken in order to support long result lists (does this apply here?)
 
-	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(itemsKey).c_str()));
+	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString(itemsKey).c_str()));
 	if (items)// May not be items, if no tables exist
 	{
 		columnInfo.resize(cJSON_GetArraySize(items));
@@ -351,7 +351,7 @@ bool GoogleFusionTablesInterface::ListColumns(const String& tableId,
 
 bool GoogleFusionTablesInterface::ResponseHasError(cJSON* root)
 {
-	cJSON* error(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(errorKey).c_str()));
+	cJSON* error(cJSON_GetObjectItem(root, UString::ToNarrowString(errorKey).c_str()));
 	if (!error)
 		return false;
 
@@ -367,7 +367,7 @@ bool GoogleFusionTablesInterface::ResponseHasError(cJSON* root)
 
 bool GoogleFusionTablesInterface::ResponseTooLarge(cJSON* root)
 {
-	cJSON* error(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(errorKey).c_str()));
+	cJSON* error(cJSON_GetObjectItem(root, UString::ToNarrowString(errorKey).c_str()));
 	if (!error)
 		return false;
 
@@ -394,7 +394,7 @@ bool GoogleFusionTablesInterface::KindMatches(cJSON* root, const String& kind)
 bool GoogleFusionTablesInterface::AddAuthToCurlHeader(CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, UString::ToNarrowString<String>(_T("Authorization: Bearer ")
+	headerList = curl_slist_append(headerList, UString::ToNarrowString(_T("Authorization: Bearer ")
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
@@ -412,7 +412,7 @@ bool GoogleFusionTablesInterface::AddAuthToCurlHeader(CURL* curl, const Modifica
 bool GoogleFusionTablesInterface::AddAuthAndDeleteToCurlHeader(CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList,UString::ToNarrowString<String>(_T("Authorization: Bearer ")
+	headerList = curl_slist_append(headerList,UString::ToNarrowString(_T("Authorization: Bearer ")
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
@@ -435,7 +435,7 @@ bool GoogleFusionTablesInterface::AddAuthAndJSONContentTypeToCurlHeader(
 	CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, UString::ToNarrowString<String>(_T("Authorization: Bearer ")
+	headerList = curl_slist_append(headerList, UString::ToNarrowString(_T("Authorization: Bearer ")
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
@@ -461,7 +461,7 @@ bool GoogleFusionTablesInterface::AddAuthAndOctetContentTypeToCurlHeader(
 	CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, UString::ToNarrowString<String>(_T("Authorization: Bearer ")
+	headerList = curl_slist_append(headerList, UString::ToNarrowString(_T("Authorization: Bearer ")
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
@@ -515,7 +515,7 @@ bool GoogleFusionTablesInterface::ReadTable(cJSON* root, TableInfo& info)
 		return false;
 	}
 
-	cJSON* columnArray(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(columnsKey).c_str()));
+	cJSON* columnArray(cJSON_GetObjectItem(root, UString::ToNarrowString(columnsKey).c_str()));
 	if (!columnArray)
 	{
 		Cerr << "Failed to read columns array\n";
@@ -582,14 +582,14 @@ String GoogleFusionTablesInterface::BuildCreateTableData(const TableInfo& info)
 		return String();
 	}
 
-	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(nameKey).c_str(), UString::ToNarrowString<String>(info.name).c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString(nameKey).c_str(), UString::ToNarrowString(info.name).c_str());
 	if (info.isExportable)
-		cJSON_AddTrueToObject(root, UString::ToNarrowString<String>(isExportableKey).c_str());
+		cJSON_AddTrueToObject(root, UString::ToNarrowString(isExportableKey).c_str());
 	else
-		cJSON_AddFalseToObject(root, UString::ToNarrowString<String>(isExportableKey).c_str());
+		cJSON_AddFalseToObject(root, UString::ToNarrowString(isExportableKey).c_str());
 
 	if (!info.description.empty())
-		cJSON_AddStringToObject(root, UString::ToNarrowString<String>(descriptionKey).c_str(), UString::ToNarrowString<String>(info.description).c_str());
+		cJSON_AddStringToObject(root, UString::ToNarrowString(descriptionKey).c_str(), UString::ToNarrowString(info.description).c_str());
 
 	cJSON* columns(cJSON_CreateArray());
 	if (!columns)
@@ -599,7 +599,7 @@ String GoogleFusionTablesInterface::BuildCreateTableData(const TableInfo& info)
 		return String();
 	}
 
-	cJSON_AddItemToObject(root, UString::ToNarrowString<String>(columnsKey).c_str(), columns);
+	cJSON_AddItemToObject(root, UString::ToNarrowString(columnsKey).c_str(), columns);
 
 	for (const auto& column : info.columns)
 	{
@@ -624,8 +624,8 @@ cJSON* GoogleFusionTablesInterface::BuildColumnItem(const TableInfo::ColumnInfo&
 	if (!columnItem)
 		return nullptr;
 
-	cJSON_AddStringToObject(columnItem, UString::ToNarrowString<String>(nameKey).c_str(), UString::ToNarrowString<String>(columnInfo.name).c_str());
-	cJSON_AddStringToObject(columnItem, UString::ToNarrowString<String>(typeKey).c_str(), UString::ToNarrowString<String>(GetColumnTypeString(columnInfo.type)).c_str());
+	cJSON_AddStringToObject(columnItem, UString::ToNarrowString(nameKey).c_str(), UString::ToNarrowString(columnInfo.name).c_str());
+	cJSON_AddStringToObject(columnItem, UString::ToNarrowString(typeKey).c_str(), UString::ToNarrowString(GetColumnTypeString(columnInfo.type)).c_str());
 
 	return columnItem;
 }
@@ -733,7 +733,7 @@ bool GoogleFusionTablesInterface::SubmitQuery(const String& query, cJSON*& root,
 		return false;
 	}
 
-	root = cJSON_Parse(UString::ToNarrowString<String>(response).c_str());
+	root = cJSON_Parse(UString::ToNarrowString(response).c_str());
 	if (!root)
 	{
 		Cerr << "Failed to parse query response\n";
@@ -788,7 +788,7 @@ bool GoogleFusionTablesInterface::CreateStyle(const String& tableId, StyleInfo& 
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse create style response\n";
@@ -821,7 +821,7 @@ bool GoogleFusionTablesInterface::ListStyles(const String& tableId, std::vector<
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse style list response\n";
@@ -842,7 +842,7 @@ bool GoogleFusionTablesInterface::ListStyles(const String& tableId, std::vector<
 	}
 
 	styles.clear();
-	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(itemsKey).c_str()));
+	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString(itemsKey).c_str()));
 	if (items)// May not be items, if no styles exist
 	{
 		styles.resize(cJSON_GetArraySize(items));
@@ -895,12 +895,12 @@ String GoogleFusionTablesInterface::BuildCreateStyleData(const StyleInfo& info)
 		return String();
 	}
 
-	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(nameKey).c_str(), UString::ToNarrowString<String>(info.name).c_str());
-	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(tableIdKey).c_str(), UString::ToNarrowString<String>(info.tableId).c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString(nameKey).c_str(), UString::ToNarrowString(info.name).c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString(tableIdKey).c_str(), UString::ToNarrowString(info.tableId).c_str());
 	if (info.isDefaultForTable)
-		cJSON_AddTrueToObject(root, UString::ToNarrowString<String>(isDefaultKey).c_str());
+		cJSON_AddTrueToObject(root, UString::ToNarrowString(isDefaultKey).c_str());
 	else
-		cJSON_AddFalseToObject(root, UString::ToNarrowString<String>(isDefaultKey).c_str());
+		cJSON_AddFalseToObject(root, UString::ToNarrowString(isDefaultKey).c_str());
 
 	if (info.hasMarkerOptions)
 		AddMarkerOptions(root, info.markerOptions);
@@ -922,7 +922,7 @@ void GoogleFusionTablesInterface::AddMarkerOptions(cJSON* root, const std::vecto
 	if (!options)
 		return;
 
-	cJSON_AddItemToObject(root, UString::ToNarrowString<String>(markerOptionsKey).c_str(), options);
+	cJSON_AddItemToObject(root, UString::ToNarrowString(markerOptionsKey).c_str(), options);
 	AddOptions(options, info);
 }
 
@@ -932,7 +932,7 @@ void GoogleFusionTablesInterface::AddPolylineOptions(cJSON* root, const std::vec
 	if (!options)
 		return;
 
-	cJSON_AddItemToObject(root, UString::ToNarrowString<String>(polylineOptionsKey).c_str(), options);
+	cJSON_AddItemToObject(root, UString::ToNarrowString(polylineOptionsKey).c_str(), options);
 	AddOptions(options, info);
 }
 
@@ -942,7 +942,7 @@ void GoogleFusionTablesInterface::AddPolygonOptions(cJSON* root, const std::vect
 	if (!options)
 		return;
 
-	cJSON_AddItemToObject(root, UString::ToNarrowString<String>(polygonOptionsKey).c_str(), options);
+	cJSON_AddItemToObject(root, UString::ToNarrowString(polygonOptionsKey).c_str(), options);
 	AddOptions(options, info);
 }
 
@@ -951,15 +951,15 @@ void GoogleFusionTablesInterface::AddOptions(cJSON* root, const std::vector<Styl
 	for (const auto& option : info)
 	{
 		if (option.type == StyleInfo::Options::Type::String)
-			cJSON_AddStringToObject(root, UString::ToNarrowString<String>(option.key).c_str(), UString::ToNarrowString<String>(option.s).c_str());
+			cJSON_AddStringToObject(root, UString::ToNarrowString(option.key).c_str(), UString::ToNarrowString(option.s).c_str());
 		else if (option.type == StyleInfo::Options::Type::Number)
-			cJSON_AddNumberToObject(root, UString::ToNarrowString<String>(option.key).c_str(), option.n);
+			cJSON_AddNumberToObject(root, UString::ToNarrowString(option.key).c_str(), option.n);
 		else if (option.type == StyleInfo::Options::Type::Bool)
 		{
 			if (option.b)
-				cJSON_AddTrueToObject(root, UString::ToNarrowString<String>(option.key).c_str());
+				cJSON_AddTrueToObject(root, UString::ToNarrowString(option.key).c_str());
 			else
-				cJSON_AddFalseToObject(root, UString::ToNarrowString<String>(option.key).c_str());
+				cJSON_AddFalseToObject(root, UString::ToNarrowString(option.key).c_str());
 		}
 		else if (option.type == StyleInfo::Options::Type::Complex)
 		{
@@ -967,7 +967,7 @@ void GoogleFusionTablesInterface::AddOptions(cJSON* root, const std::vector<Styl
 			if (!item)
 				return;
 
-			cJSON_AddItemToObject(root, UString::ToNarrowString<String>(option.key).c_str(), item);
+			cJSON_AddItemToObject(root, UString::ToNarrowString(option.key).c_str(), item);
 			AddOptions(item, option.c);
 		}
 		else
@@ -998,7 +998,7 @@ bool GoogleFusionTablesInterface::ReadStyle(cJSON* root, StyleInfo& info)
 		return false;
 	}
 
-	cJSON* markerOptions(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(markerOptionsKey).c_str()));
+	cJSON* markerOptions(cJSON_GetObjectItem(root, UString::ToNarrowString(markerOptionsKey).c_str()));
 	if (markerOptions)
 	{
 		info.hasMarkerOptions = true;
@@ -1011,7 +1011,7 @@ bool GoogleFusionTablesInterface::ReadStyle(cJSON* root, StyleInfo& info)
 	else
 		info.hasMarkerOptions = false;
 
-	cJSON* polylineOptions(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(polylineOptionsKey).c_str()));
+	cJSON* polylineOptions(cJSON_GetObjectItem(root, UString::ToNarrowString(polylineOptionsKey).c_str()));
 	if (polylineOptions)
 	{
 		info.hasPolylineOptions = true;
@@ -1024,7 +1024,7 @@ bool GoogleFusionTablesInterface::ReadStyle(cJSON* root, StyleInfo& info)
 	else
 		info.hasPolylineOptions = false;
 
-	cJSON* polygonOptions(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(polygonOptionsKey).c_str()));
+	cJSON* polygonOptions(cJSON_GetObjectItem(root, UString::ToNarrowString(polygonOptionsKey).c_str()));
 	if (polygonOptions)
 	{
 		info.hasPolygonOptions = true;
@@ -1093,7 +1093,7 @@ bool GoogleFusionTablesInterface::CreateTemplate(const String& tableId, Template
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse create template response\n";
@@ -1126,7 +1126,7 @@ bool GoogleFusionTablesInterface::ListTemplates(const String& tableId, std::vect
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse template list response\n";
@@ -1147,7 +1147,7 @@ bool GoogleFusionTablesInterface::ListTemplates(const String& tableId, std::vect
 	}
 
 	templates.clear();
-	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(itemsKey).c_str()));
+	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString(itemsKey).c_str()));
 	if (items)// May not be items, if no templates exist
 	{
 		templates.resize(cJSON_GetArraySize(items));
@@ -1200,13 +1200,13 @@ String GoogleFusionTablesInterface::BuildCreateTemplateData(const TemplateInfo& 
 		return String();
 	}
 
-	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(nameKey).c_str(), UString::ToNarrowString<String>(info.name).c_str());
-	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(tableIdKey).c_str(), UString::ToNarrowString<String>(info.tableId).c_str());
-	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(bodyKey).c_str(), UString::ToNarrowString<String>(info.body).c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString(nameKey).c_str(), UString::ToNarrowString(info.name).c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString(tableIdKey).c_str(), UString::ToNarrowString(info.tableId).c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString(bodyKey).c_str(), UString::ToNarrowString(info.body).c_str());
 	if (info.isDefaultForTable)
-		cJSON_AddTrueToObject(root, UString::ToNarrowString<String>(isDefaultKey).c_str());
+		cJSON_AddTrueToObject(root, UString::ToNarrowString(isDefaultKey).c_str());
 	else
-		cJSON_AddFalseToObject(root, UString::ToNarrowString<String>(isDefaultKey).c_str());
+		cJSON_AddFalseToObject(root, UString::ToNarrowString(isDefaultKey).c_str());
 
 	const String data(UString::ToStringType(cJSON_Print(root)));
 	cJSON_Delete(root);
