@@ -18,6 +18,8 @@
 
 int main(int argc, char *argv[])
 {
+	setlocale(LC_ALL, "");// Make sure we can print unicode characters correctly
+
 	EBirdDataProcessorApp app;
 	return app.Run(argc, argv);
 }
