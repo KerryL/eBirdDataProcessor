@@ -154,12 +154,6 @@ bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (config.bulkFrequencyUpdate && config.stateFilter.empty())
-	{
-		std::cerr << "Must specify " << GetKey(config.stateFilter) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
-		configurationOK = false;
-	}
-
 	return configurationOK;
 }
 
