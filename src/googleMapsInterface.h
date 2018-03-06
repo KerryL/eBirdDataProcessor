@@ -8,6 +8,7 @@
 
 // Local headers
 #include "email/jsonInterface.h"
+#include "utilities/uString.h"
 
 // Standard C++ headers
 #include <vector>
@@ -15,7 +16,7 @@
 class GoogleMapsInterface : public JSONInterface
 {
 public:
-	GoogleMapsInterface(const std::string& userAgent, const std::string& apiKey);
+	GoogleMapsInterface(const String& userAgent, const String& apiKey);
 
 	enum class Units
 	{
@@ -34,7 +35,7 @@ public:
 	struct DistanceInfo
 	{
 		double value;// [meters] or [seconds]
-		std::string text;
+		String text;
 	};
 
 	struct Leg
@@ -45,90 +46,90 @@ public:
 
 	struct Directions
 	{
-		std::string summary;
-		std::string copyright;
+		String summary;
+		String copyright;
 		std::vector<Leg> legs;
-		std::vector<std::string> warnings;
+		std::vector<String> warnings;
 	};
 
-	Directions GetDirections(const std::string& from, const std::string& to,
+	Directions GetDirections(const String& from, const String& to,
 		const TravelMode& mode = TravelMode::Driving, const Units& units = Units::Imperial) const;
-	std::vector<Directions> GetMultipleDirections(const std::string& from, const std::string& to,
+	std::vector<Directions> GetMultipleDirections(const String& from, const String& to,
 		const TravelMode& mode = TravelMode::Driving, const Units& units = Units::Imperial) const;
 
-	bool LookupCoordinates(const std::string& searchString, std::string& formattedAddress,
+	bool LookupCoordinates(const String& searchString, String& formattedAddress,
 		double& latitude, double& longitude,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
-		const std::string& preferNameContaining = "", std::string* statusRet = nullptr) const;
+		const String& preferNameContaining = String(), String* statusRet = nullptr) const;
 
-	bool LookupCoordinates(const std::string& searchString, std::string& formattedAddress,
+	bool LookupCoordinates(const String& searchString, String& formattedAddress,
 		double& latitude, double& longitude,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
-		const std::vector<std::string>& preferNamesContaining = std::vector<std::string>(), std::string* statusRet = nullptr) const;
+		const std::vector<String>& preferNamesContaining = std::vector<String>(), String* statusRet = nullptr) const;
 
 private:
-	const std::string apiKey;
+	const String apiKey;
 
-	static const std::string apiRoot;
-	static const std::string directionsEndPoint;
-	static const std::string geocodeEndPoint;
-	static const std::string statusKey;
-	static const std::string okStatus;
-	static const std::string errorMessageKey;
-	static const std::string routesKey;
-	static const std::string summaryKey;
-	static const std::string copyrightKey;
-	static const std::string legsKey;
-	static const std::string warningsKey;
-	static const std::string distanceKey;
-	static const std::string durationKey;
-	static const std::string valueKey;
-	static const std::string textKey;
-	static const std::string resultsKey;
-	static const std::string formattedAddressKey;
-	static const std::string geometryKey;
-	static const std::string boundsKey;
-	static const std::string northeastKey;
-	static const std::string southwestKey;
-	static const std::string locationKey;
-	static const std::string locationTypeKey;
-	static const std::string viewportKey;
-	static const std::string latitudeKey;
-	static const std::string longitudeKey;
-	static const std::string addressComponentsKey;
-	static const std::string longNameKey;
-	static const std::string shortNameKey;
-	static const std::string typesKey;
-	static const std::string placeIDKey;
+	static const String apiRoot;
+	static const String directionsEndPoint;
+	static const String geocodeEndPoint;
+	static const String statusKey;
+	static const String okStatus;
+	static const String errorMessageKey;
+	static const String routesKey;
+	static const String summaryKey;
+	static const String copyrightKey;
+	static const String legsKey;
+	static const String warningsKey;
+	static const String distanceKey;
+	static const String durationKey;
+	static const String valueKey;
+	static const String textKey;
+	static const String resultsKey;
+	static const String formattedAddressKey;
+	static const String geometryKey;
+	static const String boundsKey;
+	static const String northeastKey;
+	static const String southwestKey;
+	static const String locationKey;
+	static const String locationTypeKey;
+	static const String viewportKey;
+	static const String latitudeKey;
+	static const String longitudeKey;
+	static const String addressComponentsKey;
+	static const String longNameKey;
+	static const String shortNameKey;
+	static const String typesKey;
+	static const String placeIDKey;
 
-	std::string BuildRequestString(const std::string& origin, const std::string& destination,
+	String BuildRequestString(const String& origin, const String& destination,
 		const TravelMode& mode, const bool& alternativeRoutes, const Units& units) const;
-	static std::string BuildRequestString(const std::string& origin, const std::string& destination,
-		const std::string& key, const std::string& mode, const bool& alternativeRoutes, const std::string& units);
+	static String BuildRequestString(const String& origin, const String& destination,
+		const String& key, const String& mode, const bool& alternativeRoutes, const String& units);
 
-	static std::string GetModeString(const TravelMode& mode);
-	static std::string GetUnitString(const Units& units);
+	static String GetModeString(const TravelMode& mode);
+	static String GetUnitString(const Units& units);
 
-	bool ProcessDirectionsResponse(const std::string& response, std::vector<Directions>& directions) const;
+	bool ProcessDirectionsResponse(const String& response, std::vector<Directions>& directions) const;
 	bool ProcessRoute(cJSON* route, Directions& d) const;
 	bool ProcessLeg(cJSON* leg, Leg& l) const;
 	bool ProcessValueTextItem(cJSON* item, DistanceInfo& info) const;
 
-	static std::string SanitizeAddress(const std::string& s);
+	static String SanitizeAddress(const String& s);
 
 	struct GeocodeInfo
 	{
 		struct ComponentInfo
 		{
-			std::string longName;
-			std::string shortName;
-			std::vector<std::string> types;
+			String longName;
+			String shortName;
+			std::vector<String> types;
 		};
 
 		std::vector<ComponentInfo> addressComponents;
-		std::string formattedAddress;
+		String formattedAddress;
 
 		struct LatLongPair
 		{
@@ -139,16 +140,16 @@ private:
 		LatLongPair northeastBound;
 		LatLongPair southwestBound;
 		LatLongPair location;
-		std::string locationType;
+		String locationType;
 
 		LatLongPair northeastViewport;
 		LatLongPair southwestViewport;
 
-		std::string placeID;
-		std::vector<std::string> types;
+		String placeID;
+		std::vector<String> types;
 	};
 
-	bool ProcessGeocodeResponse(const std::string& response, std::vector<GeocodeInfo>& info, std::string* statusRet) const;
+	bool ProcessGeocodeResponse(const String& response, std::vector<GeocodeInfo>& info, String* statusRet) const;
 	bool ProcessAddressComponents(cJSON* results, std::vector<GeocodeInfo::ComponentInfo>& components) const;
 	bool ProcessGeometry(cJSON* results, GeocodeInfo& info) const;
 	bool ReadLatLongPair(cJSON* json, GeocodeInfo::LatLongPair& latLong) const;

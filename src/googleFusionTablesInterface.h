@@ -8,6 +8,7 @@
 
 // Local headers
 #include "email/jsonInterface.h"
+#include "utilities/uString.h"
 
 // Standard C++ headers
 #include <memory>
@@ -15,16 +16,16 @@
 class GoogleFusionTablesInterface : public JSONInterface
 {
 public:
-	GoogleFusionTablesInterface(const std::string& userAgent,
-		const std::string& oAuthClientId, const std::string& oAuthClientSecret);
+	GoogleFusionTablesInterface(const String& userAgent,
+		const String& oAuthClientId, const String& oAuthClientSecret);
 
 	static const unsigned int writeRequestRateLimit;// [requests per minute]
 
 	struct TableInfo
 	{
-		std::string description;
-		std::string name;
-		std::string tableId;
+		String description;
+		String name;
+		String tableId;
 		bool isExportable;
 
 		struct ColumnInfo
@@ -38,9 +39,9 @@ public:
 			};
 
 			ColumnInfo() = default;
-			ColumnInfo(const std::string& name, const ColumnType& type) : name(name), type(type) {}
+			ColumnInfo(const String& name, const ColumnType& type) : name(name), type(type) {}
 			unsigned int columnId;
-			std::string name;
+			String name;
 
 			ColumnType type;
 		};
@@ -53,20 +54,20 @@ public:
 
 	bool CreateTable(TableInfo& info);
 	bool ListTables(std::vector<TableInfo>& tables);
-	bool DeleteTable(const std::string& tableId);
-	bool CopyTable(const std::string& tableId, TableInfo& info);
-	bool Import(const std::string& tableId, const std::string& csvData);
-	bool ListColumns(const std::string& tableId,
+	bool DeleteTable(const String& tableId);
+	bool CopyTable(const String& tableId, TableInfo& info);
+	bool Import(const String& tableId, const String& csvData);
+	bool ListColumns(const String& tableId,
 		std::vector<TableInfo::ColumnInfo>& columnInfo);
-	bool DeleteAllRows(const std::string& tableId);
-	bool DeleteRow(const std::string& tableId, const unsigned int& rowId);
-	bool DeleteRows(const std::string& tableId, const std::vector<unsigned int>& rowIds);
+	bool DeleteAllRows(const String& tableId);
+	bool DeleteRow(const String& tableId, const unsigned int& rowId);
+	bool DeleteRows(const String& tableId, const std::vector<unsigned int>& rowIds);
 
 	struct StyleInfo
 	{
-		std::string tableId;
+		String tableId;
 		unsigned int styleId;
-		std::string name;
+		String name;
 		bool isDefaultForTable;
 
 		struct Options
@@ -80,15 +81,15 @@ public:
 			};
 
 			Options() = default;
-			Options(const std::string& key, const std::string& s) : key(key), type(Type::String), s(s) {}
-			Options(const std::string& key, const double& n) : key(key), type(Type::Number), n(n) {}
-			Options(const std::string& key, const bool& b) : key(key), type(Type::Bool), b(b) {}
-			Options(const std::string& key, const std::vector<Options>& c) : key(key), type(Type::Complex), c(c) {}
+			Options(const String& key, const String& s) : key(key), type(Type::String), s(s) {}
+			Options(const String& key, const double& n) : key(key), type(Type::Number), n(n) {}
+			Options(const String& key, const bool& b) : key(key), type(Type::Bool), b(b) {}
+			Options(const String& key, const std::vector<Options>& c) : key(key), type(Type::Complex), c(c) {}
 
-			std::string key;
+			String key;
 			Type type;
 
-			std::string s;
+			String s;
 			double n;
 			bool b;
 			std::vector<Options> c;
@@ -104,22 +105,22 @@ public:
 		bool hasPolygonOptions = false;
 	};
 
-	bool CreateStyle(const std::string& tableId, StyleInfo& info);
-	bool ListStyles(const std::string& tableId, std::vector<StyleInfo>& styles);
-	bool DeleteStyle(const std::string& tableId, const unsigned int& styleId);
+	bool CreateStyle(const String& tableId, StyleInfo& info);
+	bool ListStyles(const String& tableId, std::vector<StyleInfo>& styles);
+	bool DeleteStyle(const String& tableId, const unsigned int& styleId);
 
 	struct TemplateInfo
 	{
-		std::string tableId;
+		String tableId;
 		unsigned int templateId;
-		std::string name;
-		std::string body;
+		String name;
+		String body;
 		bool isDefaultForTable;
 	};
 
-	bool CreateTemplate(const std::string& tableId, TemplateInfo& info);
-	bool ListTemplates(const std::string& tableId, std::vector<TemplateInfo>& templates);
-	bool DeleteTemplate(const std::string& tableId, const unsigned int& templateId);
+	bool CreateTemplate(const String& tableId, TemplateInfo& info);
+	bool ListTemplates(const String& tableId, std::vector<TemplateInfo>& templates);
+	bool DeleteTemplate(const String& tableId, const unsigned int& templateId);
 
 	enum class TableAccess
 	{
@@ -128,71 +129,71 @@ public:
 		Unlisted
 	};
 
-	bool SetTableAccess(const std::string& tableId, const TableAccess& access);
+	bool SetTableAccess(const String& tableId, const TableAccess& access);
 
-	bool SubmitQuery(const std::string& query, cJSON*& root, std::string* csvData = nullptr);
-	bool SubmitQueryMediaDownload(const std::string& query, std::string& csvData);
+	bool SubmitQuery(const String& query, cJSON*& root, String* csvData = nullptr);
+	bool SubmitQueryMediaDownload(const String& query, String& csvData);
 
 private:
-	static const std::string apiRoot;
-	static const std::string apiRootUpload;
-	static const std::string tablesEndPoint;
-	static const std::string importEndPoint;
-	static const std::string columnsEndPoint;
-	static const std::string stylesEndPoint;
-	static const std::string templatesEndPoint;
-	static const std::string copyEndPoint;
-	static const std::string queryEndPoint;
-	static const std::string tableListKindText;
-	static const std::string tableKindText;
-	static const std::string columnKindText;
-	static const std::string columnListKindText;
-	static const std::string importKindText;
-	static const std::string queryResponseKindText;
-	static const std::string styleSettingListText;
-	static const std::string styleSettingKindText;
-	static const std::string templateListKindText;
-	static const std::string templateKindText;
-	static const std::string fromColumnKindText;
-	static const std::string itemsKey;
-	static const std::string kindKey;
-	static const std::string tableIdKey;
-	static const std::string styleIdKey;
-	static const std::string nameKey;
-	static const std::string columnIdKey;
-	static const std::string columnsKey;
-	static const std::string typeKey;
-	static const std::string descriptionKey;
-	static const std::string isExportableKey;
-	static const std::string errorKey;
-	static const std::string codeKey;
-	static const std::string messageKey;
-	static const std::string numberOfRowsImportedKey;
-	static const std::string isDefaultKey;
-	static const std::string markerOptionsKey;
-	static const std::string polylineOptionsKey;
-	static const std::string polygonOptionsKey;
-	static const std::string columnNameKey;
-	static const std::string fillColorStylerKey;
-	static const std::string templateIdKey;
-	static const std::string bodyKey;
+	static const String apiRoot;
+	static const String apiRootUpload;
+	static const String tablesEndPoint;
+	static const String importEndPoint;
+	static const String columnsEndPoint;
+	static const String stylesEndPoint;
+	static const String templatesEndPoint;
+	static const String copyEndPoint;
+	static const String queryEndPoint;
+	static const String tableListKindText;
+	static const String tableKindText;
+	static const String columnKindText;
+	static const String columnListKindText;
+	static const String importKindText;
+	static const String queryResponseKindText;
+	static const String styleSettingListText;
+	static const String styleSettingKindText;
+	static const String templateListKindText;
+	static const String templateKindText;
+	static const String fromColumnKindText;
+	static const String itemsKey;
+	static const String kindKey;
+	static const String tableIdKey;
+	static const String styleIdKey;
+	static const String nameKey;
+	static const String columnIdKey;
+	static const String columnsKey;
+	static const String typeKey;
+	static const String descriptionKey;
+	static const String isExportableKey;
+	static const String errorKey;
+	static const String codeKey;
+	static const String messageKey;
+	static const String numberOfRowsImportedKey;
+	static const String isDefaultKey;
+	static const String markerOptionsKey;
+	static const String polylineOptionsKey;
+	static const String polygonOptionsKey;
+	static const String columnNameKey;
+	static const String fillColorStylerKey;
+	static const String templateIdKey;
+	static const String bodyKey;
 
-	static const std::string typeStringText;
-	static const std::string typeNumberText;
-	static const std::string typeDateTimeText;
-	static const std::string typeLocationText;
+	static const String typeStringText;
+	static const String typeNumberText;
+	static const String typeDateTimeText;
+	static const String typeLocationText;
 
-	static const std::string fusionTableRefreshTokenFileName;
+	static const String fusionTableRefreshTokenFileName;
 
 	struct AuthTokenData : public ModificationData
 	{
-		AuthTokenData(const std::string& authToken) : authToken(authToken) {}
-		std::string authToken;
+		AuthTokenData(const String& authToken) : authToken(authToken) {}
+		String authToken;
 	};
 
 	static bool ResponseHasError(cJSON* root);
 	static bool ResponseTooLarge(cJSON* root);
-	static bool KindMatches(cJSON* root, const std::string& kind);
+	static bool KindMatches(cJSON* root, const String& kind);
 	static bool AddAuthAndDeleteToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
 	static bool AddAuthToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
 	static bool AddAuthAndJSONContentTypeToCurlHeader(CURL* curl, const ModificationData* data);// Expects AuthTokenData
@@ -201,12 +202,12 @@ private:
 	static bool ReadTable(cJSON* root, TableInfo& info);
 	static bool ReadColumn(cJSON* root, TableInfo::ColumnInfo& info);
 
-	static std::string BuildCreateTableData(const TableInfo& info);
+	static String BuildCreateTableData(const TableInfo& info);
 	static cJSON* BuildColumnItem(const TableInfo::ColumnInfo& columnInfo);
-	static std::string GetColumnTypeString(const TableInfo::ColumnInfo::ColumnType& type);
-	static TableInfo::ColumnInfo::ColumnType GetColumnTypeFromString(const std::string& s);
+	static String GetColumnTypeString(const TableInfo::ColumnInfo::ColumnType& type);
+	static TableInfo::ColumnInfo::ColumnType GetColumnTypeFromString(const String& s);
 
-	static std::string BuildCreateStyleData(const StyleInfo& info);
+	static String BuildCreateStyleData(const StyleInfo& info);
 	static void AddMarkerOptions(cJSON* root, const std::vector<StyleInfo::Options>& info);
 	static void AddPolylineOptions(cJSON* root, const std::vector<StyleInfo::Options>& info);
 	static void AddPolygonOptions(cJSON* root, const std::vector<StyleInfo::Options>& info);
@@ -215,7 +216,7 @@ private:
 	static bool ReadStyle(cJSON* root, StyleInfo& info);
 	static bool ReadOptions(cJSON* root, std::vector<StyleInfo::Options>& info);
 
-	static std::string BuildCreateTemplateData(const TemplateInfo& info);
+	static String BuildCreateTemplateData(const TemplateInfo& info);
 	static bool ReadTemplate(cJSON* root, TemplateInfo& info);
 };
 

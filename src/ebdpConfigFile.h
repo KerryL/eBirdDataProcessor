@@ -8,12 +8,13 @@
 
 // Local headers
 #include "utilities/configFile.h"
+#include "utilities/uString.h"
 #include "ebdpConfig.h"
 
 class EBDPConfigFile : public ConfigFile
 {
 public:
-	EBDPConfigFile(std::ostream &outStream = std::cout)
+	EBDPConfigFile(OStream &outStream = Cout)
 		: ConfigFile(outStream) {}
 
 	EBDPConfig& GetConfig() { return config; }

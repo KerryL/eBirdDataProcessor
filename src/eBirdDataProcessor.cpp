@@ -26,24 +26,23 @@
 #include <iomanip>
 #include <locale>
 #include <map>
-#include <regex>
 #include <chrono>
 
-const std::string EBirdDataProcessor::headerLine("Submission ID,Common Name,Scientific Name,"
+const String EBirdDataProcessor::headerLine(_T("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
 	"Protocol,Duration (Min),All Obs Reported,Distance Traveled (km),Area Covered (ha),"
-	"Number of Observers,Breeding Code,Species Comments,Checklist Comments");
+	"Number of Observers,Breeding Code,Species Comments,Checklist Comments"));
 
-bool EBirdDataProcessor::Parse(const std::string& dataFile)
+bool EBirdDataProcessor::Parse(const String& dataFile)
 {
-	std::ifstream file(dataFile.c_str());
+	IFStream file(dataFile.c_str());
 	if (!file.is_open() || !file.good())
 	{
-		std::cerr << "Failed to open '" << dataFile << "' for input\n";
+		Cerr << "Failed to open '" << dataFile << "' for input\n";
 		return false;
 	}
 
-	std::string line;
+	String line;
 	unsigned int lineCount(0);
 	while (std::getline(file, line))
 	{
@@ -51,7 +50,7 @@ bool EBirdDataProcessor::Parse(const std::string& dataFile)
 		{
 			if (line.compare(headerLine) != 0)
 			{
-				std::cerr << "Unexpected file format\n";
+				Cerr << "Unexpected file format\n";
 				return false;
 			}
 
@@ -62,7 +61,7 @@ bool EBirdDataProcessor::Parse(const std::string& dataFile)
 		Entry entry;
 		if (!ParseLine(line, entry))
 		{
-			std::cerr << "Failed to parse line " << lineCount << '\n';
+			Cerr << "Failed to parse line " << lineCount << '\n';
 			return false;
 		}
 
@@ -70,59 +69,59 @@ bool EBirdDataProcessor::Parse(const std::string& dataFile)
 		++lineCount;
 	}
 
-	std::cout << "Parsed " << data.size() << " entries" << std::endl;
+	Cout << "Parsed " << data.size() << " entries" << std::endl;
 	return true;
 }
 
-bool EBirdDataProcessor::ParseLine(const std::string& line, Entry& entry)
+bool EBirdDataProcessor::ParseLine(const String& line, Entry& entry)
 {
-	std::istringstream lineStream(line);
+	IStringStream lineStream(line);
 
-	if (!ParseToken(lineStream, "Submission ID", entry.submissionID))
+	if (!ParseToken(lineStream, _T("Submission ID"), entry.submissionID))
 		return false;
-	if (!ParseToken(lineStream, "Common Name", entry.commonName))
+	if (!ParseToken(lineStream, _T("Common Name"), entry.commonName))
 		return false;
-	if (!ParseToken(lineStream, "Scientific Name", entry.scientificName))
+	if (!ParseToken(lineStream, _T("Scientific Name"), entry.scientificName))
 		return false;
-	if (!ParseToken(lineStream, "Taxonomic Order", entry.taxonomicOrder))
+	if (!ParseToken(lineStream, _T("Taxonomic Order"), entry.taxonomicOrder))
 		return false;
-	if (!ParseCountToken(lineStream, "Count", entry.count))
+	if (!ParseCountToken(lineStream, _T("Count"), entry.count))
 		return false;
-	if (!ParseToken(lineStream, "State/Providence", entry.stateProvidence))
+	if (!ParseToken(lineStream, _T("State/Providence"), entry.stateProvidence))
 		return false;
-	if (!ParseToken(lineStream, "County", entry.county))
+	if (!ParseToken(lineStream, _T("County"), entry.county))
 		return false;
-	if (!ParseToken(lineStream, "Location", entry.location))
+	if (!ParseToken(lineStream, _T("Location"), entry.location))
 		return false;
-	if (!ParseToken(lineStream, "Latitude", entry.latitude))
+	if (!ParseToken(lineStream, _T("Latitude"), entry.latitude))
 		return false;
-	if (!ParseToken(lineStream, "Longitude", entry.longitude))
+	if (!ParseToken(lineStream, _T("Longitude"), entry.longitude))
 		return false;
-	if (!ParseDateTimeToken(lineStream, "Date", entry.dateTime, "%m-%d-%Y"))
+	if (!ParseDateTimeToken(lineStream, _T("Date"), entry.dateTime, _T("%m-%d-%Y")))
 		return false;
 #ifdef __GNUC__// Bug in g++ (still there in v5.4) cannot parse AM/PM - assume for now that we don't care if we're off by 12 hours?
-	if (!ParseDateTimeToken(lineStream, "Time", entry.dateTime, "%I:%M"))
+	if (!ParseDateTimeToken(lineStream, _T("Time"), entry.dateTime, _T("%I:%M")))
 #else
-	if (!ParseDateTimeToken(lineStream, "Time", entry.dateTime, "%I:%M %p"))
+	if (!ParseDateTimeToken(lineStream, _T("Time"), entry.dateTime, _T("%I:%M %p")))
 #endif
 		return false;
-	if (!ParseToken(lineStream, "Protocol", entry.protocol))
+	if (!ParseToken(lineStream, _T("Protocol"), entry.protocol))
 		return false;
-	if (!ParseToken(lineStream, "Duration", entry.duration))
+	if (!ParseToken(lineStream, _T("Duration"), entry.duration))
 		return false;
-	if (!ParseToken(lineStream, "All Obs Reported", entry.allObsReported))
+	if (!ParseToken(lineStream, _T("All Obs Reported"), entry.allObsReported))
 		return false;
-	if (!ParseToken(lineStream, "Distance Traveled", entry.distanceTraveled))
+	if (!ParseToken(lineStream, _T("Distance Traveled"), entry.distanceTraveled))
 		return false;
-	if (!ParseToken(lineStream, "Area Covered", entry.areaCovered))
+	if (!ParseToken(lineStream, _T("Area Covered"), entry.areaCovered))
 		return false;
-	if (!ParseToken(lineStream, "Number of Observers", entry.numberOfObservers))
+	if (!ParseToken(lineStream, _T("Number of Observers"), entry.numberOfObservers))
 		return false;
-	if (!ParseToken(lineStream, "Breeding Code", entry.breedingCode))
+	if (!ParseToken(lineStream, _T("Breeding Code"), entry.breedingCode))
 		return false;
-	if (!ParseToken(lineStream, "Species Comments", entry.speciesComments))
+	if (!ParseToken(lineStream, _T("Species Comments"), entry.speciesComments))
 		return false;
-	if (!ParseToken(lineStream, "Checklist Comments", entry.checklistComments))
+	if (!ParseToken(lineStream, _T("Checklist Comments"), entry.checklistComments))
 		return false;
 
 	// Make sure the data stored in the tm structure is consistent
@@ -135,59 +134,59 @@ bool EBirdDataProcessor::ParseLine(const std::string& line, Entry& entry)
 	return true;
 }
 
-bool EBirdDataProcessor::ParseCountToken(std::istringstream& lineStream, const std::string& fieldName, int& target)
+bool EBirdDataProcessor::ParseCountToken(IStringStream& lineStream, const String& fieldName, int& target)
 {
 	if (lineStream.peek() == 'X')
 	{
 		target = 1;
-		std::string token;
-		return std::getline(lineStream, token, ',').good();// This is just to advance the stream pointer
+		String token;
+		return std::getline(lineStream, token, Char(',')).good();// This is just to advance the stream pointer
 	}
 
 	return ParseToken(lineStream, fieldName, target);
 }
 
-bool EBirdDataProcessor::ParseDateTimeToken(std::istringstream& lineStream, const std::string& fieldName,
-	std::tm& target, const std::string& format)
+bool EBirdDataProcessor::ParseDateTimeToken(IStringStream& lineStream, const String& fieldName,
+	std::tm& target, const String& format)
 {
-	std::string token;
-	if (!std::getline(lineStream, token, ','))// This advances the stream pointer
+	String token;
+	if (!std::getline(lineStream, token, Char(',')))// This advances the stream pointer
 	{
-		std::cerr << "Failed to read token for " << fieldName << '\n';
+		Cerr << "Failed to read token for " << fieldName << '\n';
 		return false;
 	}
 
-	std::istringstream ss(token);
+	IStringStream ss(token);
 	if ((ss >> std::get_time(&target, format.c_str())).fail())
 	{
-		std::cerr << "Failed to interpret token for " << fieldName << '\n';
+		Cerr << "Failed to interpret token for " << fieldName << '\n';
 		return false;
 	}
 
 	return true;
 }
 
-bool EBirdDataProcessor::InterpretToken(std::istringstream& tokenStream,
-	const std::string& /*fieldName*/, std::string& target)
+bool EBirdDataProcessor::InterpretToken(IStringStream& tokenStream,
+	const String& /*fieldName*/, String& target)
 {
 	target = tokenStream.str();
 	return true;
 }
 
-void EBirdDataProcessor::FilterLocation(const std::string& location, const std::string& county,
-	const std::string& state, const std::string& country)
+void EBirdDataProcessor::FilterLocation(const String& location, const String& county,
+	const String& state, const String& country)
 {
 	if (!county.empty() || !state.empty() || !country.empty())
 		FilterCounty(county, state, country);
 
 	data.erase(std::remove_if(data.begin(), data.end(), [location](const Entry& entry)
 	{
-		return !std::regex_search(entry.location, std::regex(location));
+		return !std::regex_search(entry.location, RegEx(location));
 	}), data.end());
 }
 
-void EBirdDataProcessor::FilterCounty(const std::string& county,
-	const std::string& state, const std::string& country)
+void EBirdDataProcessor::FilterCounty(const String& county,
+	const String& state, const String& country)
 {
 	if (!state.empty() || !country.empty())
 		FilterState(state, country);
@@ -198,7 +197,7 @@ void EBirdDataProcessor::FilterCounty(const std::string& county,
 	}), data.end());
 }
 
-void EBirdDataProcessor::FilterState(const std::string& state, const std::string& country)
+void EBirdDataProcessor::FilterState(const String& state, const String& country)
 {
 	if (!country.empty())
 		FilterCountry(country);
@@ -209,7 +208,7 @@ void EBirdDataProcessor::FilterState(const std::string& state, const std::string
 	}), data.end());
 }
 
-void EBirdDataProcessor::FilterCountry(const std::string& country)
+void EBirdDataProcessor::FilterCountry(const String& country)
 {
 	data.erase(std::remove_if(data.begin(), data.end(), [country](const Entry& entry)
 	{
@@ -237,8 +236,8 @@ void EBirdDataProcessor::FilterWeek(const unsigned int& week)
 {
 	data.erase(std::remove_if(data.begin(), data.end(), [week](const Entry& entry)
 	{
-		std::stringstream ss;
-		ss << std::put_time(&entry.dateTime, "%U");
+		StringStream ss;
+		ss << std::put_time(&entry.dateTime, _T("%U"));
 		unsigned int entryWeek;
 		ss >> entryWeek;
 		++entryWeek;
@@ -258,10 +257,10 @@ void EBirdDataProcessor::FilterPartialIDs()
 {
 	data.erase(std::remove_if(data.begin(), data.end(), [](const Entry& entry)
 	{
-		return entry.commonName.find(" sp.") != std::string::npos ||// Eliminate Spuhs
-			entry.commonName.find('/') != std::string::npos ||// Eliminate species1/species2 type entries
-			entry.commonName.find("hybrid") != std::string::npos ||// Eliminate hybrids
-			entry.commonName.find("Domestic") != std::string::npos;// Eliminate domestic birds
+		return entry.commonName.find(_T(" sp.")) != std::string::npos ||// Eliminate Spuhs
+			entry.commonName.find(Char('/')) != std::string::npos ||// Eliminate species1/species2 type entries
+			entry.commonName.find(_T("hybrid")) != std::string::npos ||// Eliminate hybrids
+			entry.commonName.find(_T("Domestic")) != std::string::npos;// Eliminate domestic birds
 	}), data.end());
 }
 
@@ -330,20 +329,20 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const
 	return data;
 }
 
-std::string EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type, const bool& withoutPhotosOnly) const
+String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type, const bool& withoutPhotosOnly) const
 {
 	std::vector<Entry> consolidatedList(DoConsolidation(type));
 
 	if (withoutPhotosOnly)
-		std::cout << "Showing only species which have not been photographed:\n";
+		Cout << "Showing only species which have not been photographed:\n";
 
-	std::ostringstream ss;
+	OStringStream ss;
 	unsigned int count(1);
 	for (const auto& entry : consolidatedList)
 	{
 		if (!withoutPhotosOnly || !entry.hasPhoto)
 		{
-			ss << count++ << ", " << std::put_time(&entry.dateTime, "%D") << ", "
+			ss << count++ << ", " << std::put_time(&entry.dateTime, _T("%D")) << ", "
 				<< entry.commonName << ", '" << entry.location << "', " << entry.count;
 
 			if (entry.hasPhoto)
@@ -356,12 +355,12 @@ std::string EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type, c
 	return ss.str();
 }
 
-bool EBirdDataProcessor::CommonNamesMatch(std::string a, std::string b)
+bool EBirdDataProcessor::CommonNamesMatch(String a, String b)
 {
 	return StringUtilities::Trim(StripParentheses(a)).compare(StringUtilities::Trim(StripParentheses(b))) == 0;
 }
 
-std::string EBirdDataProcessor::StripParentheses(std::string s)
+String EBirdDataProcessor::StripParentheses(String s)
 {
 	std::string::size_type openParen;
 	while (openParen = s.find('('), openParen != std::string::npos)
@@ -420,12 +419,12 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByWeek() c
 	auto equivalencePredicate([](const Entry& a, const Entry& b)
 	{
 		unsigned int aWeek, bWeek;
-		std::stringstream ss;
-		ss << std::put_time(&a.dateTime, "%U");
+		StringStream ss;
+		ss << std::put_time(&a.dateTime, _T("%U"));
 		ss >> aWeek;
 		ss.clear();
-		ss.str("");
-		ss << std::put_time(&b.dateTime, "%U");
+		ss.str(String());
+		ss << std::put_time(&b.dateTime, _T("%U"));
 		ss >> bWeek;
 
 		return CommonNamesMatch(a.commonName, b.commonName) &&
@@ -456,14 +455,14 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() co
 }
 
 bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount,
-	const std::string& outputFileName, const std::string& frequencyFilePath,
-	const std::string& country, const std::string& state, const std::string& county,
+	const String& outputFileName, const String& frequencyFilePath,
+	const String& country, const String& state, const String& county,
 	const unsigned int& recentPeriod,
-	const std::string& hotspotInfoFileName, const std::string& homeLocation,
-	const std::string& mapApiKey, const std::string& eBirdApiKey) const
+	const String& hotspotInfoFileName, const String& homeLocation,
+	const String& mapApiKey, const String& eBirdApiKey) const
 {
 	EBirdInterface ebi(eBirdApiKey);
-	const std::string fileName(ebi.GetRegionCode(country, state, county) + ".csv");
+	const String fileName(ebi.GetRegionCode(country, state, county) + _T(".csv"));
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
 	if (!ParseFrequencyFile(frequencyFilePath + fileName, frequencyData, checklistCounts))
@@ -483,12 +482,12 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		});
 	}
 
-	std::cout << "Writing calendar data to " << outputFileName.c_str() << std::endl;
+	Cout << "Writing calendar data to " << outputFileName.c_str() << std::endl;
 
-	std::ofstream outFile(outputFileName.c_str());
+	OFStream outFile(outputFileName.c_str());
 	if (!outFile.good() || !outFile.is_open())
 	{
-		std::cerr << "Failed to open '" << outputFileName << "' for output\n";
+		Cerr << "Failed to open '" << outputFileName << "' for output\n";
 		return false;
 	}
 
@@ -519,8 +518,8 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		outFile << std::endl;
 	}
 
-	std::set<std::string> consolidatedSpeciesList;
-	std::map<std::string, double> speciesFrequencyMap;
+	std::set<String> consolidatedSpeciesList;
+	std::map<String, double> speciesFrequencyMap;
 	for (i = 0; i < topBirdCount; ++i)
 	{
 		for (const auto& month : frequencyData)
@@ -533,7 +532,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		}
 	}
 
-	std::cout << topBirdCount << " most common species needed for each month of the year includes "
+	Cout << topBirdCount << " most common species needed for each month of the year includes "
 		<< consolidatedSpeciesList.size() << " species" << std::endl;
 
 	std::array<std::pair<double, unsigned int>, 6> bracketCounts;
@@ -559,9 +558,9 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	for (auto& count : bracketCounts)
 	{
 		if (count.second > 0)
-			std::cout << count.second << " species with frequency > " << count.first << '%' << std::endl;
+			Cout << count.second << " species with frequency > " << count.first << '%' << std::endl;
 	}
-	std::cout << std::endl;
+	Cout << std::endl;
 
 	RecommendHotspots(consolidatedSpeciesList, country, state, county, recentPeriod,
 		hotspotInfoFileName, homeLocation, mapApiKey, eBirdApiKey);
@@ -607,11 +606,11 @@ void EBirdDataProcessor::GuessChecklistCounts(const FrequencyDataYear& frequency
 		}
 	}
 
-	std::cout << "Estimated\tActual\n";
+	Cout << "Estimated\tActual\n";
 	for (i = 0; i < checklistCounts.size(); ++i)
-		std::cout << static_cast<int>(guessedCounts[i] + 0.5) << "\t\t" << checklistCounts[i] << '\n';
+		Cout << static_cast<int>(guessedCounts[i] + 0.5) << "\t\t" << checklistCounts[i] << '\n';
 
-	std::cout << std::endl;
+	Cout << std::endl;
 }
 
 void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyData) const
@@ -629,21 +628,21 @@ void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyDa
 	}
 }
 
-bool EBirdDataProcessor::ParseFrequencyFile(const std::string& fileName,
+bool EBirdDataProcessor::ParseFrequencyFile(const String& fileName,
 	FrequencyDataYear& frequencyData, DoubleYear& checklistCounts)
 {
-	//std::cout << "Reading frequency information from '" << fileName << "'.\n";
-	std::ifstream frequencyFile(fileName.c_str());
+	//Cout << "Reading frequency information from '" << fileName << "'.\n";
+	IFStream frequencyFile(fileName.c_str());
 	if (!frequencyFile.good() || !frequencyFile.is_open())
 	{
-		std::cerr << "Failed to open '" << fileName << "' for input.\n";
+		Cerr << "Failed to open '" << fileName << "' for input.\n";
 		return false;
 	}
 
-	std::string line;
+	String line;
 	if (!std::getline(frequencyFile, line))
 	{
-		std::cerr << "Failed to read header line\n";
+		Cerr << "Failed to read header line\n";
 		return false;
 	}
 
@@ -652,7 +651,7 @@ bool EBirdDataProcessor::ParseFrequencyFile(const std::string& fileName,
 
 	if (!std::getline(frequencyFile, line))
 	{
-		std::cerr << "Failed to read second header line\n";
+		Cerr << "Failed to read second header line\n";
 		return false;
 	}
 
@@ -665,37 +664,37 @@ bool EBirdDataProcessor::ParseFrequencyFile(const std::string& fileName,
 	return true;
 }
 
-bool EBirdDataProcessor::ParseFrequencyHeaderLine(const std::string& line, DoubleYear& checklistCounts)
+bool EBirdDataProcessor::ParseFrequencyHeaderLine(const String& line, DoubleYear& checklistCounts)
 {
-	std::istringstream ss(line);
+	IStringStream ss(line);
 	for (auto& count : checklistCounts)
 	{
-		std::string monthUnused;
-		if (!ParseToken(ss, "Checklist Month", monthUnused))
+		String monthUnused;
+		if (!ParseToken(ss, _T("Checklist Month"), monthUnused))
 			return false;
-		if (!ParseToken(ss, "Checklist Count", count))
+		if (!ParseToken(ss, _T("Checklist Count"), count))
 			return false;
 	}
 
 	return true;
 }
 
-bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDataYear& frequencyData)
+bool EBirdDataProcessor::ParseFrequencyLine(const String& line, FrequencyDataYear& frequencyData)
 {
-	std::istringstream ss(line);
+	IStringStream ss(line);
 	for (auto& month : frequencyData)
 	{
-		std::string species;
+		String species;
 		double frequency;
-		if (!ParseToken(ss, "Species", species))
+		if (!ParseToken(ss, _T("Species"), species))
 			return false;
-		if (!ParseToken(ss, "Frequency", frequency))
+		if (!ParseToken(ss, _T("Frequency"), frequency))
 			return false;
 		if (!species.empty())
 		{
 			if (frequency < 0.0)
 			{
-				std::cerr << "Unexpected frequency data\n";
+				Cerr << "Unexpected frequency data\n";
 				return false;
 			}
 
@@ -706,22 +705,22 @@ bool EBirdDataProcessor::ParseFrequencyLine(const std::string& line, FrequencyDa
 	return true;
 }
 
-void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolidatedSpeciesList,
-	const std::string& country, const std::string& state, const std::string& county, const unsigned int& recentPeriod,
-	const std::string& hotspotInfoFileName, const std::string& homeLocation,
-	const std::string& mapApiKey, const std::string& eBirdApiKey) const
+void EBirdDataProcessor::RecommendHotspots(const std::set<String>& consolidatedSpeciesList,
+	const String& country, const String& state, const String& county, const unsigned int& recentPeriod,
+	const String& hotspotInfoFileName, const String& homeLocation,
+	const String& mapApiKey, const String& eBirdApiKey) const
 {
-	std::cout << "Checking eBird for recent sightings..." << std::endl;
+	Cout << "Checking eBird for recent sightings..." << std::endl;
 
 	EBirdInterface e(eBirdApiKey);
-	const std::string region(e.GetRegionCode(country, state, county));
-	std::set<std::string> recentSpecies;
+	const String region(e.GetRegionCode(country, state, county));
+	std::set<String> recentSpecies;
 
-	typedef std::vector<std::string> SpeciesList;
+	typedef std::vector<String> SpeciesList;
 	std::map<EBirdInterface::LocationInfo, SpeciesList, HotspotInfoComparer> hotspotInfo;
 	for (const auto& species : consolidatedSpeciesList)
 	{
-		const std::string speciesCode(e.GetSpeciesCodeFromCommonName(species));
+		const String speciesCode(e.GetSpeciesCodeFromCommonName(species));
 		const auto hotspots(e.GetHotspotsWithRecentObservationsOf(speciesCode, region, recentPeriod));
 		for (const auto& spot : hotspots)
 		{
@@ -730,7 +729,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 		}
 	}
 
-	std::cout << recentSpecies.size() << " needed species have been observed within the last " << recentPeriod << " days" << std::endl;
+	Cout << recentSpecies.size() << " needed species have been observed within the last " << recentPeriod << " days" << std::endl;
 
 	typedef std::pair<SpeciesList, EBirdInterface::LocationInfo> SpeciesHotspotPair;
 	std::vector<SpeciesHotspotPair> sortedHotspots;
@@ -743,7 +742,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 		return false;
 	});
 
-	std::cout << "\nRecommended hotspots for observing needed species:\n";
+	Cout << "\nRecommended hotspots for observing needed species:\n";
 	const unsigned int minimumHotspotCount(10);
 	unsigned int hotspotCount(0);
 	unsigned int lastHotspotSpeciesCount(0);
@@ -752,42 +751,42 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<std::string>& consolid
 		if (hotspotCount >= minimumHotspotCount && hotspot.first.size() < lastHotspotSpeciesCount)
 			break;
 
-		std::cout << "  " << hotspot.second.name << " (" << hotspot.first.size() << " species)\n";
+		Cout << "  " << hotspot.second.name << " (" << hotspot.first.size() << " species)\n";
 		++hotspotCount;
 		lastHotspotSpeciesCount = hotspot.first.size();
 	}
-	std::cout << std::endl;
+	Cout << std::endl;
 
 	if (!hotspotInfoFileName.empty())
 		GenerateHotspotInfoFile(sortedHotspots, hotspotInfoFileName, homeLocation, mapApiKey, region, eBirdApiKey);
 }
 
-void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<std::string>,
-	EBirdInterface::LocationInfo>>& hotspots, const std::string& hotspotInfoFileName,
-	const std::string& homeLocation, const std::string& mapApiKey,
-	const std::string& regionCode, const std::string& eBirdApiKey) const
+void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<String>,
+	EBirdInterface::LocationInfo>>& hotspots, const String& hotspotInfoFileName,
+	const String& homeLocation, const String& mapApiKey,
+	const String& regionCode, const String& eBirdApiKey) const
 {
-	std::cout << "Writing hotspot information to file..." << std::endl;
+	Cout << "Writing hotspot information to file..." << std::endl;
 
-	std::ofstream infoFile(hotspotInfoFileName.c_str());
+	OFStream infoFile(hotspotInfoFileName.c_str());
 	if (!infoFile.good() || !infoFile.is_open())
 	{
-		std::cerr << "Failed to open '" << hotspotInfoFileName << "' for output\n";
+		Cerr << "Failed to open '" << hotspotInfoFileName << "' for output\n";
 		return;
 	}
 
 	if (!homeLocation.empty())
 		infoFile << "Travel time and distance given from " << homeLocation << '\n';
 
-	std::map<std::string, std::string> speciesToObservationTimeMap;
+	std::map<String, String> speciesToObservationTimeMap;
 
 	for (const auto& h : hotspots)
 	{
 		infoFile << '\n' << h.second.name;
 		if (!homeLocation.empty())
 		{
-			GoogleMapsInterface gMaps("eBirdDataProcessor", mapApiKey);
-			std::ostringstream ss;
+			GoogleMapsInterface gMaps(_T("eBirdDataProcessor"), mapApiKey);
+			OStringStream ss;
 			ss << h.second.latitude << ',' << h.second.longitude;
 			GoogleMapsInterface::Directions travelInfo(gMaps.GetDirections(homeLocation, ss.str()));
 
@@ -828,7 +827,7 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 					return !o.dateIncludesTimeInfo;
 				}), observationInfo.end());
 
-				std::string bestObservationTime;
+				String bestObservationTime;
 				if (observationInfo.size() > 0)
 					bestObservationTime = BestObservationTimeEstimator::EstimateBestObservationTime(observationInfo);
 
@@ -837,7 +836,7 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 
 			infoFile << "  " << s;
 
-			const std::string observationString(speciesToObservationTimeMap[s]);
+			const String observationString(speciesToObservationTimeMap[s]);
 			if (!observationString.empty())
 				infoFile << " (observed " << observationString << ")\n";
 			else
@@ -855,8 +854,8 @@ void EBirdDataProcessor::GenerateUniqueObservationsReport(const EBDPConfig::Uniq
 		{
 			return [](const Entry& a, const Entry& b)
 			{
-				const std::string aCountry(a.stateProvidence.substr(0, 2));
-				const std::string bCountry(b.stateProvidence.substr(0, 2));
+				const String aCountry(a.stateProvidence.substr(0, 2));
+				const String bCountry(b.stateProvidence.substr(0, 2));
 				return CommonNamesMatch(a.commonName, b.commonName) &&
 					aCountry.compare(bCountry) == 0;
 			};
@@ -928,21 +927,21 @@ void EBirdDataProcessor::GenerateUniqueObservationsReport(const EBDPConfig::Uniq
 
 	data.erase(endUniqueIt, data.end());
 
-	std::cout << "\nUnique observations by ";
+	Cout << "\nUnique observations by ";
 	if (type == EBDPConfig::UniquenessType::ByCountry)
-		std::cout << "Country:\n";
+		Cout << "Country:\n";
 	else if (type == EBDPConfig::UniquenessType::ByState)
-		std::cout << "State:\n";
+		Cout << "State:\n";
 	else// if (type == EBDPConfig::UniquenessType::ByCounty)
-		std::cout << "County:\n";
+		Cout << "County:\n";
 }
 
-void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFilePath,
-	const EBDPConfig::ListType& listType, const std::string& eBirdAPIKey,
-	const std::string& country, const std::string& state, const std::string& county)
+void EBirdDataProcessor::GenerateRarityScores(const String& frequencyFilePath,
+	const EBDPConfig::ListType& listType, const String& eBirdAPIKey,
+	const String& country, const String& state, const String& county)
 {
 	EBirdInterface ebi(eBirdAPIKey);
-	const std::string frequencyFileName(ebi.GetRegionCode(country, state, county) + ".csv");
+	const String frequencyFileName(ebi.GetRegionCode(country, state, county) + _T(".csv"));
 	FrequencyDataYear monthFrequencyData;
 	DoubleYear checklistCounts;
 	if (!ParseFrequencyFile(frequencyFilePath + frequencyFileName, monthFrequencyData, checklistCounts))
@@ -970,7 +969,7 @@ void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFilePa
 
 		if (!found)
 		{
-			std::cerr << "Failed to find a match for '" << rarityScoreData[i].species << "' in frequency data.  Try re-generating data on a day that you have not submitted any checklists.\n";
+			Cerr << "Failed to find a match for '" << rarityScoreData[i].species << "' in frequency data.  Try re-generating data on a day that you have not submitted any checklists.\n";
 			return;
 		}
 	}
@@ -980,7 +979,7 @@ void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFilePa
 		return a.frequency < b.frequency;
 	});
 
-	std::cout << std::endl;
+	Cout << std::endl;
 	const unsigned int minSpace(4);
 	unsigned int longestName(0);
 	for (const auto& entry : rarityScoreData)
@@ -990,8 +989,8 @@ void EBirdDataProcessor::GenerateRarityScores(const std::string& frequencyFilePa
 	}
 
 	for (const auto& entry : rarityScoreData)
-		std::cout << std::left << std::setw(longestName + minSpace) << std::setfill(' ') << entry.species << entry.frequency << "%\n";
-	std::cout << std::endl;
+		Cout << std::left << std::setw(longestName + minSpace) << std::setfill(Char(' ')) << entry.species << entry.frequency << "%\n";
+	Cout << std::endl;
 }
 
 std::vector<EBirdDataProcessor::FrequencyInfo> EBirdDataProcessor::GenerateYearlyFrequencyData(
@@ -1037,25 +1036,25 @@ bool EBirdDataProcessor::HotspotInfoComparer::operator()(const EBirdInterface::L
 	return a.name < b.name;
 }
 
-bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
+bool EBirdDataProcessor::ReadPhotoList(const String& photoFileName)
 {
-	std::ifstream photoFile(photoFileName.c_str());
+	IFStream photoFile(photoFileName.c_str());
 	if (!photoFile.is_open() || !photoFile.good())
 	{
-		std::cerr << "Failed to open '" << photoFileName << "' for input" << std::endl;
+		Cerr << "Failed to open '" << photoFileName << "' for input" << std::endl;
 		return false;
 	}
 
 	struct PhotoEntry
 	{
-		explicit PhotoEntry(const std::string& commonName) : commonName(commonName) {}
+		explicit PhotoEntry(const String& commonName) : commonName(commonName) {}
 
-		std::string commonName;
+		String commonName;
 		bool matchedOnce = false;
 	};
 	std::vector<PhotoEntry> photoList;
 
-	std::string line;
+	String line;
 	while (std::getline(photoFile, line))
 		photoList.push_back(PhotoEntry(line));
 
@@ -1075,22 +1074,22 @@ bool EBirdDataProcessor::ReadPhotoList(const std::string& photoFileName)
 	for (const auto& p : photoList)
 	{
 		if (!p.matchedOnce)
-			std::cout << "Warning:  Failed to match species in photo list '" << p.commonName << "' to any observation\n";
+			Cout << "Warning:  Failed to match species in photo list '" << p.commonName << "' to any observation\n";
 	}
 
 	return true;
 }
 
-std::vector<std::string> EBirdDataProcessor::ListFilesInDirectory(const std::string& directory)
+std::vector<String> EBirdDataProcessor::ListFilesInDirectory(const String& directory)
 {
-	DIR *dir(opendir(directory.c_str()));
+	DIR *dir(opendir(UString::ToNarrowString<String>(directory).c_str()));
 	if (!dir)
 	{
-		std::cerr << "Failed to open directory '" << directory << "'\n";
-		return std::vector<std::string>();
+		Cerr << "Failed to open directory '" << directory << "'\n";
+		return std::vector<String>();
 	}
 
-	std::vector<std::string> fileNames;
+	std::vector<String> fileNames;
 	struct dirent *ent;
 	while (ent = readdir(dir), ent)
 	{
@@ -1098,15 +1097,15 @@ std::vector<std::string> EBirdDataProcessor::ListFilesInDirectory(const std::str
 			std::string(ent->d_name).compare("..") == 0)
 			continue;
 
-		fileNames.push_back(ent->d_name);
+		fileNames.push_back(UString::ToStringType(ent->d_name));
 	}
 	closedir(dir);
 
 	return fileNames;
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& frequencyFilePath,
-	const std::string& googleMapsKey, const std::string& eBirdAPIKey, const std::string& clientId, const std::string& clientSecret) const
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const String& frequencyFilePath,
+	const String& googleMapsKey, const String& eBirdAPIKey, const String& clientId, const String& clientSecret) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
@@ -1133,21 +1132,21 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const std::string& f
 	});
 
 	for (const auto& location : newSightingProbability)
-		std::cout << location.locationCode << " : " << location.probabilities[currentMonth] * 100.0 << std::endl;*/
+		Cout << location.locationCode << " : " << location.probabilities[currentMonth] * 100.0 << std::endl;*/
 
 	if (!googleMapsKey.empty())
 	{
-		const std::string fileName("bestLocations.html");// TODO:  Don't hardcode
+		const String fileName(_T("bestLocations.html"));// TODO:  Don't hardcode
 		if (!WriteBestLocationsViewerPage(fileName, googleMapsKey, eBirdAPIKey, newSightingProbability, clientId, clientSecret))
 		{
-			std::cerr << "Faild to create Google Maps best locations page\n";
+			Cerr << "Faild to create Google Maps best locations page\n";
 		}
 	}
 
 	return true;
 }
 
-bool EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileName,
+bool EBirdDataProcessor::ComputeNewSpeciesProbability(const String& fileName,
 	std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const
 {
 	FrequencyDataYear frequencyData;
@@ -1184,18 +1183,18 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(const std::string& fileNam
 	return true;
 }
 
-bool EBirdDataProcessor::WriteBestLocationsViewerPage(const std::string& htmlFileName,
-	const std::string& googleMapsKey, const std::string& eBirdAPIKey,
+bool EBirdDataProcessor::WriteBestLocationsViewerPage(const String& htmlFileName,
+	const String& googleMapsKey, const String& eBirdAPIKey,
 	const std::vector<YearFrequencyInfo>& observationProbabilities,
-	const std::string& clientId, const std::string& clientSecret)
+	const String& clientId, const String& clientSecret)
 {
 	MapPageGenerator generator;
 	return generator.WriteBestLocationsViewerPage(htmlFileName,
 		googleMapsKey, eBirdAPIKey, observationProbabilities, clientId, clientSecret);
 }
 
-bool EBirdDataProcessor::AuditFrequencyData(const std::string& freqFileDirectory,
-	const std::string& eBirdApiKey)
+bool EBirdDataProcessor::AuditFrequencyData(const String& freqFileDirectory,
+	const String& eBirdApiKey)
 {
 	auto fileNames(ListFilesInDirectory(freqFileDirectory));
 	if (fileNames.size() == 0)
@@ -1217,8 +1216,8 @@ bool EBirdDataProcessor::AuditFrequencyData(const std::string& freqFileDirectory
 	return harvester.AuditFrequencyData(freqFileDirectory, freqInfo, eBirdApiKey);
 }
 
-std::string EBirdDataProcessor::StripExtension(const std::string& fileName)
+String EBirdDataProcessor::StripExtension(const String& fileName)
 {
-	const std::string extension(".csv");
+	const String extension(_T(".csv"));
 	return fileName.substr(0, fileName.length() - extension.length());
 }

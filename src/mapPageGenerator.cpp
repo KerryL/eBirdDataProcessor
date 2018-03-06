@@ -12,7 +12,6 @@
 #include "stringUtilities.h"
 
 // Standard C++ headers
-#include <sstream>
 #include <iomanip>
 #include <cctype>
 #include <iostream>
@@ -21,20 +20,20 @@
 #include <cassert>
 #include <set>
 
-const std::string MapPageGenerator::birdProbabilityTableName("Bird Probability Table");
+const String MapPageGenerator::birdProbabilityTableName(_T("Bird Probability Table"));
 const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = {
-	NamePair("Jan", "January"),
-	NamePair("Feb", "February"),
-	NamePair("Mar", "March"),
-	NamePair("Apr", "April"),
-	NamePair("May", "May"),
-	NamePair("Jun", "June"),
-	NamePair("Jul", "July"),
-	NamePair("Aug", "August"),
-	NamePair("Sep", "September"),
-	NamePair("Oct", "October"),
-	NamePair("Nov", "November"),
-	NamePair("Dec", "December")};
+	NamePair(_T("Jan"), _T("January")),
+	NamePair(_T("Feb"), _T("February")),
+	NamePair(_T("Mar"), _T("March")),
+	NamePair(_T("Apr"), _T("April")),
+	NamePair(_T("May"), _T("May")),
+	NamePair(_T("Jun"), _T("June")),
+	NamePair(_T("Jul"), _T("July")),
+	NamePair(_T("Aug"), _T("August")),
+	NamePair(_T("Sep"), _T("September")),
+	NamePair(_T("Oct"), _T("October")),
+	NamePair(_T("Nov"), _T("November")),
+	NamePair(_T("Dec"), _T("December"))};
 
 const unsigned int MapPageGenerator::mapsAPIRateLimit(45);// [requests per sec] (actual limit is 50/sec, but our algorithm isn't perfect...)
 const ThrottledSection::Clock::duration MapPageGenerator::mapsAPIMinDuration(std::chrono::milliseconds(static_cast<long long>(1000.0 / mapsAPIRateLimit)));// 50 requests per second
@@ -48,20 +47,20 @@ MapPageGenerator::MapPageGenerator() : mapsAPIRateLimiter(mapsAPIMinDuration), f
 {
 }
 
-bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileName,
-	const std::string& googleMapsKey, const std::string& eBirdAPIKey,
+bool MapPageGenerator::WriteBestLocationsViewerPage(const String& htmlFileName,
+	const String& googleMapsKey, const String& eBirdAPIKey,
 	const std::vector<ObservationInfo>& observationProbabilities,
-	const std::string& clientId, const std::string& clientSecret)
+	const String& clientId, const String& clientSecret)
 {
-	std::ostringstream contents;
+	OStringStream contents;
 	const Keys keys(googleMapsKey, eBirdAPIKey, clientId, clientSecret);
 	WriteHeadSection(contents, keys, observationProbabilities);
 	WriteBody(contents);
 
-	std::ofstream file(htmlFileName.c_str());
+	OFStream file(htmlFileName.c_str());
 	if (!file.is_open() || !file.good())
 	{
-		std::cerr << "Failed to open '" << htmlFileName << "' for output\n";
+		Cerr << "Failed to open '" << htmlFileName << "' for output\n";
 		return false;
 	}
 	file << contents.str();
@@ -69,7 +68,7 @@ bool MapPageGenerator::WriteBestLocationsViewerPage(const std::string& htmlFileN
 	return true;
 }
 
-void MapPageGenerator::WriteHeadSection(std::ostream& f, const Keys& keys,
+void MapPageGenerator::WriteHeadSection(OStream& f, const Keys& keys,
 	const std::vector<ObservationInfo>& observationProbabilities)
 {
 	f << "<!DOCTYPE html>\n"
@@ -94,7 +93,7 @@ void MapPageGenerator::WriteHeadSection(std::ostream& f, const Keys& keys,
 	f << "  </head>\n";
 }
 
-void MapPageGenerator::WriteBody(std::ostream& f)
+void MapPageGenerator::WriteBody(OStream& f)
 {
 	f << "  <body>\n"
 		<< "    <div id=\"map\"></div>\n"
@@ -113,12 +112,12 @@ void MapPageGenerator::WriteBody(std::ostream& f)
 		<< "</html>";
 }
 
-void MapPageGenerator::WriteScripts(std::ostream& f, const Keys& keys,
+void MapPageGenerator::WriteScripts(OStream& f, const Keys& keys,
 	const std::vector<ObservationInfo>& observationProbabilities)
 {
 	double northeastLatitude, northeastLongitude;
 	double southwestLatitude, southwestLongitude;
-	std::string tableId;
+	String tableId;
 	std::vector<unsigned int> styleIds;
 	std::vector<unsigned int> templateIds;
 
@@ -126,7 +125,7 @@ void MapPageGenerator::WriteScripts(std::ostream& f, const Keys& keys,
 		northeastLongitude, southwestLatitude, southwestLongitude, tableId,
 		keys, styleIds, templateIds))
 	{
-		std::cerr << "Failed to create fusion table\n";
+		Cerr << "Failed to create fusion table\n";
 		return;
 	}
 
@@ -218,14 +217,14 @@ bool MapPageGenerator::CreateFusionTable(
 	std::vector<ObservationInfo> observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
-	std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
+	String& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
 	std::vector<unsigned int>& templateIds)
 {
-	GFTI fusionTables("Bird Probability Tool", keys.clientId, keys.clientSecret);
+	GFTI fusionTables(_T("Bird Probability Tool"), keys.clientId, keys.clientSecret);
 	std::vector<GFTI::TableInfo> tableList;
 	if (!fusionTables.ListTables(tableList))
 	{
-		std::cerr << "Failed to generate list of existing tables\n";
+		Cerr << "Failed to generate list of existing tables\n";
 		return false;
 	}
 
@@ -235,7 +234,7 @@ bool MapPageGenerator::CreateFusionTable(
 	{
 		if (t.name.compare(birdProbabilityTableName) == 0 && t.columns.size() == columnCount)// TODO:  Better check necessary?
 		{
-			std::cout << "Found existing table " << t.tableId << std::endl;
+			Cout << "Found existing table " << t.tableId << std::endl;
 			tableId = t.tableId;
 
 			if (GetExistingCountyData(existingData, fusionTables, tableId))
@@ -251,27 +250,27 @@ bool MapPageGenerator::CreateFusionTable(
 		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.CreateTable(tableInfo))
 		{
-			std::cerr << "Failed to create fusion table\n";
+			Cerr << "Failed to create fusion table\n";
 			return false;
 		}
 
 		tableId = tableInfo.tableId;
-		std::cout << "Created new fusion table " << tableId << std::endl;
+		Cout << "Created new fusion table " << tableId << std::endl;
 		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.SetTableAccess(tableInfo.tableId, GoogleFusionTablesInterface::TableAccess::Public))
-			std::cerr << "Failed to make table public\n";
+			Cerr << "Failed to make table public\n";
 	}
 
 	const auto invalidSpeciesDataRowsToDelete(FindInvalidSpeciesDataToRemove(fusionTables, tableId));
 	if (invalidSpeciesDataRowsToDelete.size() > 0)
 	{
-		std::cout << "Deleting " << invalidSpeciesDataRowsToDelete.size() << " rows with invalid species data" << std::endl;
+		Cout << "Deleting " << invalidSpeciesDataRowsToDelete.size() << " rows with invalid species data" << std::endl;
 		if (!GetConfirmationFromUser())
 			return false;
 
 		if (!DeleteRowsBatch(fusionTables, tableId, invalidSpeciesDataRowsToDelete))
 		{
-			std::cerr << "Failed to remove rows with invalid species data\n";
+			Cerr << "Failed to remove rows with invalid species data\n";
 			return false;
 		}
 	}
@@ -279,13 +278,13 @@ bool MapPageGenerator::CreateFusionTable(
 	const auto duplicateRowsToDelete(FindDuplicatesAndBlanksToRemove(existingData));
 	if (duplicateRowsToDelete.size() > 0)
 	{
-		std::cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate or blank entires" << std::endl;
+		Cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate or blank entires" << std::endl;
 		if (!GetConfirmationFromUser())
 			return false;
 
 		if (!DeleteRowsBatch(fusionTables, tableId, duplicateRowsToDelete))
 		{
-			std::cerr << "Failed to remove duplicates\n";
+			Cerr << "Failed to remove duplicates\n";
 			return false;
 		}
 	}
@@ -293,13 +292,13 @@ bool MapPageGenerator::CreateFusionTable(
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
 	if (rowsToDelete.size() > 0)
 	{
-		std::cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
+		Cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
 		if (!GetConfirmationFromUser())
 			return false;
 
 		if (!DeleteRowsBatch(fusionTables, tableId, rowsToDelete))
 		{
-			std::cerr << "Failed to remove rows for update\n";
+			Cerr << "Failed to remove rows for update\n";
 			return false;
 		}
 	}
@@ -307,16 +306,16 @@ bool MapPageGenerator::CreateFusionTable(
 	if (observationProbabilities.size() == 0)
 	{
 		// TODO:  Wouldn't have populated lat/lon stuff yet.
-		std::cout << "All data up-to-date" << std::endl;
+		Cout << "All data up-to-date" << std::endl;
 		return true;
 	}
 
-	std::cout << "Retrieving geometry data" << std::endl;
+	Cout << "Retrieving geometry data" << std::endl;
 	std::vector<CountyGeometry> geometry;
 	if (!GetCountyGeometry(fusionTables, geometry))
 		return false;
 
-	std::cout << "Retrieving county location data" << std::endl;
+	Cout << "Retrieving county location data" << std::endl;
 	EBirdInterface ebi(keys.eBirdAPIKey);
 	const auto countryCodes(GetCountryCodeList(observationProbabilities));
 	for (const auto& c : countryCodes)
@@ -349,8 +348,8 @@ bool MapPageGenerator::CreateFusionTable(
 	southwestLatitude = 18.79;
 	southwestLongitude = 171.7;
 
-	std::cout << "Preparing data for upload" << std::endl;
-	std::ostringstream ss;
+	Cout << "Preparing data for upload" << std::endl;
+	OStringStream ss;
 	unsigned int rowCount(0);
 	unsigned int cellCount(0);
 	for (const auto& c : countyInfo)
@@ -376,7 +375,7 @@ bool MapPageGenerator::CreateFusionTable(
 			if (!UploadBuffer(fusionTables, tableId, ss.str()))
 				return false;
 
-			ss.str("");
+			ss.str(String());
 			ss.clear();
 			rowCount = 0;
 			cellCount = 0;
@@ -391,26 +390,26 @@ bool MapPageGenerator::CreateFusionTable(
 
 	if (!VerifyTableStyles(fusionTables, tableId, styleIds))
 	{
-		std::cerr << "Failed to verify table styles\n";
+		Cerr << "Failed to verify table styles\n";
 		return false;
 	}
 
 	if (!VerifyTableTemplates(fusionTables, tableId, templateIds))
 	{
-		std::cerr << "Failed to verify table templates\n";
+		Cerr << "Failed to verify table templates\n";
 		return false;
 	}
 
 	return true;
 }
 
-std::vector<std::string> MapPageGenerator::GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities)
+std::vector<String> MapPageGenerator::GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities)
 {
-	std::set<std::string> codes;
+	std::set<String> codes;
 	for (const auto& o : observationProbabilities)
 		codes.insert(o.locationCode.substr(0, 2));
 
-	std::vector<std::string> codesVector(codes.size());
+	std::vector<String> codesVector(codes.size());
 	auto it(codesVector.begin());
 	for (const auto& c : codes)
 	{
@@ -423,14 +422,14 @@ std::vector<std::string> MapPageGenerator::GetCountryCodeList(const std::vector<
 
 bool MapPageGenerator::GetConfirmationFromUser()
 {
-	std::cout << "Continue? (y/n) ";
-	std::string response;
+	Cout << "Continue? (y/n) ";
+	String response;
 	while (response.empty())
 	{
-		std::cin >> response;
-		if (StringUtilities::ToLower(response).compare("y") == 0)
+		Cin >> response;
+		if (StringUtilities::ToLower(response).compare(_T("y")) == 0)
 			return true;
-		if (StringUtilities::ToLower(response).compare("n") == 0)
+		if (StringUtilities::ToLower(response).compare(_T("n")) == 0)
 			break;
 		response.clear();
 	}
@@ -439,7 +438,7 @@ bool MapPageGenerator::GetConfirmationFromUser()
 }
 
 bool MapPageGenerator::DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables,
-	const std::string& tableId, const std::vector<unsigned int>& rowIds)
+	const String& tableId, const std::vector<unsigned int>& rowIds)
 {
 	const unsigned int maxDeleteSize(500);
 	auto startIt(rowIds.begin());
@@ -457,12 +456,12 @@ bool MapPageGenerator::DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables
 	return true;
 }
 
-bool MapPageGenerator::UploadBuffer(GFTI& fusionTables, const std::string& tableId, const std::string& buffer)
+bool MapPageGenerator::UploadBuffer(GFTI& fusionTables, const String& tableId, const String& buffer)
 {
 	fusionTablesAPIRateLimiter.Wait();
 	if (!fusionTables.Import(tableId, buffer))
 	{
-		std::cerr << "Failed to import data\n";
+		Cerr << "Failed to import data\n";
 		return false;
 	}
 
@@ -474,7 +473,7 @@ bool MapPageGenerator::ProcessJSONQueryResponse(cJSON* root, std::vector<CountyI
 	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
 	if (!rowsArray)
 	{
-		//std::cerr << "Failed to get rows array\n";
+		//Cerr << "Failed to get rows array\n";
 		cJSON_Delete(root);
 		return true;// Don't fail if there's no rows array - likely empty table
 	}
@@ -487,7 +486,7 @@ bool MapPageGenerator::ProcessJSONQueryResponse(cJSON* root, std::vector<CountyI
 		if (!rowRoot)
 		{
 			cJSON_Delete(root);
-			std::cerr << "Failed to read existing row\n";
+			Cerr << "Failed to read existing row\n";
 			return false;
 		}
 
@@ -503,15 +502,15 @@ bool MapPageGenerator::ProcessJSONQueryResponse(cJSON* root, std::vector<CountyI
 	return true;
 }
 
-bool MapPageGenerator::ProcessCSVQueryResponse(const std::string& csvData, std::vector<CountyInfo>& data)
+bool MapPageGenerator::ProcessCSVQueryResponse(const String& csvData, std::vector<CountyInfo>& data)
 {
-	std::istringstream inData(csvData);
-	std::string line;
-	const std::string headingLine("rowid,State,County,Country,Name,Code,Geometry,Probability-Jan,Probability-Feb,Probability-Mar,Probability-Apr,Probability-May,Probability-Jun,Probability-Jul,Probability-Aug,Probability-Sep,Probability-Oct,Probability-Nov,Probability-Dec");
+	IStringStream inData(csvData);
+	String line;
+	const String headingLine(_T("rowid,State,County,Country,Name,Code,Geometry,Probability-Jan,Probability-Feb,Probability-Mar,Probability-Apr,Probability-May,Probability-Jun,Probability-Jul,Probability-Aug,Probability-Sep,Probability-Oct,Probability-Nov,Probability-Dec"));
 	std::getline(inData, line);
 	if (line.compare(headingLine) != 0)
 	{
-		std::cerr << "Heading line does not match expected response\n";
+		Cerr << "Heading line does not match expected response\n";
 		return false;
 	}
 
@@ -526,33 +525,33 @@ bool MapPageGenerator::ProcessCSVQueryResponse(const std::string& csvData, std::
 	return true;
 }
 
-bool MapPageGenerator::ProcessCSVQueryLine(const std::string& line, CountyInfo& info)
+bool MapPageGenerator::ProcessCSVQueryLine(const String& line, CountyInfo& info)
 {
-	std::istringstream ss(line);
-	if (!EBirdDataProcessor::ParseToken(ss, "row ID", info.rowId))
+	IStringStream ss(line);
+	if (!EBirdDataProcessor::ParseToken(ss, _T("row ID"), info.rowId))
 		return false;
 
-	if (!EBirdDataProcessor::ParseToken(ss, "state", info.state))
+	if (!EBirdDataProcessor::ParseToken(ss, _T("state"), info.state))
 		return false;
 
-	if (!EBirdDataProcessor::ParseToken(ss, "county", info.county))
+	if (!EBirdDataProcessor::ParseToken(ss, _T("county"), info.county))
 		return false;
 
-	if (!EBirdDataProcessor::ParseToken(ss, "country", info.country))
+	if (!EBirdDataProcessor::ParseToken(ss, _T("country"), info.country))
 		return false;
 
-	if (!EBirdDataProcessor::ParseToken(ss, "name", info.name))
+	if (!EBirdDataProcessor::ParseToken(ss, _T("name"), info.name))
 		return false;
 
-	if (!EBirdDataProcessor::ParseToken(ss, "code", info.code))
+	if (!EBirdDataProcessor::ParseToken(ss, _T("code"), info.code))
 		return false;
 
-	if (!EBirdDataProcessor::ParseToken(ss, "geometry", info.geometryKML))
+	if (!EBirdDataProcessor::ParseToken(ss, _T("geometry"), info.geometryKML))
 		return false;
 
 	for (auto& p : info.probabilities)
 	{
-		if (!EBirdDataProcessor::ParseToken(ss, "probability", p))
+		if (!EBirdDataProcessor::ParseToken(ss, _T("probability"), p))
 			return false;
 	}
 
@@ -563,12 +562,12 @@ bool MapPageGenerator::ProcessCSVQueryLine(const std::string& line, CountyInfo& 
 }
 
 bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
-	GFTI& fusionTables, const std::string& tableId)
+	GFTI& fusionTables, const String& tableId)
 {
 	cJSON* root(nullptr);
-	std::string csvData;
-	const std::string query("SELECT ROWID,State,County,Country,Name,Code,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM " + tableId);
-	const std::string nonTypedOption("&typed=false");
+	String csvData;
+	const String query(_T("SELECT ROWID,State,County,Country,Name,Code,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM ") + tableId);
+	const String nonTypedOption(_T("&typed=false"));
 	if (!fusionTables.SubmitQuery(query + nonTypedOption, root, &csvData))
 		return false;
 
@@ -586,7 +585,7 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 	unsigned int count(0);
 	do
 	{
-		std::ostringstream offsetAndLimit;
+		OStringStream offsetAndLimit;
 		offsetAndLimit << " OFFSET " << count * batchSize << " LIMIT " << batchSize;
 		if (!fusionTables.SubmitQuery(query + offsetAndLimit.str() + nonTypedOption, root))
 			return false;
@@ -627,20 +626,20 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 		!jan || !feb || !mar || !apr || !may || !jun ||
 		!jul || !aug || !sep || !oct || !nov || !dec)
 	{
-		std::cerr << "Failed to get county information from existing row\n";
+		Cerr << "Failed to get county information from existing row\n";
 		return false;
 	}
 
-	data.state = state->valuestring;
-	data.county = county->valuestring;
-	data.country = country->valuestring;
-	data.name = name->valuestring;
-	data.code = code->valuestring;
-	data.geometryKML = kml->valuestring;
+	data.state = UString::ToStringType(state->valuestring);
+	data.county = UString::ToStringType(county->valuestring);
+	data.country = UString::ToStringType(country->valuestring);
+	data.name = UString::ToStringType(name->valuestring);
+	data.code = UString::ToStringType(code->valuestring);
+	data.geometryKML = UString::ToStringType(kml->valuestring);
 
 	if (!Read(rowID, data.rowId))
 	{
-		std::cerr << "Failed to read row ID\n";
+		Cerr << "Failed to read row ID\n";
 		return false;
 	}
 
@@ -657,7 +656,7 @@ bool MapPageGenerator::ReadExistingCountyData(cJSON* row, CountyInfo& data)
 		!Read(nov, data.probabilities[10]) ||
 		!Read(dec, data.probabilities[11]))
 	{
-		std::cerr << "Failed to read existing probability\n";
+		Cerr << "Failed to read existing probability\n";
 		return false;
 	}
 
@@ -702,15 +701,15 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 }
 
 std::vector<unsigned int> MapPageGenerator::FindInvalidSpeciesDataToRemove(
-	GFTI& fusionTables, const std::string& tableId)
+	GFTI& fusionTables, const String& tableId)
 {
 	std::vector<unsigned int> invalidRows;
 	for (const auto& month : monthNames)
 	{
 		cJSON* root(nullptr);
-		std::string csvData;
-		const std::string query("SELECT ROWID FROM " + tableId + " WHERE 'Species-" + month.shortName + "' MATCHES '(0.00%)'");
-		const std::string nonTypedOption("&typed=false");
+		String csvData;
+		const String query(_T("SELECT ROWID FROM ") + tableId + _T(" WHERE 'Species-") + month.shortName + _T("' MATCHES '(0.00%)'"));
+		const String nonTypedOption(_T("&typed=false"));
 		if (!fusionTables.SubmitQuery(query + nonTypedOption, root, &csvData))
 			break;
 
@@ -732,7 +731,7 @@ std::vector<unsigned int> MapPageGenerator::FindInvalidSpeciesDataToRemove(
 		unsigned int count(0);
 		do
 		{
-			std::ostringstream offsetAndLimit;
+			OStringStream offsetAndLimit;
 			offsetAndLimit << " OFFSET " << count * batchSize << " LIMIT " << batchSize;
 			if (!fusionTables.SubmitQuery(query + offsetAndLimit.str() + nonTypedOption, root))
 				break;
@@ -757,7 +756,7 @@ bool MapPageGenerator::FindInvalidSpeciesDataInJSONResponse(cJSON* root, std::ve
 	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
 	if (!rowsArray)
 	{
-		//std::cerr << "Failed to get rows array\n";
+		//Cerr << "Failed to get rows array\n";
 		cJSON_Delete(root);
 		return true;// Don't fail if there's no rows array - likely empty table
 	}
@@ -770,7 +769,7 @@ bool MapPageGenerator::FindInvalidSpeciesDataInJSONResponse(cJSON* root, std::ve
 		if (!rowRoot)
 		{
 			cJSON_Delete(root);
-			std::cerr << "Failed to read existing row\n";
+			Cerr << "Failed to read existing row\n";
 			return false;
 		}
 
@@ -778,7 +777,7 @@ bool MapPageGenerator::FindInvalidSpeciesDataInJSONResponse(cJSON* root, std::ve
 		if (!rowIdItem)
 		{
 			cJSON_Delete(root);
-			std::cerr << "Failed to read item from row\n";
+			Cerr << "Failed to read item from row\n";
 			return false;
 		}
 
@@ -909,18 +908,18 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 	return false;
 }
 
-std::string MapPageGenerator::AssembleCountyName(const std::string& country, const std::string& state, const std::string& county)
+String MapPageGenerator::AssembleCountyName(const String& country, const String& state, const String& county)
 {
-	return county + ", " + state + ", " + country;
+	return county + _T(", ") + state + _T(", ") + country;
 }
 
-std::string MapPageGenerator::BuildUSLocationCode(const std::string& state, const std::string& countyNumber)
+String MapPageGenerator::BuildUSLocationCode(const String& state, const String& countyNumber)
 {
-	std::istringstream iss(countyNumber);
+	IStringStream iss(countyNumber);
 	unsigned int countyNumberInt;
 	iss >> countyNumberInt;// TODO:  Check for failure?
-	std::ostringstream oss;
-	oss << "US-" << state << '-' << std::setfill('0') << std::setw(3) << countyNumberInt;
+	OStringStream oss;
+	oss << "US-" << state << '-' << std::setfill(Char('0')) << std::setw(3) << countyNumberInt;
 	return oss.str();
 }
 
@@ -936,7 +935,7 @@ void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geo
 	}
 
 	if (data.geometryKML.empty())
-		std::cerr << "\rWarning:  Geometry not found for '" << data.code << "'\n";
+		Cerr << "\rWarning:  Geometry not found for '" << data.code << "'\n";
 }
 
 void MapPageGenerator::MapJobInfo::DoJob()
@@ -961,21 +960,21 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 {
 	GFTI::TableInfo tableInfo;
 	tableInfo.name = birdProbabilityTableName;
-	tableInfo.description = "Table of bird observation probabilities";
+	tableInfo.description = _T("Table of bird observation probabilities");
 	tableInfo.isExportable = true;
 
-	tableInfo.columns.push_back(GFTI::ColumnInfo("State", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("County", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Country", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Name", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Code", GFTI::ColumnType::String));
-	tableInfo.columns.push_back(GFTI::ColumnInfo("Geometry", GFTI::ColumnType::Location));
+	tableInfo.columns.push_back(GFTI::ColumnInfo(_T("State"), GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo(_T("County"), GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo(_T("Country"), GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo(_T("Name"), GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo(_T("Code"), GFTI::ColumnType::String));
+	tableInfo.columns.push_back(GFTI::ColumnInfo(_T("Geometry"), GFTI::ColumnType::Location));
 
 	for (const auto& m : monthNames)
 	{
-		tableInfo.columns.push_back(GFTI::ColumnInfo("Probability-" + m.shortName, GFTI::ColumnType::Number));
-		tableInfo.columns.push_back(GFTI::ColumnInfo("Color-" + m.shortName, GFTI::ColumnType::String));
-		tableInfo.columns.push_back(GFTI::ColumnInfo("Species-" + m.shortName, GFTI::ColumnType::String));
+		tableInfo.columns.push_back(GFTI::ColumnInfo(_T("Probability-") + m.shortName, GFTI::ColumnType::Number));
+		tableInfo.columns.push_back(GFTI::ColumnInfo(_T("Color-") + m.shortName, GFTI::ColumnType::String));
+		tableInfo.columns.push_back(GFTI::ColumnInfo(_T("Species-") + m.shortName, GFTI::ColumnType::String));
 	}
 
 	assert(tableInfo.columns.size() == columnCount);
@@ -983,14 +982,14 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 	return tableInfo;
 }
 
-std::string MapPageGenerator::CleanQueryString(const std::string& s)
+String MapPageGenerator::CleanQueryString(const String& s)
 {
-	std::string clean;
+	String clean;
 
 	for (const auto& c : s)
 	{
-		if (c == '\'')
-			clean.append("''");
+		if (c == Char('\''))
+			clean.append(_T("''"));
 		else
 			clean.push_back(c);
 	}
@@ -998,7 +997,7 @@ std::string MapPageGenerator::CleanQueryString(const std::string& s)
 	return clean;
 }
 
-std::string MapPageGenerator::ComputeColor(const double& frequency)
+String MapPageGenerator::ComputeColor(const double& frequency)
 {
 	const Color minColor(0.0, 0.75, 0.365);// Greenish
 	const Color maxColor(1.0, 0.0, 0.0);// Red
@@ -1022,15 +1021,15 @@ MapPageGenerator::Color MapPageGenerator::InterpolateColor(
 		minVal + (maxVal - minVal) * value);
 }
 
-std::string MapPageGenerator::ColorToHexString(const Color& c)
+String MapPageGenerator::ColorToHexString(const Color& c)
 {
-	std::ostringstream hex;
+	OStringStream hex;
 	hex << "#" << std::hex
-		<< std::setw(2) << std::setfill('0') << static_cast<int>(c.red * 255.0)
-		<< std::setw(2) << std::setfill('0') << static_cast<int>(c.green * 255.0)
-		<< std::setw(2) << std::setfill('0') << static_cast<int>(c.blue * 255.0);
+		<< std::setw(2) << std::setfill(Char('0')) << static_cast<int>(c.red * 255.0)
+		<< std::setw(2) << std::setfill(Char('0')) << static_cast<int>(c.green * 255.0)
+		<< std::setw(2) << std::setfill(Char('0')) << static_cast<int>(c.blue * 255.0);
 
-	std::string hexString(hex.str());
+	String hexString(hex.str());
 	std::transform(hexString.begin(), hexString.end(), hexString.begin(), ::toupper);
 	return hexString;
 }
@@ -1090,8 +1089,8 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 	// TODO:  Instead of this, maybe ask user to download kmz files from http://www.gadm.org/country (or download automatically if missing?)
 	// Then, unzip, parse file to find matching placemark names
 	// Would need user to specify kmz directory
-	const std::string usCountyBoundaryTableId("1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa");
-	const std::string query("SELECT 'State Abbr','COUNTY num',geometry FROM " + usCountyBoundaryTableId + "&typed=false");
+	const String usCountyBoundaryTableId(_T("1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa"));
+	const String query(_T("SELECT 'State Abbr','COUNTY num',geometry FROM ") + usCountyBoundaryTableId + _T("&typed=false"));
 	cJSON* root;
 	if (!fusionTables.SubmitQuery(query, root))
 		return false;
@@ -1099,7 +1098,7 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
 	if (!rowsArray)
 	{
-		std::cerr << "Failed to get rows array\n";
+		Cerr << "Failed to get rows array\n";
 		cJSON_Delete(root);
 		return false;// Unlike other cases, we DO want to fail on this case, because this response should never be empty
 	}
@@ -1111,7 +1110,7 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 		cJSON* item(cJSON_GetArrayItem(rowsArray, i));
 		if (!item)
 		{
-			std::cerr << "Failed to get array item " << i << '\n';
+			Cerr << "Failed to get array item " << i << '\n';
 			cJSON_Delete(root);
 			return false;
 		}
@@ -1121,13 +1120,13 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 		cJSON* kml(cJSON_GetArrayItem(item, 2));
 		if (!state || !county || !kml)
 		{
-			std::cerr << "Failed to get row information for row " << i << '\n';
+			Cerr << "Failed to get row information for row " << i << '\n';
 			cJSON_Delete(root);
 			return false;
 		}
 
-		g.code = BuildUSLocationCode(state->valuestring, county->valuestring);
-		g.kml = kml->valuestring;
+		g.code = BuildUSLocationCode(UString::ToStringType(state->valuestring), UString::ToStringType(county->valuestring));
+		g.kml = UString::ToStringType(kml->valuestring);
 
 		++i;
 	}
@@ -1137,7 +1136,7 @@ bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTabl
 }
 
 bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
-	const std::string& tableId, std::vector<unsigned int>& styleIds)
+	const String& tableId, std::vector<unsigned int>& styleIds)
 {
 	std::vector<GoogleFusionTablesInterface::StyleInfo> styles;
 	if (!fusionTables.ListStyles(tableId, styles))
@@ -1171,8 +1170,8 @@ bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTabl
 	return true;
 }
 
-GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const std::string& tableId,
-	const std::string& month)
+GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const String& tableId,
+	const String& month)
 {
 	GoogleFusionTablesInterface::StyleInfo style;
 	style.name = month;
@@ -1181,15 +1180,15 @@ GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const std::
 
 	GoogleFusionTablesInterface::StyleInfo::Options fillColorOption;
 	fillColorOption.type = GoogleFusionTablesInterface::StyleInfo::Options::Type::Complex;
-	fillColorOption.key = "fillColorStyler";
-	fillColorOption.c.push_back(GoogleFusionTablesInterface::StyleInfo::Options("columnName", "Color-" + month));
+	fillColorOption.key = _T("fillColorStyler");
+	fillColorOption.c.push_back(GoogleFusionTablesInterface::StyleInfo::Options(_T("columnName"), _T("Color-") + month));
 	style.polygonOptions.push_back(fillColorOption);
 
 	return style;
 }
 
 bool MapPageGenerator::VerifyTableTemplates(GoogleFusionTablesInterface& fusionTables,
-	const std::string& tableId, std::vector<unsigned int>& templateIds)
+	const String& tableId, std::vector<unsigned int>& templateIds)
 {
 	std::vector<GoogleFusionTablesInterface::TemplateInfo> templates;
 	if (!fusionTables.ListTemplates(tableId, templates))
@@ -1224,13 +1223,13 @@ bool MapPageGenerator::VerifyTableTemplates(GoogleFusionTablesInterface& fusionT
 }
 
 GoogleFusionTablesInterface::TemplateInfo MapPageGenerator::CreateTemplate(
-	const std::string& tableId, const std::string& month)
+	const String& tableId, const String& month)
 {
 	GoogleFusionTablesInterface::TemplateInfo info;
 	info.name = month;
 	info.tableId = tableId;
 
-	std::ostringstream ss;
+	OStringStream ss;
 	ss << "<div class='googft-info-window' style='font-family: sans-serif'>\n"
 		<< "<p><b>{Name}</b></p>\n"
 		<< "<p>Probability of Observing a Lifer: {Probability-" << std::setprecision(2) << std::fixed << month << "}%</p>\n"
@@ -1243,14 +1242,14 @@ GoogleFusionTablesInterface::TemplateInfo MapPageGenerator::CreateTemplate(
 	return info;
 }
 
-std::string MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProcessor::FrequencyInfo>& info)
+String MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProcessor::FrequencyInfo>& info)
 {
-	std::ostringstream ss;
+	OStringStream ss;
 	ss << std::setprecision(2) << std::fixed;
 	for (const auto& s : info)
 	{
 		if (s.species.empty())
-			std::cout << "Found one!" << std::endl;
+			Cout << "Found one!" << std::endl;
 		if (!ss.str().empty())
 			ss << "<br>";
 		ss << s.species << " (" << s.frequency << "%)";

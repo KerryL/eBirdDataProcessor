@@ -9,9 +9,9 @@
 // Local headers
 #include "eBirdDataProcessor.h"
 #include "throttledSection.h"
+#include "utilities/uString.h"
 
 // Standard C++ headers
-#include <string>
 #include <vector>
 #include <array>
 #include <chrono>
@@ -25,21 +25,21 @@ public:
 	FrequencyDataHarvester();
 	~FrequencyDataHarvester();
 
-	bool GenerateFrequencyFile(const std::string &country, const std::string &state,
-		const std::string &county, const std::string &frequencyFilePath, const std::string& eBirdApiKey);
+	bool GenerateFrequencyFile(const String &country, const String &state,
+		const String &county, const String &frequencyFilePath, const String& eBirdApiKey);
 
-	bool DoBulkFrequencyHarvest(const std::string &country, const std::string &state,
-		const std::string& targetPath, const std::string& firstSubRegion, const std::string& eBirdApiKey);
+	bool DoBulkFrequencyHarvest(const String &country, const String &state,
+		const String& targetPath, const String& firstSubRegion, const String& eBirdApiKey);
 
-	bool AuditFrequencyData(const std::string& frequencyFilePath,
-		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& eBirdApiKey);
+	bool AuditFrequencyData(const String& frequencyFilePath,
+		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const String& eBirdApiKey);
 
 private:
-	static const std::string targetSpeciesURLBase;
-	static const std::string eBirdLoginURL;
-	static const std::string userAgent;
+	static const String targetSpeciesURLBase;
+	static const String eBirdLoginURL;
+	static const String userAgent;
 	static const bool verbose;
-	static const std::string cookieFile;
+	static const String cookieFile;
 	static const std::chrono::steady_clock::duration eBirdCrawlDelay;
 
 	ThrottledSection rateLimiter;
@@ -55,11 +55,11 @@ private:
 		Day
 	};
 
-	static std::string BuildTargetSpeciesURL(const std::string& regionString,
+	static String BuildTargetSpeciesURL(const String& regionString,
 		const unsigned int& beginMonth, const unsigned int& endMonth,
 		const ListTimeFrame& timeFrame);
-	static std::string ExtractCountyNameFromPage(const std::string& regionString, const std::string& htmlData);
-	static std::string GetTimeFrameString(const ListTimeFrame& timeFrame);
+	static String ExtractCountyNameFromPage(const String& regionString, const String& htmlData);
+	static String GetTimeFrameString(const ListTimeFrame& timeFrame);
 
 	bool DoGeneralCurlConfiguration();
 	bool DoEBirdLogin();
@@ -70,29 +70,29 @@ private:
 		std::vector<EBirdDataProcessor::FrequencyInfo> frequencies;
 	};
 
-	bool PullFrequencyData(const std::string& regionString, std::array<FrequencyData, 12>& frequencyData);
-	bool HarvestMonthData(const std::string& regionString, const unsigned int& month, FrequencyData& frequencyData);
-	bool PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage);
-	static bool EBirdLoginSuccessful(const std::string& htmlData);
-	static void GetUserNameAndPassword(std::string& userName, std::string& password);
-	static std::string BuildEBirdLoginInfo(const std::string& userName, const std::string& password, const std::string& token);
-	bool DoCURLGet(const std::string& url, std::string &response);
+	bool PullFrequencyData(const String& regionString, std::array<FrequencyData, 12>& frequencyData);
+	bool HarvestMonthData(const String& regionString, const unsigned int& month, FrequencyData& frequencyData);
+	bool PostEBirdLoginInfo(const String& userName, const String& password, String& resultPage);
+	static bool EBirdLoginSuccessful(const String& htmlData);
+	static void GetUserNameAndPassword(String& userName, String& password);
+	static String BuildEBirdLoginInfo(const String& userName, const String& password, const String& token);
+	bool DoCURLGet(const String& url, String &response);
 	static size_t CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData);
 
-	static bool ExtractFrequencyData(const std::string& htmlData, FrequencyData& data);
-	static bool WriteFrequencyDataToFile(const std::string& fileName, const std::array<FrequencyData, 12>& data);
-	static bool ExtractTextBetweenTags(const std::string& htmlData, const std::string& startTag,
-		const std::string& endTag, std::string& text, std::string::size_type& offset);
-	static std::string ExtractTokenFromLoginPage(const std::string& htmlData);
-	static bool CurrentDataMissingSpecies(const std::string& fileName, const std::array<FrequencyData, 12>& data);
+	static bool ExtractFrequencyData(const String& htmlData, FrequencyData& data);
+	static bool WriteFrequencyDataToFile(const String& fileName, const std::array<FrequencyData, 12>& data);
+	static bool ExtractTextBetweenTags(const String& htmlData, const String& startTag,
+		const String& endTag, String& text, std::string::size_type& offset);
+	static String ExtractTokenFromLoginPage(const String& htmlData);
+	static bool CurrentDataMissingSpecies(const String& fileName, const std::array<FrequencyData, 12>& data);
 
-	static std::string Clean(const std::string& s);
+	static String Clean(const String& s);
 	static bool DataIsEmpty(const std::array<FrequencyData, 12>& frequencyData);
 
 	struct StateCountryCode
 	{
-		std::string state;
-		std::string country;
+		String state;
+		String country;
 
 		bool operator==(const StateCountryCode& other) const
 		{
@@ -110,10 +110,10 @@ private:
 	};
 
 	static std::vector<StateCountryCode> GetCountriesAndStates(const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo);
-	static std::vector<EBirdInterface::RegionInfo> FindMissingCounties(const std::string& stateCode,
+	static std::vector<EBirdInterface::RegionInfo> FindMissingCounties(const String& stateCode,
 		const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, EBirdInterface& ebi);
-	static std::string ExtractCountryFromFileName(const std::string& fileName);
-	static std::string ExtractStateFromFileName(const std::string& fileName);
+	static String ExtractCountryFromFileName(const String& fileName);
+	static String ExtractStateFromFileName(const String& fileName);
 };
 
 #endif// FREQUENCY_DATA_HARVESTER_H_

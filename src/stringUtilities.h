@@ -6,13 +6,13 @@
 #ifndef STRING_UTILITIES_H_
 #define STRING_UTILITIES_H_
 
-// Standard C++ headers
-#include <string>
+// Local headers
+#include "utilities/uString.h"
 
 namespace StringUtilities
 {
-std::string Trim(std::string s);
-std::string ToLower(const std::string& s);
-}
+String Trim(String s);
+String ToLower(const String& s);
+}// namespace StringUtilities
 
 #endif// STRING_UTILITIES_H_

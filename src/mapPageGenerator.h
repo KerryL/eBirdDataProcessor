@@ -11,9 +11,9 @@
 #include "googleFusionTablesInterface.h"
 #include "threadPool.h"
 #include "throttledSection.h"
+#include "utilities/uString.h"
 
 // Standard C++ headers
-#include <fstream>
 #include <map>
 
 class MapPageGenerator
@@ -22,36 +22,36 @@ public:
 	MapPageGenerator();
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
-	bool WriteBestLocationsViewerPage(const std::string& htmlFileName,
-		const std::string& googleMapsKey, const std::string& eBirdAPIKey,
+	bool WriteBestLocationsViewerPage(const String& htmlFileName,
+		const String& googleMapsKey, const String& eBirdAPIKey,
 		const std::vector<ObservationInfo>& observationInfo,
-		const std::string& clientId, const std::string& clientSecret);
+		const String& clientId, const String& clientSecret);
 
 private:
-	static const std::string birdProbabilityTableName;
+	static const String birdProbabilityTableName;
 
 	struct NamePair
 	{
 		NamePair() = default;
-		NamePair(const std::string& shortName, const std::string& longName)
+		NamePair(const String& shortName, const String& longName)
 			: shortName(shortName), longName(longName) {}
 
-		std::string shortName;
-		std::string longName;
+		String shortName;
+		String longName;
 	};
 
 	static const std::array<NamePair, 12> monthNames;
 
 	struct Keys
 	{
-		Keys(const std::string& googleMapsKey, const std::string& eBirdAPIKey, const std::string& clientId,
-			const std::string& clientSecret) : googleMapsKey(googleMapsKey), eBirdAPIKey(eBirdAPIKey),
+		Keys(const String& googleMapsKey, const String& eBirdAPIKey, const String& clientId,
+			const String& clientSecret) : googleMapsKey(googleMapsKey), eBirdAPIKey(eBirdAPIKey),
 			clientId(clientId), clientSecret(clientSecret) {}
 
-		const std::string googleMapsKey;
-		const std::string eBirdAPIKey;
-		const std::string clientId;
-		const std::string clientSecret;
+		const String googleMapsKey;
+		const String eBirdAPIKey;
+		const String clientId;
+		const String clientSecret;
 	};
 
 	typedef GoogleFusionTablesInterface GFTI;
@@ -66,22 +66,22 @@ private:
 	static const unsigned int importCellCountLimit;
 	static const unsigned int importSizeLimit;// [bytes]
 
-	bool UploadBuffer(GFTI& fusionTables, const std::string& tableId, const std::string& buffer);
+	bool UploadBuffer(GFTI& fusionTables, const String& tableId, const String& buffer);
 
-	void WriteHeadSection(std::ostream& f, const Keys& keys,
+	void WriteHeadSection(OStream& f, const Keys& keys,
 		const std::vector<ObservationInfo>& observationProbabilities);
-	static void WriteBody(std::ostream& f);
-	void WriteScripts(std::ostream& f, const Keys& keys,
+	static void WriteBody(OStream& f);
+	void WriteScripts(OStream& f, const Keys& keys,
 		const std::vector<ObservationInfo>& observationProbabilities);
 	bool CreateFusionTable(
 		std::vector<ObservationInfo> observationProbabilities,
 		double& northeastLatitude, double& northeastLongitude,
 		double& southwestLatitude, double& southwestLongitude,
-		std::string& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
+		String& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
 		std::vector<unsigned int>& templateIds);
 
-	static std::string CleanQueryString(const std::string& s);
-	static std::string ComputeColor(const double& frequency);
+	static String CleanQueryString(const String& s);
+	static String ComputeColor(const double& frequency);
 
 	struct Color
 	{
@@ -95,13 +95,13 @@ private:
 
 	struct CountyInfo
 	{
-		std::string name;
-		std::string state;
-		std::string county;
-		std::string country;
-		std::string code;
+		String name;
+		String state;
+		String county;
+		String country;
+		String code;
 
-		std::string geometryKML;
+		String geometryKML;
 
 		std::array<double, 12> probabilities;
 		std::array<std::vector<EBirdDataProcessor::FrequencyInfo>, 12> frequencyInfo;
@@ -111,15 +111,15 @@ private:
 
 	struct CountyGeometry
 	{
-		std::string code;
-		std::string kml;
+		String code;
+		String kml;
 	};
 
 	static bool GetExistingCountyData(std::vector<CountyInfo>& data,
-		GFTI& fusionTables, const std::string& tableId);
+		GFTI& fusionTables, const String& tableId);
 	static bool ProcessJSONQueryResponse(cJSON* root, std::vector<CountyInfo>& data);
-	static bool ProcessCSVQueryResponse(const std::string& csvData, std::vector<CountyInfo>& data);
-	static bool ProcessCSVQueryLine(const std::string& line, CountyInfo& info);
+	static bool ProcessCSVQueryResponse(const String& csvData, std::vector<CountyInfo>& data);
+	static bool ProcessCSVQueryLine(const String& line, CountyInfo& info);
 	static bool ReadExistingCountyData(cJSON* row, CountyInfo& data);
 	static std::vector<unsigned int> DetermineDeleteUpdateAdd(
 		std::vector<CountyInfo>& existingData, std::vector<ObservationInfo>& newData);
@@ -138,11 +138,11 @@ private:
 	static bool Read(cJSON* item, T& value);
 
 	static Color InterpolateColor(const Color& minColor, const Color& maxColor, const double& value);
-	static std::string ColorToHexString(const Color& c);
+	static String ColorToHexString(const Color& c);
 	static void GetHSV(const Color& c, double& hue, double& saturation, double& value);
 	static Color ColorFromHSV( const double& hue, const double& saturation, const double& value);
 
-	static std::string BuildSpeciesInfoString(const std::vector<EBirdDataProcessor::FrequencyInfo>& info);
+	static String BuildSpeciesInfoString(const std::vector<EBirdDataProcessor::FrequencyInfo>& info);
 
 	static GFTI::TableInfo BuildTableLayout();
 
@@ -166,35 +166,35 @@ private:
 		void DoJob() override;
 	};
 
-	static std::string BuildUSLocationCode(const std::string& state, const std::string& countyNumber);
+	static String BuildUSLocationCode(const String& state, const String& countyNumber);
 
-	std::map<std::string, std::vector<EBirdInterface::RegionInfo>> countryRegionInfoMap;
+	std::map<String, std::vector<EBirdInterface::RegionInfo>> countryRegionInfoMap;
 
 	bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
-		const std::string& tableId, std::vector<unsigned int>& styleIds);
-	static GoogleFusionTablesInterface::StyleInfo CreateStyle(const std::string& tableId,
-		const std::string& month);
+		const String& tableId, std::vector<unsigned int>& styleIds);
+	static GoogleFusionTablesInterface::StyleInfo CreateStyle(const String& tableId,
+		const String& month);
 
 	bool VerifyTableTemplates(GoogleFusionTablesInterface& fusionTables,
-		const std::string& tableId, std::vector<unsigned int>& templateIds);
-	static GoogleFusionTablesInterface::TemplateInfo CreateTemplate(const std::string& tableId,
-		const std::string& month);
+		const String& tableId, std::vector<unsigned int>& templateIds);
+	static GoogleFusionTablesInterface::TemplateInfo CreateTemplate(const String& tableId,
+		const String& month);
 	bool DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables,
-		const std::string& tableId, const std::vector<unsigned int>& rowIds);
+		const String& tableId, const std::vector<unsigned int>& rowIds);
 
 	static bool GetConfirmationFromUser();
-	static std::vector<unsigned int> FindInvalidSpeciesDataToRemove(GFTI& fusionTables, const std::string& tableId);
+	static std::vector<unsigned int> FindInvalidSpeciesDataToRemove(GFTI& fusionTables, const String& tableId);
 	static bool FindInvalidSpeciesDataInJSONResponse(cJSON* root, std::vector<unsigned int>& invalidRows);
 
-	static std::vector<std::string> GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities);
-	static std::string AssembleCountyName(const std::string& country, const std::string& state, const std::string& county);
+	static std::vector<String> GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities);
+	static String AssembleCountyName(const String& country, const String& state, const String& county);
 };
 
 template<typename T>
 bool MapPageGenerator::Read(cJSON* item, T& value)
 {
-	std::istringstream ss;
-	ss.str(item->valuestring);
+	IStringStream ss;
+	ss.str(UString::ToStringType(item->valuestring));
 	return !(ss >> value).fail();
 }
 

@@ -11,7 +11,7 @@
 #include <cctype>
 #include <functional>
 
-std::string StringUtilities::Trim(std::string s)
+String StringUtilities::Trim(String s)
 {
 	s.erase(s.begin(), std::find_if(s.begin(), s.end(),
 		std::not1(std::ptr_fun<int, int>(std::isspace))));
@@ -22,9 +22,9 @@ std::string StringUtilities::Trim(std::string s)
 	return s;
 }
 
-std::string StringUtilities::ToLower(const std::string& s)
+String StringUtilities::ToLower(const String& s)
 {
-	std::string lower(s);
+	String lower(s);
 	std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
 	return lower;
 }

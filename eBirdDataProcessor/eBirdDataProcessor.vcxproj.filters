@@ -84,6 +84,9 @@
     <ClCompile Include="..\src\threadPool.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\utilities\uString.cpp">
+      <Filter>Source Files\utilities</Filter>
+    </ClCompile>
     <ClCompile Include="..\src\stringUtilities.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -142,6 +145,9 @@
     </ClInclude>
     <ClInclude Include="..\src\throttledSection.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utilities\uString.h">
+      <Filter>Header Files\utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\src\stringUtilities.h">
       <Filter>Header Files</Filter>

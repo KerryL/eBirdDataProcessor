@@ -8,15 +8,13 @@
 #include "eBirdDataProcessor.h"
 #include "ebdpConfigFile.h"
 #include "frequencyDataHarvester.h"
+#include "utilities/uString.h"
 
 // cURL headers
 #include <curl/curl.h>
 
 // Standard C++ headers
-#include <sstream>
-#include <iostream>
 #include <cassert>
-#include <fstream>
 
 int main(int argc, char *argv[])
 {
@@ -28,11 +26,11 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 {
 	if (argc != 2)
 	{
-		std::cout << "Usage:  " << argv[0] << " <config file name>" << std::endl;
+		Cout << "Usage:  " << argv[0] << " <config file name>" << std::endl;
 		return 1;
 	}
 
-	const std::string configFileName(argv[1]);
+	const String configFileName(UString::ToStringType(argv[1]));
 	EBDPConfigFile configFile;
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
@@ -82,7 +80,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		if (!EBirdDataProcessor::AuditFrequencyData(configFile.GetConfig().frequencyFilePath,
 			configFile.GetConfig().eBirdApiKey))
 		{
-			std::cerr << "Audit failed\n";
+			Cerr << "Audit failed\n";
 			return 1;
 		}
 	}
@@ -105,15 +103,15 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	{
 		processor.SortData(configFile.GetConfig().primarySort, configFile.GetConfig().secondarySort);
 
-		const std::string list(processor.GenerateList(configFile.GetConfig().listType, configFile.GetConfig().showOnlyPhotoNeeds));
-		std::cout << list << std::endl;
+		const String list(processor.GenerateList(configFile.GetConfig().listType, configFile.GetConfig().showOnlyPhotoNeeds));
+		Cout << list << std::endl;
 
 		if (!configFile.GetConfig().outputFileName.empty())
 		{
-			std::ofstream outFile(configFile.GetConfig().outputFileName.c_str());
+			OFStream outFile(configFile.GetConfig().outputFileName.c_str());
 			if (!outFile.is_open() || !outFile.good())
 			{
-				std::cerr << "Failed to open '" << configFile.GetConfig().outputFileName << "' for output\n";
+				Cerr << "Failed to open '" << configFile.GetConfig().outputFileName << "' for output\n";
 				return 1;
 			}
 
@@ -143,7 +141,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 				configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
 				configFile.GetConfig().frequencyFilePath, configFile.GetConfig().eBirdApiKey))
 			{
-				std::cerr << "Failed to generate frequency file\n";
+				Cerr << "Failed to generate frequency file\n";
 				curl_global_cleanup();
 				return 1;
 			}
@@ -153,7 +151,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		{
 			if (configFile.GetConfig().topBirdCount == 0)
 			{
-				std::cerr << "Attempting to generate target calendar, but top bird count == 0\n";
+				Cerr << "Attempting to generate target calendar, but top bird count == 0\n";
 				curl_global_cleanup();
 				return 1;
 			}

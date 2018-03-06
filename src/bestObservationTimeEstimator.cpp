@@ -13,7 +13,7 @@
 #include <iomanip>
 #include <sstream>
 
-std::string BestObservationTimeEstimator::EstimateBestObservationTime(
+String BestObservationTimeEstimator::EstimateBestObservationTime(
 	const std::vector<EBirdInterface::ObservationInfo>& observationInfo)
 {
 	if (observationInfo.size() < 3)
@@ -30,8 +30,8 @@ std::string BestObservationTimeEstimator::EstimateBestObservationTime(
 			return a.observationDate.tm_min < b.observationDate.tm_min;
 		});
 
-		std::ostringstream ss;
-		ss << std::setfill('0');
+		OStringStream ss;
+		ss << std::setfill(Char('0'));
 		for (const auto& o : obsInfoSortable)
 		{
 			if (ss.str().empty())
@@ -66,7 +66,7 @@ std::string BestObservationTimeEstimator::EstimateBestObservationTime(
 	// where we should list out certain hours, or PDF can be flat over several hours, in which
 	// case we should report a range.
 	if (HasFlatPDF(pdfEstimate))
-		return "throughout the day and night";
+		return _T("throughout the day and night");
 
 	const bool isNocturnal(IsNocturnal(pdfEstimate));
 	unsigned int shift(0);
@@ -79,8 +79,8 @@ std::string BestObservationTimeEstimator::EstimateBestObservationTime(
 	auto peaks(FindPeaks(pdfEstimate));
 	assert(peaks.size() > 0);
 
-	std::ostringstream ss;
-	ss << std::setfill('0');
+	OStringStream ss;
+	ss << std::setfill(Char('0'));
 	bool lastWasRangeStart(false);
 	const auto lastPeakPtr([&peaks]() -> TimeProbability*
 	{

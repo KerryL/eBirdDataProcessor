@@ -8,53 +8,52 @@
 
 // Standard C++ headers
 #include <cassert>
-#include <iostream>
 
-const std::string GoogleMapsInterface::apiRoot("https://maps.googleapis.com/maps/api/");
-const std::string GoogleMapsInterface::directionsEndPoint("directions/json");
-const std::string GoogleMapsInterface::geocodeEndPoint("geocode/json");
-const std::string GoogleMapsInterface::statusKey("status");
-const std::string GoogleMapsInterface::okStatus("OK");
-const std::string GoogleMapsInterface::errorMessageKey("error_message");
-const std::string GoogleMapsInterface::routesKey("routes");
-const std::string GoogleMapsInterface::summaryKey("summary");
-const std::string GoogleMapsInterface::copyrightKey("copyrights");
-const std::string GoogleMapsInterface::legsKey("legs");
-const std::string GoogleMapsInterface::warningsKey("warnings");
-const std::string GoogleMapsInterface::distanceKey("distance");
-const std::string GoogleMapsInterface::durationKey("duration");
-const std::string GoogleMapsInterface::valueKey("value");
-const std::string GoogleMapsInterface::textKey("text");
-const std::string GoogleMapsInterface::resultsKey("results");
-const std::string GoogleMapsInterface::formattedAddressKey("formatted_address");
-const std::string GoogleMapsInterface::geometryKey("geometry");
-const std::string GoogleMapsInterface::boundsKey("bounds");
-const std::string GoogleMapsInterface::northeastKey("northeast");
-const std::string GoogleMapsInterface::southwestKey("southwest");
-const std::string GoogleMapsInterface::locationKey("location");
-const std::string GoogleMapsInterface::locationTypeKey("location_type");
-const std::string GoogleMapsInterface::latitudeKey("lat");
-const std::string GoogleMapsInterface::longitudeKey("lng");
-const std::string GoogleMapsInterface::viewportKey("viewport");
-const std::string GoogleMapsInterface::addressComponentsKey("address_components");
-const std::string GoogleMapsInterface::longNameKey("long_name");
-const std::string GoogleMapsInterface::shortNameKey("short_name");
-const std::string GoogleMapsInterface::typesKey("types");
-const std::string GoogleMapsInterface::placeIDKey("place_id");
+const String GoogleMapsInterface::apiRoot(_T("https://maps.googleapis.com/maps/api/"));
+const String GoogleMapsInterface::directionsEndPoint(_T("directions/json"));
+const String GoogleMapsInterface::geocodeEndPoint(_T("geocode/json"));
+const String GoogleMapsInterface::statusKey(_T("status"));
+const String GoogleMapsInterface::okStatus(_T("OK"));
+const String GoogleMapsInterface::errorMessageKey(_T("error_message"));
+const String GoogleMapsInterface::routesKey(_T("routes"));
+const String GoogleMapsInterface::summaryKey(_T("summary"));
+const String GoogleMapsInterface::copyrightKey(_T("copyrights"));
+const String GoogleMapsInterface::legsKey(_T("legs"));
+const String GoogleMapsInterface::warningsKey(_T("warnings"));
+const String GoogleMapsInterface::distanceKey(_T("distance"));
+const String GoogleMapsInterface::durationKey(_T("duration"));
+const String GoogleMapsInterface::valueKey(_T("value"));
+const String GoogleMapsInterface::textKey(_T("text"));
+const String GoogleMapsInterface::resultsKey(_T("results"));
+const String GoogleMapsInterface::formattedAddressKey(_T("formatted_address"));
+const String GoogleMapsInterface::geometryKey(_T("geometry"));
+const String GoogleMapsInterface::boundsKey(_T("bounds"));
+const String GoogleMapsInterface::northeastKey(_T("northeast"));
+const String GoogleMapsInterface::southwestKey(_T("southwest"));
+const String GoogleMapsInterface::locationKey(_T("location"));
+const String GoogleMapsInterface::locationTypeKey(_T("location_type"));
+const String GoogleMapsInterface::latitudeKey(_T("lat"));
+const String GoogleMapsInterface::longitudeKey(_T("lng"));
+const String GoogleMapsInterface::viewportKey(_T("viewport"));
+const String GoogleMapsInterface::addressComponentsKey(_T("address_components"));
+const String GoogleMapsInterface::longNameKey(_T("long_name"));
+const String GoogleMapsInterface::shortNameKey(_T("short_name"));
+const String GoogleMapsInterface::typesKey(_T("types"));
+const String GoogleMapsInterface::placeIDKey(_T("place_id"));
 
-GoogleMapsInterface::GoogleMapsInterface(const std::string& userAgent, const std::string& apiKey) : JSONInterface(userAgent), apiKey(apiKey)
+GoogleMapsInterface::GoogleMapsInterface(const String& userAgent, const String& apiKey) : JSONInterface(userAgent), apiKey(apiKey)
 {
 }
 
-GoogleMapsInterface::Directions GoogleMapsInterface::GetDirections(const std::string& from,
-	const std::string& to, const TravelMode& mode, const Units& units) const
+GoogleMapsInterface::Directions GoogleMapsInterface::GetDirections(const String& from,
+	const String& to, const TravelMode& mode, const Units& units) const
 {
-	const std::string requestURL(apiRoot + directionsEndPoint
+	const String requestURL(apiRoot + directionsEndPoint
 		+ BuildRequestString(from, to, mode, false, units));
-	std::string response;
+	String response;
 	if (!DoCURLGet(requestURL, response))
 	{
-		std::cerr << "Failed to process GET request\n";
+		Cerr << "Failed to process GET request\n";
 		return Directions();
 	}
 
@@ -67,15 +66,15 @@ GoogleMapsInterface::Directions GoogleMapsInterface::GetDirections(const std::st
 	return directions.front();
 }
 
-std::vector<GoogleMapsInterface::Directions> GoogleMapsInterface::GetMultipleDirections(const std::string& from,
-	const std::string& to, const TravelMode& mode, const Units& units) const
+std::vector<GoogleMapsInterface::Directions> GoogleMapsInterface::GetMultipleDirections(const String& from,
+	const String& to, const TravelMode& mode, const Units& units) const
 {
-	const std::string requestURL(apiRoot + directionsEndPoint
+	const String requestURL(apiRoot + directionsEndPoint
 		+ BuildRequestString(from, to, mode, true, units));
-	std::string response;
+	String response;
 	if (!DoCURLGet(requestURL, response))
 	{
-		std::cerr << "Failed to process GET request\n";
+		Cerr << "Failed to process GET request\n";
 		return std::vector<Directions>();
 	}
 
@@ -86,40 +85,40 @@ std::vector<GoogleMapsInterface::Directions> GoogleMapsInterface::GetMultipleDir
 	return directions;
 }
 
-bool GoogleMapsInterface::ProcessDirectionsResponse(const std::string& response, std::vector<Directions>& directions) const
+bool GoogleMapsInterface::ProcessDirectionsResponse(const String& response, std::vector<Directions>& directions) const
 {
-	cJSON *root(cJSON_Parse(response.c_str()));
+	cJSON *root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse response (GoogleMapsInterface::ProcessResponse)\n";
-		std::cerr << response << std::endl;
+		Cerr << "Failed to parse response (GoogleMapsInterface::ProcessResponse)\n";
+		Cerr << response << '\n';
 		return false;
 	}
 
-	std::string status;
+	String status;
 	if (!ReadJSON(root, statusKey, status))
 	{
-		std::cerr << "Failed to read status information\n";
+		Cerr << "Failed to read status information\n";
 		cJSON_Delete(root);
 		return false;
 	}
 
 	if (status.compare(okStatus) != 0)
 	{
-		std::cerr << "Directions request response is not OK.  Status = " << status << '\n';
+		Cerr << "Directions request response is not OK.  Status = " << status << '\n';
 
-		std::string errorMessage;
+		String errorMessage;
 		if (ReadJSON(root, errorMessageKey, errorMessage))
-			std::cerr << errorMessage << '\n';
+			Cerr << errorMessage << '\n';
 
 		cJSON_Delete(root);
 		return false;
 	}
 
-	cJSON *routes(cJSON_GetObjectItem(root, routesKey.c_str()));
+	cJSON *routes(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(routesKey).c_str()));
 	if (!routes)
 	{
-		std::cerr << "Failed to get routes array from response\n";
+		Cerr << "Failed to get routes array from response\n";
 		cJSON_Delete(root);
 		return false;
 	}
@@ -131,7 +130,7 @@ bool GoogleMapsInterface::ProcessDirectionsResponse(const std::string& response,
 		Directions d;
 		if (!ProcessRoute(cJSON_GetArrayItem(routes, i), d))
 		{
-			std::cerr << "Failed to process route " << i << std::endl;
+			Cerr << "Failed to process route " << i << '\n';
 			cJSON_Delete(root);
 			return false;
 		}
@@ -147,28 +146,28 @@ bool GoogleMapsInterface::ProcessRoute(cJSON* route, Directions& d) const
 {
 	if (!route)
 	{
-		std::cerr << "Failed to read route item\n";
+		Cerr << "Failed to read route item\n";
 		return false;
 	}
 
 	if (!ReadJSON(route, summaryKey, d.summary))
 	{
-		std::cerr << "Failed to read summary\n";
+		Cerr << "Failed to read summary\n";
 		return false;
 	}
 
 	if (!ReadJSON(route, copyrightKey, d.copyright))
 	{
-		std::cerr << "Failed to read copyright\n";
+		Cerr << "Failed to read copyright\n";
 		return false;
 	}
 
 	ReadJSON(route, warningsKey, d.warnings);// Not required - don't fail if none are present
 
-	cJSON *legs(cJSON_GetObjectItem(route, legsKey.c_str()));
+	cJSON *legs(cJSON_GetObjectItem(route, UString::ToNarrowString<String>(legsKey).c_str()));
 	if (!legs)
 	{
-		std::cerr << "Failed to get legs array\n";
+		Cerr << "Failed to get legs array\n";
 		return false;
 	}
 
@@ -179,7 +178,7 @@ bool GoogleMapsInterface::ProcessRoute(cJSON* route, Directions& d) const
 		Leg l;
 		if (!ProcessLeg(cJSON_GetArrayItem(legs, i), l))
 		{
-			std::cerr << "Failed to process leg " << i << std::endl;
+			Cerr << "Failed to process leg " << i << '\n';
 			return false;
 		}
 
@@ -193,24 +192,24 @@ bool GoogleMapsInterface::ProcessLeg(cJSON* leg, Leg& l) const
 {
 	if (!leg)
 	{
-		std::cerr << "Failed to read leg item\n";
+		Cerr << "Failed to read leg item\n";
 		return false;
 	}
 
-	cJSON* distance(cJSON_GetObjectItem(leg, distanceKey.c_str()));
+	cJSON* distance(cJSON_GetObjectItem(leg, UString::ToNarrowString<String>(distanceKey).c_str()));
 	if (!distance)
 	{
-		std::cerr << "Failed to get distance info\n";
+		Cerr << "Failed to get distance info\n";
 		return false;
 	}
 
 	if (!ProcessValueTextItem(distance, l.distance))
 		return false;
 
-	cJSON* duration(cJSON_GetObjectItem(leg, durationKey.c_str()));
+	cJSON* duration(cJSON_GetObjectItem(leg, UString::ToNarrowString<String>(durationKey).c_str()));
 	if (!duration)
 	{
-		std::cerr << "Failed to get duration info\n";
+		Cerr << "Failed to get duration info\n";
 		return false;
 	}
 
@@ -225,92 +224,92 @@ bool GoogleMapsInterface::ProcessValueTextItem(cJSON* item, DistanceInfo& info) 
 	assert(item);
 	if (!ReadJSON(item, valueKey, info.value))
 	{
-		std::cerr << "Failed to read value\n";
+		Cerr << "Failed to read value\n";
 		return false;
 	}
 
 	if (!ReadJSON(item, textKey, info.text))
 	{
-		std::cerr << "Failed to read text\n";
+		Cerr << "Failed to read text\n";
 		return false;
 	}
 
 	return true;
 }
 
-std::string GoogleMapsInterface::BuildRequestString(const std::string& origin, const std::string& destination,
+String GoogleMapsInterface::BuildRequestString(const String& origin, const String& destination,
 	const TravelMode& mode, const bool& alternativeRoutes, const Units& units) const
 {
 	return BuildRequestString(origin, destination, apiKey, GetModeString(mode), alternativeRoutes, GetUnitString(units));
 }
 
-std::string GoogleMapsInterface::BuildRequestString(const std::string& origin, const std::string& destination,
-	const std::string& key, const std::string& mode, const bool& alternativeRoutes, const std::string& units)
+String GoogleMapsInterface::BuildRequestString(const String& origin, const String& destination,
+	const String& key, const String& mode, const bool& alternativeRoutes, const String& units)
 {
 	assert(!origin.empty());
 	assert(!destination.empty());
 	assert(!key.empty());
 
-	std::string request("?origin=" + SanitizeAddress(origin) + "&destination=" + SanitizeAddress(destination) + "&key=" + key);
+	String request(_T("?origin=") + SanitizeAddress(origin) + _T("&destination=") + SanitizeAddress(destination) + _T("&key=") + key);
 
 	if (!mode.empty())
-		request.append("&mode=" + mode);// Valid modes are "driving", "walking", "bicycling" and "transit"
+		request.append(_T("&mode=") + mode);// Valid modes are "driving", "walking", "bicycling" and "transit"
 
 	if (alternativeRoutes)
-		request.append("&alternatives=true");
+		request.append(_T("&alternatives=true"));
 	else
-		request.append("&alternatives=false");
+		request.append(_T("&alternatives=false"));
 
 	if (!units.empty())
-		request.append("&units=" + units);// Valid units are "metric" and "imperial"
+		request.append(_T("&units=") + units);// Valid units are "metric" and "imperial"
 
 	return URLEncode(request);
 }
 
-std::string GoogleMapsInterface::GetModeString(const TravelMode& mode)
+String GoogleMapsInterface::GetModeString(const TravelMode& mode)
 {
 	switch (mode)
 	{
 	case TravelMode::Driving:
-		return "driving";
+		return _T("driving");
 
 	case TravelMode::Walking:
-		return "walking";
+		return _T("walking");
 
 	case TravelMode::Bicycling:
-		return "bicycling";
+		return _T("bicycling");
 
 	case TravelMode::Transit:
-		return "transit";
+		return _T("transit");
 	}
 
 	assert(false);
-	return std::string();
+	return String();
 }
 
-std::string GoogleMapsInterface::GetUnitString(const Units& units)
+String GoogleMapsInterface::GetUnitString(const Units& units)
 {
 	switch (units)
 	{
 	case Units::Metric:
-		return "metric";
+		return _T("metric");
 
 	case Units::Imperial:
-		return "imperial";
+		return _T("imperial");
 	}
 
 	assert(false);
-	return std::string();
+	return String();
 }
 
-std::string GoogleMapsInterface::SanitizeAddress(const std::string& s)
+String GoogleMapsInterface::SanitizeAddress(const String& s)
 {
-	std::string address;
+	String address;
 
 	for (const auto& c : s)
 	{
-		if (c == ' ')
-			address.push_back('+');
+		if (c == Char(' '))
+			address.push_back(Char('+'));
 		else
 			address.push_back(c);
 	}
@@ -318,13 +317,13 @@ std::string GoogleMapsInterface::SanitizeAddress(const std::string& s)
 	return address;
 }
 
-bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
-	std::string& formattedAddress, double& latitude, double& longitude,
+bool GoogleMapsInterface::LookupCoordinates(const String& searchString,
+	String& formattedAddress, double& latitude, double& longitude,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
-	const std::string& preferNameContaining, std::string* statusRet) const
+	const String& preferNameContaining, String* statusRet) const
 {
-	std::vector<std::string> names;
+	std::vector<String> names;
 	if (!preferNameContaining.empty())
 		names.push_back(preferNameContaining);
 
@@ -333,18 +332,18 @@ bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 		names, statusRet);
 }
 
-bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
-	std::string& formattedAddress, double& latitude, double& longitude,
+bool GoogleMapsInterface::LookupCoordinates(const String& searchString,
+	String& formattedAddress, double& latitude, double& longitude,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
-	const std::vector<std::string>& preferNamesContaining, std::string* statusRet) const
+	const std::vector<String>& preferNamesContaining, String* statusRet) const
 {
-	const std::string requestURL(apiRoot + geocodeEndPoint
-		+ "?address=" + SanitizeAddress(searchString) + "&key=" + apiKey);
-	std::string response;
+	const String requestURL(apiRoot + geocodeEndPoint
+		+ _T("?address=") + SanitizeAddress(searchString) + _T("&key=") + apiKey);
+	String response;
 	if (!DoCURLGet(requestURL, response))
 	{
-		std::cerr << "Failed to process GET request\n";
+		Cerr << "Failed to process GET request\n";
 		return false;
 	}
 
@@ -354,7 +353,7 @@ bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 
 	assert(info.size() > 0);
 	if (info.size() > 1)
-		std::cerr << "Warning:  Multiple results found for '" << searchString << "' - using first result\n";
+		Cerr << "Warning:  Multiple results found for '" << searchString << "' - using first result\n";
 
 	if (!preferNamesContaining.empty())
 	{
@@ -385,21 +384,21 @@ bool GoogleMapsInterface::LookupCoordinates(const std::string& searchString,
 	return true;
 }
 
-bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
-	std::vector<GeocodeInfo>& info, std::string* statusRet) const
+bool GoogleMapsInterface::ProcessGeocodeResponse(const String& response,
+	std::vector<GeocodeInfo>& info, String* statusRet) const
 {
-	cJSON *root(cJSON_Parse(response.c_str()));
+	cJSON *root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse response (GoogleMapsInterface::LookupCoordinates)\n";
-		std::cerr << response << std::endl;
+		Cerr << "Failed to parse response (GoogleMapsInterface::LookupCoordinates)\n";
+		Cerr << response << '\n';
 		return false;
 	}
 
-	std::string status;
+	String status;
 	if (!ReadJSON(root, statusKey, status))
 	{
-		std::cerr << "Failed to read status information\n";
+		Cerr << "Failed to read status information\n";
 		cJSON_Delete(root);
 		return false;
 	}
@@ -409,20 +408,20 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 
 	if (status.compare(okStatus) != 0)
 	{
-		std::cerr << "Geocode request response is not OK.  Status = " << status << '\n';
+		Cerr << "Geocode request response is not OK.  Status = " << status << '\n';
 
-		std::string errorMessage;
+		String errorMessage;
 		if (ReadJSON(root, errorMessageKey, errorMessage))
-			std::cerr << errorMessage << '\n';
+			Cerr << errorMessage << '\n';
 
 		cJSON_Delete(root);
 		return false;
 	}
 
-	cJSON* results(cJSON_GetObjectItem(root, resultsKey.c_str()));
+	cJSON* results(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(resultsKey).c_str()));
 	if (!results)
 	{
-		std::cerr << "Failed to read geocode results\n";
+		Cerr << "Failed to read geocode results\n";
 		cJSON_Delete(root);
 		return false;
 	}
@@ -434,7 +433,7 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 		cJSON* resultEntry(cJSON_GetArrayItem(results, i));
 		if (!resultEntry)
 		{
-			std::cerr << "Failed to get result entry " << i << '\n';
+			Cerr << "Failed to get result entry " << i << '\n';
 			cJSON_Delete(root);
 			return false;
 		}
@@ -453,21 +452,21 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 
 		if (!ReadJSON(resultEntry, formattedAddressKey, resultInfo.formattedAddress))
 		{
-			std::cerr << "Failed to read formatted address\n";
+			Cerr << "Failed to read formatted address\n";
 			cJSON_Delete(root);
 			return false;
 		}
 
 		if (!ReadJSON(resultEntry, placeIDKey, resultInfo.placeID))
 		{
-			std::cerr << "Failed to read place ID\n";
+			Cerr << "Failed to read place ID\n";
 			cJSON_Delete(root);
 			return false;
 		}
 
 		if (!ReadJSONArrayToVector(resultEntry, typesKey, resultInfo.types))
 		{
-			std::cerr << "Failed to result types\n";
+			Cerr << "Failed to result types\n";
 			cJSON_Delete(root);
 			return false;
 		}
@@ -482,10 +481,10 @@ bool GoogleMapsInterface::ProcessGeocodeResponse(const std::string& response,
 bool GoogleMapsInterface::ProcessAddressComponents(cJSON* results,
 	std::vector<GeocodeInfo::ComponentInfo>& components) const
 {
-	cJSON* addressComponents(cJSON_GetObjectItem(results, addressComponentsKey.c_str()));
+	cJSON* addressComponents(cJSON_GetObjectItem(results, UString::ToNarrowString<String>(addressComponentsKey).c_str()));
 	if (!addressComponents)
 	{
-		std::cerr << "Failed to read address component information\n";
+		Cerr << "Failed to read address component information\n";
 		return false;
 	}
 
@@ -496,25 +495,25 @@ bool GoogleMapsInterface::ProcessAddressComponents(cJSON* results,
 		cJSON* item(cJSON_GetArrayItem(addressComponents, i));
 		if (!item)
 		{
-			std::cerr << "Failed to read address component " << i << '\n';
+			Cerr << "Failed to read address component " << i << '\n';
 			return false;
 		}
 
 		if (!ReadJSON(item, longNameKey, info.longName))
 		{
-			std::cerr << "Failed to read long name for component " << i << '\n';
+			Cerr << "Failed to read long name for component " << i << '\n';
 			return false;
 		}
 
 		if (!ReadJSON(item, shortNameKey, info.shortName))
 		{
-			std::cerr << "Failed to read short name for component " << i << '\n';
+			Cerr << "Failed to read short name for component " << i << '\n';
 			return false;
 		}
 
 		if (!ReadJSONArrayToVector(item, typesKey, info.types))
 		{
-			std::cerr << "Failed to read types for component " << i << '\n';
+			Cerr << "Failed to read types for component " << i << '\n';
 			return false;
 		}
 
@@ -526,55 +525,55 @@ bool GoogleMapsInterface::ProcessAddressComponents(cJSON* results,
 
 bool GoogleMapsInterface::ProcessGeometry(cJSON* results, GeocodeInfo& info) const
 {
-	cJSON* geometry(cJSON_GetObjectItem(results, geometryKey.c_str()));
+	cJSON* geometry(cJSON_GetObjectItem(results, UString::ToNarrowString<String>(geometryKey).c_str()));
 	if (!geometry)
 	{
-		std::cerr << "Failed to read geometry information\n";
+		Cerr << "Failed to read geometry information\n";
 		return false;
 	}
 
-	cJSON* bounds(cJSON_GetObjectItem(geometry, boundsKey.c_str()));
+	cJSON* bounds(cJSON_GetObjectItem(geometry, UString::ToNarrowString<String>(boundsKey).c_str()));
 	if (!bounds)
 	{
-		std::cerr << "Failed to find bounds\n";
+		Cerr << "Failed to find bounds\n";
 		return false;
 	}
 
 	if (!ReadBoundsPair(bounds, info.northeastBound, info.southwestBound))
 	{
-		std::cerr << "Failed to read bounds\n";
+		Cerr << "Failed to read bounds\n";
 		return false;
 	}
 
-	cJSON* location(cJSON_GetObjectItem(geometry, locationKey.c_str()));
+	cJSON* location(cJSON_GetObjectItem(geometry, UString::ToNarrowString<String>(locationKey).c_str()));
 	if (!location)
 	{
-		std::cerr << "Failed to find location\n";
+		Cerr << "Failed to find location\n";
 		return false;
 	}
 
 	if (!ReadLatLongPair(location, info.location))
 	{
-		std::cerr << "Failed to read location\n";
+		Cerr << "Failed to read location\n";
 		return false;
 	}
 
 	if (!ReadJSON(geometry, locationTypeKey, info.locationType))
 	{
-		std::cerr << "Failed to read location type\n";
+		Cerr << "Failed to read location type\n";
 		return false;
 	}
 
-	cJSON* viewport(cJSON_GetObjectItem(geometry, viewportKey.c_str()));
+	cJSON* viewport(cJSON_GetObjectItem(geometry, UString::ToNarrowString<String>(viewportKey).c_str()));
 	if (!viewport)
 	{
-		std::cerr << "Failed to find viewport\n";
+		Cerr << "Failed to find viewport\n";
 		return false;
 	}
 
 	if (!ReadBoundsPair(viewport, info.northeastViewport, info.southwestViewport))
 	{
-		std::cerr << "Failed to read viewport\n";
+		Cerr << "Failed to read viewport\n";
 		return false;
 	}
 
@@ -590,13 +589,13 @@ bool GoogleMapsInterface::ReadLatLongPair(cJSON* json, GeocodeInfo::LatLongPair&
 bool GoogleMapsInterface::ReadBoundsPair(cJSON* json,
 	GeocodeInfo::LatLongPair& northeast, GeocodeInfo::LatLongPair& southwest) const
 {
-	cJSON* ne(cJSON_GetObjectItem(json, northeastKey.c_str()));
+	cJSON* ne(cJSON_GetObjectItem(json, UString::ToNarrowString<String>(northeastKey).c_str()));
 	if (!ne)
 		return false;
 	if (!ReadLatLongPair(ne, northeast))
 		return false;
 
-	cJSON* sw(cJSON_GetObjectItem(json, southwestKey.c_str()));
+	cJSON* sw(cJSON_GetObjectItem(json, UString::ToNarrowString<String>(southwestKey).c_str()));
 	if (!sw)
 		return false;
 	if (!ReadLatLongPair(sw, southwest))

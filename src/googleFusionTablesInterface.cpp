@@ -9,93 +9,90 @@
 #include "email/curlUtilities.h"
 
 // Standard C++ headers
-#include <iostream>
-#include <fstream>
 #include <cassert>
-#include <sstream>
 
-const std::string GoogleFusionTablesInterface::apiRoot("https://www.googleapis.com/fusiontables/v2/");
-const std::string GoogleFusionTablesInterface::apiRootUpload("https://www.googleapis.com/upload/fusiontables/v2/");
-const std::string GoogleFusionTablesInterface::tablesEndPoint("tables");
-const std::string GoogleFusionTablesInterface::queryEndPoint("query");
-const std::string GoogleFusionTablesInterface::importEndPoint("/import");
-const std::string GoogleFusionTablesInterface::columnsEndPoint("/columns");
-const std::string GoogleFusionTablesInterface::stylesEndPoint("/styles");
-const std::string GoogleFusionTablesInterface::templatesEndPoint("/templates");
-const std::string GoogleFusionTablesInterface::copyEndPoint("/copy");
-const std::string GoogleFusionTablesInterface::tableListKindText("fusiontables#tableList");
-const std::string GoogleFusionTablesInterface::tableKindText("fusiontables#table");
-const std::string GoogleFusionTablesInterface::columnKindText("fusiontables#column");
-const std::string GoogleFusionTablesInterface::importKindText("fusiontables#import");
-const std::string GoogleFusionTablesInterface::queryResponseKindText("fusiontables#sqlresponse");
-const std::string GoogleFusionTablesInterface::styleSettingListText("fusiontables#styleSettingList");
-const std::string GoogleFusionTablesInterface::styleSettingKindText("fusiontables#styleSetting");
-const std::string GoogleFusionTablesInterface::columnListKindText("fusiontables#columnList");
-const std::string GoogleFusionTablesInterface::fromColumnKindText("fusiontables#fromColumn");
-const std::string GoogleFusionTablesInterface::templateListKindText("fusiontables#templateList");
-const std::string GoogleFusionTablesInterface::templateKindText("fusiontables#template");
-const std::string GoogleFusionTablesInterface::itemsKey("items");
-const std::string GoogleFusionTablesInterface::kindKey("kind");
-const std::string GoogleFusionTablesInterface::tableIdKey("tableId");
-const std::string GoogleFusionTablesInterface::styleIdKey("styleId");
-const std::string GoogleFusionTablesInterface::nameKey("name");
-const std::string GoogleFusionTablesInterface::columnIdKey("columnId");
-const std::string GoogleFusionTablesInterface::columnsKey("columns");
-const std::string GoogleFusionTablesInterface::typeKey("type");
-const std::string GoogleFusionTablesInterface::descriptionKey("description");
-const std::string GoogleFusionTablesInterface::isExportableKey("isExportable");
-const std::string GoogleFusionTablesInterface::errorKey("error");
-const std::string GoogleFusionTablesInterface::codeKey("code");
-const std::string GoogleFusionTablesInterface::messageKey("message");
-const std::string GoogleFusionTablesInterface::numberOfRowsImportedKey("numRowsReceived");
-const std::string GoogleFusionTablesInterface::columnNameKey("columnName");
-const std::string GoogleFusionTablesInterface::fillColorStylerKey("fillColorStyler");
-const std::string GoogleFusionTablesInterface::templateIdKey("templateId");
-const std::string GoogleFusionTablesInterface::bodyKey("body");
+const String GoogleFusionTablesInterface::apiRoot(_T("https://www.googleapis.com/fusiontables/v2/"));
+const String GoogleFusionTablesInterface::apiRootUpload(_T("https://www.googleapis.com/upload/fusiontables/v2/"));
+const String GoogleFusionTablesInterface::tablesEndPoint(_T("tables"));
+const String GoogleFusionTablesInterface::queryEndPoint(_T("query"));
+const String GoogleFusionTablesInterface::importEndPoint(_T("/import"));
+const String GoogleFusionTablesInterface::columnsEndPoint(_T("/columns"));
+const String GoogleFusionTablesInterface::stylesEndPoint(_T("/styles"));
+const String GoogleFusionTablesInterface::templatesEndPoint(_T("/templates"));
+const String GoogleFusionTablesInterface::copyEndPoint(_T("/copy"));
+const String GoogleFusionTablesInterface::tableListKindText(_T("fusiontables#tableList"));
+const String GoogleFusionTablesInterface::tableKindText(_T("fusiontables#table"));
+const String GoogleFusionTablesInterface::columnKindText(_T("fusiontables#column"));
+const String GoogleFusionTablesInterface::importKindText(_T("fusiontables#import"));
+const String GoogleFusionTablesInterface::queryResponseKindText(_T("fusiontables#sqlresponse"));
+const String GoogleFusionTablesInterface::styleSettingListText(_T("fusiontables#styleSettingList"));
+const String GoogleFusionTablesInterface::styleSettingKindText(_T("fusiontables#styleSetting"));
+const String GoogleFusionTablesInterface::columnListKindText(_T("fusiontables#columnList"));
+const String GoogleFusionTablesInterface::fromColumnKindText(_T("fusiontables#fromColumn"));
+const String GoogleFusionTablesInterface::templateListKindText(_T("fusiontables#templateList"));
+const String GoogleFusionTablesInterface::templateKindText(_T("fusiontables#template"));
+const String GoogleFusionTablesInterface::itemsKey(_T("items"));
+const String GoogleFusionTablesInterface::kindKey(_T("kind"));
+const String GoogleFusionTablesInterface::tableIdKey(_T("tableId"));
+const String GoogleFusionTablesInterface::styleIdKey(_T("styleId"));
+const String GoogleFusionTablesInterface::nameKey(_T("name"));
+const String GoogleFusionTablesInterface::columnIdKey(_T("columnId"));
+const String GoogleFusionTablesInterface::columnsKey(_T("columns"));
+const String GoogleFusionTablesInterface::typeKey(_T("type"));
+const String GoogleFusionTablesInterface::descriptionKey(_T("description"));
+const String GoogleFusionTablesInterface::isExportableKey(_T("isExportable"));
+const String GoogleFusionTablesInterface::errorKey(_T("error"));
+const String GoogleFusionTablesInterface::codeKey(_T("code"));
+const String GoogleFusionTablesInterface::messageKey(_T("message"));
+const String GoogleFusionTablesInterface::numberOfRowsImportedKey(_T("numRowsReceived"));
+const String GoogleFusionTablesInterface::columnNameKey(_T("columnName"));
+const String GoogleFusionTablesInterface::fillColorStylerKey(_T("fillColorStyler"));
+const String GoogleFusionTablesInterface::templateIdKey(_T("templateId"));
+const String GoogleFusionTablesInterface::bodyKey(_T("body"));
 
-const std::string GoogleFusionTablesInterface::isDefaultKey("isDefaultForTable");
-const std::string GoogleFusionTablesInterface::markerOptionsKey("markerOptions");
-const std::string GoogleFusionTablesInterface::polylineOptionsKey("polylineOptions");
-const std::string GoogleFusionTablesInterface::polygonOptionsKey("polygonOptions");
+const String GoogleFusionTablesInterface::isDefaultKey(_T("isDefaultForTable"));
+const String GoogleFusionTablesInterface::markerOptionsKey(_T("markerOptions"));
+const String GoogleFusionTablesInterface::polylineOptionsKey(_T("polylineOptions"));
+const String GoogleFusionTablesInterface::polygonOptionsKey(_T("polygonOptions"));
 
-const std::string GoogleFusionTablesInterface::typeStringText("STRING");
-const std::string GoogleFusionTablesInterface::typeNumberText("NUMBER");
-const std::string GoogleFusionTablesInterface::typeDateTimeText("DATETIME");
-const std::string GoogleFusionTablesInterface::typeLocationText("LOCATION");
+const String GoogleFusionTablesInterface::typeStringText(_T("STRING"));
+const String GoogleFusionTablesInterface::typeNumberText(_T("NUMBER"));
+const String GoogleFusionTablesInterface::typeDateTimeText(_T("DATETIME"));
+const String GoogleFusionTablesInterface::typeLocationText(_T("LOCATION"));
 
-const std::string GoogleFusionTablesInterface::fusionTableRefreshTokenFileName("~ftToken");
+const String GoogleFusionTablesInterface::fusionTableRefreshTokenFileName(_T("~ftToken"));
 
 const unsigned int GoogleFusionTablesInterface::writeRequestRateLimit(25);// [requests per minute] (actual limit is 30/min)
 
 GoogleFusionTablesInterface::GoogleFusionTablesInterface(
-	const std::string& userAgent, const std::string& oAuthClientId,
-	const std::string& oAuthClientSecret) : JSONInterface(userAgent)
+	const String& userAgent, const String& oAuthClientId,
+	const String& oAuthClientSecret) : JSONInterface(userAgent)
 {
 	OAuth2Interface::Get().SetClientID(oAuthClientId);
 	OAuth2Interface::Get().SetClientSecret(oAuthClientSecret);
-	OAuth2Interface::Get().SetScope("https://www.googleapis.com/auth/fusiontables");
-	OAuth2Interface::Get().SetAuthenticationURL("https://accounts.google.com/o/oauth2/auth");
-	OAuth2Interface::Get().SetResponseType("code");
-	OAuth2Interface::Get().SetRedirectURI("oob");
-	OAuth2Interface::Get().SetGrantType("authorization_code");
-	OAuth2Interface::Get().SetTokenURL("https://accounts.google.com/o/oauth2/token");
+	OAuth2Interface::Get().SetScope(_T("https://www.googleapis.com/auth/fusiontables"));
+	OAuth2Interface::Get().SetAuthenticationURL(_T("https://accounts.google.com/o/oauth2/auth"));
+	OAuth2Interface::Get().SetResponseType(_T("code"));
+	OAuth2Interface::Get().SetRedirectURI(_T("oob"));
+	OAuth2Interface::Get().SetGrantType(_T("authorization_code"));
+	OAuth2Interface::Get().SetTokenURL(_T("https://accounts.google.com/o/oauth2/token"));
 
 	{
-		std::ifstream tokenInFile(fusionTableRefreshTokenFileName.c_str());
+		IFStream tokenInFile(fusionTableRefreshTokenFileName.c_str());
 		if (tokenInFile.good() && tokenInFile.is_open())
 		{
-			std::string token;
+			String token;
 			tokenInFile >> token;
 			OAuth2Interface::Get().SetRefreshToken(token);
 		}
 	}
 
 	if (OAuth2Interface::Get().GetRefreshToken().empty())
-		OAuth2Interface::Get().SetRefreshToken("");// This is how a new refresh token is requested
+		OAuth2Interface::Get().SetRefreshToken(String());// This is how a new refresh token is requested
 
 	if (!OAuth2Interface::Get().GetRefreshToken().empty())
 	{
-		std::ofstream tokenOutFile(fusionTableRefreshTokenFileName.c_str());
+		OFStream tokenOutFile(fusionTableRefreshTokenFileName.c_str());
 		tokenOutFile << OAuth2Interface::Get().GetRefreshToken();
 	}
 }
@@ -103,18 +100,18 @@ GoogleFusionTablesInterface::GoogleFusionTablesInterface(
 bool GoogleFusionTablesInterface::CreateTable(TableInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
+	String response;
 	if (!DoCURLPost(apiRoot + tablesEndPoint, BuildCreateTableData(info),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to create table\n";
+		Cerr << "Failed to create table\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse create table response\n";
+		Cerr << "Failed to parse create table response\n";
 		return false;
 	}
 
@@ -137,17 +134,17 @@ bool GoogleFusionTablesInterface::CreateTable(TableInfo& info)
 bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
+	String response;
 	if (!DoCURLGet(apiRoot + tablesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to request table list\n";
+		Cerr << "Failed to request table list\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse table list response\n";
+		Cerr << "Failed to parse table list response\n";
 		return false;
 	}
 
@@ -159,7 +156,7 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 
 	if (!KindMatches(root, tableListKindText))
 	{
-		std::cerr << "Recieved unexpected kind in response to request for table list\n";
+		Cerr << "Recieved unexpected kind in response to request for table list\n";
 		cJSON_Delete(root);
 		return false;
 	}
@@ -167,7 +164,7 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 	// TODO:  Add support for nextPageToken in order to support long result lists
 
 	tables.clear();
-	cJSON* items(cJSON_GetObjectItem(root, itemsKey.c_str()));
+	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(itemsKey).c_str()));
 	if (items)// May not be items, if no tables exist
 	{
 		tables.resize(cJSON_GetArraySize(items));
@@ -177,7 +174,7 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 			cJSON* item(cJSON_GetArrayItem(items, i));
 			if (!item)
 			{
-				std::cerr << "Failed to get info for table " << i << '\n';
+				Cerr << "Failed to get info for table " << i << '\n';
 				cJSON_Delete(root);
 				return false;
 			}
@@ -196,34 +193,34 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteTable(const std::string& tableId)
+bool GoogleFusionTablesInterface::DeleteTable(const String& tableId)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + '/' + tableId, response, AddAuthAndDeleteToCurlHeader, &authTokenData))
+	String response;
+	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId, response, AddAuthAndDeleteToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to delete table\n";
+		Cerr << "Failed to delete table\n";
 		return false;
 	}
 
 	return true;
 }
 
-bool GoogleFusionTablesInterface::CopyTable(const std::string& tableId, TableInfo& info)
+bool GoogleFusionTablesInterface::CopyTable(const String& tableId, TableInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint + '/' + tableId + copyEndPoint, std::string(),
+	String response;
+	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + copyEndPoint, String(),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to copy table\n";
+		Cerr << "Failed to copy table\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse copy table response\n";
+		Cerr << "Failed to parse copy table response\n";
 		return false;
 	}
 
@@ -243,22 +240,22 @@ bool GoogleFusionTablesInterface::CopyTable(const std::string& tableId, TableInf
 	return true;
 }
 
-bool GoogleFusionTablesInterface::Import(const std::string& tableId,
-	const std::string& csvData)
+bool GoogleFusionTablesInterface::Import(const String& tableId,
+	const String& csvData)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	if (!DoCURLPost(apiRootUpload + tablesEndPoint + '/' + tableId + importEndPoint + "?uploadType=media", csvData,
+	String response;
+	if (!DoCURLPost(apiRootUpload + tablesEndPoint + Char('/') + tableId + importEndPoint + _T("?uploadType=media"), csvData,
 		response, AddAuthAndOctetContentTypeToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to import data to table\n";
+		Cerr << "Failed to import data to table\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse copy import response\n";
+		Cerr << "Failed to parse copy import response\n";
 		return false;
 	}
 
@@ -270,41 +267,41 @@ bool GoogleFusionTablesInterface::Import(const std::string& tableId,
 
 	if (!KindMatches(root, importKindText))
 	{
-		std::cerr << "Received unexpected kind in import response\n";
+		Cerr << "Received unexpected kind in import response\n";
 		cJSON_Delete(root);
 		return false;
 	}
 
-	std::string rowsString;
+	String rowsString;
 	if (!ReadJSON(root, numberOfRowsImportedKey, rowsString))
 	{
-		std::cerr << "Failed to check number of imported rows\n";
+		Cerr << "Failed to check number of imported rows\n";
 		cJSON_Delete(root);
 		return false;
 	}
 
-	std::cout << "Successfully imported " << rowsString << " new rows into table " << tableId << std::endl;
+	Cout << "Successfully imported " << rowsString << " new rows into table " << tableId << std::endl;
 
 	cJSON_Delete(root);
 	return true;
 }
 
-bool GoogleFusionTablesInterface::ListColumns(const std::string& tableId,
+bool GoogleFusionTablesInterface::ListColumns(const String& tableId,
 	std::vector<TableInfo::ColumnInfo>& columnInfo)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + '/' + tableId + columnsEndPoint,
+	String response;
+	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + columnsEndPoint,
 		response, AddAuthToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to request column list\n";
+		Cerr << "Failed to request column list\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse column list response\n";
+		Cerr << "Failed to parse column list response\n";
 		return false;
 	}
 
@@ -316,14 +313,14 @@ bool GoogleFusionTablesInterface::ListColumns(const std::string& tableId,
 
 	if (!KindMatches(root, columnListKindText))
 	{
-		std::cerr << "Recieved unexpected kind in response to request for column list\n";
+		Cerr << "Recieved unexpected kind in response to request for column list\n";
 		cJSON_Delete(root);
 		return false;
 	}
 
 	// TODO:  Add support for nextPageToken in order to support long result lists (does this apply here?)
 
-	cJSON* items(cJSON_GetObjectItem(root, itemsKey.c_str()));
+	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(itemsKey).c_str()));
 	if (items)// May not be items, if no tables exist
 	{
 		columnInfo.resize(cJSON_GetArraySize(items));
@@ -333,7 +330,7 @@ bool GoogleFusionTablesInterface::ListColumns(const std::string& tableId,
 			cJSON* item(cJSON_GetArrayItem(items, i));
 			if (!item)
 			{
-				std::cerr << "Failed to get info for column " << i << '\n';
+				Cerr << "Failed to get info for column " << i << '\n';
 				cJSON_Delete(root);
 				return false;
 			}
@@ -354,40 +351,40 @@ bool GoogleFusionTablesInterface::ListColumns(const std::string& tableId,
 
 bool GoogleFusionTablesInterface::ResponseHasError(cJSON* root)
 {
-	cJSON* error(cJSON_GetObjectItem(root, errorKey.c_str()));
+	cJSON* error(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(errorKey).c_str()));
 	if (!error)
 		return false;
 
 	unsigned int errorCode;
-	std::string errorMessage;
+	String errorMessage;
 	if (ReadJSON(error, codeKey, errorCode) && ReadJSON(error, messageKey, errorMessage))
-		std::cerr << "Response contains error " << errorCode << ":  " << errorMessage << '\n';
+		Cerr << "Response contains error " << errorCode << ":  " << errorMessage << '\n';
 	else
-		std::cerr << "Response contains unknown error\n";
+		Cerr << "Response contains unknown error\n";
 
 	return true;
 }
 
 bool GoogleFusionTablesInterface::ResponseTooLarge(cJSON* root)
 {
-	cJSON* error(cJSON_GetObjectItem(root, errorKey.c_str()));
+	cJSON* error(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(errorKey).c_str()));
 	if (!error)
 		return false;
 
 	unsigned int errorCode;
-	std::string errorMessage;
+	String errorMessage;
 	if (ReadJSON(error, codeKey, errorCode) && ReadJSON(error, messageKey, errorMessage))
 	{
-		if (errorCode == 503 && errorMessage.find("Please use media download.") != std::string::npos)
+		if (errorCode == 503 && errorMessage.find(_T("Please use media download.")) != std::string::npos)
 			return true;
 	}
 
 	return false;
 }
 
-bool GoogleFusionTablesInterface::KindMatches(cJSON* root, const std::string& kind)
+bool GoogleFusionTablesInterface::KindMatches(cJSON* root, const String& kind)
 {
-	std::string kindString;
+	String kindString;
 	if (!ReadJSON(root, kindKey, kindString))
 		return false;
 
@@ -397,16 +394,16 @@ bool GoogleFusionTablesInterface::KindMatches(cJSON* root, const std::string& ki
 bool GoogleFusionTablesInterface::AddAuthToCurlHeader(CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer "
+	headerList = curl_slist_append(headerList, UString::ToNarrowString<String>(_T("Authorization: Bearer ")
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
-		std::cerr << "Failed to append auth token to header in ListTables\n";
+		Cerr << "Failed to append auth token to header in ListTables\n";
 		return false;
 	}
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
-		CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+		CURLOPT_HTTPHEADER, headerList), _T("Failed to set header")))
 		return false;
 
 	return true;
@@ -415,20 +412,20 @@ bool GoogleFusionTablesInterface::AddAuthToCurlHeader(CURL* curl, const Modifica
 bool GoogleFusionTablesInterface::AddAuthAndDeleteToCurlHeader(CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer "
+	headerList = curl_slist_append(headerList,UString::ToNarrowString<String>(_T("Authorization: Bearer ")
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
-		std::cerr << "Failed to append auth token to header\n";
+		Cerr << "Failed to append auth token to header\n";
 		return false;
 	}
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
-		CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+		CURLOPT_HTTPHEADER, headerList), _T("Failed to set header")))
 		return false;
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
-		CURLOPT_CUSTOMREQUEST, "DELETE"), "Failed to set request type to DELETE"))
+		CURLOPT_CUSTOMREQUEST, "DELETE"), _T("Failed to set request type to DELETE")))
 		return false;
 
 	return true;
@@ -438,23 +435,23 @@ bool GoogleFusionTablesInterface::AddAuthAndJSONContentTypeToCurlHeader(
 	CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer "
+	headerList = curl_slist_append(headerList, UString::ToNarrowString<String>(_T("Authorization: Bearer ")
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
-		std::cerr << "Failed to append auth token to header\n";
+		Cerr << "Failed to append auth token to header\n";
 		return false;
 	}
 
 	headerList = curl_slist_append(headerList, "Content-Type: application/json");
 	if (!headerList)
 	{
-		std::cerr << "Failed to append content type to header\n";
+		Cerr << "Failed to append content type to header\n";
 		return false;
 	}
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
-		CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+		CURLOPT_HTTPHEADER, headerList), _T("Failed to set header")))
 		return false;
 
 	return true;
@@ -464,23 +461,23 @@ bool GoogleFusionTablesInterface::AddAuthAndOctetContentTypeToCurlHeader(
 	CURL* curl, const ModificationData* data)
 {
 	curl_slist* headerList(nullptr);
-	headerList = curl_slist_append(headerList, std::string("Authorization: Bearer "
+	headerList = curl_slist_append(headerList, UString::ToNarrowString<String>(_T("Authorization: Bearer ")
 		+ static_cast<const AuthTokenData*>(data)->authToken).c_str());
 	if (!headerList)
 	{
-		std::cerr << "Failed to append auth token to header\n";
+		Cerr << "Failed to append auth token to header\n";
 		return false;
 	}
 
 	headerList = curl_slist_append(headerList, "Content-Type: application/octet-stream");
 	if (!headerList)
 	{
-		std::cerr << "Failed to append content type to header\n";
+		Cerr << "Failed to append content type to header\n";
 		return false;
 	}
 
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl,
-		CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+		CURLOPT_HTTPHEADER, headerList), _T("Failed to set header")))
 		return false;
 
 	return true;
@@ -490,38 +487,38 @@ bool GoogleFusionTablesInterface::ReadTable(cJSON* root, TableInfo& info)
 {
 	if (!KindMatches(root, tableKindText))
 	{
-		std::cerr << "Kind of element is not table\n";
+		Cerr << "Kind of element is not table\n";
 		return false;
 	}
 
 	if (!ReadJSON(root, nameKey, info.name))
 	{
-		std::cerr << "Failed to read table name\n";
+		Cerr << "Failed to read table name\n";
 		return false;
 	}
 
 	if (!ReadJSON(root, tableIdKey, info.tableId))
 	{
-		std::cerr << "Failed to read table id\n";
+		Cerr << "Failed to read table id\n";
 		return false;
 	}
 
 	if (!ReadJSON(root, descriptionKey, info.description))
 	{
-		std::cerr << "Failed to read table description\n";
+		Cerr << "Failed to read table description\n";
 		return false;
 	}
 
 	if (!ReadJSON(root, isExportableKey, info.isExportable))
 	{
-		std::cerr << "Failed to read 'is exportable' flag\n";
+		Cerr << "Failed to read 'is exportable' flag\n";
 		return false;
 	}
 
-	cJSON* columnArray(cJSON_GetObjectItem(root, columnsKey.c_str()));
+	cJSON* columnArray(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(columnsKey).c_str()));
 	if (!columnArray)
 	{
-		std::cerr << "Failed to read columns array\n";
+		Cerr << "Failed to read columns array\n";
 		return false;
 	}
 
@@ -532,7 +529,7 @@ bool GoogleFusionTablesInterface::ReadTable(cJSON* root, TableInfo& info)
 		cJSON* item(cJSON_GetArrayItem(columnArray, i));
 		if (!item)
 		{
-			std::cerr << "Failed to get column " << i << '\n';
+			Cerr << "Failed to get column " << i << '\n';
 			return false;
 		}
 
@@ -549,74 +546,74 @@ bool GoogleFusionTablesInterface::ReadColumn(cJSON* root, TableInfo::ColumnInfo&
 {
 	if (!KindMatches(root, columnKindText))
 	{
-		std::cerr << "Kind of element is not column\n";
+		Cerr << "Kind of element is not column\n";
 		return false;
 	}
 
 	if (!ReadJSON(root, nameKey, info.name))
 	{
-		std::cerr << "Failed to read column name\n";
+		Cerr << "Failed to read column name\n";
 		return false;
 	}
 
-	std::string typeString;
+	String typeString;
 	if (!ReadJSON(root, typeKey, typeString))
 	{
-		std::cerr << "Failed to read column type\n";
+		Cerr << "Failed to read column type\n";
 		return false;
 	}
 	info.type = GetColumnTypeFromString(typeString);
 
 	if (!ReadJSON(root, columnIdKey, info.columnId))
 	{
-		std::cerr << "Failed to read column name\n";
+		Cerr << "Failed to read column name\n";
 		return false;
 	}
 
 	return true;
 }
 
-std::string GoogleFusionTablesInterface::BuildCreateTableData(const TableInfo& info)
+String GoogleFusionTablesInterface::BuildCreateTableData(const TableInfo& info)
 {
 	cJSON* root(cJSON_CreateObject());
 	if (!root)
 	{
-		std::cerr << "Failed to create table data\n";
-		return std::string();
+		Cerr << "Failed to create table data\n";
+		return String();
 	}
 
-	cJSON_AddStringToObject(root, nameKey.c_str(), info.name.c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(nameKey).c_str(), UString::ToNarrowString<String>(info.name).c_str());
 	if (info.isExportable)
-		cJSON_AddTrueToObject(root, isExportableKey.c_str());
+		cJSON_AddTrueToObject(root, UString::ToNarrowString<String>(isExportableKey).c_str());
 	else
-		cJSON_AddFalseToObject(root, isExportableKey.c_str());
+		cJSON_AddFalseToObject(root, UString::ToNarrowString<String>(isExportableKey).c_str());
 
 	if (!info.description.empty())
-		cJSON_AddStringToObject(root, descriptionKey.c_str(), info.description.c_str());
+		cJSON_AddStringToObject(root, UString::ToNarrowString<String>(descriptionKey).c_str(), UString::ToNarrowString<String>(info.description).c_str());
 
 	cJSON* columns(cJSON_CreateArray());
 	if (!columns)
 	{
-		std::cerr << "Failed to create column array\n";
+		Cerr << "Failed to create column array\n";
 		cJSON_Delete(root);
-		return std::string();
+		return String();
 	}
 
-	cJSON_AddItemToObject(root, columnsKey.c_str(), columns);
+	cJSON_AddItemToObject(root, UString::ToNarrowString<String>(columnsKey).c_str(), columns);
 
 	for (const auto& column : info.columns)
 	{
 		cJSON* columnItem(BuildColumnItem(column));
 		if (!columnItem)
 		{
-			std::cerr << "Failed to create column information\n";
+			Cerr << "Failed to create column information\n";
 			cJSON_Delete(root);
-			return std::string();
+			return String();
 		}
 		cJSON_AddItemToArray(columns, columnItem);
 	}
 
-	const std::string data(cJSON_Print(root));
+	const String data(UString::ToStringType(cJSON_Print(root)));
 	cJSON_Delete(root);
 	return data;
 }
@@ -627,13 +624,13 @@ cJSON* GoogleFusionTablesInterface::BuildColumnItem(const TableInfo::ColumnInfo&
 	if (!columnItem)
 		return nullptr;
 
-	cJSON_AddStringToObject(columnItem, nameKey.c_str(), columnInfo.name.c_str());
-	cJSON_AddStringToObject(columnItem, typeKey.c_str(), GetColumnTypeString(columnInfo.type).c_str());
+	cJSON_AddStringToObject(columnItem, UString::ToNarrowString<String>(nameKey).c_str(), UString::ToNarrowString<String>(columnInfo.name).c_str());
+	cJSON_AddStringToObject(columnItem, UString::ToNarrowString<String>(typeKey).c_str(), UString::ToNarrowString<String>(GetColumnTypeString(columnInfo.type)).c_str());
 
 	return columnItem;
 }
 
-std::string GoogleFusionTablesInterface::GetColumnTypeString(
+String GoogleFusionTablesInterface::GetColumnTypeString(
 	const TableInfo::ColumnInfo::ColumnType& type)
 {
 	switch (type)
@@ -654,11 +651,11 @@ std::string GoogleFusionTablesInterface::GetColumnTypeString(
 		assert(false);
 	}
 
-	return std::string();
+	return String();
 }
 
 GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType
-	GoogleFusionTablesInterface::GetColumnTypeFromString(const std::string& s)
+	GoogleFusionTablesInterface::GetColumnTypeFromString(const String& s)
 {
 	if (s.compare(typeStringText) == 0)
 		return TableInfo::ColumnInfo::ColumnType::String;
@@ -673,9 +670,9 @@ GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType
 	return TableInfo::ColumnInfo::ColumnType::String;
 }
 
-bool GoogleFusionTablesInterface::DeleteAllRows(const std::string& tableId)
+bool GoogleFusionTablesInterface::DeleteAllRows(const String& tableId)
 {
-	const std::string deleteCommand("DELETE FROM " + tableId);
+	const String deleteCommand(_T("DELETE FROM ") + tableId);
 	cJSON* root(nullptr);
 	if (!SubmitQuery(deleteCommand, root))
 		return false;
@@ -684,11 +681,11 @@ bool GoogleFusionTablesInterface::DeleteAllRows(const std::string& tableId)
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteRow(const std::string& tableId, const unsigned int& rowId)
+bool GoogleFusionTablesInterface::DeleteRow(const String& tableId, const unsigned int& rowId)
 {
-	std::ostringstream ss;
+	OStringStream ss;
 	ss << rowId;
-	const std::string deleteCommand("DELETE FROM " + tableId + " WHERE ROWID = " + ss.str());
+	const String deleteCommand(_T("DELETE FROM ") + tableId + _T(" WHERE ROWID = ") + ss.str());
 	cJSON* root(nullptr);
 	if (!SubmitQuery(deleteCommand, root))
 		return false;
@@ -697,10 +694,10 @@ bool GoogleFusionTablesInterface::DeleteRow(const std::string& tableId, const un
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteRows(const std::string& tableId,
+bool GoogleFusionTablesInterface::DeleteRows(const String& tableId,
 	const std::vector<unsigned int>& rowIds)
 {
-	std::ostringstream ss;
+	OStringStream ss;
 	for (const auto& id : rowIds)
 	{
 		if (!ss.str().empty())
@@ -708,7 +705,7 @@ bool GoogleFusionTablesInterface::DeleteRows(const std::string& tableId,
 		ss << id;
 	}
 
-	const std::string deleteCommand("DELETE FROM " + tableId + " WHERE ROWID IN (" + ss.str() + ")");
+	const String deleteCommand(_T("DELETE FROM ") + tableId + _T(" WHERE ROWID IN (") + ss.str() + _T(")"));
 	cJSON* root(nullptr);
 	if (!SubmitQuery(deleteCommand, root))
 		return false;
@@ -717,29 +714,29 @@ bool GoogleFusionTablesInterface::DeleteRows(const std::string& tableId,
 	return true;
 }
 
-bool GoogleFusionTablesInterface::SetTableAccess(const std::string& tableId, const TableAccess& access)
+bool GoogleFusionTablesInterface::SetTableAccess(const String& tableId, const TableAccess& access)
 {
 	// TODO:  implement
-	std::cerr << "Setting table access permissions is not currently implemented.  You can do this"
+	Cerr << "Setting table access permissions is not currently implemented.  You can do this"
 		<< " manually by logging into Google Drive and modifying the 'Sharing' settings for the table.\n";
 	return false;
 }
 
-bool GoogleFusionTablesInterface::SubmitQuery(const std::string& query, cJSON*& root, std::string* csvData)
+bool GoogleFusionTablesInterface::SubmitQuery(const String& query, cJSON*& root, String* csvData)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	if (!DoCURLPost(apiRoot + queryEndPoint + "?sql=" + URLEncode(query), std::string(),
+	String response;
+	if (!DoCURLPost(apiRoot + queryEndPoint + _T("?sql=") + URLEncode(query), String(),
 		response, AddAuthToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to submit query\n";
+		Cerr << "Failed to submit query\n";
 		return false;
 	}
 
-	root = cJSON_Parse(response.c_str());
+	root = cJSON_Parse(UString::ToNarrowString<String>(response).c_str());
 	if (!root)
 	{
-		std::cerr << "Failed to parse query response\n";
+		Cerr << "Failed to parse query response\n";
 		return false;
 	}
 
@@ -758,7 +755,7 @@ bool GoogleFusionTablesInterface::SubmitQuery(const std::string& query, cJSON*& 
 
 	if (!KindMatches(root, queryResponseKindText))
 	{
-		std::cerr << "Received unexpected kind in query response\n";
+		Cerr << "Received unexpected kind in query response\n";
 		cJSON_Delete(root);
 		return false;
 	}
@@ -767,34 +764,34 @@ bool GoogleFusionTablesInterface::SubmitQuery(const std::string& query, cJSON*& 
 	return true;
 }
 
-bool GoogleFusionTablesInterface::SubmitQueryMediaDownload(const std::string& query, std::string& csvData)
+bool GoogleFusionTablesInterface::SubmitQueryMediaDownload(const String& query, String& csvData)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	if (!DoCURLGet(apiRoot + queryEndPoint + "?alt=media&sql=" + URLEncode(query),
+	if (!DoCURLGet(apiRoot + queryEndPoint + _T("?alt=media&sql=") + URLEncode(query),
 		csvData, AddAuthToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to submit query\n";
+		Cerr << "Failed to submit query\n";
 		return false;
 	}
 
 	return true;
 }
 
-bool GoogleFusionTablesInterface::CreateStyle(const std::string& tableId, StyleInfo& info)
+bool GoogleFusionTablesInterface::CreateStyle(const String& tableId, StyleInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint + '/' + tableId + stylesEndPoint, BuildCreateStyleData(info),
+	String response;
+	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint, BuildCreateStyleData(info),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to create style\n";
+		Cerr << "Failed to create style\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse create style response\n";
+		Cerr << "Failed to parse create style response\n";
 		return false;
 	}
 
@@ -814,20 +811,20 @@ bool GoogleFusionTablesInterface::CreateStyle(const std::string& tableId, StyleI
 	return true;
 }
 
-bool GoogleFusionTablesInterface::ListStyles(const std::string& tableId, std::vector<StyleInfo>& styles)
+bool GoogleFusionTablesInterface::ListStyles(const String& tableId, std::vector<StyleInfo>& styles)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + '/' + tableId + stylesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
+	String response;
+	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to request style list\n";
+		Cerr << "Failed to request style list\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse style list response\n";
+		Cerr << "Failed to parse style list response\n";
 		return false;
 	}
 
@@ -839,13 +836,13 @@ bool GoogleFusionTablesInterface::ListStyles(const std::string& tableId, std::ve
 
 	if (!KindMatches(root, styleSettingListText))
 	{
-		std::cerr << "Recieved unexpected kind in response to request for style list\n";
+		Cerr << "Recieved unexpected kind in response to request for style list\n";
 		cJSON_Delete(root);
 		return false;
 	}
 
 	styles.clear();
-	cJSON* items(cJSON_GetObjectItem(root, itemsKey.c_str()));
+	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(itemsKey).c_str()));
 	if (items)// May not be items, if no styles exist
 	{
 		styles.resize(cJSON_GetArraySize(items));
@@ -855,7 +852,7 @@ bool GoogleFusionTablesInterface::ListStyles(const std::string& tableId, std::ve
 			cJSON* item(cJSON_GetArrayItem(items, i));
 			if (!item)
 			{
-				std::cerr << "Failed to get info for style " << i << '\n';
+				Cerr << "Failed to get info for style " << i << '\n';
 				cJSON_Delete(root);
 				return false;
 			}
@@ -874,36 +871,36 @@ bool GoogleFusionTablesInterface::ListStyles(const std::string& tableId, std::ve
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteStyle(const std::string& tableId, const unsigned int& styleId)
+bool GoogleFusionTablesInterface::DeleteStyle(const String& tableId, const unsigned int& styleId)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	std::ostringstream ss;
+	String response;
+	OStringStream ss;
 	ss << styleId;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + '/' + tableId + stylesEndPoint + '/' + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
+	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint + Char('/') + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to delete style\n";
+		Cerr << "Failed to delete style\n";
 		return false;
 	}
 
 	return true;
 }
 
-std::string GoogleFusionTablesInterface::BuildCreateStyleData(const StyleInfo& info)
+String GoogleFusionTablesInterface::BuildCreateStyleData(const StyleInfo& info)
 {
 	cJSON* root(cJSON_CreateObject());
 	if (!root)
 	{
-		std::cerr << "Failed to create style data\n";
-		return std::string();
+		Cerr << "Failed to create style data\n";
+		return String();
 	}
 
-	cJSON_AddStringToObject(root, nameKey.c_str(), info.name.c_str());
-	cJSON_AddStringToObject(root, tableIdKey.c_str(), info.tableId.c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(nameKey).c_str(), UString::ToNarrowString<String>(info.name).c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(tableIdKey).c_str(), UString::ToNarrowString<String>(info.tableId).c_str());
 	if (info.isDefaultForTable)
-		cJSON_AddTrueToObject(root, isDefaultKey.c_str());
+		cJSON_AddTrueToObject(root, UString::ToNarrowString<String>(isDefaultKey).c_str());
 	else
-		cJSON_AddFalseToObject(root, isDefaultKey.c_str());
+		cJSON_AddFalseToObject(root, UString::ToNarrowString<String>(isDefaultKey).c_str());
 
 	if (info.hasMarkerOptions)
 		AddMarkerOptions(root, info.markerOptions);
@@ -914,7 +911,7 @@ std::string GoogleFusionTablesInterface::BuildCreateStyleData(const StyleInfo& i
 	if (info.hasPolygonOptions)
 		AddPolygonOptions(root, info.polygonOptions);
 
-	const std::string data(cJSON_Print(root));
+	const String data(UString::ToStringType(cJSON_Print(root)));
 	cJSON_Delete(root);
 	return data;
 }
@@ -925,7 +922,7 @@ void GoogleFusionTablesInterface::AddMarkerOptions(cJSON* root, const std::vecto
 	if (!options)
 		return;
 
-	cJSON_AddItemToObject(root, markerOptionsKey.c_str(), options);
+	cJSON_AddItemToObject(root, UString::ToNarrowString<String>(markerOptionsKey).c_str(), options);
 	AddOptions(options, info);
 }
 
@@ -935,7 +932,7 @@ void GoogleFusionTablesInterface::AddPolylineOptions(cJSON* root, const std::vec
 	if (!options)
 		return;
 
-	cJSON_AddItemToObject(root, polylineOptionsKey.c_str(), options);
+	cJSON_AddItemToObject(root, UString::ToNarrowString<String>(polylineOptionsKey).c_str(), options);
 	AddOptions(options, info);
 }
 
@@ -945,7 +942,7 @@ void GoogleFusionTablesInterface::AddPolygonOptions(cJSON* root, const std::vect
 	if (!options)
 		return;
 
-	cJSON_AddItemToObject(root, polygonOptionsKey.c_str(), options);
+	cJSON_AddItemToObject(root, UString::ToNarrowString<String>(polygonOptionsKey).c_str(), options);
 	AddOptions(options, info);
 }
 
@@ -954,15 +951,15 @@ void GoogleFusionTablesInterface::AddOptions(cJSON* root, const std::vector<Styl
 	for (const auto& option : info)
 	{
 		if (option.type == StyleInfo::Options::Type::String)
-			cJSON_AddStringToObject(root, option.key.c_str(), option.s.c_str());
+			cJSON_AddStringToObject(root, UString::ToNarrowString<String>(option.key).c_str(), UString::ToNarrowString<String>(option.s).c_str());
 		else if (option.type == StyleInfo::Options::Type::Number)
-			cJSON_AddNumberToObject(root, option.key.c_str(), option.n);
+			cJSON_AddNumberToObject(root, UString::ToNarrowString<String>(option.key).c_str(), option.n);
 		else if (option.type == StyleInfo::Options::Type::Bool)
 		{
 			if (option.b)
-				cJSON_AddTrueToObject(root, option.key.c_str());
+				cJSON_AddTrueToObject(root, UString::ToNarrowString<String>(option.key).c_str());
 			else
-				cJSON_AddFalseToObject(root, option.key.c_str());
+				cJSON_AddFalseToObject(root, UString::ToNarrowString<String>(option.key).c_str());
 		}
 		else if (option.type == StyleInfo::Options::Type::Complex)
 		{
@@ -970,7 +967,7 @@ void GoogleFusionTablesInterface::AddOptions(cJSON* root, const std::vector<Styl
 			if (!item)
 				return;
 
-			cJSON_AddItemToObject(root, option.key.c_str(), item);
+			cJSON_AddItemToObject(root, UString::ToNarrowString<String>(option.key).c_str(), item);
 			AddOptions(item, option.c);
 		}
 		else
@@ -982,7 +979,7 @@ bool GoogleFusionTablesInterface::ReadStyle(cJSON* root, StyleInfo& info)
 {
 	if (!KindMatches(root, styleSettingKindText))
 	{
-		std::cerr << "Kind of element is not style\n";
+		Cerr << "Kind of element is not style\n";
 		return false;
 	}
 
@@ -991,49 +988,49 @@ bool GoogleFusionTablesInterface::ReadStyle(cJSON* root, StyleInfo& info)
 
 	if (!ReadJSON(root, styleIdKey, info.styleId))
 	{
-		std::cerr << "Failed to read style id\n";
+		Cerr << "Failed to read style id\n";
 		return false;
 	}
 
 	if (!ReadJSON(root, tableIdKey, info.tableId))
 	{
-		std::cerr << "Failed to read table id\n";
+		Cerr << "Failed to read table id\n";
 		return false;
 	}
 
-	cJSON* markerOptions(cJSON_GetObjectItem(root, markerOptionsKey.c_str()));
+	cJSON* markerOptions(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(markerOptionsKey).c_str()));
 	if (markerOptions)
 	{
 		info.hasMarkerOptions = true;
 		if (!ReadOptions(markerOptions, info.markerOptions))
 		{
-			std::cerr << "Failed to read marker options\n";
+			Cerr << "Failed to read marker options\n";
 			return false;
 		}
 	}
 	else
 		info.hasMarkerOptions = false;
 
-	cJSON* polylineOptions(cJSON_GetObjectItem(root, polylineOptionsKey.c_str()));
+	cJSON* polylineOptions(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(polylineOptionsKey).c_str()));
 	if (polylineOptions)
 	{
 		info.hasPolylineOptions = true;
 		if (!ReadOptions(polylineOptions, info.polylineOptions))
 		{
-			std::cerr << "Failed to read polyline options\n";
+			Cerr << "Failed to read polyline options\n";
 			return false;
 		}
 	}
 	else
 		info.hasPolylineOptions = false;
 
-	cJSON* polygonOptions(cJSON_GetObjectItem(root, polygonOptionsKey.c_str()));
+	cJSON* polygonOptions(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(polygonOptionsKey).c_str()));
 	if (polygonOptions)
 	{
 		info.hasPolygonOptions = true;
 		if (!ReadOptions(polygonOptions, info.polygonOptions))
 		{
-			std::cerr << "Failed to read polygon options\n";
+			Cerr << "Failed to read polygon options\n";
 			return false;
 		}
 	}
@@ -1048,12 +1045,12 @@ bool GoogleFusionTablesInterface::ReadOptions(cJSON* root, std::vector<StyleInfo
 	cJSON* next(root->child);
 	while (next)
 	{
-		const std::string key(next->string);
+		const String key(UString::ToStringType(next->string));
 
 		if (next->type == cJSON_Number)
 			info.push_back(StyleInfo::Options(key, next->valuedouble));
 		else if (next->type == cJSON_String)
-			info.push_back(StyleInfo::Options(key, std::string(next->valuestring)));
+			info.push_back(StyleInfo::Options(key, UString::ToStringType(next->valuestring)));
 		else if (next->type == cJSON_True || next->type == cJSON_False)
 			info.push_back(StyleInfo::Options(key, next->valueint == 1));
 		else if (next->type == cJSON_Object && key.compare(fillColorStylerKey) == 0)
@@ -1067,15 +1064,15 @@ bool GoogleFusionTablesInterface::ReadOptions(cJSON* root, std::vector<StyleInfo
 			}
 			else
 			{
-				std::cerr << "unsupported option type:  " << next->string << '\n';
-				std::cerr << cJSON_Print(next) << '\n';
+				Cerr << "unsupported option type:  " << next->string << '\n';
+				Cerr << cJSON_Print(next) << '\n';
 				assert(false);
 			}
 		}
 		else
 		{
-			std::cerr << "unsupported option type:  " << next->string << '\n';
-			std::cerr << cJSON_Print(next) << '\n';
+			Cerr << "unsupported option type:  " << next->string << '\n';
+			Cerr << cJSON_Print(next) << '\n';
 			assert(false);
 		}
 
@@ -1085,21 +1082,21 @@ bool GoogleFusionTablesInterface::ReadOptions(cJSON* root, std::vector<StyleInfo
 	return true;
 }
 
-bool GoogleFusionTablesInterface::CreateTemplate(const std::string& tableId, TemplateInfo& info)
+bool GoogleFusionTablesInterface::CreateTemplate(const String& tableId, TemplateInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint + '/' + tableId + templatesEndPoint, BuildCreateTemplateData(info),
+	String response;
+	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint, BuildCreateTemplateData(info),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to create template\n";
+		Cerr << "Failed to create template\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse create template response\n";
+		Cerr << "Failed to parse create template response\n";
 		return false;
 	}
 
@@ -1119,20 +1116,20 @@ bool GoogleFusionTablesInterface::CreateTemplate(const std::string& tableId, Tem
 	return true;
 }
 
-bool GoogleFusionTablesInterface::ListTemplates(const std::string& tableId, std::vector<TemplateInfo>& templates)
+bool GoogleFusionTablesInterface::ListTemplates(const String& tableId, std::vector<TemplateInfo>& templates)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + '/' + tableId + templatesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
+	String response;
+	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to request template list\n";
+		Cerr << "Failed to request template list\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(response.c_str()));
+	cJSON* root(cJSON_Parse(UString::ToNarrowString<String>(response).c_str()));
 	if (!root)
 	{
-		std::cerr << "Failed to parse template list response\n";
+		Cerr << "Failed to parse template list response\n";
 		return false;
 	}
 
@@ -1144,13 +1141,13 @@ bool GoogleFusionTablesInterface::ListTemplates(const std::string& tableId, std:
 
 	if (!KindMatches(root, templateListKindText))
 	{
-		std::cerr << "Recieved unexpected kind in response to request for template list\n";
+		Cerr << "Recieved unexpected kind in response to request for template list\n";
 		cJSON_Delete(root);
 		return false;
 	}
 
 	templates.clear();
-	cJSON* items(cJSON_GetObjectItem(root, itemsKey.c_str()));
+	cJSON* items(cJSON_GetObjectItem(root, UString::ToNarrowString<String>(itemsKey).c_str()));
 	if (items)// May not be items, if no templates exist
 	{
 		templates.resize(cJSON_GetArraySize(items));
@@ -1160,7 +1157,7 @@ bool GoogleFusionTablesInterface::ListTemplates(const std::string& tableId, std:
 			cJSON* item(cJSON_GetArrayItem(items, i));
 			if (!item)
 			{
-				std::cerr << "Failed to get info for template " << i << '\n';
+				Cerr << "Failed to get info for template " << i << '\n';
 				cJSON_Delete(root);
 				return false;
 			}
@@ -1179,39 +1176,39 @@ bool GoogleFusionTablesInterface::ListTemplates(const std::string& tableId, std:
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteTemplate(const std::string& tableId, const unsigned int& templateId)
+bool GoogleFusionTablesInterface::DeleteTemplate(const String& tableId, const unsigned int& templateId)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	std::string response;
-	std::ostringstream ss;
+	String response;
+	OStringStream ss;
 	ss << templateId;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + '/' + tableId + templatesEndPoint + '/' + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
+	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint + Char('/') + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
 	{
-		std::cerr << "Failed to delete template\n";
+		Cerr << "Failed to delete template\n";
 		return false;
 	}
 
 	return true;
 }
 
-std::string GoogleFusionTablesInterface::BuildCreateTemplateData(const TemplateInfo& info)
+String GoogleFusionTablesInterface::BuildCreateTemplateData(const TemplateInfo& info)
 {
 	cJSON* root(cJSON_CreateObject());
 	if (!root)
 	{
-		std::cerr << "Failed to create template data\n";
-		return std::string();
+		Cerr << "Failed to create template data\n";
+		return String();
 	}
 
-	cJSON_AddStringToObject(root, nameKey.c_str(), info.name.c_str());
-	cJSON_AddStringToObject(root, tableIdKey.c_str(), info.tableId.c_str());
-	cJSON_AddStringToObject(root, bodyKey.c_str(), info.body.c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(nameKey).c_str(), UString::ToNarrowString<String>(info.name).c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(tableIdKey).c_str(), UString::ToNarrowString<String>(info.tableId).c_str());
+	cJSON_AddStringToObject(root, UString::ToNarrowString<String>(bodyKey).c_str(), UString::ToNarrowString<String>(info.body).c_str());
 	if (info.isDefaultForTable)
-		cJSON_AddTrueToObject(root, isDefaultKey.c_str());
+		cJSON_AddTrueToObject(root, UString::ToNarrowString<String>(isDefaultKey).c_str());
 	else
-		cJSON_AddFalseToObject(root, isDefaultKey.c_str());
+		cJSON_AddFalseToObject(root, UString::ToNarrowString<String>(isDefaultKey).c_str());
 
-	const std::string data(cJSON_Print(root));
+	const String data(UString::ToStringType(cJSON_Print(root)));
 	cJSON_Delete(root);
 	return data;
 }
@@ -1220,7 +1217,7 @@ bool GoogleFusionTablesInterface::ReadTemplate(cJSON* root, TemplateInfo& info)
 {
 	if (!KindMatches(root, templateKindText))
 	{
-		std::cerr << "Kind of element is not template\n";
+		Cerr << "Kind of element is not template\n";
 		return false;
 	}
 
@@ -1229,25 +1226,25 @@ bool GoogleFusionTablesInterface::ReadTemplate(cJSON* root, TemplateInfo& info)
 
 	if (!ReadJSON(root, templateIdKey, info.templateId))
 	{
-		std::cerr << "Failed to read template id\n";
+		Cerr << "Failed to read template id\n";
 		return false;
 	}
 
 	if (!ReadJSON(root, tableIdKey, info.tableId))
 	{
-		std::cerr << "Failed to read table id\n";
+		Cerr << "Failed to read table id\n";
 		return false;
 	}
 
 	if (!ReadJSON(root, nameKey, info.name))
 	{
-		std::cerr << "Failed to read template name\n";
+		Cerr << "Failed to read template name\n";
 		return false;
 	}
 
 	if (!ReadJSON(root, bodyKey, info.body))
 	{
-		std::cerr << "Failed to read template body\n";
+		Cerr << "Failed to read template body\n";
 		return false;
 	}
 

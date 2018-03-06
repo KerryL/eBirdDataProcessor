@@ -5,9 +5,9 @@
 
 // Local headers
 #include "threadPool.h"
+#include "utilities/uString.h"
 
 // Standard C++ headers
-#include <iostream>
 #include <iomanip>
 
 ThreadPool::ThreadPool(const unsigned int& threadCount, const unsigned int& rateLimit)
@@ -51,18 +51,18 @@ void ThreadPool::WaitForAllJobsComplete() const
 {
 	std::unique_lock<std::mutex> lock(queueMutex);
     unsigned int maxJobQueueSize(jobQueue.size());
-    const auto originalPrecision(std::cout.precision());
-    std::cout.precision(1);
+    const auto originalPrecision(Cout.precision());
+    Cout.precision(1);
 	jobCompleteCondition.wait(lock, [this, &maxJobQueueSize]()
 	{
         if (jobQueue.size() > maxJobQueueSize)
             maxJobQueueSize = jobQueue.size();
         const double fraction(static_cast<double>(maxJobQueueSize - jobQueue.size()) / maxJobQueueSize * 100.0);
-        std::cout << std::fixed << '\r' << fraction << '%';
+        Cout << std::fixed << '\r' << fraction << '%';
 		return jobQueue.empty() && pendingJobCount == 0;
 	});
-    std::cout.precision(originalPrecision);
-    std::cout << std::endl;
+    Cout.precision(originalPrecision);
+    Cout << std::endl;
 }
 
 void ThreadPool::ThreadEntry()

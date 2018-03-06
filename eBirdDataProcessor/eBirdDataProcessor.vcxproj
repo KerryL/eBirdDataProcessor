@@ -74,7 +74,7 @@
       <WarningLevel>Level4</WarningLevel>
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(CURL)/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CURL)/include;../src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
@@ -96,7 +96,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
-      <AdditionalIncludeDirectories>$(CURL)/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(CURL)/include;../src</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
@@ -139,6 +139,7 @@
     <ClCompile Include="..\src\threadPool.cpp" />
     <ClCompile Include="..\src\throttledSection.cpp" />
     <ClCompile Include="..\src\utilities\configFile.cpp" />
+    <ClCompile Include="..\src\utilities\uString.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\bestObservationTimeEstimator.h" />
@@ -160,6 +161,7 @@
     <ClInclude Include="..\src\threadPool.h" />
     <ClInclude Include="..\src\throttledSection.h" />
     <ClInclude Include="..\src\utilities\configFile.h" />
+    <ClInclude Include="..\src\utilities\uString.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

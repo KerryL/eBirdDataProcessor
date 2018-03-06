@@ -6,8 +6,8 @@
 // Local headers
 #include "frequencyDataHarvester.h"
 #include "eBirdInterface.h"
-#include "email/curlUtilities.h"
 #include "mapPageGenerator.h"
+#include "email/curlUtilities.h"
 
 // OS headers
 #ifdef _WIN32
@@ -22,20 +22,18 @@
 #include <curl/curl.h>
 
 // Standard C++ headers
-#include <sstream>
 #include <cassert>
 #include <iostream>
 #include <iomanip>
-#include <fstream>
 #include <cctype>
 #include <algorithm>
 #include <thread>
 
-const std::string FrequencyDataHarvester::targetSpeciesURLBase("http://ebird.org/ebird/targets");
-const std::string FrequencyDataHarvester::userAgent("eBirdDataProcessor");
-const std::string FrequencyDataHarvester::eBirdLoginURL("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en_US");
+const String FrequencyDataHarvester::targetSpeciesURLBase(_T("http://ebird.org/ebird/targets"));
+const String FrequencyDataHarvester::userAgent(_T("eBirdDataProcessor"));
+const String FrequencyDataHarvester::eBirdLoginURL(_T("https://secure.birds.cornell.edu/cassso/login?service=https://ebird.org/ebird/login/cas?portal=ebird&locale=en_US"));
 const bool FrequencyDataHarvester::verbose(false);
-const std::string FrequencyDataHarvester::cookieFile("ebdp.cookies");
+const String FrequencyDataHarvester::cookieFile(_T("ebdp.cookies"));
 
 using namespace std::chrono_literals;
 // crawl delay determined by manually visiting www.ebird.org/robots.txt - should periodically
@@ -56,35 +54,35 @@ FrequencyDataHarvester::~FrequencyDataHarvester()
 		curl_easy_cleanup(curl);
 }
 
-bool FrequencyDataHarvester::GenerateFrequencyFile(const std::string &country,
-	const std::string &state, const std::string &county, const std::string &frequencyFilePath, const std::string& eBirdApiKey)
+bool FrequencyDataHarvester::GenerateFrequencyFile(const String &country,
+	const String &state, const String &county, const String &frequencyFilePath, const String& eBirdApiKey)
 {
 	if (!DoEBirdLogin())
 		return false;
 
 	EBirdInterface ebi(eBirdApiKey);
 	std::array<FrequencyData, 12> frequencyData;
-	const std::string regionCode(ebi.GetRegionCode(country, state, county));
+	const String regionCode(ebi.GetRegionCode(country, state, county));
 	if (!PullFrequencyData(regionCode, frequencyData))
 		return false;
 
-	return WriteFrequencyDataToFile(frequencyFilePath + regionCode + ".csv", frequencyData);
+	return WriteFrequencyDataToFile(frequencyFilePath + regionCode + _T(".csv"), frequencyData);
 }
 
 // fipsStart argument can be used to resume a failed bulk harvest without needing
 // to re-harvest the data for the specified state which was successfully harvested
-bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
-	const std::string &state, const std::string& targetPath,
-	const std::string& firstSubRegion, const std::string& eBirdApiKey)
+bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const String &country,
+	const String &state, const String& targetPath,
+	const String& firstSubRegion, const String& eBirdApiKey)
 {
-	std::cout << "Harvesting frequency data for " << state << ", " << country << std::endl;
-	std::cout << "Frequency files will be stored in " << targetPath << std::endl;
+	Cout << "Harvesting frequency data for " << state << ", " << country << std::endl;
+	Cout << "Frequency files will be stored in " << targetPath << std::endl;
 
 	if (!DoEBirdLogin())
 		return false;
 
 	EBirdInterface ebi(eBirdApiKey);
-	const std::string countryRegionCode(ebi.GetCountryCode(country));
+	const String countryRegionCode(ebi.GetCountryCode(country));
 
 	// We want to be able to handle two things here:  Places which do not have sub-regions
 	// beyond level 1 and pulling state-level data by specifying only the country abbreviation.
@@ -93,7 +91,7 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		if (state.empty())
 			return ebi.GetSubRegions(countryRegionCode, EBirdInterface::RegionType::SubNational1);
 
-		const std::string stateRegionCode(ebi.GetStateCode(countryRegionCode, state));
+		const String stateRegionCode(ebi.GetStateCode(countryRegionCode, state));
 		auto subRegionList(ebi.GetSubRegions(stateRegionCode, EBirdInterface::RegionType::SubNational2));
 		if (subRegionList.empty())
 		{
@@ -105,32 +103,32 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		return subRegionList;
 	}());
 
-	std::cout << "Beginning harvest for " << subRegionList.size() << " counties";
+	Cout << "Beginning harvest for " << subRegionList.size() << " counties";
 	std::sort(subRegionList.begin(), subRegionList.end(), [](const EBirdInterface::RegionInfo& a, const EBirdInterface::RegionInfo& b)
 	{
 		return a.code.compare(b.code) < 0;
 	});
 
 	if (!firstSubRegion.empty())
-		std::cout << " (skipping regions that occur before " << firstSubRegion << ')';
-	std::cout << std::endl;
+		Cout << " (skipping regions that occur before " << firstSubRegion << ')';
+	Cout << std::endl;
 
 	for (const auto& r : subRegionList)
 	{
 		if (!firstSubRegion.empty())
 		{
-			auto lastDash(r.code.find_last_of('-'));
+			auto lastDash(r.code.find_last_of(Char('-')));
 			if (lastDash != std::string::npos)
 			{
-				const std::string currentRegionCode(r.code.substr(lastDash + 1));
+				const String currentRegionCode(r.code.substr(lastDash + 1));
 				if (currentRegionCode.compare(firstSubRegion) < 0)
 					continue;
 			}
 			else
-				std::cerr << "Failed to extract code to determine if we should ignore (so we will include it)\n";
+				Cerr << "Failed to extract code to determine if we should ignore (so we will include it)\n";
 		}
 
-		std::cout << r.name << " (" << r.code << ")..." << std::endl;
+		Cout << r.name << " (" << r.code << ")..." << std::endl;
 		std::array<FrequencyData, 12> data;
 		if (!PullFrequencyData(r.code, data))
 			break;
@@ -145,14 +143,14 @@ bool FrequencyDataHarvester::DoBulkFrequencyHarvest(const std::string &country,
 		/*if (DataIsEmpty(data))
 			continue;*/
 
-		if (!WriteFrequencyDataToFile(targetPath + r.code + ".csv", data))
+		if (!WriteFrequencyDataToFile(targetPath + r.code + _T(".csv"), data))
 			break;
 	}
 
 	return true;
 }
 
-bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
+bool FrequencyDataHarvester::PullFrequencyData(const String& regionString,
 	std::array<FrequencyData, 12>& frequencyData)
 {
 
@@ -166,26 +164,26 @@ bool FrequencyDataHarvester::PullFrequencyData(const std::string& regionString,
 	return true;
 }
 
-bool FrequencyDataHarvester::HarvestMonthData(const std::string& regionString,
+bool FrequencyDataHarvester::HarvestMonthData(const String& regionString,
 	const unsigned int& month, FrequencyData& frequencyData)
 {
 	assert(month > 0 && month <= 12);
-	std::string response;
+	String response;
 	if (!DoCURLGet(BuildTargetSpeciesURL(regionString, month, month, ListTimeFrame::Day), response))
 	{
-		std::cerr << "Failed to read target species web page\n";
+		Cerr << "Failed to read target species web page\n";
 		return false;
 	}
 
-	if (ExtractCountyNameFromPage(regionString, response).compare("null") == 0)
+	if (ExtractCountyNameFromPage(regionString, response).compare(_T("null")) == 0)
 	{
-		std::cerr << "Warning:  Found null county data for region string '" << regionString << "'\n";
+		Cerr << "Warning:  Found null county data for region string '" << regionString << "'\n";
 		return true;
 	}
 
 	if (!ExtractFrequencyData(response, frequencyData))
 	{
-		std::cerr << "Failed to parse HTML to extract frequency data\n";
+		Cerr << "Failed to parse HTML to extract frequency data\n";
 		return false;
 	}
 
@@ -194,7 +192,7 @@ bool FrequencyDataHarvester::HarvestMonthData(const std::string& regionString,
 
 bool FrequencyDataHarvester::DoEBirdLogin()
 {
-	std::string loginPage;
+	String loginPage;
 	if (!DoCURLGet(eBirdLoginURL, loginPage))
 		return false;
 
@@ -203,17 +201,17 @@ bool FrequencyDataHarvester::DoEBirdLogin()
 		/*if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL"), "Failed to clear existing cookies"))// erase all existing cookie data
 			return false;*/
 
-		std::string eBirdUserName, eBirdPassword;
+		String eBirdUserName, eBirdPassword;
 		GetUserNameAndPassword(eBirdUserName, eBirdPassword);
-		char* urlEncodedPassword(curl_easy_escape(curl, eBirdPassword.c_str(), eBirdPassword.length()));
+		char* urlEncodedPassword(curl_easy_escape(curl, UString::ToNarrowString<String>(eBirdPassword).c_str(), eBirdPassword.length()));
 		if (!urlEncodedPassword)
-			std::cerr << "Failed to URL-encode password\n";
-		eBirdPassword = urlEncodedPassword;
+			Cerr << "Failed to URL-encode password\n";
+		eBirdPassword = UString::ToStringType(urlEncodedPassword);
 		curl_free(urlEncodedPassword);
 
 		if (!PostEBirdLoginInfo(eBirdUserName, eBirdPassword, loginPage))
 		{
-			std::cerr << "Failed to login to eBird\n";
+			Cerr << "Failed to login to eBird\n";
 			return false;
 		}
 	}
@@ -221,13 +219,13 @@ bool FrequencyDataHarvester::DoEBirdLogin()
 	return true;
 }
 
-void FrequencyDataHarvester::GetUserNameAndPassword(std::string& userName, std::string& password)
+void FrequencyDataHarvester::GetUserNameAndPassword(String& userName, String& password)
 {
-	std::cout << "NOTE:  In order for this routine to work properly, you must not have submitted any checklists for the current day in the specified region." << std::endl;
+	Cout << "NOTE:  In order for this routine to work properly, you must not have submitted any checklists for the current day in the specified region." << std::endl;
 
-	std::cout << "Specify your eBird user name:  ";
-	std::cin >> userName;
-	std::cout << "Password:  ";
+	Cout << "Specify your eBird user name:  ";
+	Cin >> userName;
+	Cout << "Password:  ";
 
 #ifdef _WIN32
 	HANDLE hStdin = GetStdHandle(STD_INPUT_HANDLE);
@@ -235,8 +233,8 @@ void FrequencyDataHarvester::GetUserNameAndPassword(std::string& userName, std::
 	GetConsoleMode(hStdin, &mode);
 	SetConsoleMode(hStdin, mode & (~ENABLE_ECHO_INPUT));
 
-	std::cin.ignore();
-	std::getline(std::cin, password);
+	Cin.ignore();
+	std::getline(Cin, password);
 
 	SetConsoleMode(hStdin, mode);
 #else
@@ -246,13 +244,13 @@ void FrequencyDataHarvester::GetUserNameAndPassword(std::string& userName, std::
 	newt.c_lflag &= ~ECHO;
 	tcsetattr(STDIN_FILENO, TCSANOW, &newt);
 
-	std::cin.ignore();
-	std::getline(std::cin, password);
+	Cin.ignore();
+	std::getline(Cin, password);
 
 	tcsetattr(STDIN_FILENO, TCSANOW, &oldt);
 #endif
 
-	std::cout << std::endl;
+	Cout << std::endl;
 }
 
 bool FrequencyDataHarvester::DoGeneralCurlConfiguration()
@@ -262,123 +260,123 @@ bool FrequencyDataHarvester::DoGeneralCurlConfiguration()
 
 	if (!curl)
 	{
-		std::cerr << "Failed to initialize CURL" << std::endl;
+		Cerr << "Failed to initialize CURL" << std::endl;
 		return false;
 	}
 
 	if (verbose)
-		CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L), "Failed to set verbose output");// Don't fail for this one
+		CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L), _T("Failed to set verbose output"));// Don't fail for this one
 
 	/*if (!caCertificatePath.empty())
 		curl_easy_setopt(curl, CURLOPT_CAPATH, caCertificatePath.c_str());*/
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL), "Failed to enable SSL"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_USE_SSL, CURLUSESSL_ALL), _T("Failed to enable SSL")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent.c_str()), "Failed to set user agent"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_USERAGENT, userAgent.c_str()), _T("Failed to set user agent")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L), "Failed to enable location following"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 1L), _T("Failed to enable location following")))
 		return false;
 
 	headerList = curl_slist_append(headerList, "Connection: Keep-Alive");
 	if (!headerList)
 	{
-		std::cerr << "Failed to append keep alive to header\n";
+		Cerr << "Failed to append keep alive to header\n";
 		return false;
 	}
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList), "Failed to set header"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headerList), _T("Failed to set header")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookieFile.c_str()), "Failed to load the cookie file"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEFILE, cookieFile.c_str()), _T("Failed to load the cookie file")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookieFile.c_str()), "Failed to enable saving cookies"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIEJAR, cookieFile.c_str()), _T("Failed to enable saving cookies")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FrequencyDataHarvester::CURLWriteCallback), "Failed to set the write callback"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, FrequencyDataHarvester::CURLWriteCallback), _T("Failed to set the write callback")))
 		return false;
 
 	return true;
 }
 
-bool FrequencyDataHarvester::PostEBirdLoginInfo(const std::string& userName, const std::string& password, std::string& resultPage)
+bool FrequencyDataHarvester::PostEBirdLoginInfo(const String& userName, const String& password, String& resultPage)
 {
 	assert(curl);
 
 /*struct curl_slist *cookies = NULL;// TODO:  Remove
 curl_easy_getinfo(curl, CURLINFO_COOKIELIST, &cookies);
-std::cout << "=============COOKIES=========" << std::endl;
+Cout << "=============COOKIES=========" << std::endl;
 while(cookies) {
-std::cout << cookies->data << std::endl;
+Cout << cookies->data << std::endl;
         cookies = cookies->next;
       }
 curl_slist_free_all(cookies);
-std::cout << "=============END COOKIES=========" << std::endl;// TODO:  Remove*/
+Cout << "=============END COOKIES=========" << std::endl;// TODO:  Remove*/
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultPage), "Failed to set write data"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultPage), _T("Failed to set write data")))
 		return false;
 
-	std::string token(ExtractTokenFromLoginPage(resultPage));
+	String token(ExtractTokenFromLoginPage(resultPage));
 	if (token.empty())
 	{
-		std::cerr << "Failed to get session token\n";
+		Cerr << "Failed to get session token\n";
 		return false;
 	}
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POST, 1L), "Failed to set action to POST"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POST, 1L), _T("Failed to set action to POST")))
 		return false;
 
-	const std::string loginInfo(BuildEBirdLoginInfo(userName, password, token));
+	const String loginInfo(BuildEBirdLoginInfo(userName, password, token));
 	curl_easy_setopt(curl, CURLOPT_POSTFIELDS, loginInfo.c_str());
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), "Failed issuding https POST (login)"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), _T("Failed issuding https POST (login)")))
 		return false;
 
 	return true;
 }
 
-bool FrequencyDataHarvester::EBirdLoginSuccessful(const std::string& htmlData)
+bool FrequencyDataHarvester::EBirdLoginSuccessful(const String& htmlData)
 {
-	const std::string startTag1("<li ><a href=\"/ebird/myebird\">");
-	const std::string startTag2("<li class=\"selected\"><a href=\"/ebird/myebird\" title=\"My eBird\">");
-	const std::string startTag3("<a href=\"https://secure.birds.cornell.edu/cassso/account/edit?service=https://ebird.org/MyEBird");
-	const std::string endTag("</a>");
-	std::string dummy;
+	const String startTag1(_T("<li ><a href=\"/ebird/myebird\">"));
+	const String startTag2(_T("<li class=\"selected\"><a href=\"/ebird/myebird\" title=\"My eBird\">"));
+	const String startTag3(_T("<a href=\"https://secure.birds.cornell.edu/cassso/account/edit?service=https://ebird.org/MyEBird"));
+	const String endTag(_T("</a>"));
+	String dummy;
 	std::string::size_type offset1(0), offset2(0), offset3(0);
 	return ExtractTextBetweenTags(htmlData, startTag1, endTag, dummy, offset1) ||
 		ExtractTextBetweenTags(htmlData, startTag2, endTag, dummy, offset2) ||
 		ExtractTextBetweenTags(htmlData, startTag3, endTag, dummy, offset3);
 }
 
-std::string FrequencyDataHarvester::ExtractTokenFromLoginPage(const std::string& htmlData)
+String FrequencyDataHarvester::ExtractTokenFromLoginPage(const String& htmlData)
 {
-	const std::string tokenTagStart("<input type=\"hidden\" name=\"lt\" value=\"");
-	const std::string tokenTagEnd("\" />");
+	const String tokenTagStart(_T("<input type=\"hidden\" name=\"lt\" value=\""));
+	const String tokenTagEnd(_T("\" />"));
 
 	std::string::size_type offset(0);
-	std::string token;
+	String token;
 	if (!ExtractTextBetweenTags(htmlData, tokenTagStart, tokenTagEnd, token, offset))
-		return std::string();
+		return String();
 
 	return token;
 }
 
-std::string FrequencyDataHarvester::BuildEBirdLoginInfo(const std::string&userName, const std::string& password, const std::string& token)
+String FrequencyDataHarvester::BuildEBirdLoginInfo(const String&userName, const String& password, const String& token)
 {
-	return "username=" + userName
-		+ "&password=" + password
-		+ "&rememberMe=on"
-		+ "&lt=" + token
-		+ "&execution=e1s1"
-		+ "&_eventId=submit";
+	return _T("username=") + userName
+		+ _T("&password=") + password
+		+ _T("&rememberMe=on")
+		+ _T("&lt=") + token
+		+ _T("&execution=e1s1")
+		+ _T("&_eventId=submit");
 }
 
-std::string FrequencyDataHarvester::BuildTargetSpeciesURL(const std::string& regionString,
+String FrequencyDataHarvester::BuildTargetSpeciesURL(const String& regionString,
 	const unsigned int& beginMonth, const unsigned int& endMonth, const ListTimeFrame& timeFrame)
 {
-	std::ostringstream ss;
+	OStringStream ss;
 	// r1 is "show speicies observed in"
 	// r2 is "that I need for my list"
 	// We'll always keep them the same for now
@@ -388,45 +386,45 @@ std::string FrequencyDataHarvester::BuildTargetSpeciesURL(const std::string& reg
 	// NOTE:  Web site appends "&_mediaType=on&_mediaType=on" to URL, but it doesn't seem to make any difference (maybe has to do with selecting "with photos" or "with audio"?)
 }
 
-std::string FrequencyDataHarvester::GetTimeFrameString(const ListTimeFrame& timeFrame)
+String FrequencyDataHarvester::GetTimeFrameString(const ListTimeFrame& timeFrame)
 {
 	switch (timeFrame)
 	{
 	case ListTimeFrame::Life:
-		return "life";
+		return _T("life");
 
 	case ListTimeFrame::Year:
-		return "year";
+		return _T("year");
 
 	case ListTimeFrame::Month:
-		return "month";
+		return _T("month");
 
 	case ListTimeFrame::Day:
-		return "day";
+		return _T("day");
 
 	default:
 		break;
 	}
 
 	assert(false);
-	return std::string();
+	return String();
 }
 
-bool FrequencyDataHarvester::DoCURLGet(const std::string& url, std::string &response)
+bool FrequencyDataHarvester::DoCURLGet(const String& url, String &response)
 {
 	assert(curl);
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response), "Failed to set write data"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response), _T("Failed to set write data")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POST, 0L), "Failed to set action to GET"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POST, 0L), _T("Failed to set action to GET")))
 		return false;
 
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()), "Failed to set URL"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_URL, url.c_str()), _T("Failed to set URL")))
 		return false;
 
 	rateLimiter.Wait();
-	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), "Failed issuing https GET"))
+	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), _T("Failed issuing https GET")))
 		return false;
 	return true;
 }
@@ -441,7 +439,7 @@ bool FrequencyDataHarvester::DoCURLGet(const std::string& url, std::string &resp
 //		ptr			= char*
 //		size		= size_t indicating number of elements of size nmemb
 //		nmemb		= size_t indicating size of each element
-//		userData	= void* (must be pointer to std::string)
+//		userData	= void* (must be pointer to String)
 //
 // Output Arguments:
 //		None
@@ -453,55 +451,55 @@ bool FrequencyDataHarvester::DoCURLGet(const std::string& url, std::string &resp
 size_t FrequencyDataHarvester::CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData)
 {
 	const size_t totalSize(size * nmemb);
-	std::string& s(*static_cast<std::string*>(userData));
-	s.append(ptr, totalSize);
+	String& s(*static_cast<String*>(userData));
+	s.append(UString::ToStringType(std::string(ptr, totalSize)));
 
 	return totalSize;
 }
 
-bool FrequencyDataHarvester::ExtractFrequencyData(const std::string& htmlData, FrequencyData& data)
+bool FrequencyDataHarvester::ExtractFrequencyData(const String& htmlData, FrequencyData& data)
 {
-	const std::string checklistCountTagStart("<div class=\"last-updated\">Based on ");
-	const std::string checklistCountTagEnd(" complete checklists</div>");
+	const String checklistCountTagStart(_T("<div class=\"last-updated\">Based on "));
+	const String checklistCountTagEnd(_T(" complete checklists</div>"));
 
 	std::string::size_type currentOffset(0);
-	std::string checklistCountString;
+	String checklistCountString;
 	if (!ExtractTextBetweenTags(htmlData, checklistCountTagStart, checklistCountTagEnd, checklistCountString, currentOffset))
 	{
 		data.checklistCount = 0;
 		data.frequencies.clear();
-		std::cerr << "Failed to extract checklist count from HTML; assuming no data available for this county and month\n";
+		Cerr << "Failed to extract checklist count from HTML; assuming no data available for this county and month\n";
 		//return false;
 		return true;// Allow execution to continue - assume we reach this point due to lack of data for this county-month combo
 	}
 
-	std::istringstream ss(checklistCountString);
+	IStringStream ss(checklistCountString);
 	ss.imbue(std::locale(""));
 	if ((ss >> data.checklistCount).fail())
 	{
-		std::cerr << "Failed to parse checklist count\n";
+		Cerr << "Failed to parse checklist count\n";
 		return false;
 	}
 
-	const std::string speciesTagStart("<td headers=\"species\" class=\"species-name\">");
-	const std::string speciesTagEnd("</td>");
-	const std::string frequencyTagStart("<td headers=\"freq\" class=\"num\">");
-	const std::string frequencyTagEnd("</td>");
+	const String speciesTagStart(_T("<td headers=\"species\" class=\"species-name\">"));
+	const String speciesTagEnd(_T("</td>"));
+	const String frequencyTagStart(_T("<td headers=\"freq\" class=\"num\">"));
+	const String frequencyTagEnd(_T("</td>"));
 
 	EBirdDataProcessor::FrequencyInfo entry;
 	while (ExtractTextBetweenTags(htmlData, speciesTagStart, speciesTagEnd, entry.species, currentOffset))
 	{
-		std::string frequencyString;
+		String frequencyString;
 		if (!ExtractTextBetweenTags(htmlData, frequencyTagStart, frequencyTagEnd, frequencyString, currentOffset))
 		{
-			std::cerr << "Failed to extract frequency for species '" << entry.species << "'\n";
+			Cerr << "Failed to extract frequency for species '" << entry.species << "'\n";
 			return false;
 		}
 
-		std::istringstream freqSS(frequencyString);
+		IStringStream freqSS(frequencyString);
 		if (!(freqSS >> entry.frequency).good())
 		{
-			std::cerr << "Failed to parse frequency for species '" << entry.species << "'\n";
+			Cerr << "Failed to parse frequency for species '" << entry.species << "'\n";
 			return false;
 		}
 
@@ -511,8 +509,8 @@ bool FrequencyDataHarvester::ExtractFrequencyData(const std::string& htmlData, F
 	return data.frequencies.size() > 0;
 }
 
-bool FrequencyDataHarvester::ExtractTextBetweenTags(const std::string& htmlData, const std::string& startTag,
-	const std::string& endTag, std::string& text, std::string::size_type& offset)
+bool FrequencyDataHarvester::ExtractTextBetweenTags(const String& htmlData, const String& startTag,
+	const String& endTag, String& text, std::string::size_type& offset)
 {
 	std::string::size_type startPosition(htmlData.find(startTag, offset));
 	if (startPosition == std::string::npos)
@@ -527,11 +525,11 @@ bool FrequencyDataHarvester::ExtractTextBetweenTags(const std::string& htmlData,
 	return true;
 }
 
-bool FrequencyDataHarvester::WriteFrequencyDataToFile(const std::string& fileName, const std::array<FrequencyData, 12>& data)
+bool FrequencyDataHarvester::WriteFrequencyDataToFile(const String& fileName, const std::array<FrequencyData, 12>& data)
 {
 	if (CurrentDataMissingSpecies(fileName, data))
 	{
-		std::cerr << "New frequency data is missing species that were previously included.  This function cannot be executed if you have submitted observations for this area to eBird today." << std::endl;
+		Cerr << "New frequency data is missing species that were previously included.  This function cannot be executed if you have submitted observations for this area to eBird today." << std::endl;
 		return false;
 	}
 
@@ -546,10 +544,10 @@ bool FrequencyDataHarvester::WriteFrequencyDataToFile(const std::string& fileNam
 		return s;
 	}());
 
-	std::ofstream file(fileName.c_str());
+	OFStream file(fileName.c_str());
 	if (!file.good() || !file.is_open())
 	{
-		std::cerr << "Failed to open '" << fileName << "' for output\n";
+		Cerr << "Failed to open '" << fileName << "' for output\n";
 		return false;
 	}
 
@@ -587,28 +585,28 @@ bool FrequencyDataHarvester::WriteFrequencyDataToFile(const std::string& fileNam
 	return true;
 }
 
-bool FrequencyDataHarvester::CurrentDataMissingSpecies(const std::string& fileName, const std::array<FrequencyData, 12>& data)
+bool FrequencyDataHarvester::CurrentDataMissingSpecies(const String& fileName, const std::array<FrequencyData, 12>& data)
 {
-	std::ifstream file(fileName.c_str());
+	IFStream file(fileName.c_str());
 	if (!file.is_open() || !file.good())
 		return false;// Not an error - file may not exist
 
-	std::array<std::vector<std::string>, 12> oldData;
+	std::array<std::vector<String>, 12> oldData;
 
-	std::string line;
+	String line;
 	std::getline(file, line);// skip header rows
 	std::getline(file, line);// skip header rows
 	while (std::getline(file, line))
 	{
-		std::istringstream ss(line);
+		IStringStream ss(line);
 		auto it(oldData.begin());
-		std::string token;
-		while (std::getline(ss, token, ','))
+		String token;
+		while (std::getline(ss, token, Char(',')))
 		{
 			if (!token.empty())
 				it->push_back(token);
 
-			std::getline(ss, token, ',');// skip frequency data
+			std::getline(ss, token, Char(','));// skip frequency data
 			++it;
 		}
 	}
@@ -636,34 +634,34 @@ bool FrequencyDataHarvester::CurrentDataMissingSpecies(const std::string& fileNa
 	return false;
 }
 
-std::string FrequencyDataHarvester::ExtractCountyNameFromPage(const std::string& regionString, const std::string& htmlData)
+String FrequencyDataHarvester::ExtractCountyNameFromPage(const String& regionString, const String& htmlData)
 {
-	const std::string matchStart("<option value=\"" + regionString + "\" selected=\"selected\">");
-	const std::string matchEnd(" County, ");
+	const String matchStart(_T("<option value=\"") + regionString + _T("\" selected=\"selected\">"));
+	const String matchEnd(_T(" County, "));
 
-	std::string countyName;
+	String countyName;
 	std::string::size_type offset(0);
 	if (!ExtractTextBetweenTags(htmlData, matchStart, matchEnd, countyName, offset))
-		return std::string();
+		return String();
 
 	return countyName;
 }
 
 // This removes "County", everything after the comma (results are in format "Whatever County, State Name") as well as apostrophes, periods and spaces
 // Two separate checks for "County" and comma because some counties are actually city names (i.e. "Baltimore city")
-std::string FrequencyDataHarvester::Clean(const std::string& s)
+String FrequencyDataHarvester::Clean(const String& s)
 {
-	std::string cleanString(s);
+	String cleanString(s);
 
 	const auto lastComma(cleanString.find_last_of(','));
 	if (lastComma != std::string::npos)
 		cleanString.erase(cleanString.begin() + lastComma, cleanString.end());
 
-	const auto countyString(cleanString.find(" County"));
+	const auto countyString(cleanString.find(_T(" County")));
 	if (countyString != std::string::npos)
 		cleanString.erase(cleanString.begin() + countyString, cleanString.end());
 
-	cleanString.erase(std::remove_if(cleanString.begin(), cleanString.end(), [](const char& c)
+	cleanString.erase(std::remove_if(cleanString.begin(), cleanString.end(), [](const Char& c)
 	{
 		if (std::isspace(c) ||
 			c == '\'' ||
@@ -687,8 +685,8 @@ bool FrequencyDataHarvester::DataIsEmpty(const std::array<FrequencyData, 12>& fr
 	return true;
 }
 
-bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFilePath,
-	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const std::string& eBirdApiKey)
+bool FrequencyDataHarvester::AuditFrequencyData(const String& frequencyFilePath,
+	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, const String& eBirdApiKey)
 {
 	if (!DoEBirdLogin())
 		return false;
@@ -701,19 +699,19 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 	{
 		unsigned int i;
 		bool updated(false);
-		std::string regionString;
+		String regionString;
 		std::array<FrequencyData, 12> frequencyData;
 		for (i = 0; i < 12; ++i)
 		{
 			if (f.probabilities[i] > 0.0 && f.frequencyInfo[i].size() == 0)// "probabilities" is actually checklist count for the month
 			{
-				std::cout << "Suspect missing data in " << f.locationCode << " for month " << i + 1 << "; Updating..." << std::endl;
+				Cout << "Suspect missing data in " << f.locationCode << " for month " << i + 1 << "; Updating..." << std::endl;
 
 				if (regionString.empty())
 				{
-					const std::string countryCode(ExtractCountryFromFileName(f.locationCode));
-					const std::string state(ExtractStateFromFileName(f.locationCode));
-					const std::string stateCode(ebi.GetStateCode(countryCode, state));
+					const String countryCode(ExtractCountryFromFileName(f.locationCode));
+					const String state(ExtractStateFromFileName(f.locationCode));
+					const String stateCode(ebi.GetStateCode(countryCode, state));
 					const auto countyList(ebi.GetSubRegions(stateCode, EBirdInterface::RegionType::SubNational2));
 					for (const auto& county : countyList)
 					{
@@ -726,7 +724,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 
 					if (regionString.empty())
 					{
-						std::cerr << "Failed to find region string for '" << f.locationCode << "'\n";
+						Cerr << "Failed to find region string for '" << f.locationCode << "'\n";
 						break;
 					}
 
@@ -747,7 +745,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 
 		if (updated)
 		{
-			if (!WriteFrequencyDataToFile(frequencyFilePath + f.locationCode + ".csv", frequencyData))
+			if (!WriteFrequencyDataToFile(frequencyFilePath + f.locationCode + _T(".csv"), frequencyData))
 				continue;
 		}
 	}
@@ -755,12 +753,12 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 	auto statesAndCountries(GetCountriesAndStates(freqInfo));
 	for (const auto& sc : statesAndCountries)
 	{
-		const std::string stateCode(ebi.GetStateCode(sc.country, sc.state));
+		const String stateCode(ebi.GetStateCode(sc.country, sc.state));
 
 		auto missingCounties(FindMissingCounties(stateCode, freqInfo, ebi));
 		for (const auto& county : missingCounties)
 		{
-			std::cout << "Missing county " << county.name << " for state " << sc.state << ", " << sc.country << "; Updating..." << std::endl;
+			Cout << "Missing county " << county.name << " for state " << sc.state << ", " << sc.country << "; Updating..." << std::endl;
 
 			std::array<FrequencyData, 12> data;
 			if (!PullFrequencyData(county.code, data))
@@ -770,7 +768,7 @@ bool FrequencyDataHarvester::AuditFrequencyData(const std::string& frequencyFile
 			/*if (DataIsEmpty(data))
 				continue;*/
 
-			if (!WriteFrequencyDataToFile(frequencyFilePath + county.code + ".csv", data))
+			if (!WriteFrequencyDataToFile(frequencyFilePath + county.code + _T(".csv"), data))
 				continue;
 		}
 	}
@@ -794,10 +792,10 @@ std::vector<FrequencyDataHarvester::StateCountryCode> FrequencyDataHarvester::Ge
 	return statesCountries;
 }
 
-std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCounties(const std::string& stateCode,
+std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCounties(const String& stateCode,
 	const std::vector<EBirdDataProcessor::YearFrequencyInfo>& freqInfo, EBirdInterface& ebi)
 {
-	std::vector<std::string> countiesInDataset;
+	std::vector<String> countiesInDataset;
 	for (const auto& f : freqInfo)
 	{
 		if (ExtractStateFromFileName(f.locationCode).compare(stateCode.substr(stateCode.length() - 2)) == 0)
@@ -837,12 +835,12 @@ std::vector<EBirdInterface::RegionInfo> FrequencyDataHarvester::FindMissingCount
 	return missingCounties;
 }
 
-std::string FrequencyDataHarvester::ExtractCountryFromFileName(const std::string& fileName)
+String FrequencyDataHarvester::ExtractCountryFromFileName(const String& fileName)
 {
 	return fileName.substr(0, 2);
 }
 
-std::string FrequencyDataHarvester::ExtractStateFromFileName(const std::string& fileName)
+String FrequencyDataHarvester::ExtractStateFromFileName(const String& fileName)
 {
 	// For US, states abbreviations are all 2 characters, but this isn't universal.  Need to find the hyphen.
 	// eBird does guarantee that country abbreviation are two characters, however.
