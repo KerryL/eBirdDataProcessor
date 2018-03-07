@@ -72,11 +72,11 @@ private:
 
 	bool PullFrequencyData(const String& regionString, std::array<FrequencyData, 12>& frequencyData);
 	bool HarvestMonthData(const String& regionString, const unsigned int& month, FrequencyData& frequencyData);
-	bool PostEBirdLoginInfo(const String& userName, const String& password, String& resultPage);
+	bool PostEBirdLoginInfo(const String& userName, const String& password, std::string& resultPage);
 	static bool EBirdLoginSuccessful(const String& htmlData);
 	static void GetUserNameAndPassword(String& userName, String& password);
 	static String BuildEBirdLoginInfo(const String& userName, const String& password, const String& token);
-	bool DoCURLGet(const String& url, String &response);
+	bool DoCURLGet(const String& url, std::string &response);
 	static size_t CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData);
 
 	static bool ExtractFrequencyData(const String& htmlData, FrequencyData& data);

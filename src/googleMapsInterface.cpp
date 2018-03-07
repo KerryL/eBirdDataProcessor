@@ -50,7 +50,7 @@ GoogleMapsInterface::Directions GoogleMapsInterface::GetDirections(const String&
 {
 	const String requestURL(apiRoot + directionsEndPoint
 		+ BuildRequestString(from, to, mode, false, units));
-	String response;
+	std::string response;
 	if (!DoCURLGet(requestURL, response))
 	{
 		Cerr << "Failed to process GET request\n";
@@ -58,7 +58,7 @@ GoogleMapsInterface::Directions GoogleMapsInterface::GetDirections(const String&
 	}
 
 	std::vector<Directions> directions;
-	if (!ProcessDirectionsResponse(response, directions))
+	if (!ProcessDirectionsResponse(UString::ToStringType(response), directions))
 		return Directions();
 
 	assert(directions.size() == 1);
@@ -71,7 +71,7 @@ std::vector<GoogleMapsInterface::Directions> GoogleMapsInterface::GetMultipleDir
 {
 	const String requestURL(apiRoot + directionsEndPoint
 		+ BuildRequestString(from, to, mode, true, units));
-	String response;
+	std::string response;
 	if (!DoCURLGet(requestURL, response))
 	{
 		Cerr << "Failed to process GET request\n";
@@ -79,7 +79,7 @@ std::vector<GoogleMapsInterface::Directions> GoogleMapsInterface::GetMultipleDir
 	}
 
 	std::vector<Directions> directions;
-	if (!ProcessDirectionsResponse(response, directions))
+	if (!ProcessDirectionsResponse(UString::ToStringType(response), directions))
 		return std::vector<Directions>();
 
 	return directions;
@@ -340,7 +340,7 @@ bool GoogleMapsInterface::LookupCoordinates(const String& searchString,
 {
 	const String requestURL(apiRoot + geocodeEndPoint
 		+ _T("?address=") + SanitizeAddress(searchString) + _T("&key=") + apiKey);
-	String response;
+	std::string response;
 	if (!DoCURLGet(requestURL, response))
 	{
 		Cerr << "Failed to process GET request\n";
@@ -348,7 +348,7 @@ bool GoogleMapsInterface::LookupCoordinates(const String& searchString,
 	}
 
 	std::vector<GeocodeInfo> info;
-	if (!ProcessGeocodeResponse(response, info, statusRet))
+	if (!ProcessGeocodeResponse(UString::ToStringType(response), info, statusRet))
 		return false;
 
 	assert(info.size() > 0);

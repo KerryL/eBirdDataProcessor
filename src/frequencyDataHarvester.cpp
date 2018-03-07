@@ -168,20 +168,22 @@ bool FrequencyDataHarvester::HarvestMonthData(const String& regionString,
 	const unsigned int& month, FrequencyData& frequencyData)
 {
 	assert(month > 0 && month <= 12);
-	String response;
+	std::string response;
 	if (!DoCURLGet(BuildTargetSpeciesURL(regionString, month, month, ListTimeFrame::Day), response))
 	{
 		Cerr << "Failed to read target species web page\n";
 		return false;
 	}
 
-	if (ExtractCountyNameFromPage(regionString, response).compare(_T("null")) == 0)
+	const String htmlData(UString::ToStringType(response));
+
+	if (ExtractCountyNameFromPage(regionString, htmlData).compare(_T("null")) == 0)
 	{
 		Cerr << "Warning:  Found null county data for region string '" << regionString << "'\n";
 		return true;
 	}
 
-	if (!ExtractFrequencyData(response, frequencyData))
+	if (!ExtractFrequencyData(htmlData, frequencyData))
 	{
 		Cerr << "Failed to parse HTML to extract frequency data\n";
 		return false;
@@ -192,11 +194,11 @@ bool FrequencyDataHarvester::HarvestMonthData(const String& regionString,
 
 bool FrequencyDataHarvester::DoEBirdLogin()
 {
-	String loginPage;
+	std::string loginPage;
 	if (!DoCURLGet(eBirdLoginURL, loginPage))
 		return false;
 
-	while (!EBirdLoginSuccessful(loginPage))
+	while (!EBirdLoginSuccessful(UString::ToStringType(loginPage)))
 	{
 		/*if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_COOKIELIST, "ALL"), "Failed to clear existing cookies"))// erase all existing cookie data
 			return false;*/
@@ -301,7 +303,7 @@ bool FrequencyDataHarvester::DoGeneralCurlConfiguration()
 	return true;
 }
 
-bool FrequencyDataHarvester::PostEBirdLoginInfo(const String& userName, const String& password, String& resultPage)
+bool FrequencyDataHarvester::PostEBirdLoginInfo(const String& userName, const String& password, std::string& resultPage)
 {
 	assert(curl);
 
@@ -318,7 +320,7 @@ Cout << "=============END COOKIES=========" << std::endl;// TODO:  Remove*/
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resultPage), _T("Failed to set write data")))
 		return false;
 
-	String token(ExtractTokenFromLoginPage(resultPage));
+	String token(ExtractTokenFromLoginPage(UString::ToStringType(resultPage)));
 	if (token.empty())
 	{
 		Cerr << "Failed to get session token\n";
@@ -410,7 +412,7 @@ String FrequencyDataHarvester::GetTimeFrameString(const ListTimeFrame& timeFrame
 	return String();
 }
 
-bool FrequencyDataHarvester::DoCURLGet(const String& url, String &response)
+bool FrequencyDataHarvester::DoCURLGet(const String& url, std::string &response)
 {
 	assert(curl);
 

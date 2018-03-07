@@ -100,15 +100,15 @@ GoogleFusionTablesInterface::GoogleFusionTablesInterface(
 bool GoogleFusionTablesInterface::CreateTable(TableInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint, BuildCreateTableData(info),
+	std::string response;
+	if (!DoCURLPost(apiRoot + tablesEndPoint, UString::ToNarrowString(BuildCreateTableData(info)),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to create table\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse create table response\n";
@@ -134,14 +134,14 @@ bool GoogleFusionTablesInterface::CreateTable(TableInfo& info)
 bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
+	std::string response;
 	if (!DoCURLGet(apiRoot + tablesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to request table list\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse table list response\n";
@@ -196,7 +196,7 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 bool GoogleFusionTablesInterface::DeleteTable(const String& tableId)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
+	std::string response;
 	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId, response, AddAuthAndDeleteToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to delete table\n";
@@ -209,15 +209,15 @@ bool GoogleFusionTablesInterface::DeleteTable(const String& tableId)
 bool GoogleFusionTablesInterface::CopyTable(const String& tableId, TableInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + copyEndPoint, String(),
+	std::string response;
+	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + copyEndPoint, std::string(),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to copy table\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse copy table response\n";
@@ -244,15 +244,15 @@ bool GoogleFusionTablesInterface::Import(const String& tableId,
 	const String& csvData)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
-	if (!DoCURLPost(apiRootUpload + tablesEndPoint + Char('/') + tableId + importEndPoint + _T("?uploadType=media"), csvData,
+	std::string response;
+	if (!DoCURLPost(apiRootUpload + tablesEndPoint + Char('/') + tableId + importEndPoint + _T("?uploadType=media"), UString::ToNarrowString(csvData),
 		response, AddAuthAndOctetContentTypeToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to import data to table\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse copy import response\n";
@@ -290,7 +290,7 @@ bool GoogleFusionTablesInterface::ListColumns(const String& tableId,
 	std::vector<TableInfo::ColumnInfo>& columnInfo)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
+	std::string response;
 	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + columnsEndPoint,
 		response, AddAuthToCurlHeader, &authTokenData))
 	{
@@ -298,7 +298,7 @@ bool GoogleFusionTablesInterface::ListColumns(const String& tableId,
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse column list response\n";
@@ -725,15 +725,15 @@ bool GoogleFusionTablesInterface::SetTableAccess(const String& tableId, const Ta
 bool GoogleFusionTablesInterface::SubmitQuery(const String& query, cJSON*& root, String* csvData)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
-	if (!DoCURLPost(apiRoot + queryEndPoint + _T("?sql=") + URLEncode(query), String(),
+	std::string response;
+	if (!DoCURLPost(apiRoot + queryEndPoint + _T("?sql=") + URLEncode(query), std::string(),
 		response, AddAuthToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to submit query\n";
 		return false;
 	}
 
-	root = cJSON_Parse(UString::ToNarrowString(response).c_str());
+	root = cJSON_Parse(response.c_str());
 	if (!root)
 	{
 		Cerr << "Failed to parse query response\n";
@@ -766,13 +766,16 @@ bool GoogleFusionTablesInterface::SubmitQuery(const String& query, cJSON*& root,
 
 bool GoogleFusionTablesInterface::SubmitQueryMediaDownload(const String& query, String& csvData)
 {
+	std::string rawResponse;
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	if (!DoCURLGet(apiRoot + queryEndPoint + _T("?alt=media&sql=") + URLEncode(query),
-		csvData, AddAuthToCurlHeader, &authTokenData))
+		rawResponse, AddAuthToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to submit query\n";
 		return false;
 	}
+
+	csvData = UString::ToStringType(rawResponse);
 
 	return true;
 }
@@ -780,15 +783,15 @@ bool GoogleFusionTablesInterface::SubmitQueryMediaDownload(const String& query, 
 bool GoogleFusionTablesInterface::CreateStyle(const String& tableId, StyleInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint, BuildCreateStyleData(info),
+	std::string response;
+	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint, UString::ToNarrowString(BuildCreateStyleData(info)),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to create style\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse create style response\n";
@@ -814,14 +817,14 @@ bool GoogleFusionTablesInterface::CreateStyle(const String& tableId, StyleInfo& 
 bool GoogleFusionTablesInterface::ListStyles(const String& tableId, std::vector<StyleInfo>& styles)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
+	std::string response;
 	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to request style list\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse style list response\n";
@@ -874,7 +877,7 @@ bool GoogleFusionTablesInterface::ListStyles(const String& tableId, std::vector<
 bool GoogleFusionTablesInterface::DeleteStyle(const String& tableId, const unsigned int& styleId)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
+	std::string response;
 	OStringStream ss;
 	ss << styleId;
 	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint + Char('/') + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
@@ -1085,15 +1088,15 @@ bool GoogleFusionTablesInterface::ReadOptions(cJSON* root, std::vector<StyleInfo
 bool GoogleFusionTablesInterface::CreateTemplate(const String& tableId, TemplateInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint, BuildCreateTemplateData(info),
+	std::string response;
+	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint, UString::ToNarrowString(BuildCreateTemplateData(info)),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to create template\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse create template response\n";
@@ -1119,14 +1122,14 @@ bool GoogleFusionTablesInterface::CreateTemplate(const String& tableId, Template
 bool GoogleFusionTablesInterface::ListTemplates(const String& tableId, std::vector<TemplateInfo>& templates)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
+	std::string response;
 	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to request template list\n";
 		return false;
 	}
 
-	cJSON* root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse template list response\n";
@@ -1179,7 +1182,7 @@ bool GoogleFusionTablesInterface::ListTemplates(const String& tableId, std::vect
 bool GoogleFusionTablesInterface::DeleteTemplate(const String& tableId, const unsigned int& templateId)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
-	String response;
+	std::string response;
 	OStringStream ss;
 	ss << templateId;
 	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint + Char('/') + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))

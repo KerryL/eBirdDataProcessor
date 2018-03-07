@@ -112,7 +112,7 @@ bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 {
 	bool configurationOK(true);
 
-	if (config.firstSubRegion.empty() && !config.bulkFrequencyUpdate)
+	if (!config.firstSubRegion.empty() && !config.bulkFrequencyUpdate)
 	{
 		Cerr << GetKey(config.firstSubRegion) << " requires " << GetKey(config.bulkFrequencyUpdate) << '\n';
 		configurationOK = false;

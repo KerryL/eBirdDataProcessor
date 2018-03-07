@@ -15,10 +15,16 @@
 
 // Standard C++ headers
 #include <cassert>
+#include <locale>
 
 int main(int argc, char *argv[])
 {
-	setlocale(LC_ALL, "");// Make sure we can print unicode characters correctly
+	// Configure global locale for UTF-8
+	// All eBird datasets are UTF-8 encoded
+	std::locale::global(std::locale(std::locale::empty(), new std::codecvt_utf8<Char>));
+	Cout.imbue(std::locale());
+	Cerr.imbue(std::locale());
+	Cin.imbue(std::locale());
 
 	EBirdDataProcessorApp app;
 	return app.Run(argc, argv);

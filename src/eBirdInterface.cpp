@@ -83,15 +83,15 @@ std::vector<EBirdInterface::LocationInfo> EBirdInterface::GetHotspotsInRegion(co
 	OStringStream request;
 	request << apiRoot << hotspotReferenceEndpoint << region << "?fmt=json";
 
-	String response;
+	std::string response;
 	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
 		return std::vector<LocationInfo>();
 
-	cJSON *root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse returned string (GetHotspotsInRegion())\n";
-		Cerr << response << '\n';
+		Cerr << response.c_str() << '\n';
 		return std::vector<LocationInfo>();
 	}
 
@@ -280,15 +280,15 @@ std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservatio
 	else
 		request << "false";
 
-	String response;
+	std::string response;
 	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
 		return std::vector<ObservationInfo>();
 
-	cJSON *root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse returned string (GetRecentObservationsOfSpeciesInRegion())\n";
-		Cerr << response << '\n';
+		Cerr << response.c_str() << '\n';
 		return std::vector<ObservationInfo>();
 	}
 
@@ -362,15 +362,15 @@ bool EBirdInterface::FetchEBirdNameData()
 		<< "&locale=en"
 		<< "&fmt=json";
 
-	String response;
+	std::string response;
 	if (!DoCURLGet(request.str(), response))
 		return false;
 
-	cJSON *root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse returned string (GetScientificNameFromCommonName())\n";
-		Cerr << response << '\n';
+		Cerr << response.c_str() << '\n';
 		return false;
 	}
 
@@ -489,16 +489,16 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 	OStringStream request;
 	request << apiRoot << regionReferenceEndpoint << regionTypeString << '/' << regionCode << ".json";
 
-	String response;
+	std::string response;
 	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
 		return std::vector<RegionInfo>();
 
-	cJSON *root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
 		Cerr << "Failed to parse returned string (GetSubRegions())\n";
 		Cerr << "Request was: " << request.str() << '\n';
-		Cerr << "Response was: " << response << '\n';
+		Cerr << "Response was: " << response.c_str() << '\n';
 		return std::vector<RegionInfo>();
 	}
 
