@@ -90,6 +90,12 @@
     <ClCompile Include="..\src\stringUtilities.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\zipper.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
+    <ClCompile Include="..\src\globalKMLFetcher.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
@@ -150,6 +156,12 @@
       <Filter>Header Files\utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\src\stringUtilities.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\globalKMLFetcher.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\zipper.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

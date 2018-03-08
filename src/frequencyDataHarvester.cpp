@@ -453,8 +453,8 @@ bool FrequencyDataHarvester::DoCURLGet(const String& url, std::string &response)
 size_t FrequencyDataHarvester::CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData)
 {
 	const size_t totalSize(size * nmemb);
-	String& s(*static_cast<String*>(userData));
-	s.append(UString::ToStringType(std::string(ptr, totalSize)));
+	std::string& s(*static_cast<std::string*>(userData));
+	s.append(ptr, totalSize);
 
 	return totalSize;
 }
