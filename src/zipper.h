@@ -8,26 +8,34 @@
 // Local headers
 #include "utilities/uString.h"
 
+// libzip headers
+#include <zip.h>
+
 // Standard C++ headers
 #include <vector>
 
-// libzip forward declarations
-struct zip;
 
 class Zipper
 {
 public:
 	~Zipper();
 
-	bool OpenArchive(const String& fileName);
+	bool OpenArchiveFile(const String& fileName);
+	bool OpenArchiveBytes(const std::string& bytes);
 	void CloseArchive();
+	bool ArchiveIsOpen() const { return archive != nullptr; }
 
 	std::vector<String> ListContents() const;
+
+	bool ExtractFile(const String& fileName, std::string& bytes);
+	bool ExtractFile(const zip_int64_t& index, std::string& bytes);
 
 	String GetErrorString() const;
 
 private:
-	zip* archive = nullptr;
+	zip_t* archive = nullptr;
+
+	bool ReadAndCloseFile(zip_file_t* file, std::string& bytes) const;
 
 	String errorString;
 };

@@ -14,6 +14,7 @@
 const String GlobalKMLFetcher::userAgent(_T("eBirdDataProcessor"));
 const String GlobalKMLFetcher::gadmCountryURL(_T("http://www.gadm.org/country"));
 const String GlobalKMLFetcher::gadmDownloadPostURL(_T("http://www.gadm.org/download"));
+const bool GlobalKMLFetcher::verbose(false);
 
 GlobalKMLFetcher::GlobalKMLFetcher()
 {
@@ -145,8 +146,8 @@ bool GlobalKMLFetcher::DoGeneralCurlConfiguration()
 		return false;
 	}
 
-	/*if (verbose)
-		CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L), _T("Failed to set verbose output"));// Don't fail for this one*/
+	if (verbose)
+		CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_VERBOSE, 1L), _T("Failed to set verbose output"));// Don't fail for this one
 
 	/*if (!caCertificatePath.empty())
 		curl_easy_setopt(curl, CURLOPT_CAPATH, UString::ToNarrowString(caCertificatePath).c_str());*/

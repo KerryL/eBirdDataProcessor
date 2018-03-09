@@ -34,6 +34,7 @@ private:
 	static const String userAgent;
 	static const String gadmCountryURL;
 	static const String gadmDownloadPostURL;
+	static const bool verbose;
 
 	bool GetCountryListPage(String& html);
 	String BuildRequestString(const String& countryCode) const;
