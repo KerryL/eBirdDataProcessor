@@ -135,6 +135,7 @@
     <ClCompile Include="..\src\googleFusionTablesInterface.cpp" />
     <ClCompile Include="..\src\googleMapsInterface.cpp" />
     <ClCompile Include="..\src\kernelDensityEstimation.cpp" />
+    <ClCompile Include="..\src\kmlLibraryManager.cpp" />
     <ClCompile Include="..\src\mapPageGenerator.cpp" />
     <ClCompile Include="..\src\stringUtilities.cpp" />
     <ClCompile Include="..\src\threadPool.cpp" />
@@ -159,6 +160,7 @@
     <ClInclude Include="..\src\googleFusionTablesInterface.h" />
     <ClInclude Include="..\src\googleMapsInterface.h" />
     <ClInclude Include="..\src\kernelDensityEstimation.h" />
+    <ClInclude Include="..\src\kmlLibraryManager.h" />
     <ClInclude Include="..\src\mapPageGenerator.h" />
     <ClInclude Include="..\src\stringUtilities.h" />
     <ClInclude Include="..\src\threadPool.h" />

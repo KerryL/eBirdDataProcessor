@@ -60,6 +60,7 @@ public:
 		const String& mapApiKey, const String& eBirdApiKey) const;
 
 	bool FindBestLocationsForNeededSpecies(const String& frequencyFilePath,
+		const String& kmlLibraryPath,
 		const String& googleMapsKey, const String& eBirdAPIKey,
 		const String& clientId, const String& clientSecret) const;
 
@@ -184,6 +185,7 @@ private:
 		std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const;
 
 	static bool WriteBestLocationsViewerPage(const String& htmlFileName,
+		const String& kmlLibraryPath,
 		const String& googleMapsKey, const String& eBirdAPIKey,
 		const std::vector<YearFrequencyInfo>& observationProbabilities,
 		const String& clientId, const String& clientSecret);

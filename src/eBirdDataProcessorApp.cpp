@@ -100,7 +100,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	else if (configFile.GetConfig().findMaxNeedsLocations)
 	{
 		if (!processor.FindBestLocationsForNeededSpecies(
-			configFile.GetConfig().frequencyFilePath,
+			configFile.GetConfig().frequencyFilePath, configFile.GetConfig().kmlLibraryPath,
 			configFile.GetConfig().googleMapsAPIKey, configFile.GetConfig().eBirdApiKey,
 			configFile.GetConfig().oAuthClientId, configFile.GetConfig().oAuthClientSecret))
 			return 1;

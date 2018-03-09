@@ -7,6 +7,7 @@
 #ifndef GLOBAL_KML_FETCHER_H_
 
 // Local headers
+#include "throttledSection.h"
 #include "utilities/uString.h"
 
 // Standard C++ headers
@@ -36,6 +37,9 @@ private:
 	static const String gadmDownloadPostURL;
 	static const bool verbose;
 
+	static const ThrottledSection::Clock::duration gadmCrawlDelay;
+	ThrottledSection rateLimiter;
+
 	bool GetCountryListPage(String& html);
 	String BuildRequestString(const String& countryCode) const;
 
@@ -46,7 +50,7 @@ private:
 	struct curl_slist* headerList = nullptr;
 	bool DoGeneralCurlConfiguration();
 	bool DoCURLGet(const String& url, std::string &response);
-	bool DoCURLPost(const String &url, const std::string &data, std::string &response) const;
+	bool DoCURLPost(const String &url, const std::string &data, std::string &response);
 	static size_t CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData);
 };
 

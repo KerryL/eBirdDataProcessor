@@ -16,7 +16,12 @@ const String GlobalKMLFetcher::gadmCountryURL(_T("http://www.gadm.org/country"))
 const String GlobalKMLFetcher::gadmDownloadPostURL(_T("http://www.gadm.org/download"));
 const bool GlobalKMLFetcher::verbose(false);
 
-GlobalKMLFetcher::GlobalKMLFetcher()
+using namespace std::chrono_literals;
+// crawl delay determined by manually visiting www.gadm.org/robots.txt - should periodically
+// check this to make sure we comply, or we should include a robots.txt parser here to automatically update
+const ThrottledSection::Clock::duration GlobalKMLFetcher::gadmCrawlDelay(std::chrono::steady_clock::duration(10s));
+
+GlobalKMLFetcher::GlobalKMLFetcher() : rateLimiter(gadmCrawlDelay)
 {
 	DoGeneralCurlConfiguration();
 }
@@ -196,12 +201,13 @@ bool GlobalKMLFetcher::DoCURLGet(const String& url, std::string &response)
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_URL, UString::ToNarrowString(url).c_str()), _T("Failed to set URL")))
 		return false;
 
+	rateLimiter.Wait();
 	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), _T("Failed issuing https GET")))
 		return false;
 	return true;
 }
 
-bool GlobalKMLFetcher::DoCURLPost(const String &url, const std::string &data, std::string &response) const
+bool GlobalKMLFetcher::DoCURLPost(const String &url, const std::string &data, std::string &response)
 {
 	assert(curl);
 
@@ -218,6 +224,7 @@ bool GlobalKMLFetcher::DoCURLPost(const String &url, const std::string &data, st
 	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.length()), _T("Failed to assign data size")))
 		return false;
 
+	rateLimiter.Wait();
 	curl_easy_setopt(curl, CURLOPT_URL, UString::ToNarrowString(url).c_str());
 	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), _T("Failed issuing https POST")))
 		return false;

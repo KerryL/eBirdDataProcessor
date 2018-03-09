@@ -88,6 +88,7 @@ struct EBDPConfig
 	String eBirdApiKey;
 
 	bool findMaxNeedsLocations;
+	String kmlLibraryPath;
 
 	String oAuthClientId;
 	String oAuthClientSecret;

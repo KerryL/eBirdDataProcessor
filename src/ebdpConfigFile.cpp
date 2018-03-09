@@ -51,6 +51,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("EBIRD_API_KEY"), config.eBirdApiKey);
 
 	AddConfigItem(_T("FIND_MAX_NEEDS"), config.findMaxNeedsLocations);
+	AddConfigItem(_T("KML_LIBRARY"), config.kmlLibraryPath);
 
 	AddConfigItem(_T("OAUTH_CLIENT_ID"), config.oAuthClientId);
 	AddConfigItem(_T("OAUTH_CLIENT_SECRET"), config.oAuthClientSecret);
@@ -191,6 +192,12 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 	{
 		Cerr << GetKey(config.findMaxNeedsLocations) << " requires "
 			<< GetKey(config.oAuthClientId) << " and " << GetKey(config.oAuthClientSecret) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.findMaxNeedsLocations && config.kmlLibraryPath.empty())
+	{
+		Cerr << GetKey(config.findMaxNeedsLocations) << " requires " << GetKey(config.kmlLibraryPath) << '\n';
 		configurationOK = false;
 	}
 

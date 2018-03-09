@@ -43,7 +43,8 @@ const unsigned int MapPageGenerator::columnCount(42);
 const unsigned int MapPageGenerator::importCellCountLimit(100000);
 const unsigned int MapPageGenerator::importSizeLimit(1024 * 1024);// 1 MB
 
-MapPageGenerator::MapPageGenerator() : mapsAPIRateLimiter(mapsAPIMinDuration), fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration)
+MapPageGenerator::MapPageGenerator(const String& kmlLibraryPath) : mapsAPIRateLimiter(mapsAPIMinDuration),
+	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), kmlLibrary(kmlLibraryPath)
 {
 }
 
@@ -310,16 +311,11 @@ bool MapPageGenerator::CreateFusionTable(
 		return true;
 	}
 
-	Cout << "Retrieving geometry data" << std::endl;
-	std::vector<CountyGeometry> geometry;
-	if (!GetCountyGeometry(fusionTables, geometry))
-		return false;
-
 	Cout << "Retrieving county location data" << std::endl;
 	EBirdInterface ebi(keys.eBirdAPIKey);
 	const auto countryCodes(GetCountryCodeList(observationProbabilities));
 	for (const auto& c : countryCodes)
-		countryRegionInfoMap[c] = ebi.GetSubRegions(c, EBirdInterface::RegionType::SubNational2);
+		countryRegionInfoMap[c] = ebi.GetSubRegions(c, EBirdInterface::RegionType::SubNational2);// TODO:  Sometimes, we want sub-national 1 instead
 
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
@@ -331,9 +327,9 @@ bool MapPageGenerator::CreateFusionTable(
 		countyIt->code = entry.locationCode;
 
 		const auto& nameLookupData(countryRegionInfoMap.find(entry.locationCode.substr(0, 2))->second);
-		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, geometry, nameLookupData))
+		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, kmlLibrary, nameLookupData))
 			pool.AddJob(std::make_unique<MapJobInfo>(
-				*countyIt, entry, nameLookupData, geometry, *this));
+				*countyIt, entry, nameLookupData, kmlLibrary, *this));
 
 		++countyIt;
 	}
@@ -866,7 +862,7 @@ bool MapPageGenerator::ProbabilityDataHasChanged(
 
 bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 	const std::vector<CountyInfo>& existingData, CountyInfo& newData,
-	const std::vector<CountyGeometry>& geometry, const std::vector<EBirdInterface::RegionInfo>& regionInfo)
+	KMLLibraryManager& kmlLibrary, const std::vector<EBirdInterface::RegionInfo>& regionInfo)
 {
 	for (const auto& existing : existingData)
 	{
@@ -898,7 +894,7 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 			newData.geometryKML = std::move(existing.geometryKML);
 
 			if (newData.geometryKML.empty())
-				LookupAndAssignKML(geometry, newData);
+				LookupAndAssignKML(kmlLibrary, newData);
 
 			assert(!newData.state.empty() && !newData.country.empty() && !newData.county.empty() && !newData.name.empty() && !newData.code.empty());
 			return true;
@@ -913,27 +909,9 @@ String MapPageGenerator::AssembleCountyName(const String& country, const String&
 	return county + _T(", ") + state + _T(", ") + country;
 }
 
-String MapPageGenerator::BuildUSLocationCode(const String& state, const String& countyNumber)
+void MapPageGenerator::LookupAndAssignKML(KMLLibraryManager& kmlLibrary, CountyInfo& data)
 {
-	IStringStream iss(countyNumber);
-	unsigned int countyNumberInt;
-	iss >> countyNumberInt;// TODO:  Check for failure?
-	OStringStream oss;
-	oss << "US-" << state << '-' << std::setfill(Char('0')) << std::setw(3) << countyNumberInt;
-	return oss.str();
-}
-
-void MapPageGenerator::LookupAndAssignKML(const std::vector<CountyGeometry>& geometry, CountyInfo& data)
-{
-	for (const auto& g : geometry)
-	{
-		if (g.code.compare(data.code) == 0)
-		{
-			data.geometryKML = g.kml;
-			break;
-		}
-	}
-
+	data.geometryKML = kmlLibrary.GetKML(data.country, data.state, data.county);
 	if (data.geometryKML.empty())
 		Cerr << "\rWarning:  Geometry not found for '" << data.code << "'\n";
 }
@@ -953,7 +931,7 @@ void MapPageGenerator::MapJobInfo::DoJob()
 	}
 
 	assert(!info.state.empty() && !info.country.empty() && !info.county.empty() && !info.name.empty() && !info.code.empty());
-	LookupAndAssignKML(geometry, info);
+	LookupAndAssignKML(kmlLibrary, info);
 }
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
@@ -1081,58 +1059,6 @@ MapPageGenerator::Color MapPageGenerator::ColorFromHSV(
 		return Color(x + m, m, c + m);
 	//else if (hue < 6.0 / 6.0)
 		return Color(c + m, m, x + m);
-}
-
-bool MapPageGenerator::GetCountyGeometry(GoogleFusionTablesInterface& fusionTables,
-	std::vector<CountyGeometry>& geometry)
-{
-	// TODO:  Instead of this, maybe ask user to download kmz files from http://www.gadm.org/country (or download automatically if missing?)
-	// Then, unzip, parse file to find matching placemark names
-	// Would need user to specify kmz directory
-	const String usCountyBoundaryTableId(_T("1xdysxZ94uUFIit9eXmnw1fYc6VcQiXhceFd_CVKa"));
-	const String query(_T("SELECT 'State Abbr','COUNTY num',geometry FROM ") + usCountyBoundaryTableId + _T("&typed=false"));
-	cJSON* root;
-	if (!fusionTables.SubmitQuery(query, root))
-		return false;
-
-	cJSON* rowsArray(cJSON_GetObjectItem(root, "rows"));
-	if (!rowsArray)
-	{
-		Cerr << "Failed to get rows array\n";
-		cJSON_Delete(root);
-		return false;// Unlike other cases, we DO want to fail on this case, because this response should never be empty
-	}
-
-	geometry.resize(cJSON_GetArraySize(rowsArray));
-	unsigned int i(0);
-	for (auto& g : geometry)
-	{
-		cJSON* item(cJSON_GetArrayItem(rowsArray, i));
-		if (!item)
-		{
-			Cerr << "Failed to get array item " << i << '\n';
-			cJSON_Delete(root);
-			return false;
-		}
-
-		cJSON* state(cJSON_GetArrayItem(item, 0));
-		cJSON* county(cJSON_GetArrayItem(item, 1));
-		cJSON* kml(cJSON_GetArrayItem(item, 2));
-		if (!state || !county || !kml)
-		{
-			Cerr << "Failed to get row information for row " << i << '\n';
-			cJSON_Delete(root);
-			return false;
-		}
-
-		g.code = BuildUSLocationCode(UString::ToStringType(state->valuestring), UString::ToStringType(county->valuestring));
-		g.kml = UString::ToStringType(kml->valuestring);
-
-		++i;
-	}
-
-	cJSON_Delete(root);
-	return true;
 }
 
 bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,

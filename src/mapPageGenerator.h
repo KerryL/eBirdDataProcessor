@@ -11,6 +11,7 @@
 #include "googleFusionTablesInterface.h"
 #include "threadPool.h"
 #include "throttledSection.h"
+#include "kmlLibraryManager.h"
 #include "utilities/uString.h"
 
 // Standard C++ headers
@@ -19,7 +20,7 @@
 class MapPageGenerator
 {
 public:
-	MapPageGenerator();
+	MapPageGenerator(const String& kmlLibraryPath);
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
 	bool WriteBestLocationsViewerPage(const String& htmlFileName,
@@ -109,11 +110,13 @@ private:
 		unsigned int rowId = 0;
 	};
 
-	struct CountyGeometry
+	struct RegionGeometry
 	{
 		String code;
 		String kml;
 	};
+
+	KMLLibraryManager kmlLibrary;
 
 	static bool GetExistingCountyData(std::vector<CountyInfo>& data,
 		GFTI& fusionTables, const String& tableId);
@@ -125,14 +128,14 @@ private:
 		std::vector<CountyInfo>& existingData, std::vector<ObservationInfo>& newData);
 	static bool CopyExistingDataForCounty(const ObservationInfo& entry,
 		const std::vector<CountyInfo>& existingData, CountyInfo& newData,
-		const std::vector<CountyGeometry>& geometry,
+		KMLLibraryManager& kmlLibrary,
 		const std::vector<EBirdInterface::RegionInfo>& regionInfo);
 	static std::vector<ObservationInfo>::const_iterator NewDataIncludesMatchForCounty(
 		const std::vector<ObservationInfo>& newData, const CountyInfo& county);
 	static bool ProbabilityDataHasChanged(const ObservationInfo& newData, const CountyInfo& existingData);
 	static std::vector<unsigned int> FindDuplicatesAndBlanksToRemove(std::vector<CountyInfo>& existingData);
 
-	static void LookupAndAssignKML(const std::vector<CountyGeometry>& geometry, CountyInfo& data);
+	static void LookupAndAssignKML(KMLLibraryManager& kmlLibrary, CountyInfo& data);
 
 	template<typename T>
 	static bool Read(cJSON* item, T& value);
@@ -146,27 +149,23 @@ private:
 
 	static GFTI::TableInfo BuildTableLayout();
 
-	static bool GetCountyGeometry(GoogleFusionTablesInterface& fusionTables, std::vector<CountyGeometry>& geometry);
-
 	struct MapJobInfo : public ThreadPool::JobInfoBase
 	{
 		MapJobInfo() = default;
 		MapJobInfo(CountyInfo& info, const ObservationInfo& frequencyInfo,
-			const std::vector<EBirdInterface::RegionInfo>& regionNames, const std::vector<CountyGeometry>& geometry,
+			const std::vector<EBirdInterface::RegionInfo>& regionNames, KMLLibraryManager& kmlLibrary,
 			MapPageGenerator& mpg)
 			: info(info), frequencyInfo(frequencyInfo), regionNames(regionNames),
-			geometry(geometry), mpg(mpg) {}
+			kmlLibrary(kmlLibrary), mpg(mpg) {}
 
 		CountyInfo& info;
 		const ObservationInfo& frequencyInfo;
 		const std::vector<EBirdInterface::RegionInfo>& regionNames;
-		const std::vector<CountyGeometry>& geometry;
+		KMLLibraryManager& kmlLibrary;
 		MapPageGenerator& mpg;
 
 		void DoJob() override;
 	};
-
-	static String BuildUSLocationCode(const String& state, const String& countyNumber);
 
 	std::map<String, std::vector<EBirdInterface::RegionInfo>> countryRegionInfoMap;
 
