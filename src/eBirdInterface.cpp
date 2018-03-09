@@ -477,6 +477,19 @@ String EBirdInterface::GetUserInputOnResponse(const String& s, const String& fie
 std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 	const String& regionCode, const RegionType& type)
 {
+	if (type == RegionType::MostDetailAvailable)
+	{
+		auto sn2(GetSubRegions(regionCode, RegionType::SubNational2));
+		if (!sn2.empty())
+			return sn2;
+
+		auto sn1(GetSubRegions(regionCode, RegionType::SubNational1));
+		if (!sn1.empty())
+			return sn1;
+
+		return GetSubRegions(regionCode, RegionType::Country);
+	}
+
 	const String regionTypeString([&type]()
 	{
 		if (type == RegionType::Country)

@@ -71,7 +71,8 @@ public:
 	{
 		Country,
 		SubNational1,
-		SubNational2
+		SubNational2,
+		MostDetailAvailable
 	};
 
 	std::vector<RegionInfo> GetSubRegions(const String& regionCode, const RegionType& type);

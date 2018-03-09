@@ -315,7 +315,7 @@ bool MapPageGenerator::CreateFusionTable(
 	EBirdInterface ebi(keys.eBirdAPIKey);
 	const auto countryCodes(GetCountryCodeList(observationProbabilities));
 	for (const auto& c : countryCodes)
-		countryRegionInfoMap[c] = ebi.GetSubRegions(c, EBirdInterface::RegionType::SubNational2);// TODO:  Sometimes, we want sub-national 1 instead
+		countryRegionInfoMap[c] = ebi.GetSubRegions(c, EBirdInterface::RegionType::MostDetailAvailable);
 
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
