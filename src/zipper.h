@@ -20,8 +20,12 @@ class Zipper
 public:
 	~Zipper();
 
+	bool CreateArchiveFile(const String& fileName);
+	bool CreateArchiveBytes(const std::string& bytes);
+
 	bool OpenArchiveFile(const String& fileName);
 	bool OpenArchiveBytes(const std::string& bytes);
+
 	void CloseArchive();
 	bool ArchiveIsOpen() const { return archive != nullptr; }
 
@@ -29,6 +33,8 @@ public:
 
 	bool ExtractFile(const String& fileName, std::string& bytes);
 	bool ExtractFile(const zip_int64_t& index, std::string& bytes);
+
+	bool AddFile(const String& fileNameInArchive, std::string& bytes);
 
 	String GetErrorString() const;
 
@@ -38,6 +44,9 @@ private:
 	bool ReadAndCloseFile(zip_file_t* file, std::string& bytes) const;
 
 	String errorString;
+
+	bool OpenArchiveFile(const String& fileName, const int& flags);
+	bool OpenArchiveBytes(const std::string& bytes, const int& flags);
 };
 
 #endif// ZIPPER_H_

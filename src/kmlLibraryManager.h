@@ -29,6 +29,10 @@ private:
 	bool DownloadAndStoreKML(const String& country, const GlobalKMLFetcher::DetailLevel& detailLevel);
 
 	static String BuildLocationIDString(const String& country, const String& subNational1, const String& subNational2);
+	static String BuildSubNationalIDString(const String& subNational1, const String& subNational2);
+
+	static void CleanUpLineEndings(std::string& s);
+	static void ReplaceAllInstancesWith(std::string& s, const std::string& oldString, const std::string& newString);
 };
 
 #endif// KML_LIBRARY_MANAGER_H_

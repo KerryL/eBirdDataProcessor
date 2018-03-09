@@ -56,8 +56,7 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country)
 {
 	Zipper z;
 	const String archiveFileName(country + _T(".kmz"));
-	z.OpenArchiveFile(archiveFileName);
-	if (!z.ArchiveIsOpen())
+	if (!z.OpenArchiveFile(archiveFileName))
 	{
 		Cerr << "Failed to open '" << archiveFileName << "' for input\n";
 		return false;
@@ -69,8 +68,6 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country)
 
 	// TODO:  Parse bytes and store in hash table
 	// Need to split on each <placemark> tag set
-	// Hmm, looks like downloaded files do NOT inlcude more information than just region name (i.e. no super-region ID).
-	// Maybe need to do something fancy and complicated to get multiple levels and compare lat/lon points to determine super-region?
 
 	return false;
 }
@@ -83,6 +80,45 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	std::string result;
 	fetcher.FetchKML(country, detailLevel, result);
 
+	Zipper z;
+	if (!z.OpenArchiveBytes(result))
+	{
+		Cerr << "Failed to open kmz data\n";
+		return false;
+	}
+
+	std::string unzippedKML;
+	if (!z.ExtractFile(0, unzippedKML))
+	{
+		Cerr << "Failed to extract file from kmz archive\n";
+		return false;
+	}
+
+	z.CloseArchive();
+	CleanUpLineEndings(unzippedKML);
+
+	if (detailLevel == GlobalKMLFetcher::DetailLevel::SubNational2)
+	{
+		// TODO:  Need extra processing here
+		// Hmm, looks like downloaded files do NOT inlcude more information than just region name (i.e. no super-region ID).
+		// Maybe need to do something fancy and complicated to get multiple levels and compare lat/lon points to determine super-region?
+		// Use BuildSubNationalIDString() to create strings for placemark tags
+		// Would be good to have eBirds sub-region list here, so we know which super-regions need to be checked (and skip the check if name is unique)
+	}
+
+	std::string zippedModifiedKML;
+	if (z.CreateArchiveBytes(zippedModifiedKML))
+	{
+		Cerr << "Failed to create kmz archive\n";
+		return false;
+	}
+
+	if (!z.AddFile(country + _T(".kml"), unzippedKML))
+	{
+		Cerr << "Failed to add kml data to archive\n";
+		return false;
+	}
+
 	const String fileName(libraryPath + country + _T(".kmz"));
 	std::ofstream file(UString::ToNarrowString(fileName).c_str(), std::ios::binary);
 	if (!file.is_open() || !file.good())
@@ -91,12 +127,31 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 		return false;
 	}
 
-	return !(file << result).fail();
+	return !(file << zippedModifiedKML).fail();
 }
 
 String KMLLibraryManager::BuildLocationIDString(const String& country,
 	const String& subNational1, const String& subNational2)
 {
-	// TODO:  Implement
-	return String();
+	return country + _T(":") + BuildSubNationalIDString(subNational1, subNational2);
+}
+
+String KMLLibraryManager::BuildSubNationalIDString(const String& subNational1, const String& subNational2)
+{
+	if (subNational2.empty())
+		return subNational1;
+	return subNational1 + _T(":") + subNational2;
+}
+
+void KMLLibraryManager::CleanUpLineEndings(std::string& s)
+{
+	ReplaceAllInstancesWith(s, "\r\n", "\n");
+	ReplaceAllInstancesWith(s, "\r", "\n");
+}
+
+void KMLLibraryManager::ReplaceAllInstancesWith(std::string& s, const std::string& oldString, const std::string& newString)
+{
+	std::string::size_type next(0);
+	while (next = s.find(oldString, next), next != std::string::npos)
+		s.replace(next, 1, newString);
 }
