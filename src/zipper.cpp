@@ -152,11 +152,11 @@ bool Zipper::CreateArchiveFile(const String& fileName)
 	return OpenArchiveFile(fileName, ZIP_CREATE | ZIP_EXCL);
 }
 
-bool Zipper::CreateArchiveBytes(const std::string& bytes)
+/*bool Zipper::CreateArchiveBytes(const std::string& bytes)
 {
 	writeChanges = true;
 	return OpenArchiveBytes(bytes, ZIP_CREATE);
-}
+}*/
 
 bool Zipper::OpenArchiveFile(const String& fileName, const int& flags)
 {

@@ -21,7 +21,7 @@ public:
 	~Zipper();
 
 	bool CreateArchiveFile(const String& fileName);
-	bool CreateArchiveBytes(const std::string& bytes);
+	//bool CreateArchiveBytes(const std::string& bytes);// Currently not working, so removed from interface
 
 	bool OpenArchiveFile(const String& fileName);
 	bool OpenArchiveBytes(const std::string& bytes);

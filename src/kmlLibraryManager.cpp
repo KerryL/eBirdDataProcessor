@@ -95,7 +95,6 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	}
 
 	z.CloseArchive();
-	//CleanUpLineEndings(unzippedKML);
 
 	if (detailLevel == GlobalKMLFetcher::DetailLevel::SubNational2)
 	{
@@ -107,7 +106,6 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	}
 
 	std::string zippedModifiedKML;
-	//if (!z.CreateArchiveBytes(zippedModifiedKML))
 	if (!z.CreateArchiveFile(_T("test")))
 	{
 		Cerr << "Failed to create kmz archive\n";
@@ -121,16 +119,6 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	}
 
 	return z.CloseArchive();
-
-	const String fileName(libraryPath + country + _T(".kmz"));
-	std::ofstream file(UString::ToNarrowString(fileName).c_str(), std::ios::binary);
-	if (!file.is_open() || !file.good())
-	{
-		Cerr << "Failed to open '" << fileName << "' for output\n";
-		return false;
-	}
-
-	return !(file << zippedModifiedKML).fail();
 }
 
 String KMLLibraryManager::BuildLocationIDString(const String& country,
@@ -144,18 +132,4 @@ String KMLLibraryManager::BuildSubNationalIDString(const String& subNational1, c
 	if (subNational2.empty())
 		return subNational1;
 	return subNational1 + _T(":") + subNational2;
-}
-
-void KMLLibraryManager::CleanUpLineEndings(std::string& s)
-{
-	ReplaceAllInstancesWith(s, "\r\n", "\n");
-	ReplaceAllInstancesWith(s, "\r", "\n");
-}
-
-void KMLLibraryManager::ReplaceAllInstancesWith(std::string& s, const std::string& oldString, const std::string& newString)
-{
-	const int t(sizeof(std::string::size_type));
-	std::string::size_type next(0);
-	while (next = s.find(oldString, next), next != std::string::npos)
-		s.replace(next, oldString.length(), newString);
 }
