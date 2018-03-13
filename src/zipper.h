@@ -26,7 +26,7 @@ public:
 	bool OpenArchiveFile(const String& fileName);
 	bool OpenArchiveBytes(const std::string& bytes);
 
-	void CloseArchive();
+	bool CloseArchive();
 	bool ArchiveIsOpen() const { return archive != nullptr; }
 
 	std::vector<String> ListContents() const;
@@ -40,6 +40,7 @@ public:
 
 private:
 	zip_t* archive = nullptr;
+	bool writeChanges = false;
 
 	bool ReadAndCloseFile(zip_file_t* file, std::string& bytes) const;
 

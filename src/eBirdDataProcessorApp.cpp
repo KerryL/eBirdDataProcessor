@@ -30,6 +30,8 @@ int main(int argc, char *argv[])
 	return app.Run(argc, argv);
 }
 
+#include "eBirdInterface.h"
+#include "kmlLibraryManager.h"
 int EBirdDataProcessorApp::Run(int argc, char *argv[])
 {
 	if (argc != 2)
@@ -42,6 +44,16 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	EBDPConfigFile configFile;
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
+
+	const String country(_T("Japan"));
+	EBirdInterface ebi(configFile.GetConfig().eBirdApiKey);
+	const auto countryCode(ebi.GetCountryCode(country));
+	const auto r(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::MostDetailAvailable));
+	KMLLibraryManager kml(configFile.GetConfig().kmlLibraryPath);
+	if (/*type == EBirdInterface::RegionType::SubNational1*/true)
+		kml.GetKML(country, r.front().name, String());
+	/*else if (type == EBirdInterface::RegionType::SubNational2)
+		kml.GetKML(country, r.front().name, String());*/
 
 	EBirdDataProcessor processor;
 	if (!processor.Parse(configFile.GetConfig().dataFileName))

@@ -18,18 +18,32 @@ Zipper::~Zipper()
 
 bool Zipper::OpenArchiveFile(const String& fileName)
 {
+	writeChanges = false;
 	return OpenArchiveFile(fileName, ZIP_RDONLY);
 }
 
 bool Zipper::OpenArchiveBytes(const std::string& bytes)
 {
+	writeChanges = false;
 	return OpenArchiveBytes(bytes, ZIP_RDONLY);
 }
 
-void Zipper::CloseArchive()
+bool Zipper::CloseArchive()
 {
 	assert(archive && "Archive not yet open");
+
+	if (writeChanges)
+	{
+		if (zip_close(archive) == 0)
+		{
+			archive = nullptr;
+			return true;
+		}
+	}
+
 	zip_discard(archive);
+	archive = nullptr;
+	return false;
 }
 
 String Zipper::GetErrorString() const
@@ -134,11 +148,13 @@ bool Zipper::ReadAndCloseFile(zip_file_t* file, std::string& bytes) const
 
 bool Zipper::CreateArchiveFile(const String& fileName)
 {
+	writeChanges = true;
 	return OpenArchiveFile(fileName, ZIP_CREATE | ZIP_EXCL);
 }
 
 bool Zipper::CreateArchiveBytes(const std::string& bytes)
 {
+	writeChanges = true;
 	return OpenArchiveBytes(bytes, ZIP_CREATE);
 }
 
