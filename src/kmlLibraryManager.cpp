@@ -66,10 +66,57 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country)
 	if (!z.ExtractFile(0, bytes))
 		Cerr << "Failed to extract kml file from '" << archiveFileName << "':  " << z.GetErrorString() << '\n';
 
-	// TODO:  Parse bytes and store in hash table
-	// Need to split on each <placemark> tag set
+	std::unordered_map<String, String> tempMap;
 
-	return false;
+	const String placemarkStartTag(_T("<Placemark>"));
+	String countryKMLData(UString::ToStringType(bytes));
+	std::string::size_type next(0);
+	while (next = countryKMLData.find(placemarkStartTag, next), next != std::string::npos)
+	{
+		const String placemarkEndTag(_T("</Placemark>"));
+		const std::string::size_type placemarkEnd(countryKMLData.find(placemarkEndTag, next));
+		if (placemarkEnd == std::string::npos)
+		{
+			Cerr << "Failed to find expected placemark end tag\n";
+			return false;
+		}
+
+		// NOTE:  Possibly need to search for <Polygon> tag if <MultiGeometry> is not found.
+		// I think <MultiGeometry> is only necessary if there are multiple polygons, although
+		// gadm.org seems to wrap all polygon tags in multigeometry tags, so for now we'll
+		// leave this.
+		const String geometryStartTag(_T("<MultiGeometry>"));
+		const std::string::size_type geometryStart(countryKMLData.find(geometryStartTag, next));
+		if (geometryStart == std::string::npos)
+		{
+			Cerr << "Failed to find geometry start tag\n";
+			return false;
+		}
+
+		const String geometryEndTag(_T("</MultiGeometry>"));
+		const std::string::size_type geometryEnd(countryKMLData.find(geometryEndTag, geometryStart));
+		if (geometryEnd == std::string::npos)
+		{
+			Cerr << "Failed to find geometry end tag\n";
+			return false;
+		}
+
+		const String name(ExtractName(countryKMLData, next));
+		if (name.empty())
+		{
+			Cerr << "Failed to extract placemark name from KML data\n";
+			return false;
+		}
+
+		tempMap[country + _T(":") + name] = countryKMLData.substr(geometryStart, geometryEnd - geometryStart + geometryEndTag.length());
+
+		next = placemarkEnd;
+	}
+
+	//kmlMemory.merge(std::move(tempMap));// required C++ 17
+	kmlMemory.insert(tempMap.begin(), tempMap.end());
+
+	return true;
 }
 
 // Download by country
@@ -132,4 +179,19 @@ String KMLLibraryManager::BuildSubNationalIDString(const String& subNational1, c
 	if (subNational2.empty())
 		return subNational1;
 	return subNational1 + _T(":") + subNational2;
+}
+
+String KMLLibraryManager::ExtractName(const String& kmlData, const std::string::size_type& offset)
+{
+	const String nameStartTag(_T("<name>"));
+	const String nameEndTag(_T("</name>"));
+	const auto nameStart(kmlData.find(nameStartTag, offset));
+	if (nameStart == std::string::npos)
+		return String();
+
+	const auto nameEnd(kmlData.find(nameEndTag, nameStart));
+	if (nameEnd == std::string::npos)
+		return String();
+
+	return kmlData.substr(nameStart + nameStartTag.length(), nameEnd - nameStart - nameStartTag.length());
 }
