@@ -7,7 +7,8 @@
 #include "kmlLibraryManager.h"
 #include "zipper.h"
 
-KMLLibraryManager::KMLLibraryManager(const String& libraryPath) : libraryPath(libraryPath)
+KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
+	const String& eBirdAPIKey) : libraryPath(libraryPath), ebi(eBirdAPIKey)
 {
 }
 
@@ -67,53 +68,11 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country)
 		Cerr << "Failed to extract kml file from '" << archiveFileName << "':  " << z.GetErrorString() << '\n';
 
 	std::unordered_map<String, String> tempMap;
+	GeometryExtractionArguments args(country, tempMap);
+	if (!ForEachPlacemarkTag(UString::ToStringType(bytes), ExtractRegionGeometry, args))
+		return false;
 
-	const String placemarkStartTag(_T("<Placemark>"));
-	String countryKMLData(UString::ToStringType(bytes));
-	std::string::size_type next(0);
-	while (next = countryKMLData.find(placemarkStartTag, next), next != std::string::npos)
-	{
-		const String placemarkEndTag(_T("</Placemark>"));
-		const std::string::size_type placemarkEnd(countryKMLData.find(placemarkEndTag, next));
-		if (placemarkEnd == std::string::npos)
-		{
-			Cerr << "Failed to find expected placemark end tag\n";
-			return false;
-		}
-
-		// NOTE:  Possibly need to search for <Polygon> tag if <MultiGeometry> is not found.
-		// I think <MultiGeometry> is only necessary if there are multiple polygons, although
-		// gadm.org seems to wrap all polygon tags in multigeometry tags, so for now we'll
-		// leave this.
-		const String geometryStartTag(_T("<MultiGeometry>"));
-		const std::string::size_type geometryStart(countryKMLData.find(geometryStartTag, next));
-		if (geometryStart == std::string::npos)
-		{
-			Cerr << "Failed to find geometry start tag\n";
-			return false;
-		}
-
-		const String geometryEndTag(_T("</MultiGeometry>"));
-		const std::string::size_type geometryEnd(countryKMLData.find(geometryEndTag, geometryStart));
-		if (geometryEnd == std::string::npos)
-		{
-			Cerr << "Failed to find geometry end tag\n";
-			return false;
-		}
-
-		const String name(ExtractName(countryKMLData, next));
-		if (name.empty())
-		{
-			Cerr << "Failed to extract placemark name from KML data\n";
-			return false;
-		}
-
-		tempMap[country + _T(":") + name] = countryKMLData.substr(geometryStart, geometryEnd - geometryStart + geometryEndTag.length());
-
-		next = placemarkEnd;
-	}
-
-	//kmlMemory.merge(std::move(tempMap));// required C++ 17
+	//kmlMemory.merge(std::move(tempMap));// requires C++ 17 - not sure if there's any reason to prefer it over line below
 	kmlMemory.insert(tempMap.begin(), tempMap.end());
 
 	return true;
@@ -145,11 +104,11 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 
 	if (detailLevel == GlobalKMLFetcher::DetailLevel::SubNational2)
 	{
-		// TODO:  Need extra processing here
-		// Hmm, looks like downloaded files do NOT inlcude more information than just region name (i.e. no super-region ID).
-		// Maybe need to do something fancy and complicated to get multiple levels and compare lat/lon points to determine super-region?
-		// Use BuildSubNationalIDString() to create strings for placemark tags
-		// Would be good to have eBirds sub-region list here, so we know which super-regions need to be checked (and skip the check if name is unique)
+		String modifiedKML;
+		ParentRegionFinderArguments args(country, modifiedKML, *this);
+		if (!ForEachPlacemarkTag(UString::ToStringType(unzippedKML), FixPlacemarkNames, args))
+			return false;
+		unzippedKML = UString::ToNarrowString(modifiedKML);
 	}
 
 	std::string zippedModifiedKML;
@@ -194,4 +153,158 @@ String KMLLibraryManager::ExtractName(const String& kmlData, const std::string::
 		return String();
 
 	return kmlData.substr(nameStart + nameStartTag.length(), nameEnd - nameStart - nameStartTag.length());
+}
+
+bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
+	PlacemarkFunction func, const AdditionalArguments& args)
+{
+	const String placemarkStartTag(_T("<Placemark>"));
+	std::string::size_type next(0);
+	while (next = kmlData.find(placemarkStartTag, next), next != std::string::npos)
+	{
+		const String placemarkEndTag(_T("</Placemark>"));
+		const std::string::size_type placemarkEnd(kmlData.find(placemarkEndTag, next));
+		if (placemarkEnd == std::string::npos)
+		{
+			Cerr << "Failed to find expected placemark end tag\n";
+			return false;
+		}
+
+		if (!func(kmlData, next, args))
+			return false;
+
+		next = placemarkEnd;
+	}
+
+	return true;
+}
+
+bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
+	const std::string::size_type& offset, const AdditionalArguments& args)
+{
+	// NOTE:  Possibly need to search for <Polygon> tag if <MultiGeometry> is not found.
+	// I think <MultiGeometry> is only necessary if there are multiple polygons, although
+	// gadm.org seems to wrap all polygon tags in multigeometry tags, so for now we'll
+	// leave this.
+	const String geometryStartTag(_T("<MultiGeometry>"));
+	const std::string::size_type geometryStart(kmlData.find(geometryStartTag, offset));
+	if (geometryStart == std::string::npos)
+	{
+		Cerr << "Failed to find geometry start tag\n";
+		return false;
+	}
+
+	const String geometryEndTag(_T("</MultiGeometry>"));
+	const std::string::size_type geometryEnd(kmlData.find(geometryEndTag, geometryStart));
+	if (geometryEnd == std::string::npos)
+	{
+		Cerr << "Failed to find geometry end tag\n";
+		return false;
+	}
+
+	const String name(ExtractName(kmlData, offset));
+	if (name.empty())
+	{
+		Cerr << "Failed to extract placemark name from KML data\n";
+		return false;
+	}
+
+	auto geometryArgs(static_cast<const GeometryExtractionArguments&>(args));
+	geometryArgs.tempMap[geometryArgs.countryName + _T(":") + name] =
+		kmlData.substr(geometryStart, geometryEnd - geometryStart + geometryEndTag.length());
+	return true;
+}
+
+bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
+	const std::string::size_type& offset, const AdditionalArguments& args)
+{
+	const String name(ExtractName(kmlData, offset));
+	const String placemarkNameString(CreatePlacemarkNameString(name));
+
+	auto placemarkArgs(static_cast<const ParentRegionFinderArguments&>(args));
+
+	String parentRegionName;
+	if (ContainsMoreThanOneMatch(kmlData, placemarkNameString))
+	{
+		if (placemarkArgs.self.LookupParentRegionName(parentRegionName))
+		{
+			Cerr << "Failed to find parent region name (geometry method)\n";
+			return false;
+		}
+	}
+	else
+	{
+		if (!placemarkArgs.self.LookupParentRegionName(placemarkArgs.countryName, name, parentRegionName))
+		{
+			Cerr << "Failed to find parent region name (unique name method)\n";
+			return false;
+		}
+	}
+
+	const String locationID(placemarkArgs.self.BuildSubNationalIDString(parentRegionName, name));
+	placemarkArgs.modifiedKML.append(kmlData.substr(placemarkArgs.sourceTellP, offset - placemarkArgs.sourceTellP) + CreatePlacemarkNameString(locationID));
+
+	const String endNameTag(_T("</name>"));
+	placemarkArgs.sourceTellP = kmlData.find(endNameTag, offset);
+	if (placemarkArgs.sourceTellP == std::string::npos)
+	{
+		Cerr << "Failed to find expected end name tag\n";
+		return false;
+	}
+	placemarkArgs.sourceTellP += endNameTag.length();
+
+	return true;
+}
+
+String KMLLibraryManager::CreatePlacemarkNameString(const String& name)
+{
+	return _T("<name>") + name + _T("</name>");
+}
+
+bool KMLLibraryManager::ContainsMoreThanOneMatch(const String& s, const String& pattern)
+{
+	auto location(s.find(pattern));
+	if (location == std::string::npos)
+		return false;
+
+	return s.find(pattern, location + 1) != std::string::npos;
+}
+
+bool KMLLibraryManager::LookupParentRegionName(const String& country, const String& subregion2Name, String& parentRegionName)
+{
+	if (subregion1Data.find(country) == subregion1Data.end())
+		subregion1Data[country] = ebi.GetSubRegions(ebi.GetCountryCode(country), EBirdInterface::RegionType::SubNational1);
+
+	if (subregion1Data[country].size() == 0)
+		return false;
+
+	const auto sr1List(subregion1Data[country]);
+	for (const auto& sr1 : sr1List)
+	{
+		const String indexString(BuildLocationIDString(country, sr1.name, String()));
+		if (subregion2Data.find(indexString) == subregion2Data.end())
+			subregion2Data[indexString] = ebi.GetSubRegions(sr1.code, EBirdInterface::RegionType::SubNational2);
+
+		const auto sr2List(subregion2Data[indexString]);
+		for (const auto& sr2 : sr2List)
+		{
+			if (sr2.name.compare(subregion2Name) == 0)
+			{
+				parentRegionName = sr1.name;
+				return true;
+			}
+		}
+	}
+
+	return false;
+}
+
+bool KMLLibraryManager::LookupParentRegionName(String& parentRegionName)
+{
+	// 1. Use eBird region names to identify candidate parent regions
+	// 2. Use bounding-box method to reduce number of possible candidates
+	// 3. If # candidates > 1: (also check if 0 error)
+	// 4.   Use ray-casting to check if a point (any random point from within child kml?) is within parent
+
+	return false;
 }

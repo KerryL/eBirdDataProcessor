@@ -20,7 +20,7 @@
 class MapPageGenerator
 {
 public:
-	MapPageGenerator(const String& kmlLibraryPath);
+	MapPageGenerator(const String& kmlLibraryPath, const String& eBirdAPIKey);
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
 	bool WriteBestLocationsViewerPage(const String& htmlFileName,

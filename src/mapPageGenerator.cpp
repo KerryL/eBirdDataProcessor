@@ -43,8 +43,8 @@ const unsigned int MapPageGenerator::columnCount(42);
 const unsigned int MapPageGenerator::importCellCountLimit(100000);
 const unsigned int MapPageGenerator::importSizeLimit(1024 * 1024);// 1 MB
 
-MapPageGenerator::MapPageGenerator(const String& kmlLibraryPath) : mapsAPIRateLimiter(mapsAPIMinDuration),
-	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), kmlLibrary(kmlLibraryPath)
+MapPageGenerator::MapPageGenerator(const String& kmlLibraryPath, const String& eBirdAPIKey) : mapsAPIRateLimiter(mapsAPIMinDuration),
+	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), kmlLibrary(kmlLibraryPath, eBirdAPIKey)
 {
 }
 

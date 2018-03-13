@@ -1189,7 +1189,7 @@ bool EBirdDataProcessor::WriteBestLocationsViewerPage(const String& htmlFileName
 	const std::vector<YearFrequencyInfo>& observationProbabilities,
 	const String& clientId, const String& clientSecret)
 {
-	MapPageGenerator generator(kmlLibraryPath);
+	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey);
 	return generator.WriteBestLocationsViewerPage(htmlFileName,
 		googleMapsKey, eBirdAPIKey, observationProbabilities, clientId, clientSecret);
 }
