@@ -7,6 +7,9 @@
 #include "kmlLibraryManager.h"
 #include "zipper.h"
 
+// Standard C++ headers
+#include <cassert>
+
 KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
 	const String& eBirdAPIKey) : libraryPath(libraryPath), ebi(eBirdAPIKey)
 {
@@ -84,7 +87,8 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 {
 	GlobalKMLFetcher fetcher;
 	std::string result;
-	fetcher.FetchKML(country, detailLevel, result);
+	if (!fetcher.FetchKML(country, detailLevel, result))
+		return false;
 
 	Zipper z;
 	if (!z.OpenArchiveBytes(result))
@@ -226,7 +230,15 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 	String parentRegionName;
 	if (ContainsMoreThanOneMatch(kmlData, placemarkNameString))
 	{
-		if (placemarkArgs.self.LookupParentRegionName(parentRegionName))
+		const auto placemarkEnd(kmlData.find(_T("</Placemark>"), offset));
+		if (placemarkEnd == std::string::npos)
+		{
+			Cerr << "Failed to match expected end of placemark\n";
+			return false;
+		}
+
+		if (placemarkArgs.self.LookupParentRegionName(placemarkArgs.countryName,
+			name, kmlData.substr(offset, placemarkEnd - offset), parentRegionName))
 		{
 			Cerr << "Failed to find parent region name (geometry method)\n";
 			return false;
@@ -272,20 +284,13 @@ bool KMLLibraryManager::ContainsMoreThanOneMatch(const String& s, const String& 
 
 bool KMLLibraryManager::LookupParentRegionName(const String& country, const String& subregion2Name, String& parentRegionName)
 {
-	if (subregion1Data.find(country) == subregion1Data.end())
-		subregion1Data[country] = ebi.GetSubRegions(ebi.GetCountryCode(country), EBirdInterface::RegionType::SubNational1);
-
-	if (subregion1Data[country].size() == 0)
+	auto sr1List(GetSubRegion1Data(country));
+	if (sr1List.empty())
 		return false;
 
-	const auto sr1List(subregion1Data[country]);
 	for (const auto& sr1 : sr1List)
 	{
-		const String indexString(BuildLocationIDString(country, sr1.name, String()));
-		if (subregion2Data.find(indexString) == subregion2Data.end())
-			subregion2Data[indexString] = ebi.GetSubRegions(sr1.code, EBirdInterface::RegionType::SubNational2);
-
-		const auto sr2List(subregion2Data[indexString]);
+		const auto sr2List(GetSubRegion2Data(country, sr1));
 		for (const auto& sr2 : sr2List)
 		{
 			if (sr2.name.compare(subregion2Name) == 0)
@@ -299,12 +304,205 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country, const Stri
 	return false;
 }
 
-bool KMLLibraryManager::LookupParentRegionName(String& parentRegionName)
+const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion1Data(const String& countryName)
 {
-	// 1. Use eBird region names to identify candidate parent regions
-	// 2. Use bounding-box method to reduce number of possible candidates
-	// 3. If # candidates > 1: (also check if 0 error)
-	// 4.   Use ray-casting to check if a point (any random point from within child kml?) is within parent
+	auto it(subRegion1Data.find(countryName));
+	if (it == subRegion1Data.end())
+		return subRegion1Data[countryName] = ebi.GetSubRegions(ebi.GetCountryCode(countryName), EBirdInterface::RegionType::SubNational1);
+
+	return it->second;
+}
+
+const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion2Data(const String& countryName, const EBirdInterface::RegionInfo& regionInfo)
+{
+	const String locationID(BuildLocationIDString(countryName, regionInfo.name, String()));
+	auto it(subRegion2Data.find(locationID));
+	if (it == subRegion2Data.end())
+		return subRegion2Data[locationID] = ebi.GetSubRegions(regionInfo.code, EBirdInterface::RegionType::SubNational2);
+
+	return it->second;
+}
+
+bool KMLLibraryManager::LookupParentRegionName(const String& country,
+	const String& subregion2Name, const String& childKML, String& parentRegionName)
+{
+	auto parentCandidates(FindRegionsWithSubRegionMatchingName(country, subregion2Name));
+	const GeometryInfo childInfo(childKML);
+	parentCandidates.erase(std::remove_if(parentCandidates.begin(), parentCandidates.end(), [&country, &childInfo, this](const EBirdInterface::RegionInfo& region)
+	{
+		return !BoundingBoxWithinParentBox(GetGeometryInfoByName(country, region.name).bbox, childInfo.bbox);
+	}), parentCandidates.end());
+
+	assert(!parentCandidates.empty());
+
+	if (parentCandidates.size() == 1)
+	{
+		parentRegionName = parentCandidates.front().name;
+		return true;
+	}
+
+	// TODO:  Use ray-casting to check if a point (any random point from within child kml?) is within parent
 
 	return false;
+}
+
+KMLLibraryManager::GeometryInfo KMLLibraryManager::GetGeometryInfoByName(const String& countryName, const String& parentName)
+{
+	const String indexString(BuildLocationIDString(countryName, parentName, String()));
+	auto it(geometryInfo.find(indexString));
+	if (it == geometryInfo.end())
+	{
+		if (!GetParentGeometryInfo(countryName))
+			return GeometryInfo(String());
+
+		return geometryInfo.find(indexString)->second;
+	}
+
+	return it->second;
+}
+
+std::vector<EBirdInterface::RegionInfo> KMLLibraryManager::FindRegionsWithSubRegionMatchingName(const String& country, const String& name)
+{
+	auto subRegion1List(GetSubRegion1Data(country));
+	subRegion1List.erase(std::remove_if(subRegion1List.begin(), subRegion1List.end(), [&country, &name, this](const EBirdInterface::RegionInfo& regionInfo)
+	{
+		auto subRegion2List(GetSubRegion2Data(country, regionInfo));
+		for (const auto& r : subRegion2List)
+		{
+			if (r.name.compare(name) == 0)
+				return false;
+		}
+
+		return true;
+	}), subRegion1List.end());
+	return subRegion1List;
+}
+
+bool KMLLibraryManager::BoundingBoxWithinParentBox(const GeometryInfo::BoundingBox& parent, const GeometryInfo::BoundingBox& child)
+{
+	if (child.northEast.latitude > parent.northEast.latitude || child.southWest.latitude < parent.southWest.latitude)
+		return false;
+
+	// TODO:  The poles require even more special handling - they won't have any points greater
+	// than something less than 90 deg latitude, but do contain points at 90 deg, for example.
+
+	// Due to rollover at +/- 180, special handling is required
+	GeometryInfo::BoundingBox p(parent);
+	GeometryInfo::BoundingBox c(child);
+	const double rollover(360.0);
+
+	// Make all longitudes positive
+	if (p.southWest.longitude < 0.0)
+		p.southWest.longitude += rollover;
+	if (p.northEast.longitude < 0.0)
+		p.northEast.longitude += rollover;
+	if (c.southWest.longitude < 0.0)
+		c.southWest.longitude += rollover;
+	if (c.northEast.longitude < 0.0)
+		c.northEast.longitude += rollover;
+
+	if (c.northEast.longitude > p.northEast.longitude || c.southWest.longitude < p.southWest.longitude)
+		return false;
+
+	return true;
+}
+
+bool KMLLibraryManager::GetParentGeometryInfo(const String& country)
+{
+	GlobalKMLFetcher fetcher;
+	std::string result;
+	if (!fetcher.FetchKML(country, GlobalKMLFetcher::DetailLevel::SubNational1, result))
+		return false;
+
+	const String resultString(UString::ToStringType(result));
+	geometryInfo.insert(std::make_pair(BuildLocationIDString(country, ExtractName(resultString, 0), String()), GeometryInfo(resultString)));
+
+	return true;
+}
+
+KMLLibraryManager::GeometryInfo::GeometryInfo(const String& kml) : polygons(ExtractPolygons(kml)), bbox(ComputeBoundingBox(polygons))
+{
+}
+
+KMLLibraryManager::GeometryInfo::GeometryInfo(const GeometryInfo& g) : polygons(g.polygons), bbox(g.bbox)
+{
+}
+
+KMLLibraryManager::GeometryInfo::GeometryInfo(GeometryInfo&& g) : polygons(std::move(g.polygons)), bbox(std::move(g.bbox))
+{
+}
+
+KMLLibraryManager::GeometryInfo::BoundingBox KMLLibraryManager::GeometryInfo::ComputeBoundingBox(const PolygonList& polygonList)
+{
+	BoundingBox bb;
+	bb.northEast.latitude = -90.0;
+	bb.northEast.longitude = -180.0;
+	bb.southWest.latitude = 90.0;
+	bb.southWest.longitude = 180.0;
+
+	for (const auto& polygon : polygonList)
+	{
+		for (const auto& point : polygon)
+		{
+			if (point.latitude > bb.northEast.latitude)
+				bb.northEast.latitude = point.latitude;
+			if (point.latitude < bb.southWest.latitude)
+				bb.southWest.latitude = point.latitude;
+			if (point.longitude > bb.northEast.longitude)
+				bb.northEast.longitude = point.longitude;
+			if (point.longitude < bb.southWest.longitude)
+				bb.southWest.longitude = point.longitude;
+		}
+	}
+
+	// This method assumes that we'll never want a parent regions are relatively small compared to the Earh.
+	// For example, we assume that coordinates spanning from -170 to +170 deg should be interpreted as a 20 deg
+	// wide box, not a 340 deg wide box.
+	if (fabs(bb.northEast.longitude - bb.southWest.longitude - 360.0) < fabs(bb.northEast.longitude - bb.southWest.longitude))
+		std::swap(bb.northEast.longitude, bb.southWest.longitude);
+
+	return bb;
+}
+
+KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::ExtractPolygons(const String& kml)
+{
+	// Assuming that it's not necessary to check for <outerBoundaryIs> and <LinearRing> tags
+
+	PolygonList polygons;
+	const String coordinatesStartTag(_T("<coordinates>"));
+	std::string::size_type startIndex(0);
+	while (startIndex = kml.find(coordinatesStartTag, startIndex), startIndex != std::string::npos)
+	{
+		const String coordinatesEndTag(_T("</coordinates>"));
+		const auto endIndex(kml.find(coordinatesEndTag));
+		if (endIndex == std::string::npos)
+			break;
+
+		IStringStream ss(kml.substr(startIndex + coordinatesStartTag.length(), endIndex - startIndex - coordinatesStartTag.length()));
+		String line;
+		std::vector<Point> polygon;
+		while (std::getline(ss, line))
+		{
+			IStringStream lineSS(line);
+			Point p;
+			if ((lineSS >> p.longitude).fail())
+			{
+				Cerr << "Failed to parse longitude value\n";
+				return PolygonList();
+			}
+
+			lineSS.ignore();
+			if ((lineSS >> p.latitude).fail())
+			{
+				Cerr << "Failed to parse latitude value\n";
+				return PolygonList();
+			}
+
+			polygon.push_back(p);
+		}
+
+		polygons.push_back(polygon);
+	}
+
+	return polygons;
 }

@@ -67,11 +67,49 @@ private:
 	static String CreatePlacemarkNameString(const String& name);
 
 	EBirdInterface ebi;
-	std::unordered_map<String, std::vector<EBirdInterface::RegionInfo>> subregion1Data;// key is country name
-	std::unordered_map<String, std::vector<EBirdInterface::RegionInfo>> subregion2Data;// key generated with BuildLocationIDString() (empty third argument)
+	std::unordered_map<String, std::vector<EBirdInterface::RegionInfo>> subRegion1Data;// key is country name
+	std::unordered_map<String, std::vector<EBirdInterface::RegionInfo>> subRegion2Data;// key generated with BuildLocationIDString() (empty third argument)
+
+	const std::vector<EBirdInterface::RegionInfo>& GetSubRegion1Data(const String& countryName);
+	const std::vector<EBirdInterface::RegionInfo>& GetSubRegion2Data(const String& countryName, const EBirdInterface::RegionInfo& regionInfo);
 
 	bool LookupParentRegionName(const String& country, const String& subregion2Name, String& parentRegionName);
-	bool LookupParentRegionName(String& parentRegionName);
+	bool LookupParentRegionName(const String& country, const String& subregion2Name, const String& childKML, String& parentRegionName);
+
+	std::vector<EBirdInterface::RegionInfo> FindRegionsWithSubRegionMatchingName(const String& country, const String& name);
+
+	struct GeometryInfo
+	{
+		GeometryInfo(const String& kml);
+		GeometryInfo(const GeometryInfo& g);
+		GeometryInfo(GeometryInfo&& g);
+
+		struct Point
+		{
+			double latitude;// [deg]
+			double longitude;// [deg]
+		};
+
+		typedef std::vector<std::vector<Point>> PolygonList;
+
+		const PolygonList polygons;
+
+		struct BoundingBox
+		{
+			Point northEast;
+			Point southWest;
+		};
+		const BoundingBox bbox;
+
+		static BoundingBox ComputeBoundingBox(const PolygonList& polygonList);
+		static PolygonList ExtractPolygons(const String& kml);
+	};
+
+	bool GetParentGeometryInfo(const String& country);
+
+	std::unordered_map<String, GeometryInfo> geometryInfo;// key generated with BuildLocationIDString() (empty third argument)
+	GeometryInfo GetGeometryInfoByName(const String& countryName, const String& parentName);
+	static bool BoundingBoxWithinParentBox(const GeometryInfo::BoundingBox& parent, const GeometryInfo::BoundingBox& child);
 };
 
 #endif// KML_LIBRARY_MANAGER_H_

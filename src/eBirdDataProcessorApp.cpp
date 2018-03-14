@@ -45,12 +45,10 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
 
-	const String country(_T("Japan"));
+	const String country(_T("US"));
 	EBirdInterface ebi(configFile.GetConfig().eBirdApiKey);
-	const auto countryCode(ebi.GetCountryCode(country));
-	const auto r(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::MostDetailAvailable));
 	KMLLibraryManager kml(configFile.GetConfig().kmlLibraryPath, configFile.GetConfig().eBirdApiKey);
-	const String geometry(kml.GetKML(country, r.front().name, String()));// Have to know here what level of detail we got from GetSubRegions()
+	const String geometry(kml.GetKML(country, _T("Pennsylvania"), _T("Montgomery")));
 
 	EBirdDataProcessor processor;
 	if (!processor.Parse(configFile.GetConfig().dataFileName))
