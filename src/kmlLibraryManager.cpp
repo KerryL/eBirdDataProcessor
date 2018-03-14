@@ -9,6 +9,7 @@
 
 // Standard C++ headers
 #include <cassert>
+#include <cctype>
 
 KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
 	const String& eBirdAPIKey) : libraryPath(libraryPath), ebi(eBirdAPIKey)
@@ -174,6 +175,26 @@ bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
 			return false;
 		}
 
+		// TODO:  Verify that description is NOT:
+		// <description><![CDATA[Water body]]></description>
+		//
+		// Should be one of (certainly many more as well):
+		// <![CDATA[County]]>
+		// <![CDATA[Borough]]>
+		// <![CDATA[Census Area]]>
+		// <![CDATA[Municipality]]>
+		// <![CDATA[City And Borough]]>
+		// <![CDATA[City And County]]>
+		// <![CDATA[District]]>
+		// <![CDATA[Parish]]>
+		// <![CDATA[Independent City]]>
+		// <![CDATA[State]]>
+		// <![CDATA[Federal District]]>
+		// <![CDATA[Ken]]>
+		// <![CDATA[Do]]>
+		// <![CDATA[Fu]]>
+		// <![CDATA[To]]>
+
 		if (!func(kmlData, next, args))
 			return false;
 
@@ -237,7 +258,7 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 			return false;
 		}
 
-		if (placemarkArgs.self.LookupParentRegionName(placemarkArgs.countryName,
+		if (!placemarkArgs.self.LookupParentRegionName(placemarkArgs.countryName,
 			name, kmlData.substr(offset, placemarkEnd - offset), parentRegionName))
 		{
 			Cerr << "Failed to find parent region name (geometry method)\n";
@@ -268,6 +289,22 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 	return true;
 }
 
+bool KMLLibraryManager::ExtractParentRegionGeometry(const String& kmlData, const std::string::size_type& offset, const AdditionalArguments& args)
+{
+	const auto placemarkEnd(kmlData.find(_T("</Placemark>"), offset));
+	if (placemarkEnd == std::string::npos)
+	{
+		Cerr << "Failed to match expected end of placemark\n";
+		return false;
+	}
+
+	const String name(ExtractName(kmlData, offset));
+	auto placemarkArgs(static_cast<const ParentGeometryExtractionArguments&>(args));
+	placemarkArgs.geometryInfo.insert(std::make_pair(BuildLocationIDString(
+		placemarkArgs.countryName, name, String()), GeometryInfo(kmlData.substr(offset, placemarkEnd - offset))));
+	return true;
+}
+
 String KMLLibraryManager::CreatePlacemarkNameString(const String& name)
 {
 	return _T("<name>") + name + _T("</name>");
@@ -293,7 +330,7 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country, const Stri
 		const auto sr2List(GetSubRegion2Data(country, sr1));
 		for (const auto& sr2 : sr2List)
 		{
-			if (sr2.name.compare(subregion2Name) == 0)
+			if (RegionNamesMatch(sr2.name, subregion2Name))
 			{
 				parentRegionName = sr1.name;
 				return true;
@@ -302,6 +339,24 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country, const Stri
 	}
 
 	return false;
+}
+
+bool KMLLibraryManager::RegionNamesMatch(const String& name1, const String& name2)
+{
+	String lower1(name1), lower2(name2);
+	std::transform(lower1.begin(), lower1.end(), lower1.begin(), ::tolower);
+	std::transform(lower2.begin(), lower2.end(), lower2.begin(), ::tolower);
+
+	lower1.erase(std::remove_if(lower1.begin(), lower1.end(), [](const Char& c)
+	{
+		return !std::isalnum(c);
+	}), lower1.end());
+	lower2.erase(std::remove_if(lower2.begin(), lower2.end(), [](const Char& c)
+	{
+		return !std::isalnum(c);
+	}), lower1.end());
+
+	return lower1.compare(lower2) == 0;
 }
 
 const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion1Data(const String& countryName)
@@ -341,6 +396,7 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country,
 		return true;
 	}
 
+	assert(false && "Need to implement ray-casting for full solution");
 	// TODO:  Use ray-casting to check if a point (any random point from within child kml?) is within parent
 
 	return false;
@@ -369,7 +425,7 @@ std::vector<EBirdInterface::RegionInfo> KMLLibraryManager::FindRegionsWithSubReg
 		auto subRegion2List(GetSubRegion2Data(country, regionInfo));
 		for (const auto& r : subRegion2List)
 		{
-			if (r.name.compare(name) == 0)
+			if (RegionNamesMatch(r.name, name))
 				return false;
 		}
 
@@ -380,7 +436,8 @@ std::vector<EBirdInterface::RegionInfo> KMLLibraryManager::FindRegionsWithSubReg
 
 bool KMLLibraryManager::BoundingBoxWithinParentBox(const GeometryInfo::BoundingBox& parent, const GeometryInfo::BoundingBox& child)
 {
-	if (child.northEast.latitude > parent.northEast.latitude || child.southWest.latitude < parent.southWest.latitude)
+	const double epsilon(0.02);// [deg] tolerance (makes parent size this much larger)
+	if (child.northEast.latitude > parent.northEast.latitude + epsilon || child.southWest.latitude < parent.southWest.latitude - epsilon)
 		return false;
 
 	// TODO:  The poles require even more special handling - they won't have any points greater
@@ -401,7 +458,7 @@ bool KMLLibraryManager::BoundingBoxWithinParentBox(const GeometryInfo::BoundingB
 	if (c.northEast.longitude < 0.0)
 		c.northEast.longitude += rollover;
 
-	if (c.northEast.longitude > p.northEast.longitude || c.southWest.longitude < p.southWest.longitude)
+	if (c.northEast.longitude > p.northEast.longitude  + epsilon || c.southWest.longitude < p.southWest.longitude - epsilon)
 		return false;
 
 	return true;
@@ -414,8 +471,33 @@ bool KMLLibraryManager::GetParentGeometryInfo(const String& country)
 	if (!fetcher.FetchKML(country, GlobalKMLFetcher::DetailLevel::SubNational1, result))
 		return false;
 
-	const String resultString(UString::ToStringType(result));
-	geometryInfo.insert(std::make_pair(BuildLocationIDString(country, ExtractName(resultString, 0), String()), GeometryInfo(resultString)));
+	Zipper z;
+	if (!z.OpenArchiveBytes(result))
+	{
+		Cerr << "Failed to open kmz data\n";
+		return false;
+	}
+
+	std::string unzippedKML;
+	if (!z.ExtractFile(0, unzippedKML))
+	{
+		Cerr << "Failed to extract file from kmz archive\n";
+		return false;
+	}
+
+	z.CloseArchive();
+
+	ParentGeometryExtractionArguments args(country, geometryInfo);
+	return ForEachPlacemarkTag(UString::ToStringType(unzippedKML), ExtractParentRegionGeometry, args);
+}
+
+bool KMLLibraryManager::ContainsOnlyWhitespace(const String& s)
+{
+	for (const auto& c : s)
+	{
+		if (!std::isspace(c))
+			return false;
+	}
 
 	return true;
 }
@@ -474,7 +556,7 @@ KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::Ex
 	while (startIndex = kml.find(coordinatesStartTag, startIndex), startIndex != std::string::npos)
 	{
 		const String coordinatesEndTag(_T("</coordinates>"));
-		const auto endIndex(kml.find(coordinatesEndTag));
+		const auto endIndex(kml.find(coordinatesEndTag, startIndex));
 		if (endIndex == std::string::npos)
 			break;
 
@@ -483,6 +565,9 @@ KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::Ex
 		std::vector<Point> polygon;
 		while (std::getline(ss, line))
 		{
+			if (ContainsOnlyWhitespace(line))
+				continue;
+
 			IStringStream lineSS(line);
 			Point p;
 			if ((lineSS >> p.longitude).fail())
@@ -502,6 +587,7 @@ KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::Ex
 		}
 
 		polygons.push_back(polygon);
+		startIndex = endIndex;
 	}
 
 	return polygons;

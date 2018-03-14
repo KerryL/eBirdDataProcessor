@@ -57,11 +57,22 @@ private:
 		std::string::size_type sourceTellP = 0;
 	};
 
+	struct GeometryInfo;// Forward declaration
+
+	struct ParentGeometryExtractionArguments : public AdditionalArguments
+	{
+		ParentGeometryExtractionArguments(const String& countryName,
+			std::unordered_map<String, GeometryInfo>& geometryInfo) : countryName(countryName), geometryInfo(geometryInfo) {}
+		const String& countryName;
+		std::unordered_map<String, GeometryInfo>& geometryInfo;
+	};
+
 	typedef bool(*PlacemarkFunction)(const String&, const std::string::size_type&, const AdditionalArguments&);
 
 	static bool ForEachPlacemarkTag(const String& kmlData, PlacemarkFunction func, const AdditionalArguments& args);
 	static bool ExtractRegionGeometry(const String& kmlData, const std::string::size_type& offset, const AdditionalArguments& args);
 	static bool FixPlacemarkNames(const String& kmlData, const std::string::size_type& offset, const AdditionalArguments& args);
+	static bool ExtractParentRegionGeometry(const String& kmlData, const std::string::size_type& offset, const AdditionalArguments& args);
 
 	static bool ContainsMoreThanOneMatch(const String& s, const String& pattern);
 	static String CreatePlacemarkNameString(const String& name);
@@ -110,6 +121,9 @@ private:
 	std::unordered_map<String, GeometryInfo> geometryInfo;// key generated with BuildLocationIDString() (empty third argument)
 	GeometryInfo GetGeometryInfoByName(const String& countryName, const String& parentName);
 	static bool BoundingBoxWithinParentBox(const GeometryInfo::BoundingBox& parent, const GeometryInfo::BoundingBox& child);
+	static bool ContainsOnlyWhitespace(const String& s);
+
+	static bool RegionNamesMatch(const String& name1, const String& name2);
 };
 
 #endif// KML_LIBRARY_MANAGER_H_

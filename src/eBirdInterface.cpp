@@ -561,12 +561,12 @@ bool EBirdInterface::NameMatchesRegion(const String& name, const RegionInfo& reg
 		return true;
 	else if (lowerName.compare(lowerCode) == 0)
 		return true;
-	else if (lowerCode.length() > lowerName.length() &&
+	/*else if (lowerCode.length() > lowerName.length() &&
 		lowerCode.substr(lowerCode.length() - lowerName.length()).compare(lowerName) == 0)
 		return true;
 	else if (lowerName.length() > lowerCode.length() &&
 		lowerName.substr(lowerName.length() - lowerCode.length()).compare(lowerCode) == 0)
-		return true;
+		return true;*/// I think this was an attempt to match names more liberally, but really it's a bug.  Need to use something far more sophisticated if we want to handle inexact matches.
 
 	return false;
 }
