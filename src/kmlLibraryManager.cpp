@@ -14,37 +14,6 @@
 KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
 	const String& eBirdAPIKey) : libraryPath(libraryPath), ebi(eBirdAPIKey)
 {
-	// Cases should return true
-	// Normal
-	Cout << "\n\nShould be true:\n";
-	Cout << "(0,0)(1,1) and (1,0)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 1.0)) << std::endl;
-	Cout << "(0,0)(1,1) and (0,1)(1,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 0.0)) << std::endl;
-	Cout << "(1,1)(0,0) and (1,0)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 1.0)) << std::endl;
-	Cout << "(1,1)(0,0) and (0,1)(1,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 0.0)) << std::endl;
-	Cout << "(1,0)(0,1) and (0,0)(1,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0)) << std::endl;
-	Cout << "(0,1)(1,0) and (0,0)(1,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0)) << std::endl;
-	Cout << "(1,0)(0,1) and (1,1)(0,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.0)) << std::endl;
-	Cout << "(0,1)(1,0) and (1,1)(0,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.0)) << std::endl;
-
-	// Colinear
-	Cout << "(0,0)(0,1) and (0,0.5)(0,1.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.5)) << std::endl;
-	Cout << "(0,0.5)(0,1.5) and (0,0)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.5), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0)) << std::endl;
-	Cout << "(0,1)(0,0) and (0,0.5)(0,1.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.5)) << std::endl;
-	Cout << "(0,0.5)(0,1.5) and (0,1)(0,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.5), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.0)) << std::endl;
-
-	Cout << "\n\nShould be false:\n";
-	// Cases should return false
-	// Normal
-	Cout << "(0,0)(1,1) and (0,0.5)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.0)) << std::endl;
-
-	// Parallel
-	Cout << "(0,0)(1,1) and (1,0)(2,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(2.0, 1.0)) << std::endl;
-
-	// Colinear
-	Cout << "(0,0)(0,1) and (0,1.5)(0,2.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 1.5), GeometryInfo::Point(0.0, 2.5)) << std::endl;
-	Cout << "(0,0)(0,1) and (0,2.5)(0,1.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 2.5), GeometryInfo::Point(0.0, 1.5)) << std::endl;
-	Cout << "(0,1.5)(0,2.5) and (0,0)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.5), GeometryInfo::Point(0.0, 2.5), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0)) << std::endl;
-	Cout << "(0,1)(0,0) and (0,2.5)(0,1.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 2.5), GeometryInfo::Point(0.0, 1.5)) << std::endl;
 }
 
 String KMLLibraryManager::GetKML(const String& country, const String& subNational1, const String& subNational2)
@@ -178,17 +147,7 @@ String KMLLibraryManager::BuildSubNationalIDString(const String& subNational1, c
 
 String KMLLibraryManager::ExtractName(const String& kmlData, const std::string::size_type& offset)
 {
-	const String nameStartTag(_T("<name>"));
-	const String nameEndTag(_T("</name>"));
-	const auto nameStart(kmlData.find(nameStartTag, offset));
-	if (nameStart == std::string::npos)
-		return String();
-
-	const auto nameEnd(kmlData.find(nameEndTag, nameStart));
-	if (nameEnd == std::string::npos)
-		return String();
-
-	return kmlData.substr(nameStart + nameStartTag.length(), nameEnd - nameStart - nameStartTag.length());
+	return ExtractTagValue(kmlData, offset, _T("name"));
 }
 
 bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
@@ -206,25 +165,16 @@ bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
 			return false;
 		}
 
-		// TODO:  Verify that description is NOT:
-		// <description><![CDATA[Water body]]></description>
-		//
-		// Should be one of (certainly many more as well):
-		// <![CDATA[County]]>
-		// <![CDATA[Borough]]>
-		// <![CDATA[Census Area]]>
-		// <![CDATA[Municipality]]>
-		// <![CDATA[City And Borough]]>
-		// <![CDATA[City And County]]>
-		// <![CDATA[District]]>
-		// <![CDATA[Parish]]>
-		// <![CDATA[Independent City]]>
-		// <![CDATA[State]]>
-		// <![CDATA[Federal District]]>
-		// <![CDATA[Ken]]>
-		// <![CDATA[Do]]>
-		// <![CDATA[Fu]]>
-		// <![CDATA[To]]>
+		// List of acceptable description types is long and location dependent
+		// (i.e. County, Census Area, and Ken/Do/Fu/To for Japan...), so easier
+		// to check known descriptions to discard.  Algorithm must be designed
+		// to handle cases where unwanted regions get through, however - this
+		// is only a performance improvement.
+		if (DescriptionIsUnwanted(kmlData, next))
+		{
+			next = placemarkEnd;
+			continue;
+		}
 
 		if (!func(kmlData, next, args))
 			return false;
@@ -233,6 +183,34 @@ bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
 	}
 
 	return true;
+}
+
+String KMLLibraryManager::ExtractTagValue(const String& kmlData,
+	const std::string::size_type& offset, const String& tag)
+{
+	const String startTag(_T("<") + tag + _T(">"));
+	const String endTag(_T("</") + tag + _T(">"));
+	const auto start(kmlData.find(startTag, offset));
+	if (start == std::string::npos)
+		return String();
+
+	const auto end(kmlData.find(endTag, start));
+	if (end == std::string::npos)
+		return String();
+
+	return kmlData.substr(start + startTag.length(), end - start - startTag.length());
+}
+
+String KMLLibraryManager::ExtractDescription(const String& kmlData, const std::string::size_type& offset)
+{
+	return ExtractTagValue(kmlData, offset, _T("description"));
+}
+
+bool KMLLibraryManager::DescriptionIsUnwanted(const String& kmlData, const std::string::size_type& offset)
+{
+	const String bodyOfWaterDescription(_T("<![CDATA[Water body]]>"));
+	const String description(ExtractDescription(kmlData, offset));
+	return description.compare(bodyOfWaterDescription) == 0;
 }
 
 bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,

@@ -33,7 +33,10 @@ private:
 	static String BuildLocationIDString(const String& country, const String& subNational1, const String& subNational2);
 	static String BuildSubNationalIDString(const String& subNational1, const String& subNational2);
 
+	static String ExtractTagValue(const String& kmlData, const std::string::size_type& offset, const String& tag);
 	static String ExtractName(const String& kmlData, const std::string::size_type& offset);
+	static String ExtractDescription(const String& kmlData, const std::string::size_type& offset);
+	static bool DescriptionIsUnwanted(const String& kmlData, const std::string::size_type& offset);
 
 	struct AdditionalArguments
 	{
