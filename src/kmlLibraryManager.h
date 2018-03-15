@@ -70,15 +70,17 @@ private:
 		std::unordered_map<String, GeometryInfo>& geometryInfo;
 	};
 
-	typedef bool(*PlacemarkFunction)(const String&, const std::string::size_type&, const AdditionalArguments&);
+	typedef bool(*PlacemarkFunction)(const String&, const std::string::size_type&, AdditionalArguments&);
 
-	static bool ForEachPlacemarkTag(const String& kmlData, PlacemarkFunction func, const AdditionalArguments& args);
-	static bool ExtractRegionGeometry(const String& kmlData, const std::string::size_type& offset, const AdditionalArguments& args);
-	static bool FixPlacemarkNames(const String& kmlData, const std::string::size_type& offset, const AdditionalArguments& args);
-	static bool ExtractParentRegionGeometry(const String& kmlData, const std::string::size_type& offset, const AdditionalArguments& args);
+	static bool ForEachPlacemarkTag(const String& kmlData, PlacemarkFunction func, AdditionalArguments& args);
+	static bool ExtractRegionGeometry(const String& kmlData, const std::string::size_type& offset, AdditionalArguments& args);
+	static bool FixPlacemarkNames(const String& kmlData, const std::string::size_type& offset, AdditionalArguments& args);
+	static bool ExtractParentRegionGeometry(const String& kmlData, const std::string::size_type& offset, AdditionalArguments& args);
 
 	static bool ContainsMoreThanOneMatch(const String& s, const String& pattern);
 	static String CreatePlacemarkNameString(const String& name);
+
+	static void ExpandSaintAbbr(String& s);
 
 	EBirdInterface ebi;
 	std::unordered_map<String, std::vector<EBirdInterface::RegionInfo>> subRegion1Data;// key is country name

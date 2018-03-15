@@ -151,7 +151,7 @@ String KMLLibraryManager::ExtractName(const String& kmlData, const std::string::
 }
 
 bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
-	PlacemarkFunction func, const AdditionalArguments& args)
+	PlacemarkFunction func, AdditionalArguments& args)
 {
 	const String placemarkStartTag(_T("<Placemark>"));
 	std::string::size_type next(0);
@@ -214,7 +214,7 @@ bool KMLLibraryManager::DescriptionIsUnwanted(const String& kmlData, const std::
 }
 
 bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
-	const std::string::size_type& offset, const AdditionalArguments& args)
+	const std::string::size_type& offset, AdditionalArguments& args)
 {
 	// NOTE:  Possibly need to search for <Polygon> tag if <MultiGeometry> is not found.
 	// I think <MultiGeometry> is only necessary if there are multiple polygons, although
@@ -243,19 +243,19 @@ bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
 		return false;
 	}
 
-	auto geometryArgs(static_cast<const GeometryExtractionArguments&>(args));
+	auto& geometryArgs(static_cast<GeometryExtractionArguments&>(args));
 	geometryArgs.tempMap[geometryArgs.countryName + _T(":") + name] =
 		kmlData.substr(geometryStart, geometryEnd - geometryStart + geometryEndTag.length());
 	return true;
 }
 
 bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
-	const std::string::size_type& offset, const AdditionalArguments& args)
+	const std::string::size_type& offset, AdditionalArguments& args)
 {
 	const String name(ExtractName(kmlData, offset));
 	const String placemarkNameString(CreatePlacemarkNameString(name));
 
-	auto placemarkArgs(static_cast<const ParentRegionFinderArguments&>(args));
+	auto& placemarkArgs(static_cast<ParentRegionFinderArguments&>(args));
 
 	String parentRegionName;
 	if (ContainsMoreThanOneMatch(kmlData, placemarkNameString))
@@ -270,16 +270,16 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 		if (!placemarkArgs.self.LookupParentRegionName(placemarkArgs.countryName,
 			name, kmlData.substr(offset, placemarkEnd - offset), parentRegionName))
 		{
-			Cerr << "Failed to find parent region name (geometry method)\n";
-			return false;
+			Cerr << "Failed to find parent region name (geometry method) for " << name << '\n';
+			return true;// Non-fatal - could be an area for which eBird does not have a region defined, or eBird combines what is actually multiple administrative areas
 		}
 	}
 	else
 	{
 		if (!placemarkArgs.self.LookupParentRegionName(placemarkArgs.countryName, name, parentRegionName))
 		{
-			Cerr << "Failed to find parent region name (unique name method)\n";
-			return false;
+			Cerr << "Failed to find parent region name (unique name method) for " << name << '\n';
+			return true;// Non-fatal - could be an area for which eBird does not have a region defined, or eBird combines what is actually multiple administrative areas
 		}
 	}
 
@@ -298,7 +298,8 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 	return true;
 }
 
-bool KMLLibraryManager::ExtractParentRegionGeometry(const String& kmlData, const std::string::size_type& offset, const AdditionalArguments& args)
+bool KMLLibraryManager::ExtractParentRegionGeometry(const String& kmlData,
+	const std::string::size_type& offset, AdditionalArguments& args)
 {
 	const auto placemarkEnd(kmlData.find(_T("</Placemark>"), offset));
 	if (placemarkEnd == std::string::npos)
@@ -308,7 +309,7 @@ bool KMLLibraryManager::ExtractParentRegionGeometry(const String& kmlData, const
 	}
 
 	const String name(ExtractName(kmlData, offset));
-	auto placemarkArgs(static_cast<const ParentGeometryExtractionArguments&>(args));
+	auto& placemarkArgs(static_cast<ParentGeometryExtractionArguments&>(args));
 	placemarkArgs.geometryInfo.insert(std::make_pair(BuildLocationIDString(
 		placemarkArgs.countryName, name, String()), GeometryInfo(kmlData.substr(offset, placemarkEnd - offset))));
 	return true;
@@ -350,11 +351,25 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country, const Stri
 	return false;
 }
 
+void KMLLibraryManager::ExpandSaintAbbr(String& s)
+{
+	// Assumes this abbreviation occurs at most once
+	const String saintAbbr(_T("st."));
+	auto start(s.find(saintAbbr));
+	if (start == std::string::npos)
+		return;
+
+	s.replace(start, saintAbbr.length(), _T("saint"));
+}
+
 bool KMLLibraryManager::RegionNamesMatch(const String& name1, const String& name2)
 {
 	String lower1(name1), lower2(name2);
 	std::transform(lower1.begin(), lower1.end(), lower1.begin(), ::tolower);
 	std::transform(lower2.begin(), lower2.end(), lower2.begin(), ::tolower);
+
+	ExpandSaintAbbr(lower1);
+	ExpandSaintAbbr(lower2);
 
 	lower1.erase(std::remove_if(lower1.begin(), lower1.end(), [](const Char& c)
 	{
@@ -397,6 +412,8 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country,
 		return !BoundingBoxWithinParentBox(GetGeometryInfoByName(country, region.name).bbox, childInfo.bbox);
 	}), parentCandidates.end());
 
+	if (parentCandidates.empty())
+		int a = 1;
 	assert(!parentCandidates.empty());
 
 	if (parentCandidates.size() == 1)
@@ -522,19 +539,13 @@ bool KMLLibraryManager::BoundingBoxWithinParentBox(const GeometryInfo::BoundingB
 	// Due to rollover at +/- 180, special handling is required
 	GeometryInfo::BoundingBox p(parent);
 	GeometryInfo::BoundingBox c(child);
-	const double rollover(360.0);
+	const double longitudeOffset(500.0);
+	p.northEast.longitude += longitudeOffset;
+	p.southWest.longitude += longitudeOffset;
+	c.northEast.longitude += longitudeOffset;
+	c.southWest.longitude += longitudeOffset;
 
-	// Make all longitudes positive
-	if (p.southWest.longitude < 0.0)
-		p.southWest.longitude += rollover;
-	if (p.northEast.longitude < 0.0)
-		p.northEast.longitude += rollover;
-	if (c.southWest.longitude < 0.0)
-		c.southWest.longitude += rollover;
-	if (c.northEast.longitude < 0.0)
-		c.northEast.longitude += rollover;
-
-	if (c.northEast.longitude > p.northEast.longitude  + epsilon || c.southWest.longitude < p.southWest.longitude - epsilon)
+	if (c.northEast.longitude > p.northEast.longitude + epsilon || c.southWest.longitude < p.southWest.longitude - epsilon)
 		return false;
 
 	return true;
@@ -592,11 +603,12 @@ KMLLibraryManager::GeometryInfo::GeometryInfo(GeometryInfo&& g) : polygons(std::
 
 KMLLibraryManager::GeometryInfo::BoundingBox KMLLibraryManager::GeometryInfo::ComputeBoundingBox(const PolygonList& polygonList)
 {
+	const double longitudeOffset(500.0);// used to handle case of geometry overlapping the international date line
 	BoundingBox bb;
 	bb.northEast.latitude = -90.0;
-	bb.northEast.longitude = -180.0;
+	bb.northEast.longitude = -180.0 + longitudeOffset;
 	bb.southWest.latitude = 90.0;
-	bb.southWest.longitude = 180.0;
+	bb.southWest.longitude = 180.0 + longitudeOffset;
 
 	for (const auto& polygon : polygonList)
 	{
@@ -606,18 +618,15 @@ KMLLibraryManager::GeometryInfo::BoundingBox KMLLibraryManager::GeometryInfo::Co
 				bb.northEast.latitude = point.latitude;
 			if (point.latitude < bb.southWest.latitude)
 				bb.southWest.latitude = point.latitude;
-			if (point.longitude > bb.northEast.longitude)
-				bb.northEast.longitude = point.longitude;
-			if (point.longitude < bb.southWest.longitude)
-				bb.southWest.longitude = point.longitude;
+			if (point.longitude + longitudeOffset > bb.northEast.longitude)
+				bb.northEast.longitude = point.longitude + longitudeOffset;
+			if (point.longitude + longitudeOffset < bb.southWest.longitude)
+				bb.southWest.longitude = point.longitude + longitudeOffset;
 		}
 	}
 
-	// This method assumes that we'll never want a parent regions are relatively small compared to the Earh.
-	// For example, we assume that coordinates spanning from -170 to +170 deg should be interpreted as a 20 deg
-	// wide box, not a 340 deg wide box.
-	if (fabs(bb.northEast.longitude - bb.southWest.longitude - 360.0) < fabs(bb.northEast.longitude - bb.southWest.longitude))
-		std::swap(bb.northEast.longitude, bb.southWest.longitude);
+	bb.northEast.longitude -= longitudeOffset;
+	bb.southWest.longitude -= longitudeOffset;
 
 	return bb;
 }
