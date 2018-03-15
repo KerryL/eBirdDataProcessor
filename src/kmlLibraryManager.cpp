@@ -14,6 +14,37 @@
 KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
 	const String& eBirdAPIKey) : libraryPath(libraryPath), ebi(eBirdAPIKey)
 {
+	// Cases should return true
+	// Normal
+	Cout << "\n\nShould be true:\n";
+	Cout << "(0,0)(1,1) and (1,0)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 1.0)) << std::endl;
+	Cout << "(0,0)(1,1) and (0,1)(1,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 0.0)) << std::endl;
+	Cout << "(1,1)(0,0) and (1,0)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 1.0)) << std::endl;
+	Cout << "(1,1)(0,0) and (0,1)(1,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 0.0)) << std::endl;
+	Cout << "(1,0)(0,1) and (0,0)(1,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0)) << std::endl;
+	Cout << "(0,1)(1,0) and (0,0)(1,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0)) << std::endl;
+	Cout << "(1,0)(0,1) and (1,1)(0,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.0)) << std::endl;
+	Cout << "(0,1)(1,0) and (1,1)(0,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.0)) << std::endl;
+
+	// Colinear
+	Cout << "(0,0)(0,1) and (0,0.5)(0,1.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.5)) << std::endl;
+	Cout << "(0,0.5)(0,1.5) and (0,0)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.5), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0)) << std::endl;
+	Cout << "(0,1)(0,0) and (0,0.5)(0,1.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.5)) << std::endl;
+	Cout << "(0,0.5)(0,1.5) and (0,1)(0,0) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.5), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.0)) << std::endl;
+
+	Cout << "\n\nShould be false:\n";
+	// Cases should return false
+	// Normal
+	Cout << "(0,0)(1,1) and (0,0.5)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(0.0, 0.5), GeometryInfo::Point(0.0, 1.0)) << std::endl;
+
+	// Parallel
+	Cout << "(0,0)(1,1) and (1,0)(2,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(1.0, 1.0), GeometryInfo::Point(1.0, 0.0), GeometryInfo::Point(2.0, 1.0)) << std::endl;
+
+	// Colinear
+	Cout << "(0,0)(0,1) and (0,1.5)(0,2.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 1.5), GeometryInfo::Point(0.0, 2.5)) << std::endl;
+	Cout << "(0,0)(0,1) and (0,2.5)(0,1.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 2.5), GeometryInfo::Point(0.0, 1.5)) << std::endl;
+	Cout << "(0,1.5)(0,2.5) and (0,0)(0,1) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.5), GeometryInfo::Point(0.0, 2.5), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 1.0)) << std::endl;
+	Cout << "(0,1)(0,0) and (0,2.5)(0,1.5) -> " << (int)SegmentsIntersect(GeometryInfo::Point(0.0, 1.0), GeometryInfo::Point(0.0, 0.0), GeometryInfo::Point(0.0, 2.5), GeometryInfo::Point(0.0, 1.5)) << std::endl;
 }
 
 String KMLLibraryManager::GetKML(const String& country, const String& subNational1, const String& subNational2)
@@ -354,7 +385,7 @@ bool KMLLibraryManager::RegionNamesMatch(const String& name1, const String& name
 	lower2.erase(std::remove_if(lower2.begin(), lower2.end(), [](const Char& c)
 	{
 		return !std::isalnum(c);
-	}), lower1.end());
+	}), lower2.end());
 
 	return lower1.compare(lower2) == 0;
 }
@@ -396,10 +427,77 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country,
 		return true;
 	}
 
-	assert(false && "Need to implement ray-casting for full solution");
-	// TODO:  Use ray-casting to check if a point (any random point from within child kml?) is within parent
+	for (const auto& candidate : parentCandidates)
+	{
+		// TODO:  Would be better to be smarter about choosing the point.  Not sure about robustness
+		// of solution when chosen point is on a common boundary between child and parent (which can happen)
+		if (PointIsWithinPolygons(childInfo.polygons.front().front(), GetGeometryInfoByName(country, candidate.name)))
+		{
+			parentRegionName = candidate.name;
+			return true;
+		}
+	}
 
 	return false;
+}
+
+// Implements ray-casting algorithm
+bool KMLLibraryManager::PointIsWithinPolygons(const GeometryInfo::Point& p, const GeometryInfo& geometry)
+{
+	GeometryInfo::Point outsidePoint(geometry.bbox.northEast);
+	outsidePoint.longitude += 1.0;// 1 deg is a fairly large step
+	unsigned int intersectionCount(0);
+	for (const auto& polygon : geometry.polygons)
+	{
+		unsigned int i;
+		for (i = 1; i < polygon.size(); ++i)
+		{
+			if (SegmentsIntersect(p, outsidePoint, polygon[i], polygon[i - 1]))
+				++intersectionCount;
+		}
+	}
+
+	return intersectionCount % 2 == 1;
+}
+
+// Adapted from:  https://stackoverflow.com/questions/563198/how-do-you-detect-where-two-line-segments-intersect
+bool KMLLibraryManager::SegmentsIntersect(const GeometryInfo::Point& segment1Point1,
+	const GeometryInfo::Point& segment1Point2, const GeometryInfo::Point& segment2Point1,
+	const GeometryInfo::Point& segment2Point2)
+{
+	Vector2D p11(segment1Point1.longitude, segment1Point1.latitude);
+	Vector2D p12(segment1Point2.longitude, segment1Point2.latitude);
+	Vector2D p21(segment2Point1.longitude, segment2Point1.latitude);
+	Vector2D p22(segment2Point2.longitude, segment2Point2.latitude);
+
+	Vector2D direction1(p12 - p11);
+	Vector2D direction2(p22 - p21);
+	Vector2D p21ToP11(p21 - p11);
+
+	const auto directionCross(direction1.Cross(direction2));
+	const auto segmentToSegmentCross(p21ToP11.Cross(direction1));
+	const double t(p21ToP11.Cross(direction2) / direction1.Cross(direction2));
+	const double u(p21ToP11.Cross(direction1) / direction1.Cross(direction2));
+
+	if (directionCross == 0 && segmentToSegmentCross == 0)// segments are colinear
+	{
+		// If segments overlap, consider them to intersect
+		const double t0(p21ToP11.Dot(direction1) / direction1.Dot(direction1));
+		const double t1(t0 + direction2.Dot(direction1) / direction1.Dot(direction1));
+		if ((t0 >= 0.0 && t0 <= 1.0) ||
+			(t1 >= 0.0 && t1 <= 1.0))
+			return true;
+		else if ((t0 > 1.0 && t1 < 0.0) ||
+			(t1 > 1.0 && t0 < 0.0))
+			return true;
+		//return fabs(t0 - t1) < 1.0;// TODO:  Work through this case to ensure understanding and correctness
+	}
+	else if (directionCross == 0)// segments are parallel
+		return false;
+	else if (t >= 0.0 && t <= 1.0 && u >= 0.0 && u <= 1.0)
+		return true;
+
+	return false;// Not parallel, but non-intersecting
 }
 
 KMLLibraryManager::GeometryInfo KMLLibraryManager::GetGeometryInfoByName(const String& countryName, const String& parentName)
@@ -591,4 +689,44 @@ KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::Ex
 	}
 
 	return polygons;
+}
+
+KMLLibraryManager::Vector2D KMLLibraryManager::Vector2D::operator+(const Vector2D& v) const
+{
+	Vector2D ret(*this);
+	ret += v;
+	return ret;
+}
+
+KMLLibraryManager::Vector2D KMLLibraryManager::Vector2D::operator-(const Vector2D& v) const
+{
+	Vector2D ret(*this);
+	ret -= v;
+	return ret;
+}
+
+KMLLibraryManager::Vector2D& KMLLibraryManager::Vector2D::operator+=(const Vector2D& v)
+{
+	x += v.x;
+	y += v.y;
+
+	return *this;
+}
+
+KMLLibraryManager::Vector2D& KMLLibraryManager::Vector2D::operator-=(const Vector2D& v)
+{
+	x -= v.x;
+	y -= v.y;
+
+	return *this;
+}
+
+double KMLLibraryManager::Vector2D::Cross(const Vector2D& v) const
+{
+	return x * v.y - y * v.x;
+}
+
+double KMLLibraryManager::Vector2D::Dot(const Vector2D& v) const
+{
+	return x * v.x + y * v.y;
 }

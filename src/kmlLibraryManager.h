@@ -97,8 +97,11 @@ private:
 
 		struct Point
 		{
-			double latitude;// [deg]
+			Point() = default;
+			Point(const double& longitude, const double& latitude) : longitude(longitude), latitude(latitude) {}
+			
 			double longitude;// [deg]
+			double latitude;// [deg]
 		};
 
 		typedef std::vector<std::vector<Point>> PolygonList;
@@ -121,9 +124,29 @@ private:
 	std::unordered_map<String, GeometryInfo> geometryInfo;// key generated with BuildLocationIDString() (empty third argument)
 	GeometryInfo GetGeometryInfoByName(const String& countryName, const String& parentName);
 	static bool BoundingBoxWithinParentBox(const GeometryInfo::BoundingBox& parent, const GeometryInfo::BoundingBox& child);
-	static bool ContainsOnlyWhitespace(const String& s);
+	static bool PointIsWithinPolygons(const GeometryInfo::Point& p, const GeometryInfo& geometry);
+	static bool SegmentsIntersect(const GeometryInfo::Point& segment1Point1, const GeometryInfo::Point& segment1Point2,
+		const GeometryInfo::Point& segment2Point1, const GeometryInfo::Point& segment2Point2);
 
+	static bool ContainsOnlyWhitespace(const String& s);
 	static bool RegionNamesMatch(const String& name1, const String& name2);
+
+	class Vector2D
+	{
+	public:
+		Vector2D() = default;
+		Vector2D(const double& x, const double& y) : x(x), y(y) {}
+
+		double x, y;
+
+		Vector2D operator+(const Vector2D& v) const;
+		Vector2D operator-(const Vector2D& v) const;
+		Vector2D& operator+=(const Vector2D& v);
+		Vector2D& operator-=(const Vector2D& v);
+
+		double Cross(const Vector2D& v) const;
+		double Dot(const Vector2D& v) const;
+	};
 };
 
 #endif// KML_LIBRARY_MANAGER_H_
