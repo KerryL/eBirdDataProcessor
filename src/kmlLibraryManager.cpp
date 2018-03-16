@@ -18,6 +18,8 @@ KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
 
 String KMLLibraryManager::GetKML(const String& country, const String& subNational1, const String& subNational2)
 {
+	std::lock_guard<std::mutex> lock(mutex);
+
 	// Check for kml already in memory
 	const String locationIDString(BuildLocationIDString(country, subNational1, subNational2));
 	auto it(kmlMemory.find(locationIDString));

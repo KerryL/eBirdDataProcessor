@@ -13,6 +13,7 @@
 
 // Standard C++ headers
 #include <unordered_map>
+#include <mutex>
 
 class KMLLibraryManager
 {
@@ -154,6 +155,8 @@ private:
 		double Cross(const Vector2D& v) const;
 		double Dot(const Vector2D& v) const;
 	};
+
+	std::mutex mutex;
 };
 
 #endif// KML_LIBRARY_MANAGER_H_
