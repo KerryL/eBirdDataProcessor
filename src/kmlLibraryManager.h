@@ -81,6 +81,7 @@ private:
 	static String CreatePlacemarkNameString(const String& name);
 
 	static void ExpandSaintAbbr(String& s);
+	static void ExpandSainteAbbr(String& s);
 
 	EBirdInterface ebi;
 	std::unordered_map<String, std::vector<EBirdInterface::RegionInfo>> subRegion1Data;// key is country name
@@ -132,6 +133,7 @@ private:
 	static bool PointIsWithinPolygons(const GeometryInfo::Point& p, const GeometryInfo& geometry);
 	static bool SegmentsIntersect(const GeometryInfo::Point& segment1Point1, const GeometryInfo::Point& segment1Point2,
 		const GeometryInfo::Point& segment2Point1, const GeometryInfo::Point& segment2Point2);
+	static GeometryInfo::Point ChooseRobustPoint(const GeometryInfo& geometry);
 
 	static bool ContainsOnlyWhitespace(const String& s);
 	static bool RegionNamesMatch(const String& name1, const String& name2);

@@ -362,6 +362,17 @@ void KMLLibraryManager::ExpandSaintAbbr(String& s)
 	s.replace(start, saintAbbr.length(), _T("saint"));
 }
 
+void KMLLibraryManager::ExpandSainteAbbr(String& s)
+{
+	// Assumes this abbreviation occurs at most once
+	const String saintAbbr(_T("ste."));
+	auto start(s.find(saintAbbr));
+	if (start == std::string::npos)
+		return;
+
+	s.replace(start, saintAbbr.length(), _T("sainte"));
+}
+
 bool KMLLibraryManager::RegionNamesMatch(const String& name1, const String& name2)
 {
 	String lower1(name1), lower2(name2);
@@ -370,6 +381,9 @@ bool KMLLibraryManager::RegionNamesMatch(const String& name1, const String& name
 
 	ExpandSaintAbbr(lower1);
 	ExpandSaintAbbr(lower2);
+
+	ExpandSainteAbbr(lower1);
+	ExpandSainteAbbr(lower2);
 
 	lower1.erase(std::remove_if(lower1.begin(), lower1.end(), [](const Char& c)
 	{
@@ -413,9 +427,7 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country,
 	}), parentCandidates.end());
 
 	if (parentCandidates.empty())
-		int a = 1;
-	assert(!parentCandidates.empty());
-
+		return false;
 	if (parentCandidates.size() == 1)
 	{
 		parentRegionName = parentCandidates.front().name;
@@ -424,9 +436,7 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country,
 
 	for (const auto& candidate : parentCandidates)
 	{
-		// TODO:  Would be better to be smarter about choosing the point.  Not sure about robustness
-		// of solution when chosen point is on a common boundary between child and parent (which can happen)
-		if (PointIsWithinPolygons(childInfo.polygons.front().front(), GetGeometryInfoByName(country, candidate.name)))
+		if (PointIsWithinPolygons(ChooseRobustPoint(childInfo), GetGeometryInfoByName(country, candidate.name)))
 		{
 			parentRegionName = candidate.name;
 			return true;
@@ -434,6 +444,45 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country,
 	}
 
 	return false;
+}
+
+KMLLibraryManager::GeometryInfo::Point KMLLibraryManager::ChooseRobustPoint(const GeometryInfo& geometry)
+{
+	// First, try a point in the middle of the largest polygon
+	const std::vector<GeometryInfo::Point>* largestPolygon(&geometry.polygons.front());
+	for (const auto& polygon : geometry.polygons)
+	{
+		if (polygon.size() > largestPolygon->size())
+			largestPolygon = &polygon;
+	}
+
+	double sumLong(0.0), sumLat(0.0);
+	for (const auto& p : *largestPolygon)
+	{
+		sumLong += p.longitude;
+		sumLat += p.latitude;
+	}
+
+	GeometryInfo::Point centerPoint(sumLong / largestPolygon->size(), sumLat / largestPolygon->size());
+
+	// Double check, to ensure we didn't pick a point in the middle of a hole
+	if (PointIsWithinPolygons(centerPoint, geometry))
+		return centerPoint;
+
+	// Backup plan - use three consecutive edge points to find a new point, then verify that it's within the polygon
+	unsigned int i;
+	for (i = 2; i < largestPolygon->size(); ++i)
+	{
+		sumLong = (*largestPolygon)[i - 2].longitude + (*largestPolygon)[i - 1].longitude + (*largestPolygon)[i].longitude;
+		sumLat = (*largestPolygon)[i - 2].latitude + (*largestPolygon)[i - 1].latitude + (*largestPolygon)[i].latitude;
+		GeometryInfo::Point pointNearEdge(sumLong / 3.0, sumLat / 3.0);
+
+		if (PointIsWithinPolygons(pointNearEdge, geometry))
+			return pointNearEdge;
+	}
+
+	// Last resort - choose an arbitrary boundary point
+	return largestPolygon->front();
 }
 
 // Implements ray-casting algorithm
