@@ -45,11 +45,6 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
 
-	const String country(_T("United States"));// TODO:  Accept either eBird code or name?
-	EBirdInterface ebi(configFile.GetConfig().eBirdApiKey);
-	KMLLibraryManager kml(configFile.GetConfig().kmlLibraryPath, configFile.GetConfig().eBirdApiKey);
-	const String geometry(kml.GetKML(country, _T("Pennsylvania"), _T("Montgomery")));
-
 	EBirdDataProcessor processor;
 	if (!processor.Parse(configFile.GetConfig().dataFileName))
 		return 1;
