@@ -111,8 +111,12 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	{
 		String modifiedKML;
 		ParentRegionFinderArguments args(country, modifiedKML, *this);
-		if (!ForEachPlacemarkTag(UString::ToStringType(unzippedKML), FixPlacemarkNames, args))
+		const auto unzippedKMLString(UString::ToStringType(unzippedKML));
+		if (!ForEachPlacemarkTag(unzippedKMLString, FixPlacemarkNames, args))
 			return false;
+
+		// Also need to write the remainder of the file (after the last placemark tag)
+		modifiedKML.append(unzippedKMLString.substr(args.sourceTellP));
 		unzippedKML = UString::ToNarrowString(modifiedKML);
 	}
 
@@ -176,7 +180,7 @@ bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
 			continue;
 		}
 
-		if (!func(kmlData, next + placemarkStartTag.length(), args))
+		if (!func(kmlData, next, args))
 			return false;
 
 		next = placemarkEnd;
@@ -283,11 +287,13 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 		}
 	}
 
+	const auto startOfNameTag(kmlData.find(_T("<name>"), offset));// Required to ensure new insert occurs at same place in file as original tag
+
 	const String locationID(placemarkArgs.self.BuildSubNationalIDString(parentRegionName, name));
-	placemarkArgs.modifiedKML.append(kmlData.substr(placemarkArgs.sourceTellP, offset - placemarkArgs.sourceTellP) + CreatePlacemarkNameString(locationID));
+	placemarkArgs.modifiedKML.append(kmlData.substr(placemarkArgs.sourceTellP, startOfNameTag - placemarkArgs.sourceTellP) + CreatePlacemarkNameString(locationID));
 
 	const String endNameTag(_T("</name>"));
-	placemarkArgs.sourceTellP = kmlData.find(endNameTag, offset);
+	placemarkArgs.sourceTellP = kmlData.find(endNameTag, startOfNameTag);
 	if (placemarkArgs.sourceTellP == std::string::npos)
 	{
 		Cerr << "Failed to find expected end name tag\n";
