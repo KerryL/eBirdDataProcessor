@@ -16,6 +16,7 @@
 
 // Standard C++ headers
 #include <map>
+#include <unordered_map>
 
 class MapPageGenerator
 {
@@ -62,6 +63,10 @@ private:
 	static const ThrottledSection::Clock::duration fusionTablesAPIMinDuration;
 	ThrottledSection mapsAPIRateLimiter;
 	ThrottledSection fusionTablesAPIRateLimiter;
+
+	EBirdInterface ebi;
+	std::unordered_map<String, String> eBirdRegionCodeToNameMap;
+	void AddRegionCodesToMap(const String& parentCode, const EBirdInterface::RegionType& regionType);
 
 	static const unsigned int columnCount;
 	static const unsigned int importCellCountLimit;
@@ -126,16 +131,15 @@ private:
 	static bool ReadExistingCountyData(cJSON* row, CountyInfo& data);
 	static std::vector<unsigned int> DetermineDeleteUpdateAdd(
 		std::vector<CountyInfo>& existingData, std::vector<ObservationInfo>& newData);
-	static bool CopyExistingDataForCounty(const ObservationInfo& entry,
+	bool CopyExistingDataForCounty(const ObservationInfo& entry,
 		const std::vector<CountyInfo>& existingData, CountyInfo& newData,
-		KMLLibraryManager& kmlLibrary,
 		const std::vector<EBirdInterface::RegionInfo>& regionInfo);
 	static std::vector<ObservationInfo>::const_iterator NewDataIncludesMatchForCounty(
 		const std::vector<ObservationInfo>& newData, const CountyInfo& county);
 	static bool ProbabilityDataHasChanged(const ObservationInfo& newData, const CountyInfo& existingData);
 	static std::vector<unsigned int> FindDuplicatesAndBlanksToRemove(std::vector<CountyInfo>& existingData);
 
-	static void LookupAndAssignKML(KMLLibraryManager& kmlLibrary, CountyInfo& data);
+	void LookupAndAssignKML(CountyInfo& data);
 
 	template<typename T>
 	static bool Read(cJSON* item, T& value);
@@ -153,15 +157,12 @@ private:
 	{
 		MapJobInfo() = default;
 		MapJobInfo(CountyInfo& info, const ObservationInfo& frequencyInfo,
-			const std::vector<EBirdInterface::RegionInfo>& regionNames, KMLLibraryManager& kmlLibrary,
-			MapPageGenerator& mpg)
-			: info(info), frequencyInfo(frequencyInfo), regionNames(regionNames),
-			kmlLibrary(kmlLibrary), mpg(mpg) {}
+			const std::vector<EBirdInterface::RegionInfo>& regionNames, MapPageGenerator& mpg)
+			: info(info), frequencyInfo(frequencyInfo), regionNames(regionNames), mpg(mpg) {}
 
 		CountyInfo& info;
 		const ObservationInfo& frequencyInfo;
 		const std::vector<EBirdInterface::RegionInfo>& regionNames;
-		KMLLibraryManager& kmlLibrary;
 		MapPageGenerator& mpg;
 
 		void DoJob() override;
@@ -188,7 +189,11 @@ private:
 	static std::vector<String> GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities);
 	static String AssembleCountyName(const String& country, const String& state, const String& county);
 
-	static std::vector<EBirdInterface::RegionInfo> GetFullCountrySubRegionList(const String& countryCode, EBirdInterface& ebi);
+	std::vector<EBirdInterface::RegionInfo> GetFullCountrySubRegionList(const String& countryCode);
+	void LookupEBirdRegionNames(const String& countryCode, const String& subRegion1Code, String& country, String& subRegion1);
+
+	static String ExtractCountryFromFileName(const String& fileName);
+	static String ExtractStateFromFileName(const String& fileName);
 };
 
 template<typename T>

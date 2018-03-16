@@ -44,7 +44,7 @@ const unsigned int MapPageGenerator::importCellCountLimit(100000);
 const unsigned int MapPageGenerator::importSizeLimit(1024 * 1024);// 1 MB
 
 MapPageGenerator::MapPageGenerator(const String& kmlLibraryPath, const String& eBirdAPIKey) : mapsAPIRateLimiter(mapsAPIMinDuration),
-	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), kmlLibrary(kmlLibraryPath, eBirdAPIKey)
+	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), ebi(eBirdAPIKey), kmlLibrary(kmlLibraryPath, eBirdAPIKey)
 {
 }
 
@@ -312,10 +312,9 @@ bool MapPageGenerator::CreateFusionTable(
 	}
 
 	Cout << "Retrieving county location data" << std::endl;
-	EBirdInterface ebi(keys.eBirdAPIKey);
 	const auto countryCodes(GetCountryCodeList(observationProbabilities));
 	for (const auto& c : countryCodes)
-		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c, ebi);
+		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c);
 
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
@@ -327,9 +326,9 @@ bool MapPageGenerator::CreateFusionTable(
 		countyIt->code = entry.locationCode;
 
 		const auto& nameLookupData(countryRegionInfoMap.find(entry.locationCode.substr(0, 2))->second);
-		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, kmlLibrary, nameLookupData))
+		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, nameLookupData))
 			pool.AddJob(std::make_unique<MapJobInfo>(
-				*countyIt, entry, nameLookupData, kmlLibrary, *this));
+				*countyIt, entry, nameLookupData, *this));
 
 		++countyIt;
 	}
@@ -862,7 +861,7 @@ bool MapPageGenerator::ProbabilityDataHasChanged(
 
 bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 	const std::vector<CountyInfo>& existingData, CountyInfo& newData,
-	KMLLibraryManager& kmlLibrary, const std::vector<EBirdInterface::RegionInfo>& regionInfo)
+	const std::vector<EBirdInterface::RegionInfo>& regionInfo)
 {
 	for (const auto& existing : existingData)
 	{
@@ -894,7 +893,7 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 			newData.geometryKML = std::move(existing.geometryKML);
 
 			if (newData.geometryKML.empty())
-				LookupAndAssignKML(kmlLibrary, newData);
+				LookupAndAssignKML(newData);
 
 			assert(!newData.state.empty() && !newData.country.empty() && !newData.county.empty() && !newData.name.empty() && !newData.code.empty());
 			return true;
@@ -911,17 +910,57 @@ String MapPageGenerator::AssembleCountyName(const String& country, const String&
 	return county + _T(", ") + state + _T(", ") + country;
 }
 
-void MapPageGenerator::LookupAndAssignKML(KMLLibraryManager& kmlLibrary, CountyInfo& data)
+void MapPageGenerator::LookupAndAssignKML(CountyInfo& data)
 {
+	String countryName, stateName;
+	LookupEBirdRegionNames(data.country, data.state, countryName, stateName);
 	data.geometryKML = kmlLibrary.GetKML(data.country, data.state, data.county);
 	if (data.geometryKML.empty())
 		Cerr << "\rWarning:  Geometry not found for '" << data.code << "'\n";
 }
 
+void MapPageGenerator::AddRegionCodesToMap(const String& parentCode, const EBirdInterface::RegionType& regionType)
+{
+	auto regionInfo(ebi.GetSubRegions(parentCode, regionType));
+	for (const auto& r : regionInfo)
+		eBirdRegionCodeToNameMap[r.code] = r.name;
+}
+
+void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
+	const String& subRegion1Code, String& country, String& subRegion1)
+{
+	const String fullSubRegionCode(countryCode + Char('-') + subRegion1Code);
+	auto countryIt(eBirdRegionCodeToNameMap.find(countryCode));
+	if (countryIt == eBirdRegionCodeToNameMap.end())
+	{
+		AddRegionCodesToMap(_T("world"), EBirdInterface::RegionType::Country);
+		countryIt = eBirdRegionCodeToNameMap.find(countryCode);
+		if (countryIt == eBirdRegionCodeToNameMap.end())
+		{
+			Cerr << "Failed to lookup country name for code '" << countryCode << "'\n";
+			return;
+		}
+
+		country = countryIt->second;
+		AddRegionCodesToMap(countryCode, EBirdInterface::RegionType::SubNational1);
+	}
+	else
+		country = countryIt->second;
+
+	auto subNational1It(eBirdRegionCodeToNameMap.find(fullSubRegionCode));
+	if (subNational1It == eBirdRegionCodeToNameMap.end())
+	{
+		Cerr << "Failed to lookup region name for code '" << fullSubRegionCode << "'\n";
+		return;
+	}
+
+	subRegion1 = subNational1It->second;
+}
+
 void MapPageGenerator::MapJobInfo::DoJob()
 {
-	info.country = frequencyInfo.locationCode.substr(0, 2);
-	info.state = frequencyInfo.locationCode.substr(3, 2);
+	info.country = ExtractCountryFromFileName(frequencyInfo.locationCode);
+	info.state = ExtractStateFromFileName(frequencyInfo.locationCode);
 	for (const auto& r : regionNames)
 	{
 		if (r.code.compare(frequencyInfo.locationCode) == 0)
@@ -932,8 +971,24 @@ void MapPageGenerator::MapJobInfo::DoJob()
 		}
 	}
 
-	assert(!info.state.empty() && !info.country.empty() && !info.name.empty() && !info.code.empty());// County allowed to be empty, since sometimes there is no county
-	LookupAndAssignKML(kmlLibrary, info);
+	assert(!info.state.empty() && !info.country.empty() && !info.name.empty() && !info.code.empty());
+	mpg.LookupAndAssignKML(info);
+}
+
+// TODO:  These methods also appear in FrequencyDataHarvester.  Need to clean up.
+String MapPageGenerator::ExtractCountryFromFileName(const String& fileName)
+{
+	return fileName.substr(0, 2);
+}
+
+String MapPageGenerator::ExtractStateFromFileName(const String& fileName)
+{
+	// For US, states abbreviations are all 2 characters, but this isn't universal.  Need to find the hyphen.
+	// eBird does guarantee that country abbreviation are two characters, however.
+	const std::string::size_type start(3);
+	const std::string::size_type length(fileName.find('-', start) - start);
+	assert(length != std::string::npos);
+	return fileName.substr(start, length);
 }
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
@@ -1186,7 +1241,7 @@ String MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProce
 	return ss.str();
 }
 
-std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegionList(const String& countryCode, EBirdInterface& ebi)
+std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegionList(const String& countryCode)
 {
 	auto regionList(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::MostDetailAvailable));
 	const auto firstDash(regionList.front().code.find(Char('-')));
