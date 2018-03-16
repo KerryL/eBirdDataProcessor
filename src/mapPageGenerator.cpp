@@ -315,7 +315,7 @@ bool MapPageGenerator::CreateFusionTable(
 	EBirdInterface ebi(keys.eBirdAPIKey);
 	const auto countryCodes(GetCountryCodeList(observationProbabilities));
 	for (const auto& c : countryCodes)
-		countryRegionInfoMap[c] = ebi.GetSubRegions(c, EBirdInterface::RegionType::MostDetailAvailable);
+		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c, ebi);
 
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
@@ -906,6 +906,8 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 
 String MapPageGenerator::AssembleCountyName(const String& country, const String& state, const String& county)
 {
+	if (county.empty())
+		return state + _T(", ") + country;
 	return county + _T(", ") + state + _T(", ") + country;
 }
 
@@ -930,7 +932,7 @@ void MapPageGenerator::MapJobInfo::DoJob()
 		}
 	}
 
-	assert(!info.state.empty() && !info.country.empty() && !info.county.empty() && !info.name.empty() && !info.code.empty());
+	assert(!info.state.empty() && !info.country.empty() && !info.name.empty() && !info.code.empty());// County allowed to be empty, since sometimes there is no county
 	LookupAndAssignKML(kmlLibrary, info);
 }
 
@@ -1182,4 +1184,42 @@ String MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProce
 	}
 
 	return ss.str();
+}
+
+std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegionList(const String& countryCode, EBirdInterface& ebi)
+{
+	auto regionList(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::MostDetailAvailable));
+	const auto firstDash(regionList.front().code.find(Char('-')));
+	assert(firstDash != std::string::npos);
+	const auto secondDash(regionList.front().code.find(Char('-'), firstDash + 1));
+	if (secondDash == std::string::npos)// most detail available is subregion 1 - use as-is
+		return regionList;
+
+	// Check to make sure there are no level 1 areas that have no further sub regions (and thus are left out of level 2 response)
+	std::set<String> parentRegionCodes;
+	for (const auto& r : regionList)
+	{
+		const auto lastDash(r.code.find_last_of(Char('-')));
+		assert(lastDash != std::string::npos);
+		parentRegionCodes.insert(r.code.substr(0, lastDash));
+	}
+
+	auto subNational1List(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::SubNational1));
+	for (const auto& sn1 : subNational1List)
+	{
+		bool found(false);
+		for (const auto& p : parentRegionCodes)
+		{
+			if (p.compare(sn1.code) == 0)
+			{
+				found = true;
+				break;
+			}
+		}
+
+		if (!found)
+			regionList.push_back(sn1);
+	}
+
+	return regionList;
 }

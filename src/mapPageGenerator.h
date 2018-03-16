@@ -187,6 +187,8 @@ private:
 
 	static std::vector<String> GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities);
 	static String AssembleCountyName(const String& country, const String& state, const String& county);
+
+	static std::vector<EBirdInterface::RegionInfo> GetFullCountrySubRegionList(const String& countryCode, EBirdInterface& ebi);
 };
 
 template<typename T>
