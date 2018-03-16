@@ -201,6 +201,12 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 		configurationOK = false;
 	}
 
+	if (config.findMaxNeedsLocations && config.eBirdApiKey.empty())
+	{
+		Cerr << GetKey(config.findMaxNeedsLocations) << " requires " << GetKey(config.eBirdApiKey) << '\n';
+		configurationOK = false;
+	}
+
 	return configurationOK;
 }
 

@@ -30,8 +30,6 @@ int main(int argc, char *argv[])
 	return app.Run(argc, argv);
 }
 
-#include "eBirdInterface.h"
-#include "kmlLibraryManager.h"
 int EBirdDataProcessorApp::Run(int argc, char *argv[])
 {
 	if (argc != 2)
