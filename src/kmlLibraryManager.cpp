@@ -60,7 +60,7 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 bool KMLLibraryManager::LoadKMLFromLibrary(const String& country)
 {
 	Zipper z;
-	const String archiveFileName(country + _T(".kmz"));
+	const String archiveFileName(libraryPath + country + _T(".kmz"));
 	if (!z.OpenArchiveFile(archiveFileName))
 	{
 		Cerr << "Failed to open '" << archiveFileName << "' for input\n";
@@ -117,7 +117,7 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	}
 
 	std::string zippedModifiedKML;
-	if (!z.CreateArchiveFile(_T("test")))
+	if (!z.CreateArchiveFile(libraryPath + country + _T(".kmz")))
 	{
 		Cerr << "Failed to create kmz archive\n";
 		return false;
@@ -176,7 +176,7 @@ bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
 			continue;
 		}
 
-		if (!func(kmlData, next, args))
+		if (!func(kmlData, next + placemarkStartTag.length(), args))
 			return false;
 
 		next = placemarkEnd;
