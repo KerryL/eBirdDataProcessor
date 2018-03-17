@@ -21,7 +21,7 @@ int main(int argc, char *argv[])
 {
 	// Configure global locale for UTF-8
 	// All eBird datasets are UTF-8 encoded
-	std::locale::global(std::locale(std::locale(""), new std::codecvt_utf8<Char>));
+	std::locale::global(std::locale(std::locale(""), new std::codecvt_utf8<wchar_t>));
 	Cout.imbue(std::locale());
 	Cerr.imbue(std::locale());
 	Cin.imbue(std::locale());
