@@ -568,6 +568,15 @@ bool EBirdInterface::NameMatchesRegion(const String& name, const RegionInfo& reg
 		lowerName.substr(lowerName.length() - lowerCode.length()).compare(lowerCode) == 0)
 		return true;*/// I think this was an attempt to match names more liberally, but really it's a bug.  Need to use something far more sophisticated if we want to handle inexact matches.
 
+	// Also consider that the region code will always be fully qualified (i.e. XX-YY),
+	// but the name or code we're trying to match may not be (i.e. YY only)
+	auto lastDash(lowerCode.find_last_of(Char('-')));
+	if (lastDash != std::string::npos)
+	{
+		if (lowerName.compare(lowerCode.substr(lastDash + 1)) == 0)
+			return true;
+	}
+
 	return false;
 }
 
