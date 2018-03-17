@@ -135,7 +135,7 @@ bool Zipper::ReadAndCloseFile(zip_file_t* file, std::string& bytes) const
 	}
 	else
 	{
-		if (zip_fread(file, static_cast<void*>(byteVector.data()), byteVector.size()) != bytes.size())
+		if (zip_fread(file, static_cast<void*>(byteVector.data()), byteVector.size()) != static_cast<int64_t>(bytes.size()))
 		{
 			zip_fclose(file);
 			return false;

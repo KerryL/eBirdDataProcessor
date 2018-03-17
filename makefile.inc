@@ -7,7 +7,7 @@
 # DO NOT include the -I prefix to these paths - it will
 # be added automatically
 INCDIRS_TEMP = \
-	$(CURDIR)/src 
+	$(CURDIR)/src
 
 INCDIRS = $(addprefix -I,$(INCDIRS_TEMP))
 
@@ -42,12 +42,12 @@ AR = ar rcs
 RANLIB = ranlib
 
 # Compiler flags
-CFLAGS = -Wall -Wextra -std=c++14 $(INCDIRS)
+CFLAGS = -Wall -Wextra -std=c++14 $(INCDIRS) `pkg-config --cflags libzip`
 CFLAGS_RELEASE = $(CFLAGS) -O2
 CFLAGS_DEBUG = $(CFLAGS) -g
 
 # Linker flags
-LDFLAGS = $(LIBDIRS) $(LIBS) -lpthread
+LDFLAGS = $(LIBDIRS) $(LIBS) -lpthread `pkg-config --libs libzip`
 LDFLAGS_DEBUG = $(LDFLAGS)
 LDFLAGS_RELEASE = $(LDFLAGS)
 

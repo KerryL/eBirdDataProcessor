@@ -56,8 +56,8 @@ private:
 		ParentRegionFinderArguments(const String& countryName, String& modifiedKML,
 			KMLLibraryManager& self) : countryName(countryName), modifiedKML(modifiedKML), self(self) {}
 		const String& countryName;
-		KMLLibraryManager& self;
 		String& modifiedKML;
+		KMLLibraryManager& self;
 		std::string::size_type sourceTellP = 0;
 	};
 

@@ -1,0 +1,3 @@
+On a fresh Ubuntu install, the following will install the required dependencies:
+
+$ sudo apt install git build-essential libcurl4-openssl-dev libzip-dev
