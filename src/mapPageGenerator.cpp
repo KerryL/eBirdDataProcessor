@@ -914,7 +914,7 @@ void MapPageGenerator::LookupAndAssignKML(CountyInfo& data)
 {
 	String countryName, stateName;
 	LookupEBirdRegionNames(data.country, data.state, countryName, stateName);
-	data.geometryKML = kmlLibrary.GetKML(data.country, data.state, data.county);
+	data.geometryKML = kmlLibrary.GetKML(countryName, stateName, data.county);
 	if (data.geometryKML.empty())
 		Cerr << "\rWarning:  Geometry not found for '" << data.code << "'\n";
 }
