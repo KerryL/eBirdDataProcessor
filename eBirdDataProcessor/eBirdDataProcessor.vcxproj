@@ -141,6 +141,7 @@
     <ClCompile Include="..\src\threadPool.cpp" />
     <ClCompile Include="..\src\throttledSection.cpp" />
     <ClCompile Include="..\src\utilities\configFile.cpp" />
+    <ClCompile Include="..\src\utilities\mutexUtilities.cpp" />
     <ClCompile Include="..\src\utilities\uString.cpp" />
     <ClCompile Include="..\src\zipper.cpp" />
   </ItemGroup>
@@ -166,6 +167,7 @@
     <ClInclude Include="..\src\threadPool.h" />
     <ClInclude Include="..\src\throttledSection.h" />
     <ClInclude Include="..\src\utilities\configFile.h" />
+    <ClInclude Include="..\src\utilities\mutexUtilities.h" />
     <ClInclude Include="..\src\utilities\uString.h" />
     <ClInclude Include="..\src\zipper.h" />
   </ItemGroup>

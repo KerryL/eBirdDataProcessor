@@ -10,10 +10,11 @@
 #include "globalKMLFetcher.h"
 #include "eBirdInterface.h"
 #include "utilities/uString.h"
+#include "utilities/mutexUtilities.h"
 
 // Standard C++ headers
 #include <unordered_map>
-#include <mutex>
+#include <shared_mutex>
 
 class KMLLibraryManager
 {
@@ -26,9 +27,9 @@ private:
 	const String libraryPath;
 
 	typedef std::unordered_map<String, String> KMLMapType;
-	std::unordered_map<String, String> kmlMemory;
+	KMLMapType kmlMemory;
 
-	bool LoadKMLFromLibrary(const String& country);
+	bool LoadKMLFromLibrary(const String& country, const String& locationId);
 	bool DownloadAndStoreKML(const String& country, const GlobalKMLFetcher::DetailLevel& detailLevel);
 
 	static String BuildLocationIDString(const String& country, const String& subNational1, const String& subNational2);
@@ -46,9 +47,9 @@ private:
 	struct GeometryExtractionArguments : public AdditionalArguments
 	{
 		GeometryExtractionArguments(const String& countryName,
-			std::unordered_map<String, String>& tempMap) : countryName(countryName), tempMap(tempMap) {}
+			KMLMapType& tempMap) : countryName(countryName), tempMap(tempMap) {}
 		const String& countryName;
-		std::unordered_map<String, String>& tempMap;
+		KMLMapType& tempMap;
 	};
 
 	struct ParentRegionFinderArguments : public AdditionalArguments
@@ -156,7 +157,14 @@ private:
 		double Dot(const Vector2D& v) const;
 	};
 
-	std::mutex mutex;
+	bool GetKMLFromMemory(const String& locationId, String& kml) const;
+
+	mutable std::shared_mutex mutex;
+	MutexUtilities::AccessManager loadManager;
+	MutexUtilities::AccessManager downloadManager;
+	MutexUtilities::AccessManager geometryManager;
+
+	static bool FileExists(const String& fileName);
 };
 
 #endif// KML_LIBRARY_MANAGER_H_

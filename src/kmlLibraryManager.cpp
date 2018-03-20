@@ -7,9 +7,13 @@
 #include "kmlLibraryManager.h"
 #include "zipper.h"
 
+// OS headers
+#include <sys/stat.h>
+
 // Standard C++ headers
 #include <cassert>
 #include <cctype>
+#include <mutex>
 
 KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
 	const String& eBirdAPIKey) : libraryPath(libraryPath), ebi(eBirdAPIKey)
@@ -18,19 +22,15 @@ KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
 
 String KMLLibraryManager::GetKML(const String& country, const String& subNational1, const String& subNational2)
 {
-	std::lock_guard<std::mutex> lock(mutex);
-
-	// Check for kml already in memory
 	const String locationIDString(BuildLocationIDString(country, subNational1, subNational2));
-	auto it(kmlMemory.find(locationIDString));
-	if (it != kmlMemory.end())
-		return it->second;
+	String kml;
+	if (GetKMLFromMemory(locationIDString, kml))
+		return kml;
 
-	if (LoadKMLFromLibrary(country))
+	if (LoadKMLFromLibrary(country, locationIDString))
 	{
-		it = kmlMemory.find(locationIDString);
-		if (it != kmlMemory.end())
-			return it->second;
+		if (GetKMLFromMemory(locationIDString, kml))
+			return kml;
 
 		Cerr << "KML for '" << country << "' loaded, but no match for '" << locationIDString << "'\n";
 		return String();
@@ -50,20 +50,41 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 
 	if (DownloadAndStoreKML(country, detailLevel))
 	{
-		if (LoadKMLFromLibrary(country))
+		if (LoadKMLFromLibrary(country, locationIDString))
 		{
-			it = kmlMemory.find(locationIDString);
-			if (it != kmlMemory.end())
-				return it->second;
+			if (GetKMLFromMemory(locationIDString, kml))
+				return kml;
+			Cerr << "Downloaded KML for '" << country << "', but no match for '" << locationIDString << "'\n";
 		}
 	}
 
 	return String();
 }
 
-// Load by country
-bool KMLLibraryManager::LoadKMLFromLibrary(const String& country)
+bool KMLLibraryManager::GetKMLFromMemory(const String& locationId, String& kml) const
 {
+	std::shared_lock<std::shared_mutex> lock(mutex);
+	auto it(kmlMemory.find(locationId));
+	if (it == kmlMemory.end())
+		return false;
+
+	kml = it->second;
+	return true;
+}
+
+// Load by country
+bool KMLLibraryManager::LoadKMLFromLibrary(const String& country, const String& locationId)
+{
+	if (!loadManager.TryAccess(country))
+	{
+		loadManager.WaitOn(country);
+		return true;// Assume other thread succeeded
+	}
+
+	MutexUtilities::AccessManager::AccessHelper helper(country, loadManager);
+	if (kmlMemory.find(locationId) != kmlMemory.end())
+		return true;// Another thread loaded it while we were transfering from shared to exclusive access
+
 	Zipper z;
 	const String archiveFileName(libraryPath + country + _T(".kmz"));
 	if (!z.OpenArchiveFile(archiveFileName))
@@ -81,6 +102,7 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country)
 	if (!ForEachPlacemarkTag(UString::ToStringType(bytes), ExtractRegionGeometry, args))
 		return false;
 
+	std::lock_guard<std::shared_mutex> lock(mutex);
 	//kmlMemory.merge(std::move(tempMap));// requires C++ 17 - not sure if there's any reason to prefer it over line below
 	kmlMemory.insert(tempMap.begin(), tempMap.end());
 
@@ -91,6 +113,17 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country)
 bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	const GlobalKMLFetcher::DetailLevel& detailLevel)
 {
+	if (!downloadManager.TryAccess(country))
+	{
+		downloadManager.WaitOn(country);
+		return true;// Assume other thread succeeded
+	}
+
+	MutexUtilities::AccessManager::AccessHelper helper(country, downloadManager);
+	const String kmzFileName(libraryPath + country + _T(".kmz"));
+	if (FileExists(kmzFileName))
+		return true;// Another thread downloaded it while we were transfering from shared to exclusive access
+
 	GlobalKMLFetcher fetcher;
 	std::string result;
 	if (!fetcher.FetchKML(country, detailLevel, result))
@@ -126,7 +159,7 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	}
 
 	std::string zippedModifiedKML;
-	if (!z.CreateArchiveFile(libraryPath + country + _T(".kmz")))
+	if (!z.CreateArchiveFile(kmzFileName))
 	{
 		Cerr << "Failed to create kmz archive\n";
 		return false;
@@ -139,6 +172,12 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	}
 
 	return z.CloseArchive();
+}
+
+bool KMLLibraryManager::FileExists(const String& fileName)
+{
+	struct stat buffer;
+	return stat(UString::ToNarrowString(fileName).c_str(), &buffer) == 0;
 }
 
 String KMLLibraryManager::BuildLocationIDString(const String& country,
@@ -410,9 +449,15 @@ bool KMLLibraryManager::RegionNamesMatch(const String& name1, const String& name
 
 const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion1Data(const String& countryName)
 {
+	std::shared_lock<std::shared_mutex> sharedLock(mutex);
 	auto it(subRegion1Data.find(countryName));
 	if (it == subRegion1Data.end())
-		return subRegion1Data[countryName] = ebi.GetSubRegions(ebi.GetCountryCode(countryName), EBirdInterface::RegionType::SubNational1);
+	{
+		MutexUtilities::AccessUpgrader exclusiveLock(sharedLock);
+		it = subRegion1Data.find(countryName);
+		if (it == subRegion1Data.end())
+			return subRegion1Data[countryName] = ebi.GetSubRegions(ebi.GetCountryCode(countryName), EBirdInterface::RegionType::SubNational1);
+	}
 
 	return it->second;
 }
@@ -420,9 +465,15 @@ const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion1D
 const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion2Data(const String& countryName, const EBirdInterface::RegionInfo& regionInfo)
 {
 	const String locationID(BuildLocationIDString(countryName, regionInfo.name, String()));
+	std::shared_lock<std::shared_mutex> sharedLock(mutex);
 	auto it(subRegion2Data.find(locationID));
 	if (it == subRegion2Data.end())
-		return subRegion2Data[locationID] = ebi.GetSubRegions(regionInfo.code, EBirdInterface::RegionType::SubNational2);
+	{
+		MutexUtilities::AccessUpgrader exclusiveLock(sharedLock);
+		it = subRegion2Data.find(countryName);
+		if (it == subRegion2Data.end())
+			return subRegion2Data[locationID] = ebi.GetSubRegions(regionInfo.code, EBirdInterface::RegionType::SubNational2);
+	}
 
 	return it->second;
 }
@@ -558,13 +609,20 @@ bool KMLLibraryManager::SegmentsIntersect(const GeometryInfo::Point& segment1Poi
 KMLLibraryManager::GeometryInfo KMLLibraryManager::GetGeometryInfoByName(const String& countryName, const String& parentName)
 {
 	const String indexString(BuildLocationIDString(countryName, parentName, String()));
+	std::shared_lock<std::shared_mutex> lock(mutex);
 	auto it(geometryInfo.find(indexString));
 	if (it == geometryInfo.end())
 	{
-		if (!GetParentGeometryInfo(countryName))
-			return GeometryInfo(String());
+		// TODO:  Concurrency could be improved if we used AccessManager here, but it's a little trickier than pattern used in other places.
+		MutexUtilities::AccessUpgrader exclusiveLock(lock);
+		it = geometryInfo.find(indexString);
+		if (it == geometryInfo.end())
+		{
+			if (!GetParentGeometryInfo(countryName))
+				return GeometryInfo(String());
 
-		return geometryInfo.find(indexString)->second;
+			return geometryInfo.find(indexString)->second;
+		}
 	}
 
 	return it->second;

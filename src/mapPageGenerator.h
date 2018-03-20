@@ -17,6 +17,7 @@
 // Standard C++ headers
 #include <map>
 #include <unordered_map>
+#include <shared_mutex>
 
 class MapPageGenerator
 {
@@ -64,7 +65,8 @@ private:
 	ThrottledSection mapsAPIRateLimiter;
 	ThrottledSection fusionTablesAPIRateLimiter;
 
-	EBirdInterface ebi;
+	mutable EBirdInterface ebi;
+	std::shared_mutex codeToNameMapMutex;
 	std::unordered_map<String, String> eBirdRegionCodeToNameMap;
 	void AddRegionCodesToMap(const String& parentCode, const EBirdInterface::RegionType& regionType);
 
@@ -189,7 +191,7 @@ private:
 	static std::vector<String> GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities);
 	static String AssembleCountyName(const String& country, const String& state, const String& county);
 
-	std::vector<EBirdInterface::RegionInfo> GetFullCountrySubRegionList(const String& countryCode);
+	std::vector<EBirdInterface::RegionInfo> GetFullCountrySubRegionList(const String& countryCode) const;
 	void LookupEBirdRegionNames(const String& countryCode, const String& subRegion1Code, String& country, String& subRegion1);
 
 	static String ExtractCountryFromFileName(const String& fileName);

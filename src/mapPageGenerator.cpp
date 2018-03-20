@@ -10,6 +10,7 @@
 #include "googleMapsInterface.h"
 #include "frequencyDataHarvester.h"
 #include "stringUtilities.h"
+#include "utilities/mutexUtilities.h"
 
 // Standard C++ headers
 #include <iomanip>
@@ -19,6 +20,7 @@
 #include <algorithm>
 #include <cassert>
 #include <set>
+#include <mutex>
 
 const String MapPageGenerator::birdProbabilityTableName(_T("Bird Probability Table"));
 const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = {
@@ -930,19 +932,28 @@ void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
 	const String& subRegion1Code, String& country, String& subRegion1)
 {
 	const String fullSubRegionCode(countryCode + Char('-') + subRegion1Code);
+	std::shared_lock<std::shared_mutex> lock(codeToNameMapMutex);
 	auto countryIt(eBirdRegionCodeToNameMap.find(countryCode));
 	if (countryIt == eBirdRegionCodeToNameMap.end())
 	{
-		AddRegionCodesToMap(_T("world"), EBirdInterface::RegionType::Country);
+		MutexUtilities::AccessUpgrader exclusiveLock(lock);
+		// Always need to re-check to ensure another thread didn't already add the
+		// region names during the time we transitioned from shared to exclusive
 		countryIt = eBirdRegionCodeToNameMap.find(countryCode);
-		if (countryIt == eBirdRegionCodeToNameMap.end())
+		if (countryIt == eBirdRegionCodeToNameMap.end())// Confirmed - still need to do this work
 		{
-			Cerr << "Failed to lookup country name for code '" << countryCode << "'\n";
-			return;
-		}
+			AddRegionCodesToMap(_T("world"), EBirdInterface::RegionType::Country);
 
-		country = countryIt->second;
-		AddRegionCodesToMap(countryCode, EBirdInterface::RegionType::SubNational1);
+			countryIt = eBirdRegionCodeToNameMap.find(countryCode);
+			if (countryIt == eBirdRegionCodeToNameMap.end())
+			{
+				Cerr << "Failed to lookup country name for code '" << countryCode << "'\n";
+				return;
+			}
+
+			country = countryIt->second;
+			AddRegionCodesToMap(countryCode, EBirdInterface::RegionType::SubNational1);
+		}
 	}
 	else
 		country = countryIt->second;
@@ -1241,7 +1252,7 @@ String MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProce
 	return ss.str();
 }
 
-std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegionList(const String& countryCode)
+std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegionList(const String& countryCode) const
 {
 	auto regionList(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::MostDetailAvailable));
 	const auto firstDash(regionList.front().code.find(Char('-')));
