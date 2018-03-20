@@ -31,6 +31,9 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 		it = kmlMemory.find(locationIDString);
 		if (it != kmlMemory.end())
 			return it->second;
+
+		Cerr << "KML for '" << country << "' loaded, but no match for '" << locationIDString << "'\n";
+		return String();
 	}
 
 	const GlobalKMLFetcher::DetailLevel detailLevel([subNational1, subNational2]()
