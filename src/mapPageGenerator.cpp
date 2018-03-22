@@ -21,6 +21,7 @@
 #include <cassert>
 #include <set>
 #include <mutex>
+#include <cmath>
 
 const String MapPageGenerator::birdProbabilityTableName(_T("Bird Probability Table"));
 const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = {
