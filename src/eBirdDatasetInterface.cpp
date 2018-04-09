@@ -30,6 +30,8 @@
 #include <algorithm>
 #include <numeric>
 
+const String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
+
 bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const String& fileName)
 {
 	assert(frequencyMap.empty());
@@ -93,8 +95,52 @@ void EBirdDatasetInterface::RemoveRarities()
 	}
 }
 
+bool EBirdDatasetInterface::WriteNameIndexFile(const String& frequencyDataPath) const
+{
+	if (!EnsureFolderExists(frequencyDataPath))
+	{
+		Cerr << "Failed to create target direcotry\n";
+		return false;
+	}
+
+	OFStream file(frequencyDataPath + nameIndexFileName);
+	for (const auto& pair : nameIndexMap)
+		file << pair.first << ',' << pair.second << '\n';
+
+	return true;
+}
+
+bool EBirdDatasetInterface::SerializeMonthData(OFStream& file, const FrequencyData& data)
+{
+	if (!Write(file, static_cast<uint16_t>(data.checklistIDs.size())))
+		return false;
+	if (!Write(file, static_cast<uint16_t>(data.speciesList.size())))
+		return false;
+
+	for (const auto& species : data.speciesList)
+	{
+		if (!Write(file, species.first))
+			return false;
+
+		const double frequency([&data, &species]()
+		{
+			if (data.checklistIDs.size() == 0)
+				return 0.0;
+			return 100.0 * species.second.occurrenceCount / data.checklistIDs.size();
+		}());
+
+		if (!Write(file, frequency))
+			return false;
+	}
+
+	return true;
+}
+
 bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath) const
 {
+	if (!WriteNameIndexFile(frequencyDataPath))
+		return false;
+
 	for (const auto& entry : frequencyMap)
 	{
 		const String path(frequencyDataPath + GetPath(entry.first));
@@ -104,15 +150,21 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 			return false;
 		}
 
-		const String fullFileName(path + entry.first + _T(".csv"));
-		OFStream file(fullFileName.c_str());
+		const String fullFileName(path + entry.first + _T(".bin"));
+		OFStream file(fullFileName.c_str(), std::ios::binary);
 		if (!file.is_open() || !file.good())
 		{
 			Cerr << "Failed to open '" << fullFileName << "' for output\n";
 			return false;
 		}
 
-		file << "January," << entry.second[0].checklistIDs.size() <<
+		for (const auto& month : entry.second)
+		{
+			if (!SerializeMonthData(file, month))
+				return false;
+		}
+
+		/*file << "January," << entry.second[0].checklistIDs.size() <<
 			",February," << entry.second[1].checklistIDs.size() <<
 			",March," << entry.second[2].checklistIDs.size() <<
 			",April," << entry.second[3].checklistIDs.size() <<
@@ -165,7 +217,7 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 			}
 
 			file << '\n';
-		}
+		}*/
 	}
 
 	return true;
@@ -367,7 +419,8 @@ void EBirdDatasetInterface::ProcessObservationData(const Observation& observatio
 
 	auto& entry(frequencyMap[observation.regionCode]);
 	const auto monthIndex(GetMonthIndex(observation.date));
-	auto& speciesInfo(entry[monthIndex].speciesList[observation.commonName]);
+	nameIndexMap.insert(std::make_pair(observation.commonName, static_cast<uint16_t>(nameIndexMap.size())));
+	auto& speciesInfo(entry[monthIndex].speciesList[nameIndexMap[observation.commonName]]);
 	speciesInfo.rarityGuess.Update(observation.date);
 
 	if (observation.completeChecklist)

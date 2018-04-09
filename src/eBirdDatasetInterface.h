@@ -23,6 +23,8 @@ public:
 	bool WriteFrequencyFiles(const String& frequencyDataPath) const;
 
 private:
+	static const String nameIndexFileName;
+
 	struct Date
 	{
 		unsigned int year;
@@ -61,8 +63,10 @@ private:
 	struct FrequencyData
 	{
 		std::set<String> checklistIDs;
-		std::map<String, SpeciesData> speciesList;
+		std::map<uint16_t, SpeciesData> speciesList;
 	};
+
+	std::unordered_map<String, uint16_t> nameIndexMap;
 
 	typedef std::array<FrequencyData, 12> YearFrequencyData;
 	std::unordered_map<String, YearFrequencyData> frequencyMap;// Key is fully qualified eBird region name
@@ -88,6 +92,12 @@ private:
 	static Date ConvertStringToDate(const String& s);
 	static bool IncludeInLikelihoodCalculation(const String& commonName);
 
+	bool WriteNameIndexFile(const String& frequencyDataPath) const;
+
+	static bool SerializeMonthData(OFStream& file, const FrequencyData& data);
+	template<typename T>
+	static bool Write(OFStream& file, const T& data);
+
 	static String GetPath(const String& regionCode);
 	static bool EnsureFolderExists(const String& dir);
 	static bool FolderExists(const String& dir);
@@ -98,7 +108,15 @@ private:
 };
 
 template<typename T>
-static bool EBirdDatasetInterface::ParseInto(const String& s, T& value)
+bool EBirdDatasetInterface::Write(OFStream& file, const T& data)
+{
+	// TODO:  Make more robust (handle endianess?)
+	file.write(reinterpret_cast<const Char*>(&data), sizeof(data));
+	return true;
+}
+
+template<typename T>
+bool EBirdDatasetInterface::ParseInto(const String& s, T& value)
 {
 	IStringStream ss(s);
 	return !(ss >> value).fail();
