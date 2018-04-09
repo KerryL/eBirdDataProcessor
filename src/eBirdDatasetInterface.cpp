@@ -57,15 +57,8 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const String& fileName)
 	}
 
 	uint64_t lineCount(0);
-	std::streampos lastReport(0);// TODO:  Remove
 	while (std::getline(dataset, line))
 	{
-		if (dataset.tellg() - lastReport > 1024 * 1024 * 1024)
-		{
-			Cout << "Read position = " << dataset.tellg() / 1024.0 / 1024 / 1024 << " GB" << std::endl;// TODO:  Remove
-			lastReport = dataset.tellg();
-			break;// TODO:  Remove
-		}
 		Observation observation;
 		if (!ParseLine(line, observation))
 		{
@@ -154,15 +147,21 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 
 		for (i = 0; i < maxSpecies; ++i)
 		{
+			unsigned int j(0);
 			for (const auto& m : entry.second)
 			{
-				if (iterators[i] != m.speciesList.end())
+				if (iterators[j] != m.speciesList.end())
 				{
-					file << iterators[i]->first << ',' << iterators[i]->second.occurrenceCount * 100.0 / m.checklistIDs.size() << ',';
-					++iterators[i];
+					file << iterators[j]->first << ',';
+					if (m.checklistIDs.size() > 0)
+						file << iterators[j]->second.occurrenceCount * 100.0 / m.checklistIDs.size() << ',';
+					else
+						file << "0,";
+					++iterators[j];
 				}
 				else
 					file << ",,";
+				++j;
 			}
 
 			file << '\n';
@@ -170,6 +169,14 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 	}
 
 	return true;
+}
+
+bool EBirdDatasetInterface::IncludeInLikelihoodCalculation(const String& commonName)
+{
+	return commonName.find(_T(" sp.")) == std::string::npos &&// Eliminate Spuhs
+		commonName.find(Char('/')) == std::string::npos &&// Eliminate species1/species2 type entries
+		commonName.find(_T("hybrid")) == std::string::npos &&// Eliminate hybrids
+		commonName.find(_T("Domestic")) == std::string::npos;// Eliminate domestic birds
 }
 
 bool EBirdDatasetInterface::EnsureFolderExists(const String& dir)// Creates each level of a directory as needed to generate the full path
@@ -355,10 +362,12 @@ void EBirdDatasetInterface::ProcessObservationData(const Observation& observatio
 {
 	if (!observation.approved)
 		return;
+	else if (!IncludeInLikelihoodCalculation(observation.commonName))
+		return;
 
-	auto entry(frequencyMap[observation.regionCode]);
+	auto& entry(frequencyMap[observation.regionCode]);
 	const auto monthIndex(GetMonthIndex(observation.date));
-	auto speciesInfo(entry[monthIndex].speciesList[observation.commonName]);
+	auto& speciesInfo(entry[monthIndex].speciesList[observation.commonName]);
 	speciesInfo.rarityGuess.Update(observation.date);
 
 	if (observation.completeChecklist)

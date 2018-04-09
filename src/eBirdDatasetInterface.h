@@ -86,6 +86,7 @@ private:
 	static unsigned int GetMonthIndex(const Date& date);
 	static bool HeaderMatchesExpectedFormat(const String& line);
 	static Date ConvertStringToDate(const String& s);
+	static bool IncludeInLikelihoodCalculation(const String& commonName);
 
 	static String GetPath(const String& regionCode);
 	static bool EnsureFolderExists(const String& dir);
