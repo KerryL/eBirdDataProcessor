@@ -55,6 +55,8 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem(_T("OAUTH_CLIENT_ID"), config.oAuthClientId);
 	AddConfigItem(_T("OAUTH_CLIENT_SECRET"), config.oAuthClientSecret);
+
+	AddConfigItem(_T("DATASET"), config.eBirdDatasetPath);
 }
 
 void EBDPConfigFile::AssignDefaults()
@@ -112,6 +114,12 @@ bool EBDPConfigFile::ConfigIsOK()
 bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 {
 	bool configurationOK(true);
+
+	if (!config.eBirdDatasetPath.empty() && config.frequencyFilePath.empty())
+	{
+		Cerr << GetKey(config.eBirdDatasetPath) << " requires " << GetKey(config.frequencyFilePath) << '\n';
+		configurationOK = false;
+	}
 
 	if (!config.firstSubRegion.empty() && !config.bulkFrequencyUpdate)
 	{

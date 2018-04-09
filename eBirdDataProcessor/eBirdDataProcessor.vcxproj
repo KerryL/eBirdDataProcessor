@@ -125,6 +125,7 @@
     <ClCompile Include="..\src\ebdpConfigFile.cpp" />
     <ClCompile Include="..\src\eBirdDataProcessor.cpp" />
     <ClCompile Include="..\src\eBirdDataProcessorApp.cpp" />
+    <ClCompile Include="..\src\eBirdDatasetInterface.cpp" />
     <ClCompile Include="..\src\eBirdInterface.cpp" />
     <ClCompile Include="..\src\email\cJSON\cJSON.c" />
     <ClCompile Include="..\src\email\curlUtilities.cpp" />
@@ -151,6 +152,7 @@
     <ClInclude Include="..\src\ebdpConfigFile.h" />
     <ClInclude Include="..\src\eBirdDataProcessor.h" />
     <ClInclude Include="..\src\eBirdDataProcessorApp.h" />
+    <ClInclude Include="..\src\eBirdDatasetInterface.h" />
     <ClInclude Include="..\src\eBirdInterface.h" />
     <ClInclude Include="..\src\email\cJSON\cJSON.h" />
     <ClInclude Include="..\src\email\curlUtilities.h" />

@@ -92,6 +92,8 @@ struct EBDPConfig
 
 	String oAuthClientId;
 	String oAuthClientSecret;
+
+	String eBirdDatasetPath;
 };
 
 #endif// EBDP_CONFIG_H_

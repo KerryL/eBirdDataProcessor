@@ -9,6 +9,7 @@
 #include "ebdpConfigFile.h"
 #include "frequencyDataHarvester.h"
 #include "utilities/uString.h"
+#include "eBirdDatasetInterface.h"
 
 // cURL headers
 #include <curl/curl.h>
@@ -42,6 +43,16 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	EBDPConfigFile configFile;
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
+
+	if (!configFile.GetConfig().eBirdDatasetPath.empty())// Ignore all other options and generate global frequency data
+	{
+		EBirdDatasetInterface dataset;
+		if (!dataset.ExtractGlobalFrequencyData(configFile.GetConfig().eBirdDatasetPath))
+			return 1;
+		if (dataset.WriteFrequencyFiles(configFile.GetConfig().frequencyFilePath))
+			return 1;
+		return 0;
+	}
 
 	EBirdDataProcessor processor;
 	if (!processor.Parse(configFile.GetConfig().dataFileName))

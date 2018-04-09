@@ -102,6 +102,9 @@
     <ClCompile Include="..\src\utilities\mutexUtilities.cpp">
       <Filter>Source Files\utilities</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\eBirdDatasetInterface.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
@@ -175,6 +178,9 @@
     </ClInclude>
     <ClInclude Include="..\src\utilities\mutexUtilities.h">
       <Filter>Header Files\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\eBirdDatasetInterface.h">
+      <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>
