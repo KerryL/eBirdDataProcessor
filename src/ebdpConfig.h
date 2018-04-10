@@ -16,10 +16,6 @@ struct EBDPConfig
 	String countyFilter;
 	String locationFilter;
 
-	bool bulkFrequencyUpdate;
-	String firstSubRegion;
-	bool auditFrequencyData;
-
 	enum class ListType : int
 	{
 		Life = 0,
@@ -74,7 +70,6 @@ struct EBDPConfig
 
 	bool generateTargetCalendar;
 	TargetNeedArea targetNeedArea;
-	bool harvestFrequencyData;
 	unsigned int topBirdCount;
 	unsigned int recentObservationPeriod;// [days]
 	String frequencyFilePath;

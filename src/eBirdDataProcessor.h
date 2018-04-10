@@ -24,6 +24,9 @@
 #include <cassert>
 #include <numeric>
 
+// Local forward declarations
+class FrequencyFileReader;
+
 class EBirdDataProcessor
 {
 public:
@@ -63,6 +66,8 @@ public:
 		const String& kmlLibraryPath,
 		const String& googleMapsKey, const String& eBirdAPIKey,
 		const String& clientId, const String& clientSecret) const;
+		
+	static String PrepareForComparison(const String& commonName);
 
 	struct FrequencyInfo
 	{
@@ -71,7 +76,7 @@ public:
 		String compareString;// Huge boost in efficiency if we pre-compute this
 
 		FrequencyInfo() = default;
-		FrequencyInfo(const String& species, const double& frequency) : species(species), frequency(frequency), compareString(StringUtilities::Trim(StripParentheses(species))) {}
+		FrequencyInfo(const String& species, const double& frequency) : species(species), frequency(frequency), compareString(PrepareForComparison(species)) {}
 	};
 
 	struct YearFrequencyInfo
@@ -85,10 +90,11 @@ public:
 		std::array<std::vector<FrequencyInfo>, 12> frequencyInfo;
 	};
 
-	static bool AuditFrequencyData(const String& freqFileDirectory, const String& eBirdApiKey);
-
 	template<typename T>
 	static bool ParseToken(IStringStream& lineStream, const String& fieldName, T& target);
+	
+	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
+	typedef std::array<double, 12> DoubleYear;
 
 private:
 	static const String headerLine;
@@ -156,13 +162,6 @@ private:
 	static bool CommonNamesMatch(String a, String b);
 	static String StripParentheses(String s);
 
-	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
-	typedef std::array<double, 12> DoubleYear;
-
-	static bool ParseFrequencyFile(const String& fileName,
-		FrequencyDataYear& frequencyData, DoubleYear& checklistCounts);
-	static bool ParseFrequencyHeaderLine(const String& line, DoubleYear& checklistCounts);
-	static bool ParseFrequencyLine(const String& line, FrequencyDataYear& frequencyData);
 	void EliminateObservedSpecies(FrequencyDataYear& frequencyData) const;
 	std::vector<FrequencyInfo> GenerateYearlyFrequencyData(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
@@ -181,7 +180,7 @@ private:
 		bool operator()(const EBirdInterface::LocationInfo& a, const EBirdInterface::LocationInfo& b) const;
 	};
 
-	bool ComputeNewSpeciesProbability(const String& fileName,
+	bool ComputeNewSpeciesProbability(FrequencyFileReader& reader, const String& regionCode,
 		std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const;
 
 	static bool WriteBestLocationsViewerPage(const String& htmlFileName,
@@ -190,39 +189,21 @@ private:
 		const std::vector<YearFrequencyInfo>& observationProbabilities,
 		const String& clientId, const String& clientSecret);
 
-	static String StripExtension(const String& fileName);
 	class FileReadAndCalculateJob : public ThreadPool::JobInfoBase
 	{
 	public:
-		FileReadAndCalculateJob(YearFrequencyInfo& frequencyInfo, const String& path, const String& fileName,
-			const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo), path(path), fileName(fileName), ebdp(ebdp) {}
+		FileReadAndCalculateJob(YearFrequencyInfo& frequencyInfo, FrequencyFileReader& reader, const String& regionCode,
+			const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo), reader(reader), regionCode(regionCode), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
-		const String path;
-		const String fileName;
+		FrequencyFileReader& reader;
+		const String regionCode;
 		const EBirdDataProcessor& ebdp;
 
 		void DoJob() override
 		{
-			frequencyInfo.locationCode = StripExtension(fileName);
-			ebdp.ComputeNewSpeciesProbability(path + fileName, frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
-		}
-	};
-
-	class FileReadJob : public ThreadPool::JobInfoBase
-	{
-	public:
-		FileReadJob(YearFrequencyInfo& frequencyInfo, const String& path, const String& fileName)
-			: frequencyInfo(frequencyInfo), path(path), fileName(fileName) {}
-
-		YearFrequencyInfo& frequencyInfo;
-		const String path;
-		const String fileName;
-
-		void DoJob() override
-		{
-			frequencyInfo.locationCode = StripExtension(fileName);
-			ParseFrequencyFile(path + fileName, frequencyInfo.frequencyInfo, frequencyInfo.probabilities);
+			frequencyInfo.locationCode = regionCode;
+			ebdp.ComputeNewSpeciesProbability(reader, regionCode, frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
 		}
 	};
 

@@ -61,6 +61,9 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const String& fileName)
 	uint64_t lineCount(0);
 	while (std::getline(dataset, line))
 	{
+		if (lineCount % 1000000 == 0)
+			Cout << "  " << lineCount << " records parsed" << std::endl;
+
 		Observation observation;
 		if (!ParseLine(line, observation))
 		{
@@ -110,7 +113,7 @@ bool EBirdDatasetInterface::WriteNameIndexFile(const String& frequencyDataPath) 
 	return true;
 }
 
-bool EBirdDatasetInterface::SerializeMonthData(OFStream& file, const FrequencyData& data)
+bool EBirdDatasetInterface::SerializeMonthData(std::ofstream& file, const FrequencyData& data)
 {
 	if (!Write(file, static_cast<uint16_t>(data.checklistIDs.size())))
 		return false;
@@ -151,7 +154,7 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 		}
 
 		const String fullFileName(path + entry.first + _T(".bin"));
-		OFStream file(fullFileName.c_str(), std::ios::binary);
+		std::ofstream file(fullFileName.c_str(), std::ios::binary);
 		if (!file.is_open() || !file.good())
 		{
 			Cerr << "Failed to open '" << fullFileName << "' for output\n";

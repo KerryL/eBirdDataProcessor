@@ -8,8 +8,8 @@
 // Local headers
 #include "mapPageGenerator.h"
 #include "googleMapsInterface.h"
-#include "frequencyDataHarvester.h"
 #include "stringUtilities.h"
+#include "utilities.h"
 #include "utilities/mutexUtilities.h"
 
 // Standard C++ headers
@@ -971,8 +971,8 @@ void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
 
 void MapPageGenerator::MapJobInfo::DoJob()
 {
-	info.country = ExtractCountryFromFileName(frequencyInfo.locationCode);
-	info.state = ExtractStateFromFileName(frequencyInfo.locationCode);
+	info.country = Utilities::ExtractCountryFromRegionCode(frequencyInfo.locationCode);
+	info.state = Utilities::ExtractStateFromRegionCode(frequencyInfo.locationCode);
 	for (const auto& r : regionNames)
 	{
 		if (r.code.compare(frequencyInfo.locationCode) == 0)
@@ -985,22 +985,6 @@ void MapPageGenerator::MapJobInfo::DoJob()
 
 	assert(!info.state.empty() && !info.country.empty() && !info.name.empty() && !info.code.empty());
 	mpg.LookupAndAssignKML(info);
-}
-
-// TODO:  These methods also appear in FrequencyDataHarvester.  Need to clean up.
-String MapPageGenerator::ExtractCountryFromFileName(const String& fileName)
-{
-	return fileName.substr(0, 2);
-}
-
-String MapPageGenerator::ExtractStateFromFileName(const String& fileName)
-{
-	// For US, states abbreviations are all 2 characters, but this isn't universal.  Need to find the hyphen.
-	// eBird does guarantee that country abbreviation are two characters, however.
-	const std::string::size_type start(3);
-	const std::string::size_type length(fileName.find('-', start) - start);
-	assert(length != std::string::npos);
-	return fileName.substr(start, length);
 }
 
 GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()

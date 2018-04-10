@@ -193,9 +193,6 @@ private:
 
 	std::vector<EBirdInterface::RegionInfo> GetFullCountrySubRegionList(const String& countryCode) const;
 	void LookupEBirdRegionNames(const String& countryCode, const String& subRegion1Code, String& country, String& subRegion1);
-
-	static String ExtractCountryFromFileName(const String& fileName);
-	static String ExtractStateFromFileName(const String& fileName);
 };
 
 template<typename T>

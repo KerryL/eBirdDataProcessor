@@ -37,10 +37,6 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem(_T("CALENDAR"), config.generateTargetCalendar);
 	AddConfigItem(_T("TARGET_AREA"), config.targetNeedArea);
-	AddConfigItem(_T("HARVEST_FREQUENCY"), config.harvestFrequencyData);
-	AddConfigItem(_T("BULK_FREQUENCY_UPDATE"), config.bulkFrequencyUpdate);
-	AddConfigItem(_T("AUDIT_FREQUENCY_DATA"), config.auditFrequencyData);
-	AddConfigItem(_T("FIRST_SUB_REGION"), config.firstSubRegion);
 	AddConfigItem(_T("TOP_COUNT"), config.topBirdCount);
 	AddConfigItem(_T("FREQUENCY_FILES"), config.frequencyFilePath);
 	AddConfigItem(_T("TARGET_INFO_FILE_NAME"), config.targetInfoFileName);
@@ -82,10 +78,6 @@ void EBDPConfigFile::AssignDefaults()
 	config.recentObservationPeriod = 15;
 
 	config.showOnlyPhotoNeeds = false;
-
-	config.auditFrequencyData = false;
-	config.bulkFrequencyUpdate = false;
-	config.harvestFrequencyData = false;
 	config.findMaxNeedsLocations = false;
 }
 
@@ -121,68 +113,29 @@ bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (!config.firstSubRegion.empty() && !config.bulkFrequencyUpdate)
-	{
-		Cerr << GetKey(config.firstSubRegion) << " requires " << GetKey(config.bulkFrequencyUpdate) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.bulkFrequencyUpdate && config.frequencyFilePath.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.auditFrequencyData && config.frequencyFilePath.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.auditFrequencyData) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.findMaxNeedsLocations && config.frequencyFilePath.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.findMaxNeedsLocations) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.harvestFrequencyData && config.countryFilter.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.harvestFrequencyData) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.bulkFrequencyUpdate && config.harvestFrequencyData)
-	{
-		Cerr << "Cannot specify both " << GetKey(config.bulkFrequencyUpdate) << " and " << GetKey(config.harvestFrequencyData) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.bulkFrequencyUpdate && config.countryFilter.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.countryFilter) << " when using " << GetKey(config.bulkFrequencyUpdate) << '\n';
-		configurationOK = false;
-	}
-
 	return configurationOK;
 }
 
 bool EBDPConfigFile::TargetCalendarConfigIsOK()
 {
+    if (!config.generateTargetCalendar)
+        return true;
+    
 	bool configurationOK(true);
 
-	if (config.generateTargetCalendar && config.frequencyFilePath.empty())
+	if (config.frequencyFilePath.empty())
 	{
 		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.generateTargetCalendar) << '\n';
 		configurationOK = false;
 	}
 
-	if (config.generateTargetCalendar && config.eBirdApiKey.empty())
+	if (config.eBirdApiKey.empty())
 	{
 		Cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.generateTargetCalendar) << '\n';
 		configurationOK = false;
 	}
 
-	if (config.generateTargetCalendar && config.uniqueObservations != EBDPConfig::UniquenessType::None)
+	if (config.uniqueObservations != EBDPConfig::UniquenessType::None)
 	{
 		Cerr << "Cannot specify both " << GetKey(config.generateTargetCalendar) << " and " << GetKey(config.uniqueObservations) << '\n';
 		configurationOK = false;
@@ -193,25 +146,33 @@ bool EBDPConfigFile::TargetCalendarConfigIsOK()
 
 bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 {
+    if (!config.findMaxNeedsLocations)
+        return true;
+    
 	bool configurationOK(true);
 
-	if (config.findMaxNeedsLocations &&
-		(config.oAuthClientId.empty() || config.oAuthClientSecret.empty()))
+	if (config.oAuthClientId.empty() || config.oAuthClientSecret.empty())
 	{
 		Cerr << GetKey(config.findMaxNeedsLocations) << " requires "
 			<< GetKey(config.oAuthClientId) << " and " << GetKey(config.oAuthClientSecret) << '\n';
 		configurationOK = false;
 	}
 
-	if (config.findMaxNeedsLocations && config.kmlLibraryPath.empty())
+	if (config.kmlLibraryPath.empty())
 	{
 		Cerr << GetKey(config.findMaxNeedsLocations) << " requires " << GetKey(config.kmlLibraryPath) << '\n';
 		configurationOK = false;
 	}
 
-	if (config.findMaxNeedsLocations && config.eBirdApiKey.empty())
+	if (config.eBirdApiKey.empty())
 	{
 		Cerr << GetKey(config.findMaxNeedsLocations) << " requires " << GetKey(config.eBirdApiKey) << '\n';
+		configurationOK = false;
+	}
+    
+    if (config.frequencyFilePath.empty())
+	{
+		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.findMaxNeedsLocations) << '\n';
 		configurationOK = false;
 	}
 
@@ -289,27 +250,30 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 
 bool EBDPConfigFile::RaritiesConfigIsOK()
 {
+    if (!config.generateRarityScores)
+        return true;
+    
 	bool configurationOK(true);
 
-	if (config.generateRarityScores && config.frequencyFilePath.empty())
+	if (config.frequencyFilePath.empty())
 	{
 		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.generateRarityScores) << '\n';
 		configurationOK = false;
 	}
 
-	if (config.generateRarityScores && config.eBirdApiKey.empty())
+	if (config.eBirdApiKey.empty())
 	{
 		Cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.generateRarityScores) << '\n';
 		configurationOK = false;
 	}
 
-	if (config.generateRarityScores && config.generateTargetCalendar)
+	if (config.generateTargetCalendar)
 	{
 		Cerr << "Cannot specify both " << GetKey(config.generateRarityScores) << " and " << GetKey(config.generateTargetCalendar) << '\n';
 		configurationOK = false;
 	}
 
-	if (config.generateRarityScores && config.uniqueObservations != EBDPConfig::UniquenessType::None)
+	if (config.uniqueObservations != EBDPConfig::UniquenessType::None)
 	{
 		Cerr << "Cannot specify both " << GetKey(config.generateRarityScores) << " and " << GetKey(config.uniqueObservations) << '\n';
 		configurationOK = false;

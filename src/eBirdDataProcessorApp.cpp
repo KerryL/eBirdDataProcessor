@@ -7,12 +7,8 @@
 #include "eBirdDataProcessorApp.h"
 #include "eBirdDataProcessor.h"
 #include "ebdpConfigFile.h"
-#include "frequencyDataHarvester.h"
 #include "utilities/uString.h"
 #include "eBirdDatasetInterface.h"
-
-// cURL headers
-#include <curl/curl.h>
 
 // Standard C++ headers
 #include <cassert>
@@ -94,16 +90,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	// TODO:  species count only?
 
-	if (configFile.GetConfig().auditFrequencyData)
-	{
-		if (!EBirdDataProcessor::AuditFrequencyData(configFile.GetConfig().frequencyFilePath,
-			configFile.GetConfig().eBirdApiKey))
-		{
-			Cerr << "Audit failed\n";
-			return 1;
-		}
-	}
-	else if (configFile.GetConfig().generateRarityScores)
+	if (configFile.GetConfig().generateRarityScores)
 		processor.GenerateRarityScores(configFile.GetConfig().frequencyFilePath,
 			configFile.GetConfig().listType, configFile.GetConfig().eBirdApiKey,
 			configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter,
@@ -116,9 +103,22 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			configFile.GetConfig().oAuthClientId, configFile.GetConfig().oAuthClientSecret))
 			return 1;
 	}
-	else if (!configFile.GetConfig().harvestFrequencyData &&
-		!configFile.GetConfig().generateTargetCalendar &&
-		!configFile.GetConfig().bulkFrequencyUpdate)
+    else if (configFile.GetConfig().generateTargetCalendar)
+	{
+		if (configFile.GetConfig().topBirdCount == 0)
+		{
+			Cerr << "Attempting to generate target calendar, but top bird count == 0\n";
+			return 1;
+		}
+
+		processor.GenerateTargetCalendar(configFile.GetConfig().topBirdCount,
+			configFile.GetConfig().outputFileName, configFile.GetConfig().frequencyFilePath,
+			configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
+			configFile.GetConfig().recentObservationPeriod,
+			configFile.GetConfig().targetInfoFileName, configFile.GetConfig().homeLocation,
+			configFile.GetConfig().googleMapsAPIKey, configFile.GetConfig().eBirdApiKey);
+	}
+	else
 	{
 		processor.SortData(configFile.GetConfig().primarySort, configFile.GetConfig().secondarySort);
 
@@ -138,52 +138,5 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		}
 	}
 
-	curl_global_init(CURL_GLOBAL_DEFAULT);
-
-	if (configFile.GetConfig().bulkFrequencyUpdate)
-	{
-		FrequencyDataHarvester harvester;
-		if (!harvester.DoBulkFrequencyHarvest(configFile.GetConfig().countryFilter,
-			configFile.GetConfig().stateFilter, configFile.GetConfig().frequencyFilePath,
-			configFile.GetConfig().firstSubRegion, configFile.GetConfig().eBirdApiKey))
-		{
-			curl_global_cleanup();
-			return 1;
-		}
-	}
-	else
-	{
-		if (configFile.GetConfig().harvestFrequencyData)
-		{
-			FrequencyDataHarvester harvester;
-			if (!harvester.GenerateFrequencyFile(configFile.GetConfig().countryFilter,
-				configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
-				configFile.GetConfig().frequencyFilePath, configFile.GetConfig().eBirdApiKey))
-			{
-				Cerr << "Failed to generate frequency file\n";
-				curl_global_cleanup();
-				return 1;
-			}
-		}
-
-		if (configFile.GetConfig().generateTargetCalendar)
-		{
-			if (configFile.GetConfig().topBirdCount == 0)
-			{
-				Cerr << "Attempting to generate target calendar, but top bird count == 0\n";
-				curl_global_cleanup();
-				return 1;
-			}
-
-			processor.GenerateTargetCalendar(configFile.GetConfig().topBirdCount,
-				configFile.GetConfig().outputFileName, configFile.GetConfig().frequencyFilePath,
-				configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,
-				configFile.GetConfig().recentObservationPeriod,
-				configFile.GetConfig().targetInfoFileName, configFile.GetConfig().homeLocation,
-				configFile.GetConfig().googleMapsAPIKey, configFile.GetConfig().eBirdApiKey);
-		}
-	}
-
-	curl_global_cleanup();
 	return 0;
 }

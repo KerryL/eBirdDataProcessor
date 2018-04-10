@@ -8,7 +8,8 @@
 #include "googleMapsInterface.h"
 #include "bestObservationTimeEstimator.h"
 #include "mapPageGenerator.h"
-#include "frequencyDataHarvester.h"
+#include "frequencyFileReader.h"
+#include "utilities.h"
 
 // System headers (added from https://github.com/tronkko/dirent/ for Windows)
 #ifdef _WIN32
@@ -129,7 +130,7 @@ bool EBirdDataProcessor::ParseLine(const String& line, Entry& entry)
 	entry.dateTime.tm_isdst = -1;// Let locale determine if DST is in effect
 	mktime(&entry.dateTime);
 
-	entry.compareString = StringUtilities::Trim(StripParentheses(entry.commonName));
+	entry.compareString = PrepareForComparison(entry.commonName);
 
 	return true;
 }
@@ -357,7 +358,7 @@ String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type, const 
 
 bool EBirdDataProcessor::CommonNamesMatch(String a, String b)
 {
-	return StringUtilities::Trim(StripParentheses(a)).compare(StringUtilities::Trim(StripParentheses(b))) == 0;
+	return PrepareForComparison(a).compare(PrepareForComparison(b)) == 0;
 }
 
 String EBirdDataProcessor::StripParentheses(String s)
@@ -461,11 +462,11 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	const String& hotspotInfoFileName, const String& homeLocation,
 	const String& mapApiKey, const String& eBirdApiKey) const
 {
+	FrequencyFileReader frequencyFileReader(frequencyFilePath);
 	EBirdInterface ebi(eBirdApiKey);
-	const String fileName(ebi.GetRegionCode(country, state, county) + _T(".csv"));
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
-	if (!ParseFrequencyFile(frequencyFilePath + fileName, frequencyData, checklistCounts))
+	if (!frequencyFileReader.ReadRegionData(ebi.GetRegionCode(country, state, county), frequencyData, checklistCounts))
 		return false;
 
 	//GuessChecklistCounts(frequencyData, checklistCounts);
@@ -626,83 +627,6 @@ void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyDa
 			return speciesIterator != data.end();
 		}), month.end());
 	}
-}
-
-bool EBirdDataProcessor::ParseFrequencyFile(const String& fileName,
-	FrequencyDataYear& frequencyData, DoubleYear& checklistCounts)
-{
-	//Cout << "Reading frequency information from '" << fileName << "'.\n";
-	IFStream frequencyFile(fileName.c_str());
-	if (!frequencyFile.good() || !frequencyFile.is_open())
-	{
-		Cerr << "Failed to open '" << fileName << "' for input.\n";
-		return false;
-	}
-
-	String line;
-	if (!std::getline(frequencyFile, line))
-	{
-		Cerr << "Failed to read header line\n";
-		return false;
-	}
-
-	if (!ParseFrequencyHeaderLine(line, checklistCounts))
-		return false;
-
-	if (!std::getline(frequencyFile, line))
-	{
-		Cerr << "Failed to read second header line\n";
-		return false;
-	}
-
-	while (std::getline(frequencyFile, line))
-	{
-		if (!ParseFrequencyLine(line, frequencyData))
-			return false;
-	}
-
-	return true;
-}
-
-bool EBirdDataProcessor::ParseFrequencyHeaderLine(const String& line, DoubleYear& checklistCounts)
-{
-	IStringStream ss(line);
-	for (auto& count : checklistCounts)
-	{
-		String monthUnused;
-		if (!ParseToken(ss, _T("Checklist Month"), monthUnused))
-			return false;
-		if (!ParseToken(ss, _T("Checklist Count"), count))
-			return false;
-	}
-
-	return true;
-}
-
-bool EBirdDataProcessor::ParseFrequencyLine(const String& line, FrequencyDataYear& frequencyData)
-{
-	IStringStream ss(line);
-	for (auto& month : frequencyData)
-	{
-		String species;
-		double frequency;
-		if (!ParseToken(ss, _T("Species"), species))
-			return false;
-		if (!ParseToken(ss, _T("Frequency"), frequency))
-			return false;
-		if (!species.empty())
-		{
-			if (frequency < 0.0)
-			{
-				Cerr << "Unexpected frequency data\n";
-				return false;
-			}
-
-			month.push_back(FrequencyInfo(species, frequency));
-		}
-	}
-
-	return true;
 }
 
 void EBirdDataProcessor::RecommendHotspots(const std::set<String>& consolidatedSpeciesList,
@@ -936,15 +860,20 @@ void EBirdDataProcessor::GenerateUniqueObservationsReport(const EBDPConfig::Uniq
 		Cout << "County:\n";
 }
 
+String EBirdDataProcessor::PrepareForComparison(const String& commonName)
+{
+	return StringUtilities::Trim(StripParentheses(commonName));
+}
+
 void EBirdDataProcessor::GenerateRarityScores(const String& frequencyFilePath,
 	const EBDPConfig::ListType& listType, const String& eBirdAPIKey,
 	const String& country, const String& state, const String& county)
 {
 	EBirdInterface ebi(eBirdAPIKey);
-	const String frequencyFileName(ebi.GetRegionCode(country, state, county) + _T(".csv"));
+	FrequencyFileReader reader(frequencyFilePath);
 	FrequencyDataYear monthFrequencyData;
 	DoubleYear checklistCounts;
-	if (!ParseFrequencyFile(frequencyFilePath + frequencyFileName, monthFrequencyData, checklistCounts))
+	if (!reader.ReadRegionData(ebi.GetRegionCode(country, state, county), monthFrequencyData, checklistCounts))
 		return;
 
 	std::vector<EBirdDataProcessor::FrequencyInfo> yearFrequencyData(
@@ -956,21 +885,14 @@ void EBirdDataProcessor::GenerateRarityScores(const String& frequencyFilePath,
 	for (i = 0; i < rarityScoreData.size(); ++i)
 	{
 		rarityScoreData[i].species = consolidatedData[i].commonName;
-		bool found(false);
+		rarityScoreData[i].frequency = 0.0;
 		for (const auto& species : yearFrequencyData)
 		{
 			if (CommonNamesMatch(rarityScoreData[i].species, species.species))
 			{
 				rarityScoreData[i].frequency = species.frequency;
-				found = true;
 				break;
 			}
-		}
-
-		if (!found)
-		{
-			Cerr << "Failed to find a match for '" << rarityScoreData[i].species << "' in frequency data.  Try re-generating data on a day that you have not submitted any checklists.\n";
-			return;
 		}
 	}
 
@@ -1104,21 +1026,24 @@ std::vector<String> EBirdDataProcessor::ListFilesInDirectory(const String& direc
 	return fileNames;
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const String& frequencyFilePath,
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequencyFilePath,
 	const String& kmlLibraryPath, const String& googleMapsKey, const String& eBirdAPIKey,
 	const String& clientId, const String& clientSecret) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
 		return false;
+    
+    // TODO:  Test:  Better to read sequentially then multi-thread only the calculate part?
 
 	std::vector<YearFrequencyInfo> newSightingProbability(fileNames.size());// frequency is probability of seeing new species and species is file name of frequency data file
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
+	FrequencyFileReader reader(frequencyFilePath);
 
 	auto probEntryIt(newSightingProbability.begin());
 	for (const auto& f : fileNames)
 	{
-		pool.AddJob(std::make_unique<FileReadAndCalculateJob>(*probEntryIt, frequencyFilePath, f, *this));
+		pool.AddJob(std::make_unique<FileReadAndCalculateJob>(*probEntryIt, reader, Utilities::StripExtension(f), *this));
 		++probEntryIt;
 	}
 
@@ -1147,12 +1072,12 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies( const String& freque
 	return true;
 }
 
-bool EBirdDataProcessor::ComputeNewSpeciesProbability(const String& fileName,
+bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyFileReader& reader, const String& regionCode,
 	std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const
 {
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
-	if (!ParseFrequencyFile(fileName, frequencyData, checklistCounts))
+	if (!reader.ReadRegionData(regionCode, frequencyData, checklistCounts))
 		return false;
 
 	EliminateObservedSpecies(frequencyData);
@@ -1167,7 +1092,7 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(const String& fileName,
 			continue;
 		}
 
-		const double thresholdFrequency(5.0);// TODO:  Don't hardcode
+		const double thresholdFrequency(0.0);// TODO:  Don't hardcode TODO:  TEST THIS!
 		double product(1.0);
 		for (const auto& entry : frequencyData[i])
 		{
@@ -1192,33 +1117,4 @@ bool EBirdDataProcessor::WriteBestLocationsViewerPage(const String& htmlFileName
 	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey);
 	return generator.WriteBestLocationsViewerPage(htmlFileName,
 		googleMapsKey, eBirdAPIKey, observationProbabilities, clientId, clientSecret);
-}
-
-bool EBirdDataProcessor::AuditFrequencyData(const String& freqFileDirectory,
-	const String& eBirdApiKey)
-{
-	auto fileNames(ListFilesInDirectory(freqFileDirectory));
-	if (fileNames.size() == 0)
-		return false;
-
-	std::vector<YearFrequencyInfo> freqInfo(fileNames.size());
-	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
-
-	auto probEntryIt(freqInfo.begin());
-	for (const auto& f : fileNames)
-	{
-		pool.AddJob(std::make_unique<FileReadJob>(*probEntryIt, freqFileDirectory, f));
-		++probEntryIt;
-	}
-
-	pool.WaitForAllJobsComplete();
-
-	FrequencyDataHarvester harvester;
-	return harvester.AuditFrequencyData(freqFileDirectory, freqInfo, eBirdApiKey);
-}
-
-String EBirdDataProcessor::StripExtension(const String& fileName)
-{
-	const String extension(_T(".csv"));
-	return fileName.substr(0, fileName.length() - extension.length());
 }

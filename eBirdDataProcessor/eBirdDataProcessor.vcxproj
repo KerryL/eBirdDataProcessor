@@ -131,7 +131,7 @@
     <ClCompile Include="..\src\email\curlUtilities.cpp" />
     <ClCompile Include="..\src\email\jsonInterface.cpp" />
     <ClCompile Include="..\src\email\oAuth2Interface.cpp" />
-    <ClCompile Include="..\src\frequencyDataHarvester.cpp" />
+    <ClCompile Include="..\src\frequencyFileReader.cpp" />
     <ClCompile Include="..\src\globalKMLFetcher.cpp" />
     <ClCompile Include="..\src\googleFusionTablesInterface.cpp" />
     <ClCompile Include="..\src\googleMapsInterface.cpp" />
@@ -141,6 +141,7 @@
     <ClCompile Include="..\src\stringUtilities.cpp" />
     <ClCompile Include="..\src\threadPool.cpp" />
     <ClCompile Include="..\src\throttledSection.cpp" />
+    <ClCompile Include="..\src\utilities.cpp" />
     <ClCompile Include="..\src\utilities\configFile.cpp" />
     <ClCompile Include="..\src\utilities\mutexUtilities.cpp" />
     <ClCompile Include="..\src\utilities\uString.cpp" />
@@ -158,7 +159,7 @@
     <ClInclude Include="..\src\email\curlUtilities.h" />
     <ClInclude Include="..\src\email\jsonInterface.h" />
     <ClInclude Include="..\src\email\oAuth2Interface.h" />
-    <ClInclude Include="..\src\frequencyDataHarvester.h" />
+    <ClInclude Include="..\src\frequencyFileReader.h" />
     <ClInclude Include="..\src\globalKMLFetcher.h" />
     <ClInclude Include="..\src\googleFusionTablesInterface.h" />
     <ClInclude Include="..\src\googleMapsInterface.h" />
@@ -168,6 +169,7 @@
     <ClInclude Include="..\src\stringUtilities.h" />
     <ClInclude Include="..\src\threadPool.h" />
     <ClInclude Include="..\src\throttledSection.h" />
+    <ClInclude Include="..\src\utilities.h" />
     <ClInclude Include="..\src\utilities\configFile.h" />
     <ClInclude Include="..\src\utilities\mutexUtilities.h" />
     <ClInclude Include="..\src\utilities\uString.h" />

@@ -94,9 +94,9 @@ private:
 
 	bool WriteNameIndexFile(const String& frequencyDataPath) const;
 
-	static bool SerializeMonthData(OFStream& file, const FrequencyData& data);
+	static bool SerializeMonthData(std::ofstream& file, const FrequencyData& data);
 	template<typename T>
-	static bool Write(OFStream& file, const T& data);
+	static bool Write(std::ofstream& file, const T& data);
 
 	static String GetPath(const String& regionCode);
 	static bool EnsureFolderExists(const String& dir);
@@ -108,10 +108,10 @@ private:
 };
 
 template<typename T>
-bool EBirdDatasetInterface::Write(OFStream& file, const T& data)
+bool EBirdDatasetInterface::Write(std::ofstream& file, const T& data)
 {
 	// TODO:  Make more robust (handle endianess?)
-	file.write(reinterpret_cast<const Char*>(&data), sizeof(data));
+	file.write(reinterpret_cast<const char*>(&data), sizeof(data));
 	return true;
 }
 
