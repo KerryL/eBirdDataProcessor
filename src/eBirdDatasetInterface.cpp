@@ -87,7 +87,7 @@ void EBirdDatasetInterface::RemoveRarities()
 			for (auto it = month.speciesList.begin(); it != month.speciesList.end(); )
 			{
 				if (it->second.rarityGuess.mightBeRarity)
-					month.speciesList.erase(it);
+					it = month.speciesList.erase(it);
 				else
 					++it;
 			}
@@ -163,61 +163,6 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 			if (!SerializeMonthData(file, month))
 				return false;
 		}
-
-		/*file << "January," << entry.second[0].checklistIDs.size() <<
-			",February," << entry.second[1].checklistIDs.size() <<
-			",March," << entry.second[2].checklistIDs.size() <<
-			",April," << entry.second[3].checklistIDs.size() <<
-			",May," << entry.second[4].checklistIDs.size() <<
-			",June," << entry.second[5].checklistIDs.size() <<
-			",July," << entry.second[6].checklistIDs.size() <<
-			",August," << entry.second[7].checklistIDs.size() <<
-			",September," << entry.second[8].checklistIDs.size() <<
-			",October," << entry.second[9].checklistIDs.size() <<
-			",November," << entry.second[10].checklistIDs.size() <<
-			",December," << entry.second[11].checklistIDs.size() << ",\n";
-
-		unsigned int i;
-		for (i = 0; i < entry.second.size(); ++i)
-			file << "Species,Frequency,";
-		file << '\n';
-
-		const unsigned int maxSpecies([&entry]()
-		{
-			unsigned int s(0);
-			for (const auto& d : entry.second)
-			{
-				if (d.speciesList.size() > s)
-					s = d.speciesList.size();
-			}
-			return s;
-		}());
-
-		std::array<std::map<String, SpeciesData>::const_iterator, 12> iterators;
-		for (i = 0; i < iterators.size(); ++i)
-			iterators[i] = entry.second[i].speciesList.begin();
-
-		for (i = 0; i < maxSpecies; ++i)
-		{
-			unsigned int j(0);
-			for (const auto& m : entry.second)
-			{
-				if (iterators[j] != m.speciesList.end())
-				{
-					file << iterators[j]->first << ',';
-					if (m.checklistIDs.size() > 0)
-						file << iterators[j]->second.occurrenceCount * 100.0 / m.checklistIDs.size() << ',';
-					else
-						file << "0,";
-					++iterators[j];
-				}
-				else
-					file << ",,";
-				++j;
-			}
-
-			file << '\n';
-		}*/
 	}
 
 	return true;
