@@ -180,6 +180,9 @@ bool EBirdDatasetInterface::EnsureFolderExists(const String& dir)// Creates each
 {
 #ifdef _WIN32
 	std::string::size_type nextSlash(std::min(dir.find(Char('/')), dir.find(Char('\\'))));
+#else
+	std::string::size_type nextSlash(dir.find(Char('/')));
+#endif// _WIN32
 	while (nextSlash != std::string::npos)
 	{
 		const auto partialPath(dir.substr(0, nextSlash));
@@ -189,7 +192,11 @@ bool EBirdDatasetInterface::EnsureFolderExists(const String& dir)// Creates each
 				return false;
 		}
 
+#ifdef _WIN32
 		nextSlash = std::min(dir.find(Char('/'), nextSlash + 1), dir.find(Char('\\'), nextSlash + 1));
+#else
+		nextSlash = dir.find(Char('/'), nextSlash + 1);
+#endif// _WIN32
 	}
 
 	if (!FolderExists(dir))
@@ -197,9 +204,6 @@ bool EBirdDatasetInterface::EnsureFolderExists(const String& dir)// Creates each
 		if (!CreateFolder(dir))
 			return false;
 	}
-#else
-#error "not yet implemented"
-#endif// _WIN32
 
 	return true;
 }
@@ -396,7 +400,7 @@ void EBirdDatasetInterface::SpeciesData::Rarity::Update(const Date& date)
 
 bool EBirdDatasetInterface::SpeciesData::Rarity::ObservationsIndicateRarity() const
 {
-	const unsigned int minimumTimeDelta(365);
+	const int minimumTimeDelta(365);
 	return latestObservationDate - earliestObservationDate < minimumTimeDelta;
 }
 
