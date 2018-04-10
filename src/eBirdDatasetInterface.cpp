@@ -144,13 +144,15 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 	if (!WriteNameIndexFile(frequencyDataPath))
 		return false;
 
+	bool success(true);
 	for (const auto& entry : frequencyMap)
 	{
 		const String path(frequencyDataPath + GetPath(entry.first));
 		if (!EnsureFolderExists(path))
 		{
-			Cerr << "Failed to create target direcotry\n";
-			return false;
+			Cerr << "Failed to create directory '" << path << "'\n";
+			success = false;
+			continue;
 		}
 
 		const String fullFileName(path + entry.first + _T(".bin"));
@@ -158,17 +160,22 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 		if (!file.is_open() || !file.good())
 		{
 			Cerr << "Failed to open '" << fullFileName << "' for output\n";
-			return false;
+			success = false;
+			continue;
 		}
 
 		for (const auto& month : entry.second)
 		{
 			if (!SerializeMonthData(file, month))
-				return false;
+			{
+				Cerr << "Failed to serialize data to '" << fullFileName << "'\n";
+				success = false;
+				break;
+			}
 		}
 	}
 
-	return true;
+	return success;
 }
 
 bool EBirdDatasetInterface::IncludeInLikelihoodCalculation(const String& commonName)
