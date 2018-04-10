@@ -20,6 +20,7 @@
 #ifdef _WIN32
 #pragma warning(pop)
 #endif
+#include <sys/stat.h>
 
 // Standard C++ headers
 #include <fstream>
@@ -1019,7 +1020,20 @@ std::vector<String> EBirdDataProcessor::ListFilesInDirectory(const String& direc
 			std::string(ent->d_name).compare("..") == 0)
 			continue;
 
-		fileNames.push_back(UString::ToStringType(ent->d_name));
+		assert(ent->d_type != DT_UNKNOWN && "Cannot properly iterate through this filesystem");
+		if (ent->d_type == DT_DIR)
+		{
+			const String folder(UString::ToStringType(ent->d_name) + _T("/"));
+			const String subPath(directory + folder);
+			auto subDirFiles(ListFilesInDirectory(subPath));
+			/*std::for_each(subDirFiles.begin(), subDirFiles.end(), [&folder](String& s)
+			{
+				s = folder + s;
+			});*/
+			fileNames.insert(fileNames.end(), subDirFiles.begin(), subDirFiles.end());
+		}
+		else
+			fileNames.push_back(UString::ToStringType(ent->d_name));
 	}
 	closedir(dir);
 
@@ -1033,8 +1047,16 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequen
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
 		return false;
-    
-    // TODO:  Test:  Better to read sequentially then multi-thread only the calculate part?
+
+	fileNames.erase(std::remove_if(fileNames.begin(), fileNames.end(), [](const String& f)
+	{
+		const String desiredExtension(_T(".bin"));
+		if (f.length() < desiredExtension.length())
+			return true;
+
+		return f.substr(f.length() - 4).compare(desiredExtension) != 0;
+
+	}), fileNames.end());
 
 	std::vector<YearFrequencyInfo> newSightingProbability(fileNames.size());// frequency is probability of seeing new species and species is file name of frequency data file
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
@@ -1043,26 +1065,22 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequen
 	auto probEntryIt(newSightingProbability.begin());
 	for (const auto& f : fileNames)
 	{
-		pool.AddJob(std::make_unique<FileReadAndCalculateJob>(*probEntryIt, reader, Utilities::StripExtension(f), *this));
+		FrequencyDataYear occurrenceData;
+		DoubleYear checklistCounts;
+		const auto regionCode(Utilities::StripExtension(f));
+		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts))
+			return false;
+
+		probEntryIt->locationCode = regionCode;
+		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData), std::move(checklistCounts), *this));
 		++probEntryIt;
 	}
 
 	pool.WaitForAllJobsComplete();
 
-	/*time_t now(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
-	const struct tm nowTime(*localtime(&now));
-	const int currentMonth(nowTime.tm_mon);
-	std::sort(newSightingProbability.begin(), newSightingProbability.end(), [&currentMonth](const YearFrequencyInfo& a, const YearFrequencyInfo& b)
-	{
-		return a.probabilities[currentMonth] > b.probabilities[currentMonth];
-	});
-
-	for (const auto& location : newSightingProbability)
-		Cout << location.locationCode << " : " << location.probabilities[currentMonth] * 100.0 << std::endl;*/
-
 	if (!googleMapsKey.empty())
 	{
-		const String fileName(_T("bestLocations.html"));// TODO:  Don't hardcode
+		const String fileName(_T("bestLocations.html"));
 		if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, googleMapsKey, eBirdAPIKey, newSightingProbability, clientId, clientSecret))
 		{
 			Cerr << "Faild to create Google Maps best locations page\n";
@@ -1072,27 +1090,23 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequen
 	return true;
 }
 
-bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyFileReader& reader, const String& regionCode,
-	std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const
+bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
+	DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
+	std::array<std::vector<FrequencyInfo>, 12>& species) const
 {
-	FrequencyDataYear frequencyData;
-	DoubleYear checklistCounts;
-	if (!reader.ReadRegionData(regionCode, frequencyData, checklistCounts))
-		return false;
-
 	EliminateObservedSpecies(frequencyData);
 
 	unsigned int i(0);
 	for (auto& p : probabilities)
 	{
-		const unsigned int thresholdObservationCount(50);// TODO:  Don't hardcode
-		if (checklistCounts[i] < thresholdObservationCount)// Ignore counties which have very few observations (due to unreliable data)
+		const unsigned int thresholdObservationCount(30);
+		if (checklistCounts[i] < thresholdObservationCount)// Ignore counties which have very few observations (due to insufficient data)
 		{
 			p = 0.0;
 			continue;
 		}
 
-		const double thresholdFrequency(0.0);// TODO:  Don't hardcode TODO:  TEST THIS!
+		const double thresholdFrequency(0.0);// TODO:  TEST THIS!
 		double product(1.0);
 		for (const auto& entry : frequencyData[i])
 		{

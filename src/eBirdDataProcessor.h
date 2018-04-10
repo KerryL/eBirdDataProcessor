@@ -180,8 +180,9 @@ private:
 		bool operator()(const EBirdInterface::LocationInfo& a, const EBirdInterface::LocationInfo& b) const;
 	};
 
-	bool ComputeNewSpeciesProbability(FrequencyFileReader& reader, const String& regionCode,
-		std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const;
+	bool ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
+		DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
+		std::array<std::vector<FrequencyInfo>, 12>& species) const;
 
 	static bool WriteBestLocationsViewerPage(const String& htmlFileName,
 		const String& kmlLibraryPath,
@@ -189,21 +190,22 @@ private:
 		const std::vector<YearFrequencyInfo>& observationProbabilities,
 		const String& clientId, const String& clientSecret);
 
-	class FileReadAndCalculateJob : public ThreadPool::JobInfoBase
+	class CalculateProbabilityJob : public ThreadPool::JobInfoBase
 	{
 	public:
-		FileReadAndCalculateJob(YearFrequencyInfo& frequencyInfo, FrequencyFileReader& reader, const String& regionCode,
-			const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo), reader(reader), regionCode(regionCode), ebdp(ebdp) {}
+		CalculateProbabilityJob(YearFrequencyInfo& frequencyInfo, FrequencyDataYear&& occurrenceData,
+			DoubleYear&& checklistCounts, const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo),
+			occurrenceData(occurrenceData), checklistCounts(checklistCounts), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
-		FrequencyFileReader& reader;
-		const String regionCode;
+		FrequencyDataYear occurrenceData;
+		DoubleYear checklistCounts;
 		const EBirdDataProcessor& ebdp;
 
 		void DoJob() override
 		{
-			frequencyInfo.locationCode = regionCode;
-			ebdp.ComputeNewSpeciesProbability(reader, regionCode, frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
+			ebdp.ComputeNewSpeciesProbability(std::move(occurrenceData), std::move(checklistCounts),
+				frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
 		}
 	};
 

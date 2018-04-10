@@ -29,8 +29,10 @@ String ExtractStateFromRegionCode(const String& regionCode)
 
 String StripExtension(const String& fileName)
 {
-	const String extension(_T(".csv"));
-	return fileName.substr(0, fileName.length() - extension.length());
+	const auto extStart(fileName.find_last_of(_T(".")));
+	if (extStart == std::string::npos)
+		return fileName;
+	return fileName.substr(0, extStart);
 }
 
 }// namespace Utilities
