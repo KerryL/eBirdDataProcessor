@@ -8,6 +8,7 @@
 
 // Local headers
 #include "utilities/uString.h"
+#include "threadPool.h"
 
 // Standard C++ headers
 #include <unordered_map>
@@ -105,6 +106,23 @@ private:
 
 	template<typename T>
 	static bool ParseInto(const String& s, T& value);
+
+	struct LineProcessJobInfo : public ThreadPool::JobInfoBase
+	{
+		LineProcessJobInfo(const String& line, EBirdDatasetInterface &ebdi) : line(line), ebdi(ebdi) {}
+
+		const String line;
+		EBirdDatasetInterface& ebdi;
+
+		void DoJob() override
+		{
+			ebdi.ProcessLine(line);
+		}
+	};
+
+	bool ProcessLine(const String& line);
+
+	std::mutex mutex;
 };
 
 template<typename T>

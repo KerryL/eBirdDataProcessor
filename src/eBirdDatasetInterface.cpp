@@ -58,26 +58,34 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const String& fileName)
 		return false;
 	}
 
+	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 	uint64_t lineCount(0);
 	while (std::getline(dataset, line))
 	{
 		if (lineCount % 1000000 == 0)
-			Cout << "  " << lineCount << " records parsed" << std::endl;
+			Cout << "  " << lineCount << " records read" << std::endl;
 
-		Observation observation;
-		if (!ParseLine(line, observation))
-		{
-			Cerr << "Failure parsing line " << lineCount << '\n';
-			return false;
-		}
-
-		ProcessObservationData(observation);
+		pool.AddJob(std::make_unique<LineProcessJobInfo>(line, *this));
 		++lineCount;
 	}
 
+	pool.WaitForAllJobsComplete();
 	Cout << "Finished parsing " << lineCount << " lines from dataset" << std::endl;
 	RemoveRarities();
 
+	return true;
+}
+
+bool EBirdDatasetInterface::ProcessLine(const String& line)
+{
+	Observation observation;
+	if (!ParseLine(line, observation))
+	{
+		Cerr << "Failure parsing data line\n";
+		return false;
+	}
+
+	ProcessObservationData(observation);
 	return true;
 }
 
@@ -376,8 +384,11 @@ void EBirdDatasetInterface::ProcessObservationData(const Observation& observatio
 	else if (!IncludeInLikelihoodCalculation(observation.commonName))
 		return;
 
-	auto& entry(frequencyMap[observation.regionCode]);
 	const auto monthIndex(GetMonthIndex(observation.date));
+
+	std::lock_guard<std::mutex> lock(mutex);// TODO:  If there were a way to eliminate this lock, there could potentially be a big speed improvement (would need to verify by profiling to ensure read isn't bottleneck)
+
+	auto& entry(frequencyMap[observation.regionCode]);
 	nameIndexMap.insert(std::make_pair(observation.commonName, static_cast<uint16_t>(nameIndexMap.size())));
 	auto& speciesInfo(entry[monthIndex].speciesList[nameIndexMap[observation.commonName]]);
 	speciesInfo.rarityGuess.Update(observation.date);
