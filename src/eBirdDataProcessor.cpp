@@ -1106,7 +1106,7 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 			continue;
 		}
 
-		const double thresholdFrequency(0.0);// TODO:  TEST THIS!
+		const double thresholdFrequency(2.0);// This could be tunded, which means maybe it shouldn't be hard-coded
 		double product(1.0);
 		for (const auto& entry : frequencyData[i])
 		{
