@@ -115,6 +115,10 @@ private:
 	static const String nameTag;
 	static const String codeTag;
 
+	static const String errorTag;
+	static const String titleTag;
+	static const String statusTag;
+
 	static const String eBirdTokenHeader;
 
 	bool FetchEBirdNameData();
@@ -159,6 +163,15 @@ private:
 	const TokenData tokenData;
 
 	static bool AddTokenToCurlHeader(CURL* curl, const ModificationData* data);// Expects TokenData
+
+	struct ErrorInfo
+	{
+		String title;
+		String code;
+		String status;
+	};
+
+	static bool ResponseHasErrors(cJSON *root, std::vector<ErrorInfo>& errors);
 };
 
 #endif// EBIRD_INTERFACE_H_

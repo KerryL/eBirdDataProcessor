@@ -1055,8 +1055,10 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequen
 			return true;
 
 		return f.substr(f.length() - 4).compare(desiredExtension) != 0;
-
 	}), fileNames.end());
+
+	// TODO:  Also, remove any files that are not the lowest-level for the area
+	// Or possibly this isn't necessary since the map generator builds a list of lowest-level areas for each country?
 
 	std::vector<YearFrequencyInfo> newSightingProbability(fileNames.size());// frequency is probability of seeing new species and species is file name of frequency data file
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
@@ -1106,7 +1108,7 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 			continue;
 		}
 
-		const double thresholdFrequency(2.0);// This could be tunded, which means maybe it shouldn't be hard-coded
+		const double thresholdFrequency(2.0);// This could be tuned, which means maybe it shouldn't be hard-coded
 		double product(1.0);
 		for (const auto& entry : frequencyData[i])
 		{

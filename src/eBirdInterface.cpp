@@ -47,6 +47,10 @@ const String EBirdInterface::subNational2TypeName(_T("subnational2"));
 const String EBirdInterface::nameTag(_T("name"));
 const String EBirdInterface::codeTag(_T("code"));
 
+const String EBirdInterface::errorTag(_T("errors"));
+const String EBirdInterface::titleTag(_T("title"));
+const String EBirdInterface::statusTag(_T("status"));
+
 const String EBirdInterface::eBirdTokenHeader(_T("X-eBirdApiToken: "));
 
 std::unordered_map<String, EBirdInterface::NameInfo> EBirdInterface::commonToScientificMap;
@@ -515,6 +519,39 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 		return std::vector<RegionInfo>();
 	}
 
+	std::vector<ErrorInfo> errors;
+	if (ResponseHasErrors(root, errors))
+	{
+		if (errors.size() == 1 && errors.front().status.compare(_T("500")) == 0)// "No enum constant" error -> indicates no subregions, even at country level
+		{
+			const auto countryCode(GetCountryCode(regionCode));
+			auto it(storedRegionInfo.cbegin());
+			for (; it != storedRegionInfo.end(); ++it)
+			{
+				if (it->code.compare(countryCode) == 0)
+					break;
+			}
+
+			if (it == storedRegionInfo.end())
+			{
+				Cerr << "Failed to find information for '" << regionCode << "'\n";
+				return std::vector<RegionInfo>();
+			}
+
+			RegionInfo countryInfo;
+			countryInfo.code = countryCode;
+			countryInfo.name = it->name;
+			return std::vector<RegionInfo>(1, countryInfo);
+		}
+		else
+		{
+			Cerr << "Request for subregion info failed\n";
+			for (const auto& e : errors)
+				Cerr << "  Error:  " << e.title << "; status = " << e.status << "; code = " << e.code << '\n';
+			return std::vector<RegionInfo>();
+		}
+	}
+
 	std::vector<RegionInfo> subRegions(cJSON_GetArraySize(root));
 	unsigned int i(0);
 	for (auto& r : subRegions)
@@ -544,6 +581,45 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 
 	cJSON_Delete(root);
 	return subRegions;
+}
+
+bool EBirdInterface::ResponseHasErrors(cJSON *root, std::vector<ErrorInfo>& errors)
+{
+	cJSON* errorsNode(cJSON_GetObjectItem(root, UString::ToNarrowString(errorTag).c_str()));
+	if (!errorsNode)
+		return false;
+
+	errors.resize(cJSON_GetArraySize(errorsNode));
+	unsigned int i(0);
+	for (auto& e : errors)
+	{
+		cJSON* item(cJSON_GetArrayItem(errorsNode, i++));
+		if (!item)
+		{
+			Cerr << "Failed to read error " << i << '\n';
+			return true;
+		}
+
+		if (!ReadJSON(item, codeTag, e.code))
+		{
+			Cerr << "Failed to read error code\n";
+			break;
+		}
+
+		if (!ReadJSON(item, statusTag, e.status))
+		{
+			Cerr << "Failed to read error status\n";
+			break;
+		}
+
+		if (!ReadJSON(item, titleTag, e.title))
+		{
+			Cerr << "Failed to read error title\n";
+			break;
+		}
+	}
+
+	return true;
 }
 
 bool EBirdInterface::NameMatchesRegion(const String& name, const RegionInfo& region)

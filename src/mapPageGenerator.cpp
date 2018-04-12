@@ -579,7 +579,7 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 	if (csvData.empty())// Shouldn't have no root and also no csvData
 		return false;
 
-	const unsigned int batchSize(1000);
+	const unsigned int batchSize(500);
 	unsigned int count(0);
 	do
 	{
