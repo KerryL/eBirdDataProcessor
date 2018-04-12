@@ -510,6 +510,16 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
 		return std::vector<RegionInfo>();
 
+	// It seems sometimes we get HTML response instead of JSON.  Attempt to handle that here.
+	const std::string htmlStart("<!doctype html>");
+	if (response.substr(0, htmlStart.length()).compare(htmlStart) == 0)
+	{
+		Cerr << "Warning:  Got HTML response to '" << request.str() << "'; trying once more\n";
+		// Try one more time before giving up
+		if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
+			return std::vector<RegionInfo>();
+	}
+
 	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
