@@ -29,6 +29,7 @@
 #include <cassert>
 #include <algorithm>
 #include <numeric>
+#include <locale>
 
 const String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
 
@@ -115,6 +116,7 @@ bool EBirdDatasetInterface::WriteNameIndexFile(const String& frequencyDataPath) 
 	}
 
 	OFStream file(frequencyDataPath + nameIndexFileName);
+	file.imbue(std::locale());
 	for (const auto& pair : nameIndexMap)
 		file << pair.first << ',' << pair.second << '\n';
 

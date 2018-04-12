@@ -7,6 +7,9 @@
 #include "frequencyFileReader.h"
 #include "utilities.h"
 
+// Standard C++ headers
+#include <locale>
+
 const String FrequencyFileReader::nameIndexFileName(_T("nameIndexMap.csv"));
 
 FrequencyFileReader::FrequencyFileReader(const String& rootPath) : rootPath(rootPath)
@@ -51,7 +54,7 @@ bool FrequencyFileReader::ReadNameIndexData()
 	std::lock_guard<std::mutex> lock(mutex);
 	if (!indexToNameMap.empty())// In case of data race
 		return true;
-	
+
 	const String fileName(rootPath + nameIndexFileName);
 	IFStream file(fileName);
 	if (!file.good() || !file.is_open())
@@ -59,6 +62,8 @@ bool FrequencyFileReader::ReadNameIndexData()
 		Cerr << "Failed to open '" << fileName << "' for input\n";
 		return false;
 	}
+
+	file.imbue(std::locale());
 	
 	String line;
 	while (std::getline(file, line))
