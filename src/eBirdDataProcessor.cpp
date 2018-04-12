@@ -29,6 +29,7 @@
 #include <locale>
 #include <map>
 #include <chrono>
+#include <set>
 
 const String EBirdDataProcessor::headerLine(_T("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
@@ -1040,6 +1041,46 @@ std::vector<String> EBirdDataProcessor::ListFilesInDirectory(const String& direc
 	return fileNames;
 }
 
+bool EBirdDataProcessor::IsNotBinFile(const String& fileName)
+{
+	const String desiredExtension(_T(".bin"));
+		if (fileName.length() < desiredExtension.length())
+			return true;
+
+	return fileName.substr(fileName.length() - 4).compare(desiredExtension) != 0;
+}
+
+void EBirdDataProcessor::RemoveHighLevelFiles(std::vector<String>& fileNames)
+{
+	std::set<String> removeList;
+	for (const auto& f : fileNames)
+	{
+		const auto firstDash(f.find(Char('-')));
+		if (firstDash == std::string::npos)
+			continue;// Nothing to remove - this is the highest level file we have
+
+		const auto secondDash(f.find(Char('-'), firstDash + 1));
+		if (secondDash == std::string::npos)
+		{
+			if (f.substr(firstDash).compare(_T("-.bin")) == 0)// Nothing to remove - this is the highest level file we have
+				continue;
+		}
+		else
+		{
+			const String stateFileName(f.substr(0, secondDash) + _T(".bin"));
+			removeList.insert(stateFileName);
+		}
+
+		const String countryFileName(f.substr(0, firstDash) + _T("-.bin"));
+		removeList.insert(countryFileName);
+	}
+
+	fileNames.erase(std::remove_if(fileNames.begin(), fileNames.end(), [&removeList](const String& f)
+	{
+		return std::find(removeList.begin(), removeList.end(),  f) != removeList.end();
+	}), fileNames.end());
+}
+
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequencyFilePath,
 	const String& kmlLibraryPath, const String& googleMapsKey, const String& eBirdAPIKey,
 	const String& clientId, const String& clientSecret) const
@@ -1048,17 +1089,8 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequen
 	if (fileNames.size() == 0)
 		return false;
 
-	fileNames.erase(std::remove_if(fileNames.begin(), fileNames.end(), [](const String& f)
-	{
-		const String desiredExtension(_T(".bin"));
-		if (f.length() < desiredExtension.length())
-			return true;
-
-		return f.substr(f.length() - 4).compare(desiredExtension) != 0;
-	}), fileNames.end());
-
-	// TODO:  Also, remove any files that are not the lowest-level for the area
-	// Or possibly this isn't necessary since the map generator builds a list of lowest-level areas for each country?
+	fileNames.erase(std::remove_if(fileNames.begin(), fileNames.end(), IsNotBinFile), fileNames.end());
+	RemoveHighLevelFiles(fileNames);
 
 	std::vector<YearFrequencyInfo> newSightingProbability(fileNames.size());// frequency is probability of seeing new species and species is file name of frequency data file
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
