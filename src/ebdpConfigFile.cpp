@@ -118,8 +118,8 @@ bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 
 bool EBDPConfigFile::TargetCalendarConfigIsOK()
 {
-    if (!config.generateTargetCalendar)
-        return true;
+	if (!config.generateTargetCalendar)
+		return true;
     
 	bool configurationOK(true);
 
@@ -146,8 +146,8 @@ bool EBDPConfigFile::TargetCalendarConfigIsOK()
 
 bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 {
-    if (!config.findMaxNeedsLocations)
-        return true;
+	if (!config.findMaxNeedsLocations)
+		return true;
     
 	bool configurationOK(true);
 
@@ -250,8 +250,8 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 
 bool EBDPConfigFile::RaritiesConfigIsOK()
 {
-    if (!config.generateRarityScores)
-        return true;
+	if (!config.generateRarityScores)
+		return true;
     
 	bool configurationOK(true);
 
