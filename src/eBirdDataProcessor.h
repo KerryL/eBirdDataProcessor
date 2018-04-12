@@ -212,6 +212,7 @@ private:
 	static std::vector<String> ListFilesInDirectory(const String& directory);
 	static bool IsNotBinFile(const String& fileName);
 	static void RemoveHighLevelFiles(std::vector<String>& fileNames);
+	static String RemoveTrailingDash(const String& s);
 };
 
 template<typename T>

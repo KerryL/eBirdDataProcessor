@@ -983,7 +983,7 @@ void MapPageGenerator::MapJobInfo::DoJob()
 		}
 	}
 
-	assert(!info.state.empty() && !info.country.empty() && !info.name.empty() && !info.code.empty());
+	assert(!info.country.empty() && !info.name.empty() && !info.code.empty());
 	mpg.LookupAndAssignKML(info);
 }
 

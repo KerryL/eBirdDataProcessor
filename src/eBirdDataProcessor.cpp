@@ -1081,6 +1081,13 @@ void EBirdDataProcessor::RemoveHighLevelFiles(std::vector<String>& fileNames)
 	}), fileNames.end());
 }
 
+String EBirdDataProcessor::RemoveTrailingDash(const String& s)
+{
+	if (s.back() != Char('-'))
+		return s;
+	return s.substr(0, s.length() - 1);
+}
+
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequencyFilePath,
 	const String& kmlLibraryPath, const String& googleMapsKey, const String& eBirdAPIKey,
 	const String& clientId, const String& clientSecret) const
@@ -1105,7 +1112,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequen
 		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts))
 			return false;
 
-		probEntryIt->locationCode = regionCode;
+		probEntryIt->locationCode = RemoveTrailingDash(regionCode);
 		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData), std::move(checklistCounts), *this));
 		++probEntryIt;
 	}
