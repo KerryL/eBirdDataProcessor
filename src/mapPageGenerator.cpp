@@ -1241,7 +1241,9 @@ std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegio
 {
 	auto regionList(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::MostDetailAvailable));
 	const auto firstDash(regionList.front().code.find(Char('-')));
-	assert(firstDash != std::string::npos);
+	if (firstDash == std::string::npos)// most detail available is country - use as-is
+		return regionList;
+
 	const auto secondDash(regionList.front().code.find(Char('-'), firstDash + 1));
 	if (secondDash == std::string::npos)// most detail available is subregion 1 - use as-is
 		return regionList;
