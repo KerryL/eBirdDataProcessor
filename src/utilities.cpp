@@ -20,8 +20,11 @@ String ExtractCountryFromRegionCode(const String& regionCode)
 String ExtractStateFromRegionCode(const String& regionCode)
 {
 	// For US, states abbreviations are all 2 characters, but this isn't universal.  Need to find the hyphen.
-	// eBird does guarantee that country abbreviation are two characters, however.
+	// eBird does guarantee that country abbreviations are two characters, however.
 	const std::string::size_type start(3);
+	if (regionCode.length() < start)
+		return String();
+
 	const std::string::size_type length(regionCode.find('-', start) - start);
 	assert(length != std::string::npos);
 	return regionCode.substr(start, length);

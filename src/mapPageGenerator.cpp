@@ -684,7 +684,7 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 			}
 
 			if (!ProbabilityDataHasChanged(*matchingEntry, c) &&
-				!c.name.empty() && !c.state.empty() && !c.country.empty())// Could also consider checking for empty geometry here?
+				!c.name.empty() && !c.country.empty())// Could also consider checking for empty geometry here?
 			{
 				newData.erase(matchingEntry);
 				return true;// Leave row as-is (Case #2)
@@ -870,15 +870,14 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 	{
 		if (existing.code.compare(entry.locationCode) == 0)
 		{
-			if (existing.name.empty() || existing.state.empty() ||
-				existing.country.empty() || existing.county.empty())
+			if (existing.name.empty() || existing.country.empty())
 			{
 				for (const auto& r : regionInfo)
 				{
 					if (r.code.compare(entry.locationCode) == 0)
 					{
-						newData.country = r.code.substr(0, 2);
-						newData.state = r.code.substr(3, 2);
+						newData.country = Utilities::ExtractCountryFromRegionCode(r.code);
+						newData.state = Utilities::ExtractStateFromRegionCode(r.code);
 						newData.county = r.name;
 						newData.name = AssembleCountyName(newData.county, newData.state, newData.county);
 						break;
@@ -898,7 +897,7 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 			if (newData.geometryKML.empty())
 				LookupAndAssignKML(newData);
 
-			assert(!newData.state.empty() && !newData.country.empty() && !newData.county.empty() && !newData.name.empty() && !newData.code.empty());
+			assert(!newData.country.empty() && !newData.name.empty() && !newData.code.empty());
 			return true;
 		}
 	}
@@ -909,7 +908,11 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 String MapPageGenerator::AssembleCountyName(const String& country, const String& state, const String& county)
 {
 	if (county.empty())
+	{
+		if (state.empty())
+			return country;
 		return state + _T(", ") + country;
+	}
 	return county + _T(", ") + state + _T(", ") + country;
 }
 
@@ -932,7 +935,12 @@ void MapPageGenerator::AddRegionCodesToMap(const String& parentCode, const EBird
 void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
 	const String& subRegion1Code, String& country, String& subRegion1)
 {
-	const String fullSubRegionCode(countryCode + Char('-') + subRegion1Code);
+	const String fullSubRegionCode([&countryCode, &subRegion1Code]()
+	{
+		if (subRegion1Code.empty())
+			return countryCode;
+		return countryCode + Char('-') + subRegion1Code;
+	}());
 	std::shared_lock<std::shared_mutex> lock(codeToNameMapMutex);
 	auto countryIt(eBirdRegionCodeToNameMap.find(countryCode));
 	if (countryIt == eBirdRegionCodeToNameMap.end())
@@ -962,7 +970,7 @@ void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
 	auto subNational1It(eBirdRegionCodeToNameMap.find(fullSubRegionCode));
 	if (subNational1It == eBirdRegionCodeToNameMap.end())
 	{
-		Cerr << "Failed to lookup region name for code '" << fullSubRegionCode << "'\n";
+		//Cerr << "Failed to lookup region name for code '" << fullSubRegionCode << "'\n";// Expect this for countries without subregions
 		return;
 	}
 
