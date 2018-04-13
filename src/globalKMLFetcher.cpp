@@ -12,8 +12,8 @@
 #include <cassert>
 
 const String GlobalKMLFetcher::userAgent(_T("eBirdDataProcessor"));
-const String GlobalKMLFetcher::gadmCountryURL(_T("http://www.gadm.org/country"));
-const String GlobalKMLFetcher::gadmDownloadPostURL(_T("http://www.gadm.org/download"));
+const String GlobalKMLFetcher::gadmCountryURL(_T("https://gadm.org/download_country.html"));
+const String GlobalKMLFetcher::gadmDownloadBaseURL(_T("https://biogeo.ucdavis.edu/data/gadm2.8/"));
 const bool GlobalKMLFetcher::verbose(false);
 
 using namespace std::chrono_literals;
@@ -49,15 +49,9 @@ bool GlobalKMLFetcher::FetchKML(const String& country, const DetailLevel& level,
 		return false;
 	}
 
-	std::string response;
-	if (!DoCURLPost(gadmDownloadPostURL, UString::ToNarrowString(BuildRequestString(it->second)), response))
-		return false;
-
-	const String downloadURL(ExtractDownloadURL(UString::ToStringType(response), level));
+	const String downloadURL(BuildDownloadURL(it->second, level));
 	if (!DoCURLGet(downloadURL, zippedFileContents))
 		return false;
-
-	// TODO:  Consider adding KMLManager class to be able to find KML files in already downloaded file (i.e. lookup certain county, etc.) and download as needed
 
 	return true;
 }
@@ -82,7 +76,7 @@ String GlobalKMLFetcher::BuildRequestString(const String& countryCode) const
 
 std::map<String, String> GlobalKMLFetcher::ExtractCountryCodeMap(const String& html)
 {
-	const String listStartTag(_T("<select name=\"cnt\">"));
+	const String listStartTag(_T("<select class=\"form-control\" id=\"countrySelect\", name=\"country\""));
 	const String listEndTag(_T("</select>"));
 	auto listStart(html.find(listStartTag));
 	auto listEnd(html.find(listEndTag));
@@ -107,7 +101,8 @@ std::map<String, String> GlobalKMLFetcher::ExtractCountryCodeMap(const String& h
 		{
 			const String countryCode(html.substr(entryStart + entryTagStart.length(), entryMiddle - entryStart - entryTagStart.length()));
 			const String countryName(html.substr(entryMiddle + entryTagMiddle.length(), entryEnd - entryMiddle - entryTagMiddle.length()));
-			countryCodeMap[countryName] = countryCode;
+			if (!countryCode.empty() && !countryName.empty())
+				countryCodeMap[countryName] = countryCode;
 		}
 
 		currentPosition = entryEnd;
@@ -116,28 +111,11 @@ std::map<String, String> GlobalKMLFetcher::ExtractCountryCodeMap(const String& h
 	return countryCodeMap;
 }
 
-String GlobalKMLFetcher::ExtractDownloadURL(const String& html, const DetailLevel& level)
+String GlobalKMLFetcher::BuildDownloadURL(const String& countryFile, const DetailLevel& level)
 {
-	const String urlStartTag(_T("<a href="));
-	const String urlEndTag([level]()
-	{
-		if (level == DetailLevel::Country)
-			return _T(">level 0</a>");
-		else if (level == DetailLevel::SubNational1)
-			return _T(">level 1</a>");
-		else// if (level == DetailLevel::SubNational2)
-			return _T(">level 2</a>");
-	}());
-
-	const auto urlEnd(html.find(urlEndTag));
-	if (urlEnd == std::string::npos)
-		return String();
-
-	const auto urlStart(html.rfind(urlStartTag, urlEnd));
-	if (urlStart == std::string::npos)
-		return String();
-
-	return html.substr(urlStart + urlStartTag.length(), urlEnd - urlStart - urlStartTag.length());
+	OStringStream levelIndex;
+	levelIndex << static_cast<unsigned int>(level);
+	return gadmDownloadBaseURL + _T("kmz/") + countryFile.substr(0, 3) + _T("_adm") + levelIndex.str() + _T(".kmz");
 }
 
 bool GlobalKMLFetcher::DoGeneralCurlConfiguration()
@@ -204,31 +182,6 @@ bool GlobalKMLFetcher::DoCURLGet(const String& url, std::string &response)
 	rateLimiter.Wait();
 	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), _T("Failed issuing https GET")))
 		return false;
-	return true;
-}
-
-bool GlobalKMLFetcher::DoCURLPost(const String &url, const std::string &data, std::string &response)
-{
-	assert(curl);
-
-	response.clear();
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_WRITEDATA, &response), _T("Failed to set write data")))
-		return false;
-
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POST, 1L), _T("Failed to set action to POST")))
-		return false;
-
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POSTFIELDS, data.c_str()), _T("Failed to assign post data")))
-		return false;
-
-	if (CURLUtilities::CURLCallHasError(curl_easy_setopt(curl, CURLOPT_POSTFIELDSIZE, data.length()), _T("Failed to assign data size")))
-		return false;
-
-	rateLimiter.Wait();
-	curl_easy_setopt(curl, CURLOPT_URL, UString::ToNarrowString(url).c_str());
-	if (CURLUtilities::CURLCallHasError(curl_easy_perform(curl), _T("Failed issuing https POST")))
-		return false;
-
 	return true;
 }
 

@@ -24,7 +24,7 @@ public:
 
 	enum class DetailLevel
 	{
-		Country,// Least detail (i.e. country outline)
+		Country = 0,// Least detail (i.e. country outline)
 		SubNational1,
 		SubNational2// Most detail (i.e. county equivalent)
 	};
@@ -34,7 +34,7 @@ public:
 private:
 	static const String userAgent;
 	static const String gadmCountryURL;
-	static const String gadmDownloadPostURL;
+	static const String gadmDownloadBaseURL;
 	static const bool verbose;
 
 	static const ThrottledSection::Clock::duration gadmCrawlDelay;
@@ -44,13 +44,12 @@ private:
 	String BuildRequestString(const String& countryCode) const;
 
 	static std::map<String, String> ExtractCountryCodeMap(const String& html);// Key is country name, value is county code
-	String ExtractDownloadURL(const String& html, const DetailLevel& level);
+	String BuildDownloadURL(const String& countryFile, const DetailLevel& level);
 
 	CURL* curl = nullptr;
 	struct curl_slist* headerList = nullptr;
 	bool DoGeneralCurlConfiguration();
 	bool DoCURLGet(const String& url, std::string &response);
-	bool DoCURLPost(const String &url, const std::string &data, std::string &response);
 	static size_t CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData);
 };
 

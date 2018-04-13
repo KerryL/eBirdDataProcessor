@@ -78,12 +78,14 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country, const String& 
 	if (!loadManager.TryAccess(country))
 	{
 		loadManager.WaitOn(country);
-		return true;// Assume other thread succeeded TODO This assumption apparently leads to confusing messages.  Possibly also a bug?
+		//return true;// Assume other thread succeeded TODO This assumption apparently leads to confusing messages.  Possibly also a bug?
 	}
 
 	MutexUtilities::AccessManager::AccessHelper helper(country, loadManager);
 	if (kmlMemory.find(locationId) != kmlMemory.end())
 		return true;// Another thread loaded it while we were transfering from shared to exclusive access
+
+	Cout << "Attempting to load KML data from archive for '" << country << '\'' << std::endl;
 
 	Zipper z;
 	const String archiveFileName(libraryPath + country + _T(".kmz"));
@@ -116,7 +118,7 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	if (!downloadManager.TryAccess(country))
 	{
 		downloadManager.WaitOn(country);
-		return true;// Assume other thread succeeded TODO This assumption apparently leads to confusing messages.  Possibly also a bug?
+		//return true;// Assume other thread succeeded TODO This assumption apparently leads to confusing messages.  Possibly also a bug?
 	}
 
 	MutexUtilities::AccessManager::AccessHelper helper(country, downloadManager);
@@ -124,6 +126,7 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	if (FileExists(kmzFileName))
 		return true;// Another thread downloaded it while we were transfering from shared to exclusive access
 
+	Cout << "Attempting to download KML data for '" << country << '\'' << std::endl;
 	GlobalKMLFetcher fetcher;
 	std::string result;
 	if (!fetcher.FetchKML(country, detailLevel, result))
