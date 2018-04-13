@@ -527,6 +527,9 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	{
 		for (const auto& month : frequencyData)
 		{
+			if (i >= month.size())
+				continue;
+
 			consolidatedSpeciesList.insert(month[i].species);
 			if (speciesFrequencyMap.find(month[i].species) == speciesFrequencyMap.end())
 				speciesFrequencyMap[month[i].species] = month[i].frequency;

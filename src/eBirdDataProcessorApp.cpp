@@ -105,12 +105,6 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	}
     else if (configFile.GetConfig().generateTargetCalendar)
 	{
-		if (configFile.GetConfig().topBirdCount == 0)
-		{
-			Cerr << "Attempting to generate target calendar, but top bird count == 0\n";
-			return 1;
-		}
-
 		processor.GenerateTargetCalendar(configFile.GetConfig().topBirdCount,
 			configFile.GetConfig().outputFileName, configFile.GetConfig().frequencyFilePath,
 			configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter,

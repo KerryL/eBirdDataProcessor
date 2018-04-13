@@ -141,6 +141,12 @@ bool EBDPConfigFile::TargetCalendarConfigIsOK()
 		configurationOK = false;
 	}
 
+	if (config.topBirdCount == 0)
+	{
+		Cerr << GetKey(config.topBirdCount) << " must be greater than zero\n";
+		configurationOK = false;
+	}
+
 	return configurationOK;
 }
 
