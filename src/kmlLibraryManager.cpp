@@ -78,7 +78,7 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country, const String& 
 	if (!loadManager.TryAccess(country))
 	{
 		loadManager.WaitOn(country);
-		//return true;// Assume other thread succeeded TODO This assumption apparently leads to confusing messages.  Possibly also a bug?
+		return true;// Assume other thread succeeded
 	}
 
 	MutexUtilities::AccessManager::AccessHelper helper(country, loadManager);
@@ -118,7 +118,7 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	if (!downloadManager.TryAccess(country))
 	{
 		downloadManager.WaitOn(country);
-		//return true;// Assume other thread succeeded TODO This assumption apparently leads to confusing messages.  Possibly also a bug?
+		return true;// Assume other thread succeeded
 	}
 
 	MutexUtilities::AccessManager::AccessHelper helper(country, downloadManager);
