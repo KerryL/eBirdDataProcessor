@@ -69,6 +69,8 @@ public:
 		
 	static String PrepareForComparison(const String& commonName);
 
+	void DoListComparison() const;
+
 	struct FrequencyInfo
 	{
 		String species;
@@ -104,7 +106,7 @@ private:
 		String submissionID;
 		String commonName;
 		String scientificName;
-		int taxonomicOrder;
+		double taxonomicOrder;
 		int count;
 		String stateProvidence;
 		String county;
@@ -129,7 +131,10 @@ private:
 
 	std::vector<Entry> data;
 
+	void FilterYear(const unsigned int& year, std::vector<Entry>& dataToFilter) const;
+
 	std::vector<Entry> ConsolidateByLife() const;
+	std::vector<Entry> ConsolidateByYear(const std::vector<Entry>& sourceData) const;
 	std::vector<Entry> ConsolidateByYear() const;
 	std::vector<Entry> ConsolidateByMonth() const;
 	std::vector<Entry> ConsolidateByWeek() const;
@@ -213,6 +218,10 @@ private:
 	static bool IsNotBinFile(const String& fileName);
 	static void RemoveHighLevelFiles(std::vector<String>& fileNames);
 	static String RemoveTrailingDash(const String& s);
+
+	static void PrintListComparison(const std::vector<std::vector<Entry>>& lists);
+	static bool IndicesAreValid(const std::vector<unsigned int>& indices, const std::vector<std::vector<Entry>>& lists);
+	static String PrintInColumns(const std::vector<std::vector<String>>& cells, const unsigned int& columnSpacing);
 };
 
 template<typename T>

@@ -68,6 +68,8 @@ struct EBDPConfig
 		World
 	};
 
+	bool doComparison;
+
 	bool generateTargetCalendar;
 	TargetNeedArea targetNeedArea;
 	unsigned int topBirdCount;

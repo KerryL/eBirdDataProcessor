@@ -53,6 +53,8 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("OAUTH_CLIENT_SECRET"), config.oAuthClientSecret);
 
 	AddConfigItem(_T("DATASET"), config.eBirdDatasetPath);
+
+	AddConfigItem(_T("COMPARE"), config.doComparison);
 }
 
 void EBDPConfigFile::AssignDefaults()
@@ -79,6 +81,8 @@ void EBDPConfigFile::AssignDefaults()
 
 	config.showOnlyPhotoNeeds = false;
 	config.findMaxNeedsLocations = false;
+
+	config.doComparison = false;
 }
 
 bool EBDPConfigFile::ConfigIsOK()

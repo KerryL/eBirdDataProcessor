@@ -112,6 +112,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			configFile.GetConfig().targetInfoFileName, configFile.GetConfig().homeLocation,
 			configFile.GetConfig().googleMapsAPIKey, configFile.GetConfig().eBirdApiKey);
 	}
+	else if (configFile.GetConfig().doComparison)
+		processor.DoListComparison();
 	else
 	{
 		processor.SortData(configFile.GetConfig().primarySort, configFile.GetConfig().secondarySort);

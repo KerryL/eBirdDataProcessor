@@ -221,10 +221,7 @@ void EBirdDataProcessor::FilterCountry(const String& country)
 
 void EBirdDataProcessor::FilterYear(const unsigned int& year)
 {
-	data.erase(std::remove_if(data.begin(), data.end(), [year](const Entry& entry)
-	{
-		return static_cast<unsigned int>(entry.dateTime.tm_year) + 1900U != year;
-	}), data.end());
+	FilterYear(year, data);
 }
 
 void EBirdDataProcessor::FilterMonth(const unsigned int& month)
@@ -283,7 +280,13 @@ int EBirdDataProcessor::DoComparison(const Entry& a, const Entry& b, const EBDPC
 	else if (sortBy == EBDPConfig::SortBy::ScientificName)
 		return a.scientificName.compare(b.scientificName);
 	else if (sortBy == EBDPConfig::SortBy::TaxonomicOrder)
-		return a.taxonomicOrder - b.taxonomicOrder;
+	{
+		if (a.taxonomicOrder == b.taxonomicOrder)
+			return 0;
+		else if (a.taxonomicOrder < b.taxonomicOrder)
+			return -1;
+		return 1;
+	}
 
 	assert(false);
 	return 0;
@@ -390,16 +393,7 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByLife() c
 
 std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByYear() const
 {
-	auto equivalencePredicate([](const Entry& a, const Entry& b)
-	{
-		return CommonNamesMatch(a.commonName, b.commonName) &&
-			a.dateTime.tm_year == b.dateTime.tm_year;
-	});
-
-	std::vector<Entry> consolidatedList(data);
-	StableRemoveDuplicates(consolidatedList, equivalencePredicate);
-
-	return consolidatedList;
+	return ConsolidateByYear(data);
 }
 
 std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByMonth() const
@@ -1175,4 +1169,134 @@ bool EBirdDataProcessor::WriteBestLocationsViewerPage(const String& htmlFileName
 	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey);
 	return generator.WriteBestLocationsViewerPage(htmlFileName,
 		googleMapsKey, eBirdAPIKey, observationProbabilities, clientId, clientSecret);
+}
+
+// Assume we're comparing lists based on year
+void EBirdDataProcessor::DoListComparison() const
+{
+	std::set<unsigned int> years;
+	for (const auto& e : data)
+		years.insert(e.dateTime.tm_year + 1900);
+	Cout << "Data for selected location spans " << years.size() << " years\n" << std::endl;
+
+	std::vector<std::vector<Entry>> yearLists(years.size());
+
+	auto it(years.begin());
+	for (unsigned int i = 0; i < years.size(); ++i)
+	{
+		auto temp(data);
+		FilterYear(*it, temp);
+		++it;
+		yearLists[i] = ConsolidateByYear(temp);
+	}
+
+	std::sort(yearLists.begin(), yearLists.end(), [](const std::vector<Entry>& a, const std::vector<Entry>& b)
+	{
+		return a.front().dateTime.tm_year < b.front().dateTime.tm_year;
+	});
+	
+	PrintListComparison(yearLists);
+}
+
+void EBirdDataProcessor::PrintListComparison(const std::vector<std::vector<Entry>>& lists)
+{
+	std::vector<unsigned int> indexList(lists.size(), 0);
+	std::vector<std::vector<String>> listData(lists.size() + 1);// first index is column, second is row
+
+	listData.front().push_back(_T("Species"));
+	for (unsigned int i = 0; i < lists.size(); ++i)
+	{
+		OStringStream ss;
+		ss << lists[i].front().dateTime.tm_year + 1900;
+		listData[i + 1].push_back(ss.str());
+	}
+
+	while (IndicesAreValid(indexList, lists))
+	{
+		double minTaxonomicOrder(std::numeric_limits<double>::max());
+		unsigned int minIndex(0);
+		for (unsigned int i = 0; i < lists.size(); ++i)
+		{
+			if (indexList[i] < lists[i].size() && lists[i][indexList[i]].taxonomicOrder < minTaxonomicOrder)
+			{
+				minTaxonomicOrder = lists[i][indexList[i]].taxonomicOrder;
+				minIndex = i;
+			}
+		}
+
+		listData[0].push_back(lists[minIndex][indexList[minIndex]].commonName);
+		for (unsigned int i = 0; i < lists.size(); ++i)
+		{
+			if (indexList[i] < lists[i].size() && lists[i][indexList[i]].taxonomicOrder == minTaxonomicOrder)
+			{
+				listData[i + 1].push_back(_T("X"));
+				++indexList[i];
+			}
+			else
+				listData[i + 1].push_back(String());
+		}
+	}
+
+	Cout << PrintInColumns(listData, 2) << std::endl;
+}
+
+bool EBirdDataProcessor::IndicesAreValid(const std::vector<unsigned int>& indices, const std::vector<std::vector<Entry>>& lists)
+{
+	assert(indices.size() == lists.size());
+	for (unsigned int i = 0; i < indices.size(); ++i)
+	{
+		if (indices[i] < lists[i].size())
+			return true;
+	}
+
+	return false;
+}
+
+String EBirdDataProcessor::PrintInColumns(const std::vector<std::vector<String>>& cells, const unsigned int& columnSpacing)
+{
+	std::vector<unsigned int> widths(cells.size(), 0);
+	for (unsigned int i = 0; i < cells.size(); ++i)
+	{
+		for (const auto& row : cells[i])
+		{
+			if (widths[i] < row.length())
+				widths[i] = row.length();
+		}
+	}
+
+	for (auto& w : widths)
+		w += columnSpacing;
+
+	OStringStream ss;
+	ss << std::setfill(_T(' '));
+	for (unsigned int i = 0; i < cells.front().size(); ++i)
+	{
+		for (unsigned int j = 0; j < cells.size(); ++j)
+			ss << std::setw(widths[j]) << std::left << cells[j][i];
+		ss << '\n';
+	}
+
+	return ss.str();
+}
+
+void EBirdDataProcessor::FilterYear(const unsigned int& year, std::vector<Entry>& dataToFilter) const
+{
+	dataToFilter.erase(std::remove_if(dataToFilter.begin(), dataToFilter.end(), [year](const Entry& entry)
+	{
+		return static_cast<unsigned int>(entry.dateTime.tm_year) + 1900U != year;
+	}), dataToFilter.end());
+}
+
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByYear(const std::vector<Entry>& sourceData) const
+{
+	auto equivalencePredicate([](const Entry& a, const Entry& b)
+	{
+		return CommonNamesMatch(a.commonName, b.commonName) &&
+			a.dateTime.tm_year == b.dateTime.tm_year;
+	});
+
+	std::vector<Entry> consolidatedList(sourceData);
+	StableRemoveDuplicates(consolidatedList, equivalencePredicate);
+
+	return consolidatedList;
 }
