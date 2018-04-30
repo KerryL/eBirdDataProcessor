@@ -1215,19 +1215,22 @@ void EBirdDataProcessor::PrintListComparison(const std::vector<std::vector<Entry
 	{
 		double minTaxonomicOrder(std::numeric_limits<double>::max());
 		unsigned int minIndex(0);
+		String compareString;
 		for (unsigned int i = 0; i < lists.size(); ++i)
 		{
 			if (indexList[i] < lists[i].size() && lists[i][indexList[i]].taxonomicOrder < minTaxonomicOrder)
 			{
 				minTaxonomicOrder = lists[i][indexList[i]].taxonomicOrder;
 				minIndex = i;
+				compareString = lists[i][indexList[i]].compareString;
 			}
 		}
 
 		listData[0].push_back(lists[minIndex][indexList[minIndex]].commonName);
 		for (unsigned int i = 0; i < lists.size(); ++i)
 		{
-			if (indexList[i] < lists[i].size() && lists[i][indexList[i]].taxonomicOrder == minTaxonomicOrder)
+			if (indexList[i] < lists[i].size() &&
+				lists[i][indexList[i]].compareString.compare(compareString) == 0)
 			{
 				listData[i + 1].push_back(_T("X"));
 				++indexList[i];
@@ -1235,6 +1238,17 @@ void EBirdDataProcessor::PrintListComparison(const std::vector<std::vector<Entry
 			else
 				listData[i + 1].push_back(String());
 		}
+	}
+
+	for (auto& col : listData)
+		col.push_back(String());
+
+	listData.front().push_back(_T("Total"));
+	for (unsigned int i = 0; i < lists.size(); ++i)
+	{
+		OStringStream ss;
+		ss << lists[i].size();
+		listData[i + 1].push_back(ss.str());
 	}
 
 	Cout << PrintInColumns(listData, 2) << std::endl;
