@@ -22,8 +22,10 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("SPECIES_COUNT_ONLY"), config.speciesCountOnly);
 	AddConfigItem(_T("INCLUDE_PARTIAL_IDS"), config.includePartialIDs);
 
-	AddConfigItem(_T("PHOTO_FILE"), config.photoFileName);
+	AddConfigItem(_T("MEDIA_LIST_HTML"), config.mediaListHTML);
+	AddConfigItem(_T("MEDIA_FILE"), config.mediaFileName);
 	AddConfigItem(_T("SHOW_PHOTO_NEEDS"), config.showOnlyPhotoNeeds);
+	AddConfigItem(_T("SHOW_AUDIO_NEEDS"), config.showOnlyAudioNeeds);
 
 	AddConfigItem(_T("YEAR"), config.yearFilter);
 	AddConfigItem(_T("MONTH"), config.monthFilter);
@@ -79,7 +81,8 @@ void EBDPConfigFile::AssignDefaults()
 	config.topBirdCount = 20;
 	config.recentObservationPeriod = 15;
 
-	config.showOnlyPhotoNeeds = false;
+	config.showOnlyPhotoNeeds = -1;
+	config.showOnlyAudioNeeds = -1;
 	config.findMaxNeedsLocations = false;
 
 	config.doComparison = false;
@@ -249,9 +252,21 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (config.showOnlyPhotoNeeds && config.photoFileName.empty())
+	if (config.showOnlyPhotoNeeds > 0 && config.mediaFileName.empty())
 	{
-		Cerr << "Must specify " << GetKey(config.photoFileName) << " when using " << GetKey(config.showOnlyPhotoNeeds) << '\n';
+		Cerr << "Must specify " << GetKey(config.mediaFileName) << " when using " << GetKey(config.showOnlyPhotoNeeds) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.showOnlyAudioNeeds > 0 && config.mediaFileName.empty())
+	{
+		Cerr << "Must specify " << GetKey(config.mediaFileName) << " when using " << GetKey(config.showOnlyAudioNeeds) << '\n';
+		configurationOK = false;
+	}
+
+	if (!config.mediaListHTML.empty() && config.mediaFileName.empty())
+	{
+		Cerr << "Must specify " << GetKey(config.mediaFileName) << " when " << GetKey(config.mediaListHTML) << " is specified\n";
 		configurationOK = false;
 	}
 

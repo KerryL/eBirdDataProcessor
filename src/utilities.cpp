@@ -38,4 +38,31 @@ String StripExtension(const String& fileName)
 	return fileName.substr(0, extStart);
 }
 
+String SanitizeCommas(const String& s)
+{
+	String clean(s);
+	ReplaceAll(_T(","), _T("&#44;"), clean);
+	return clean;
+}
+
+String Unsanitize(const String& s)
+{
+	String dirty(s);
+	ReplaceAll(_T("&#44;"), _T(","), dirty);
+	ReplaceAll(_T("&#47;"), _T("/"), dirty);
+	ReplaceAll(_T("&#39;"), _T("'"), dirty);
+	ReplaceAll(_T("&#x27;"), _T("'"), dirty);// This is what appears in the html file, but I think it *should* be #39?
+	return dirty;
+}
+
+void ReplaceAll(const String& pattern, const String& replaceWith, String& s)
+{
+	std::string::size_type position(0);
+	while (position = s.find(pattern, position), position != std::string::npos)
+	{
+		s.replace(position, pattern.length(), replaceWith);
+		position += replaceWith.length();
+	}
+}
+
 }// namespace Utilities

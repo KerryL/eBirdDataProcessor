@@ -31,7 +31,8 @@ class EBirdDataProcessor
 {
 public:
 	bool Parse(const String& dataFile);
-	bool ReadPhotoList(const String& photoFileName);
+	bool ReadMediaList(const String& mediaFileName);
+	bool GenerateMediaList(const String& mediaListHTML, const String& mediaFileName);
 
 	void FilterLocation(const String& location, const String& county,
 		const String& state, const String& country);
@@ -53,7 +54,7 @@ public:
 	void GenerateRarityScores(const String& frequencyFilePath,
 		const EBDPConfig::ListType& listType, const String& eBirdAPIKey,
 		const String& country, const String& state, const String& county);
-	String GenerateList(const EBDPConfig::ListType& type, const bool& withoutPhotosOnly) const;
+	String GenerateList(const EBDPConfig::ListType& type, const int& minPhotoScore, const int& minAudioScore) const;
 
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
 		const String& outputFileName, const String& frequencyFilePath,
@@ -124,7 +125,8 @@ private:
 		String speciesComments;
 		String checklistComments;
 
-		bool hasPhoto = false;
+		int photoRating = -1;
+		int audioRating = -1;
 
 		String compareString;// Huge boost in efficiency if we pre-compute this
 	};
@@ -222,6 +224,63 @@ private:
 	static void PrintListComparison(const std::vector<std::vector<Entry>>& lists);
 	static bool IndicesAreValid(const std::vector<unsigned int>& indices, const std::vector<std::vector<Entry>>& lists);
 	static String PrintInColumns(const std::vector<std::vector<String>>& cells, const unsigned int& columnSpacing);
+
+	struct MediaEntry
+	{
+		String macaulayId;
+		String commonName;
+
+		enum class Type
+		{
+			Photo,
+			Audio
+		};
+
+		Type type;
+
+		int rating;
+		String date;
+		String location;
+
+		enum class Age
+		{
+			Unknown,
+			Juvenile,
+			Immature,
+			Adult
+		};
+
+		Age age = Age::Unknown;
+
+		enum class Sex
+		{
+			Unknown,
+			Male,
+			Female
+		};
+
+		Sex sex = Sex::Unknown;
+
+		enum class Sound
+		{
+			Unknown,
+			Song,
+			Call,
+			Other
+		};
+
+		Sound sound = Sound::Unknown;
+
+		String checklistId;
+	};
+
+	static bool ExtractNextMediaEntry(const String& html, std::string::size_type& position, MediaEntry& entry);
+	static void WriteNextMediaEntry(OFStream& file, const MediaEntry& entry);
+	static String GetMediaTypeString(const MediaEntry::Type& type);
+	static String GetMediaAgeString(const MediaEntry::Age& age);
+	static String GetMediaSexString(const MediaEntry::Sex& sex);
+	static String GetMediaSoundString(const MediaEntry::Sound& sound);
+	static bool ParseMediaEntry(const String& line, MediaEntry& entry);
 };
 
 template<typename T>

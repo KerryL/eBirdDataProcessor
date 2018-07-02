@@ -85,8 +85,13 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!configFile.GetConfig().includePartialIDs)
 		processor.FilterPartialIDs();
 
-	if (!configFile.GetConfig().photoFileName.empty())
-		processor.ReadPhotoList(configFile.GetConfig().photoFileName);
+	if (!configFile.GetConfig().mediaListHTML.empty())
+	{
+		processor.GenerateMediaList(configFile.GetConfig().mediaListHTML, configFile.GetConfig().mediaFileName);
+		return 0;
+	}
+	else if (!configFile.GetConfig().mediaFileName.empty())
+		processor.ReadMediaList(configFile.GetConfig().mediaFileName);
 
 	// TODO:  species count only?
 
@@ -118,7 +123,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	{
 		processor.SortData(configFile.GetConfig().primarySort, configFile.GetConfig().secondarySort);
 
-		const String list(processor.GenerateList(configFile.GetConfig().listType, configFile.GetConfig().showOnlyPhotoNeeds));
+		const String list(processor.GenerateList(configFile.GetConfig().listType,
+			configFile.GetConfig().showOnlyPhotoNeeds, configFile.GetConfig().showOnlyAudioNeeds));
 		Cout << list << std::endl;
 
 		if (!configFile.GetConfig().outputFileName.empty())

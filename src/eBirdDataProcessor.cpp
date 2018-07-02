@@ -10,6 +10,7 @@
 #include "mapPageGenerator.h"
 #include "frequencyFileReader.h"
 #include "utilities.h"
+#include "stringUtilities.h"
 
 // System headers (added from https://github.com/tronkko/dirent/ for Windows)
 #ifdef _WIN32
@@ -335,24 +336,30 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const
 	return data;
 }
 
-String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type, const bool& withoutPhotosOnly) const
+String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type,
+	const int& minPhotoScore, const int& minAudioScore) const
 {
-	std::vector<Entry> consolidatedList(DoConsolidation(type));
+	std::vector<Entry> consolidatedList(DoConsolidation(type));// TODO:  Needs to change?
 
-	if (withoutPhotosOnly)
-		Cout << "Showing only species which have not been photographed:\n";
+	if (minPhotoScore >= 0)
+		Cout << "Showing only species which do not have photo rated " << minPhotoScore << " or higher\n";
+	if (minAudioScore >= 0)
+		Cout << "Showing only species which do not have audio rated " << minAudioScore << " or higher\n";
 
 	OStringStream ss;
 	unsigned int count(1);
 	for (const auto& entry : consolidatedList)
 	{
-		if (!withoutPhotosOnly || !entry.hasPhoto)
+		if ((minPhotoScore == -1 && minAudioScore == -1) || 
+			(entry.photoRating >= minPhotoScore && entry.audioRating >= minAudioScore))
 		{
 			ss << count++ << ", " << std::put_time(&entry.dateTime, _T("%D")) << ", "
 				<< entry.commonName << ", '" << entry.location << "', " << entry.count;
 
-			if (entry.hasPhoto)
-				ss << " (photo)";
+			if (entry.photoRating > 0)
+				ss << " (photo rating = " << entry.photoRating << ')';
+			if (entry.audioRating > 0)
+				ss << " (audio rating = " << entry.audioRating << ')';
 
 			ss << '\n';
 		}
@@ -957,45 +964,358 @@ bool EBirdDataProcessor::HotspotInfoComparer::operator()(const EBirdInterface::L
 	return a.name < b.name;
 }
 
-bool EBirdDataProcessor::ReadPhotoList(const String& photoFileName)
+bool EBirdDataProcessor::ExtractNextMediaEntry(const String& html, std::string::size_type& position, MediaEntry& entry)
 {
-	IFStream photoFile(photoFileName.c_str());
-	if (!photoFile.is_open() || !photoFile.good())
-	{
-		Cerr << "Failed to open '" << photoFileName << "' for input" << std::endl;
+	const String resultStart(_T("<div class=\"ResultsList-cell\">"));
+	const auto resultStartPosition(html.find(resultStart, position));
+	if (resultStartPosition == std::string::npos)
 		return false;
+
+	const String playButtonStart(_T("<div class=\"Button--play\">"));
+	const auto playButtonStartPosition(html.find(playButtonStart, resultStartPosition));
+
+	const String commonNameHeader(_T("<h3 class=\"SpecimenHeader-commonName\">"));
+	const auto commonNameHeaderPosition(html.find(commonNameHeader, resultStartPosition));
+	if (commonNameHeaderPosition == std::string::npos)
+		return false;
+
+	if (playButtonStartPosition < commonNameHeaderPosition)
+		entry.type = MediaEntry::Type::Audio;
+	else
+		entry.type = MediaEntry::Type::Photo;
+
+	const String endOfStartTag(_T("\">"));
+	const auto commonNamePosition(html.find(endOfStartTag, commonNameHeaderPosition + commonNameHeader.length()));
+	if (commonNamePosition == std::string::npos)
+		return false;
+
+	const String endOfLinkTag(_T("</a>"));
+	const auto commonNameEndPosition(html.find(endOfLinkTag, commonNamePosition));
+	if (commonNameEndPosition == std::string::npos)
+		return false;
+
+	entry.commonName = html.substr(commonNamePosition + endOfStartTag.length(), commonNameEndPosition - commonNamePosition - endOfStartTag.length());
+
+	const String ratingStart(_T("<div class=\"RatingStars RatingStars-"));
+	const auto ratingStartPosition(html.find(ratingStart, commonNameEndPosition));
+	if (ratingStartPosition != std::string::npos)
+	{
+		IStringStream ss(html.substr(ratingStartPosition + ratingStart.length(), 1));
+		if ((ss >> entry.rating).fail())
+			return false;
 	}
+	else
+		entry.rating = 0;
 
-	struct PhotoEntry
+	const String calendarLine(_T("<svg class=\"Icon Icon-calendar\" role=\"img\"><use xlink:href=\"#Icon--calendar\"></use></svg>"));
+	const auto calendarLinePosition(html.find(calendarLine, commonNameEndPosition));
+	if (calendarLinePosition == std::string::npos)
+		return false;
+	IStringStream ss(StringUtilities::Trim(html.substr(calendarLinePosition + calendarLine.length() + 5)));
+	if (!std::getline(ss, entry.date))
+		return false;
+
+	const String locationLine(_T("<svg class=\"Icon Icon-location\" role=\"img\"><use xlink:href=\"#Icon--location\"></use></svg>"));
+	const auto locationLinePosition(html.find(locationLine, calendarLinePosition));
+	if (locationLinePosition == std::string::npos)
+		return false;
+	ss.clear();
+	ss.str(StringUtilities::Trim(html.substr(locationLinePosition + locationLine.length() + 2)));
+	if (!std::getline(ss, entry.location))
+		return false;
+	entry.location = Utilities::Unsanitize(entry.location);
+
+	const String soundStart(_T("<dt>Sounds</dt>"));
+	const auto soundStartPosition(html.find(soundStart, locationLinePosition));
+
+	const String ageStart(_T("<dt>Age</dt>"));
+	const auto ageStartPosition(html.find(ageStart, locationLinePosition));
+
+	const String sexStart(_T("<dt>Sex</dt>"));
+	const auto sexStartPosition(html.find(sexStart, locationLinePosition));
+
+	const String checklistIdStart(_T("\">eBird Checklist "));
+	const auto checklistIdPosition(html.find(checklistIdStart, locationLinePosition));
+	if (checklistIdPosition == std::string::npos)
+		return false;
+
+	const String beginTag(_T("<dd>"));
+	const String endTag(_T("</dd>"));
+	if (soundStartPosition < checklistIdPosition)
 	{
-		explicit PhotoEntry(const String& commonName) : commonName(commonName) {}
-
-		String commonName;
-		bool matchedOnce = false;
-	};
-	std::vector<PhotoEntry> photoList;
-
-	String line;
-	while (std::getline(photoFile, line))
-		photoList.push_back(PhotoEntry(line));
-
-	for (auto& entry : data)
-	{
-		for (auto& p : photoList)
+		const auto startPosition(html.find(beginTag, soundStartPosition));
+		if (startPosition != std::string::npos)
 		{
-			if (CommonNamesMatch(entry.commonName, p.commonName))
+			const auto endPosition(html.find(endTag, startPosition));
+			if (endPosition != std::string::npos)
 			{
-				p.matchedOnce = true;
-				entry.hasPhoto = true;
-				break;
+				const String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
+				if (s.compare(_T("Song")) == 0)
+					entry.sound = MediaEntry::Sound::Song;
+				else if (s.compare(_T("Call")) == 0)
+					entry.sound = MediaEntry::Sound::Call;
+				else if (s.compare(_T("Unknown")) == 0)
+					entry.sound = MediaEntry::Sound::Unknown;
+				else
+					entry.sound = MediaEntry::Sound::Other;
 			}
 		}
 	}
 
-	for (const auto& p : photoList)
+	if (ageStartPosition < checklistIdPosition)
 	{
-		if (!p.matchedOnce)
-			Cout << "Warning:  Failed to match species in photo list '" << p.commonName << "' to any observation\n";
+		const auto startPosition(html.find(beginTag, ageStartPosition));
+		if (startPosition != std::string::npos)
+		{
+			const auto endPosition(html.find(endTag, startPosition));
+			if (endPosition != std::string::npos)
+			{
+				const String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
+				if (s.compare(_T("Adult")) == 0)
+					entry.age = MediaEntry::Age::Adult;
+				else if (s.compare(_T("Juvenile")) == 0)
+					entry.age = MediaEntry::Age::Juvenile;
+				else if (s.compare(_T("Immature")) == 0)
+					entry.age = MediaEntry::Age::Immature;
+				else
+					entry.age = MediaEntry::Age::Unknown;
+			}
+		}
+	}
+
+	if (sexStartPosition < checklistIdPosition)
+	{
+		const auto startPosition(html.find(beginTag, sexStartPosition));
+		if (startPosition != std::string::npos)
+		{
+			const auto endPosition(html.find(endTag, startPosition));
+			if (endPosition != std::string::npos)
+			{
+				const String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
+				if (s.compare(_T("Male")) == 0)
+					entry.sex = MediaEntry::Sex::Male;
+				else if (s.compare(_T("Female")) == 0)
+					entry.sex = MediaEntry::Sex::Female;
+				else
+					entry.sex = MediaEntry::Sex::Unknown;
+			}
+		}
+	}
+
+	const auto checklistIdEndPosition(html.find(endOfLinkTag, checklistIdPosition));
+	if (checklistIdEndPosition == std::string::npos)
+		return false;
+
+	entry.checklistId = html.substr(checklistIdPosition + checklistIdStart.length(), checklistIdEndPosition - checklistIdPosition - checklistIdStart.length());
+
+	const String macaulayIdStart(_T("\">Macaulay Library "));
+	const auto macaulayIdPosition(html.find(macaulayIdStart, checklistIdEndPosition));
+	if (macaulayIdPosition == std::string::npos)
+		return false;
+
+	const auto macaulayIdEndPosition(html.find(endOfLinkTag, macaulayIdPosition));
+	if (macaulayIdEndPosition == std::string::npos)
+		return false;
+
+	entry.macaulayId = html.substr(macaulayIdPosition + macaulayIdStart.length(), macaulayIdEndPosition - macaulayIdPosition - macaulayIdStart.length());
+
+	position = macaulayIdEndPosition;
+	return true;
+}
+
+String EBirdDataProcessor::GetMediaTypeString(const MediaEntry::Type& type)
+{
+	if (type == MediaEntry::Type::Photo)
+		return _T("Photo");
+	//else
+		return _T("Audio");
+}
+
+String EBirdDataProcessor::GetMediaAgeString(const MediaEntry::Age& age)
+{
+	if (age == MediaEntry::Age::Juvenile)
+		return _T("Juvenile");
+	else if (age == MediaEntry::Age::Immature)
+		return _T("Immature");
+	else if (age == MediaEntry::Age::Adult)
+		return _T("Adult");
+	//else
+		return _T("Unknown");
+}
+
+String EBirdDataProcessor::GetMediaSexString(const MediaEntry::Sex& sex)
+{
+	if (sex == MediaEntry::Sex::Male)
+		return _T("Male");
+	else if (sex == MediaEntry::Sex::Female)
+		return _T("Female");
+	//else
+		return _T("Unknown");
+}
+
+String EBirdDataProcessor::GetMediaSoundString(const MediaEntry::Sound& sound)
+{
+	if (sound == MediaEntry::Sound::Song)
+		return _T("Song");
+	else if (sound == MediaEntry::Sound::Call)
+		return _T("Call");
+	else if (sound == MediaEntry::Sound::Unknown)
+		return _T("Unknown");
+	//else
+		return _T("Other");
+}
+
+void EBirdDataProcessor::WriteNextMediaEntry(OFStream& file, const MediaEntry& entry)
+{
+	file << entry.macaulayId << ','
+		<< entry.commonName << ','
+		<< GetMediaTypeString(entry.type) << ','
+		<< entry.rating << ','
+		<< entry.date << ','
+		<< Utilities::SanitizeCommas(entry.location) << ','
+		<< GetMediaAgeString(entry.age) << ','
+		<< GetMediaSexString(entry.sex) << ','
+		<< GetMediaSoundString(entry.sound) << ','
+		<< entry.checklistId << '\n';
+}
+
+// Directions for getting media list from Chrome:
+// 1.  Go to eBird profile page
+// 2.  At bottom, choose "View All" next to list of recent photos
+// 3.  At top of following page, remove filters for location and media type (i.e. "Photo")
+// 4.  At bottom of page, click "Show More" until all available media is shown
+// 5.  Right-click and choose "Inspect"
+// 6.  In pane that appears, expand "<body>" tag down to "<div class="ResultsList js-ResultsContainer">" level
+// 7.  Right-click on that element and choose Copy->Copy Element
+// 8.  Paste into media list html file and save
+bool EBirdDataProcessor::GenerateMediaList(const String& mediaListHTML, const String& mediaFileName)
+{
+	std::ifstream htmlFile(mediaListHTML.c_str(), std::ios::binary | std::ios::ate);
+	if (!htmlFile.is_open() || !htmlFile.good())
+	{
+		Cerr << "Failed to open '" << mediaListHTML << "' for input\n";
+		return false;
+	}
+	const unsigned int fileSize(static_cast<unsigned int>(htmlFile.tellg()));
+	htmlFile.seekg(0, std::ios::beg);
+
+	std::vector<char> buffer(fileSize);
+	if (!htmlFile.read(buffer.data(), fileSize))
+	{
+		Cerr << "Failed to read html data from file\n";
+		return false;
+	}
+	const String html(UString::ToStringType(std::string(buffer.data(), fileSize)));
+
+	OFStream mediaList(mediaFileName.c_str());
+	if (!mediaList.is_open() || !mediaList.good())
+	{
+		Cerr << "Failed to open '" << mediaFileName << "' for output\n";
+		return false;
+	}
+
+	mediaList << "Macaulay Library ID,Common Name,Media Type,Rating,Date,Location,Age,Sex,Extra,eBird Checklist ID\n";
+	std::string::size_type position(0);
+	while (true)
+	{
+		MediaEntry entry;
+		if (!ExtractNextMediaEntry(html, position, entry))
+			break;
+		WriteNextMediaEntry(mediaList, entry);
+	}
+
+	return true;
+}
+
+bool EBirdDataProcessor::ParseMediaEntry(const String& line, MediaEntry& entry)
+{
+	IStringStream lineStream(line);
+
+	if (!ParseToken(lineStream, _T("Macaulay Library ID"), entry.macaulayId))
+		return false;
+	if (!ParseToken(lineStream, _T("Common Name"), entry.commonName))
+		return false;
+	String temp;
+	if (!ParseToken(lineStream, _T("Media Type"), temp))
+		return false;
+
+	if (temp.compare(_T("Photo")) == 0)
+		entry.type = MediaEntry::Type::Photo;
+	else
+		entry.type = MediaEntry::Type::Audio;
+
+	if (!ParseToken(lineStream, _T("Rating"), entry.rating))
+		return false;
+	if (!ParseToken(lineStream, _T("Date"), entry.date))
+		return false;
+	if (!ParseToken(lineStream, _T("Location"), entry.location))
+		return false;
+	entry.location = Utilities::Unsanitize(entry.location);
+	if (!ParseToken(lineStream, _T("Age"), temp))
+		return false;
+
+	if (temp.compare(_T("Adult")) == 0)
+		entry.age = MediaEntry::Age::Adult;
+	else if (temp.compare(_T("Juvenile")) == 0)
+		entry.age = MediaEntry::Age::Juvenile;
+	else if (temp.compare(_T("Immature")) == 0)
+		entry.age = MediaEntry::Age::Immature;
+	else
+		entry.age = MediaEntry::Age::Unknown;
+
+	if (!ParseToken(lineStream, _T("Sex"), temp))
+		return false;
+	if (!ParseToken(lineStream, _T("Sound"), temp))
+		return false;
+
+	if (temp.compare(_T("Song")) == 0)
+		entry.sound = MediaEntry::Sound::Song;
+	else if (temp.compare(_T("Call")) == 0)
+		entry.sound = MediaEntry::Sound::Call;
+	else if (temp.compare(_T("Other")) == 0)
+		entry.sound = MediaEntry::Sound::Other;
+	else
+		entry.sound = MediaEntry::Sound::Unknown;
+
+	if (!ParseToken(lineStream, _T("eBird Checklist ID"), entry.checklistId))
+		return false;
+
+	return true;
+}
+
+bool EBirdDataProcessor::ReadMediaList(const String& mediaFileName)
+{
+	IFStream mediaFile(mediaFileName.c_str());
+	if (!mediaFile.is_open() || !mediaFile.good())
+	{
+		Cerr << "Failed to open '" << mediaFileName << "' for input" << std::endl;
+		return false;
+	}
+
+	std::vector<MediaEntry> mediaList;
+	String line;
+	while (std::getline(mediaFile, line))
+	{
+		MediaEntry entry;
+		if (!ParseMediaEntry(line, entry))
+			return false;
+		mediaList.push_back(entry);
+	}
+
+	for (auto& entry : data)
+	{
+		for (auto& m : mediaList)
+		{
+			if (m.checklistId.compare(entry.submissionID) == 0 &&
+				CommonNamesMatch(entry.commonName, m.commonName))
+			{
+				if (m.type == MediaEntry::Type::Photo)
+					entry.photoRating = m.rating;
+				else// if (m.type == MediaEntry::Type::Audio)
+					entry.audioRating = m.rating;
+				break;// TODO:  If audio and photo submitted for same observation, this won't score both of them
+			}
+		}
 	}
 
 	return true;

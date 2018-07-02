@@ -77,8 +77,10 @@ struct EBDPConfig
 	String frequencyFilePath;
 	String targetInfoFileName;
 
-	bool showOnlyPhotoNeeds;
-	String photoFileName;
+	int showOnlyPhotoNeeds;
+	int showOnlyAudioNeeds;
+	String mediaFileName;
+	String mediaListHTML;
 
 	String googleMapsAPIKey;
 	String homeLocation;
