@@ -308,25 +308,43 @@ void EBirdDataProcessor::SortData(const EBDPConfig::SortBy& primarySort, const E
 	});
 }
 
-std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const EBDPConfig::ListType& type) const
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::RemoveHighMediaScores(
+	const int& minPhotoScore, const int& minAudioScore, const std::vector<Entry>& data)
+{
+	std::vector<Entry> sublist(data);
+	std::set<String> haveMediaSet;
+	std::for_each(sublist.begin(), sublist.end(), [&minPhotoScore, &minAudioScore, &haveMediaSet](const Entry& entry)
+	{
+		if (entry.photoRating >= minPhotoScore && entry.audioRating >= minAudioScore)
+			haveMediaSet.insert(entry.compareString);
+	});
+	sublist.erase(std::remove_if(sublist.begin(), sublist.end(), [&haveMediaSet](const Entry& entry)
+	{
+		return haveMediaSet.find(entry.compareString) != haveMediaSet.end();
+	}), sublist.end());
+
+	return sublist;
+}
+
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const EBDPConfig::ListType& type, const std::vector<Entry>& data)
 {
 	std::vector<Entry> consolidatedList;
 	switch (type)
 	{
 	case EBDPConfig::ListType::Life:
-		return ConsolidateByLife();
+		return ConsolidateByLife(data);
 
 	case EBDPConfig::ListType::Year:
-		return ConsolidateByYear();
+		return ConsolidateByYear(data);
 
 	case EBDPConfig::ListType::Month:
-		return ConsolidateByMonth();
+		return ConsolidateByMonth(data);
 
 	case EBDPConfig::ListType::Week:
-		return ConsolidateByWeek();
+		return ConsolidateByWeek(data);
 
 	case EBDPConfig::ListType::Day:
-		return ConsolidateByDay();
+		return ConsolidateByDay(data);
 
 	default:
 	case EBDPConfig::ListType::SeparateAllObservations:
@@ -339,7 +357,12 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const
 String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type,
 	const int& minPhotoScore, const int& minAudioScore) const
 {
-	std::vector<Entry> consolidatedList(DoConsolidation(type));// TODO:  Needs to change?
+	std::vector<Entry> consolidatedList;
+	if (minPhotoScore >= 0 || minAudioScore >= 0)
+		consolidatedList = RemoveHighMediaScores(minPhotoScore, minAudioScore, data);
+	else
+		consolidatedList = data;
+	consolidatedList = DoConsolidation(type, consolidatedList);
 
 	if (minPhotoScore >= 0)
 		Cout << "Showing only species which do not have photo rated " << minPhotoScore << " or higher\n";
@@ -350,19 +373,15 @@ String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type,
 	unsigned int count(1);
 	for (const auto& entry : consolidatedList)
 	{
-		if ((minPhotoScore == -1 && minAudioScore == -1) || 
-			(entry.photoRating >= minPhotoScore && entry.audioRating >= minAudioScore))
-		{
-			ss << count++ << ", " << std::put_time(&entry.dateTime, _T("%D")) << ", "
-				<< entry.commonName << ", '" << entry.location << "', " << entry.count;
+		ss << count++ << ", " << std::put_time(&entry.dateTime, _T("%D")) << ", "
+			<< entry.commonName << ", '" << entry.location << "', " << entry.count;
 
-			if (entry.photoRating > 0)
-				ss << " (photo rating = " << entry.photoRating << ')';
-			if (entry.audioRating > 0)
-				ss << " (audio rating = " << entry.audioRating << ')';
+		if (entry.photoRating >= 0)
+			ss << " (photo rating = " << entry.photoRating << ')';
+		if (entry.audioRating >= 0)
+			ss << " (audio rating = " << entry.audioRating << ')';
 
-			ss << '\n';
-		}
+		ss << '\n';
 	}
 
 	return ss.str();
@@ -386,7 +405,7 @@ String EBirdDataProcessor::StripParentheses(String s)
 	return s;
 }
 
-std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByLife() const
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByLife(const std::vector<Entry>& data)
 {
 	auto equivalencePredicate([](const Entry& a, const Entry& b)
 	{
@@ -398,12 +417,21 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByLife() c
 	return consolidatedList;
 }
 
-std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByYear() const
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByYear(const std::vector<Entry>& data)
 {
-	return ConsolidateByYear(data);
+	auto equivalencePredicate([](const Entry& a, const Entry& b)
+	{
+		return CommonNamesMatch(a.commonName, b.commonName) &&
+			a.dateTime.tm_year == b.dateTime.tm_year;
+	});
+
+	std::vector<Entry> consolidatedList(data);
+	StableRemoveDuplicates(consolidatedList, equivalencePredicate);
+
+	return consolidatedList;
 }
 
-std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByMonth() const
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByMonth(const std::vector<Entry>& data)
 {
 	auto equivalencePredicate([](const Entry& a, const Entry& b)
 	{
@@ -418,7 +446,7 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByMonth() 
 	return consolidatedList;
 }
 
-std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByWeek() const
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByWeek(const std::vector<Entry>& data)
 {
 	auto equivalencePredicate([](const Entry& a, const Entry& b)
 	{
@@ -442,7 +470,7 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByWeek() c
 	return consolidatedList;
 }
 
-std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay() const
+std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay(const std::vector<Entry>& data)
 {
 	auto equivalencePredicate([](const Entry& a, const Entry& b)
 	{
@@ -885,7 +913,7 @@ void EBirdDataProcessor::GenerateRarityScores(const String& frequencyFilePath,
 	std::vector<EBirdDataProcessor::FrequencyInfo> yearFrequencyData(
 		GenerateYearlyFrequencyData(monthFrequencyData, checklistCounts));
 
-	const auto consolidatedData(DoConsolidation(listType));
+	const auto consolidatedData(DoConsolidation(listType, data));
 	std::vector<EBirdDataProcessor::FrequencyInfo> rarityScoreData(consolidatedData.size());
 	unsigned int i;
 	for (i = 0; i < rarityScoreData.size(); ++i)
@@ -1292,8 +1320,14 @@ bool EBirdDataProcessor::ReadMediaList(const String& mediaFileName)
 		return false;
 	}
 
-	std::vector<MediaEntry> mediaList;
 	String line;
+	if (!std::getline(mediaFile, line))// Discard header line
+	{
+		Cerr << "Media file is empty\n";
+		return false;
+	}
+
+	std::vector<MediaEntry> mediaList;
 	while (std::getline(mediaFile, line))
 	{
 		MediaEntry entry;
@@ -1619,18 +1653,4 @@ void EBirdDataProcessor::FilterYear(const unsigned int& year, std::vector<Entry>
 	{
 		return static_cast<unsigned int>(entry.dateTime.tm_year) + 1900U != year;
 	}), dataToFilter.end());
-}
-
-std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByYear(const std::vector<Entry>& sourceData) const
-{
-	auto equivalencePredicate([](const Entry& a, const Entry& b)
-	{
-		return CommonNamesMatch(a.commonName, b.commonName) &&
-			a.dateTime.tm_year == b.dateTime.tm_year;
-	});
-
-	std::vector<Entry> consolidatedList(sourceData);
-	StableRemoveDuplicates(consolidatedList, equivalencePredicate);
-
-	return consolidatedList;
 }

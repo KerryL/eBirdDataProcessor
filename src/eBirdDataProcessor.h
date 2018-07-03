@@ -135,14 +135,14 @@ private:
 
 	void FilterYear(const unsigned int& year, std::vector<Entry>& dataToFilter) const;
 
-	std::vector<Entry> ConsolidateByLife() const;
-	std::vector<Entry> ConsolidateByYear(const std::vector<Entry>& sourceData) const;
-	std::vector<Entry> ConsolidateByYear() const;
-	std::vector<Entry> ConsolidateByMonth() const;
-	std::vector<Entry> ConsolidateByWeek() const;
-	std::vector<Entry> ConsolidateByDay() const;
+	static std::vector<Entry> ConsolidateByLife(const std::vector<Entry>& data);
+	static std::vector<Entry> ConsolidateByYear(const std::vector<Entry>& data);
+	static std::vector<Entry> ConsolidateByMonth(const std::vector<Entry>& data);
+	static std::vector<Entry> ConsolidateByWeek(const std::vector<Entry>& data);
+	static std::vector<Entry> ConsolidateByDay(const std::vector<Entry>& data);
+	static std::vector<Entry> RemoveHighMediaScores(const int& minPhotoScore, const int& minAudioScore, const std::vector<Entry>& data);
 
-	std::vector<Entry> DoConsolidation(const EBDPConfig::ListType& type) const;
+	static std::vector<Entry> DoConsolidation(const EBDPConfig::ListType& type, const std::vector<Entry>& data);
 
 	static bool ParseLine(const String& line, Entry& entry);
 
