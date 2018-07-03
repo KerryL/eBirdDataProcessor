@@ -1347,7 +1347,7 @@ bool EBirdDataProcessor::ReadMediaList(const String& mediaFileName)
 					entry.photoRating = m.rating;
 				else// if (m.type == MediaEntry::Type::Audio)
 					entry.audioRating = m.rating;
-				break;// TODO:  If audio and photo submitted for same observation, this won't score both of them
+				//break;// Efficiency gain if we break, but if an entry has both audio and photo media, only one of them will be assigned.  In practice, efficiency gain here is not needed.
 			}
 		}
 	}
