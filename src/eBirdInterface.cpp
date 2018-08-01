@@ -491,6 +491,9 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 		if (!sn1.empty())
 			return sn1;
 
+		if (regionCode.compare(_T("world")) != 0)// No subregions for the specified region code
+			return std::vector<RegionInfo>();
+
 		return GetSubRegions(regionCode, RegionType::Country);
 	}
 

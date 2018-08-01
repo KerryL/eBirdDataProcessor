@@ -171,6 +171,7 @@ private:
 	};
 
 	std::map<String, std::vector<EBirdInterface::RegionInfo>> countryRegionInfoMap;
+	std::map<String, EBirdInterface::RegionInfo> countryLevelRegionInfoMap;
 
 	bool VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
 		const String& tableId, std::vector<unsigned int>& styleIds);

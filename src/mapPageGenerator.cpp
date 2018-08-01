@@ -316,6 +316,9 @@ bool MapPageGenerator::CreateFusionTable(
 
 	Cout << "Retrieving county location data" << std::endl;
 	const auto countryCodes(GetCountryCodeList(observationProbabilities));
+	const auto countries(ebi.GetSubRegions(_T("world"), EBirdInterface::RegionType::Country));
+	for (const auto& c : countries)
+		countryLevelRegionInfoMap[c.code] = c;
 	for (const auto& c : countryCodes)
 		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c);
 
@@ -1248,39 +1251,23 @@ String MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProce
 std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegionList(const String& countryCode) const
 {
 	auto regionList(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::MostDetailAvailable));
+	if (regionList.empty())// most detail available is country - use as-is
+	{
+		const auto countryInfo(countryLevelRegionInfoMap.find(countryCode));
+		assert(countryInfo != countryLevelRegionInfoMap.end());
+		return std::vector<EBirdInterface::RegionInfo>(1, countryInfo->second);
+	}
+
 	const auto firstDash(regionList.front().code.find(Char('-')));
-	if (firstDash == std::string::npos)// most detail available is country - use as-is
-		return regionList;
+	if (firstDash == std::string::npos)
+		return regionList;// I don't think we should ever get here?
 
 	const auto secondDash(regionList.front().code.find(Char('-'), firstDash + 1));
 	if (secondDash == std::string::npos)// most detail available is subregion 1 - use as-is
 		return regionList;
 
-	// Check to make sure there are no level 1 areas that have no further sub regions (and thus are left out of level 2 response)
-	std::set<String> parentRegionCodes;
-	for (const auto& r : regionList)
-	{
-		const auto lastDash(r.code.find_last_of(Char('-')));
-		assert(lastDash != std::string::npos);
-		parentRegionCodes.insert(r.code.substr(0, lastDash));
-	}
-
-	auto subNational1List(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::SubNational1));
-	for (const auto& sn1 : subNational1List)
-	{
-		bool found(false);
-		for (const auto& p : parentRegionCodes)
-		{
-			if (p.compare(sn1.code) == 0)
-			{
-				found = true;
-				break;
-			}
-		}
-
-		if (!found)
-			regionList.push_back(sn1);
-	}
-
+	// If here, we have subregion2 data.  Let's also add subregion1 data.
+	auto subRegion1List(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::SubNational1));
+	regionList.insert(regionList.end(), subRegion1List.begin(), subRegion1List.end());
 	return regionList;
 }
