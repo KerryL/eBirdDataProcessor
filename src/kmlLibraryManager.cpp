@@ -29,12 +29,11 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 	if (GetKMLFromMemory(locationIDString, kml))
 		return kml;
 
-	if (LoadKMLFromLibrary(country, locationIDString))
+	if (LoadKMLFromLibrary(country, locationIDString, kml))
+		return kml;
+	else if (CountryLoadedFromLibrary(country))
 	{
-		if (GetKMLFromMemory(locationIDString, kml))
-			return kml;
-
-		log << "KML for '" << country << "' loaded, but no match for '" << locationIDString << '\'' << std::endl;
+		log << "Loaded KML for '" << country << "', but no match for '" << locationIDString << '\'' << std::endl;
 		return String();
 	}
 
@@ -50,22 +49,36 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 		return GlobalKMLFetcher::DetailLevel::SubNational2;
 	}());
 
-	if (DownloadAndStoreKML(country, detailLevel))
+	if (DownloadAndStoreKML(country, detailLevel, locationIDString, kml))
+		return kml;
+	else if (FileExists(libraryPath + country + _T(".kmz")))
 	{
-		if (LoadKMLFromLibrary(country, locationIDString))
-		{
-			if (GetKMLFromMemory(locationIDString, kml))
-				return kml;
-			log << "Downloaded KML for '" << country << "', but no match for '" << locationIDString << '\'' << std::endl;
-		}
+		log << "Downloaded KML for '" << country << "', but no match for '" << locationIDString << '\'' << std::endl;
+		return String();
 	}
 
-	return String();
+	return kml;
 }
 
 bool KMLLibraryManager::GetKMLFromMemory(const String& locationId, String& kml) const
 {
 	std::shared_lock<std::shared_mutex> lock(mutex);
+	return NonLockingGetKMLFromMemory(locationId, kml);
+}
+
+bool KMLLibraryManager::CountryLoadedFromLibrary(const String& country) const
+{
+	auto it(kmlMemory.cbegin());
+	for (; it != kmlMemory.end(); ++it)
+	{
+		if (it->first.substr(0, country.length() + 1).compare(country + _T(":")) == 0)
+			return true;
+	}
+	return false;
+}
+
+bool KMLLibraryManager::NonLockingGetKMLFromMemory(const String& locationId, String& kml) const
+{
 	auto it(kmlMemory.find(locationId));
 	if (it == kmlMemory.end())
 		return false;
@@ -75,18 +88,24 @@ bool KMLLibraryManager::GetKMLFromMemory(const String& locationId, String& kml) 
 }
 
 // Load by country
-bool KMLLibraryManager::LoadKMLFromLibrary(const String& country, const String& locationId)
+bool KMLLibraryManager::LoadKMLFromLibrary(const String& country, const String& locationId, String& kml)
 {
 	if (!loadManager.TryAccess(country))
 	{
 		loadManager.WaitOn(country);
-		return true;// Assume other thread succeeded
+		return GetKMLFromMemory(locationId, kml);// Assume other thread succeeded
 	}
 
 	MutexUtilities::AccessManager::AccessHelper helper(country, loadManager);
 	if (kmlMemory.find(locationId) != kmlMemory.end())
-		return true;// Another thread loaded it while we were transfering from shared to exclusive access
+		return GetKMLFromMemory(locationId, kml);// Another thread loaded it while we were transfering from shared to exclusive access
 
+	return NonLockingLoadKMLFromLibrary(country, locationId, kml);
+}
+
+// Load by country
+bool KMLLibraryManager::NonLockingLoadKMLFromLibrary(const String& country, const String& locationId, String& kml)
+{
 	log << "Attempting to load KML data from archive for '" << country << '\'' << std::endl;
 
 	Zipper z;
@@ -110,23 +129,23 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country, const String& 
 	//kmlMemory.merge(std::move(tempMap));// requires C++ 17 - not sure if there's any reason to prefer it over line below
 	kmlMemory.insert(tempMap.begin(), tempMap.end());
 
-	return true;
+	return NonLockingGetKMLFromMemory(locationId, kml);
 }
 
 // Download by country
 bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
-	const GlobalKMLFetcher::DetailLevel& detailLevel)
+	const GlobalKMLFetcher::DetailLevel& detailLevel, const String& locationId, String& kml)
 {
 	if (!downloadManager.TryAccess(country))
 	{
 		downloadManager.WaitOn(country);
-		return true;// Assume other thread succeeded
+		return GetKMLFromMemory(locationId, kml);// Assume other thread succeeded
 	}
 
 	MutexUtilities::AccessManager::AccessHelper helper(country, downloadManager);
 	const String kmzFileName(libraryPath + country + _T(".kmz"));
 	if (FileExists(kmzFileName))
-		return true;// Another thread downloaded it while we were transfering from shared to exclusive access
+		return GetKMLFromMemory(locationId, kml);// Another thread downloaded it while we were transfering from shared to exclusive access
 
 	log << "Attempting to download KML data for '" << country << '\'' << " at detail level " << static_cast<int>(detailLevel) << std::endl;
 	GlobalKMLFetcher fetcher(log);
@@ -178,6 +197,8 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 		log << "Failed to add kml data to archive" << std::endl;
 		return false;
 	}
+
+	NonLockingLoadKMLFromLibrary(country, locationId, kml);
 
 	return z.CloseArchive();
 }

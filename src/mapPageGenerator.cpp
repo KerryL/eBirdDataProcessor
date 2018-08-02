@@ -951,8 +951,11 @@ void MapPageGenerator::LookupAndAssignKML(CountyInfo& data)
 	LookupEBirdRegionNames(data.country, data.state, countryName, stateName);
 	if (countryName.empty())// Should never happen
 	{
+		log << "BAD THING HERE!" << std::endl;
 		log << data.country << " - " << data.state << std::endl;
 		log << "info map size = " << countryRegionInfoMap[data.country].size() << std::endl;
+		for (const auto& c : countryRegionInfoMap[data.country])
+			log << c.code << " :: " << c.name << std::endl;
 		assert(false);
 	}
 	data.geometryKML = kmlLibrary.GetKML(countryName, stateName, data.county);

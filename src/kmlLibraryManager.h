@@ -30,8 +30,11 @@ private:
 	typedef std::unordered_map<String, String> KMLMapType;
 	KMLMapType kmlMemory;
 
-	bool LoadKMLFromLibrary(const String& country, const String& locationId);
-	bool DownloadAndStoreKML(const String& country, const GlobalKMLFetcher::DetailLevel& detailLevel);
+	bool LoadKMLFromLibrary(const String& country, const String& locationId, String& kml);
+	bool DownloadAndStoreKML(const String& country, const GlobalKMLFetcher::DetailLevel& detailLevel,
+		const String& locationId, String& kml);
+
+	bool NonLockingLoadKMLFromLibrary(const String& country, const String& locationId, String& kml);
 
 	static String BuildLocationIDString(const String& country, const String& subNational1, const String& subNational2);
 	static String BuildSubNationalIDString(const String& subNational1, const String& subNational2);
@@ -40,6 +43,8 @@ private:
 	static String ExtractName(const String& kmlData, const std::string::size_type& offset);
 	static String ExtractDescription(const String& kmlData, const std::string::size_type& offset);
 	static bool DescriptionIsUnwanted(const String& kmlData, const std::string::size_type& offset);
+
+	bool CountryLoadedFromLibrary(const String& country) const;
 
 	struct AdditionalArguments
 	{
@@ -159,6 +164,7 @@ private:
 	};
 
 	bool GetKMLFromMemory(const String& locationId, String& kml) const;
+	bool NonLockingGetKMLFromMemory(const String& locationId, String& kml) const;
 
 	mutable std::shared_mutex mutex;
 	MutexUtilities::AccessManager loadManager;
