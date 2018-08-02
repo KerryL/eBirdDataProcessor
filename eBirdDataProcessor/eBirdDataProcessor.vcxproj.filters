@@ -31,6 +31,9 @@
     <Filter Include="Source Files\email\cJSON">
       <UniqueIdentifier>{d9c17349-85f1-4618-a153-de8b23077f12}</UniqueIdentifier>
     </Filter>
+    <Filter Include="Header Files\logging">
+      <UniqueIdentifier>{44f3e35e-7bc2-4a3d-9c53-bd95366687d5}</UniqueIdentifier>
+    </Filter>
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="..\src\eBirdDataProcessor.cpp">
@@ -187,6 +190,9 @@
     </ClInclude>
     <ClInclude Include="..\src\utilities.h">
       <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\logging\combinedLogger.h">
+      <Filter>Header Files\logging</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

@@ -12,6 +12,7 @@
 
 // Standard C++ headers
 #include <map>
+#include <ostream>
 
 // for cURL
 typedef void CURL;
@@ -19,7 +20,7 @@ typedef void CURL;
 class GlobalKMLFetcher
 {
 public:
-	GlobalKMLFetcher();
+	GlobalKMLFetcher(std::basic_ostream<String::value_type>& log);
 	~GlobalKMLFetcher();
 
 	enum class DetailLevel
@@ -36,6 +37,8 @@ private:
 	static const String gadmCountryURL;
 	static const String gadmDownloadBaseURL;
 	static const bool verbose;
+
+	std::basic_ostream<String::value_type>& log;
 
 	static const ThrottledSection::Clock::duration gadmCrawlDelay;
 	ThrottledSection rateLimiter;

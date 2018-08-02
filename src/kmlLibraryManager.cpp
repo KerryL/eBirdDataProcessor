@@ -16,12 +16,14 @@
 #include <mutex>
 
 KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
-	const String& eBirdAPIKey) : libraryPath(libraryPath), ebi(eBirdAPIKey)
+	const String& eBirdAPIKey, std::basic_ostream<String::value_type>& log) : libraryPath(libraryPath), log(log), ebi(eBirdAPIKey)
 {
 }
 
 String KMLLibraryManager::GetKML(const String& country, const String& subNational1, const String& subNational2)
 {
+	assert(!country.empty());
+	assert((!subNational2.empty() && !subNational1.empty()) || subNational2.empty());
 	const String locationIDString(BuildLocationIDString(country, subNational1, subNational2));
 	String kml;
 	if (GetKMLFromMemory(locationIDString, kml))
@@ -32,7 +34,7 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 		if (GetKMLFromMemory(locationIDString, kml))
 			return kml;
 
-		Cerr << "KML for '" << country << "' loaded, but no match for '" << locationIDString << "'\n";
+		log << "KML for '" << country << "' loaded, but no match for '" << locationIDString << '\'' << std::endl;
 		return String();
 	}
 
@@ -54,7 +56,7 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 		{
 			if (GetKMLFromMemory(locationIDString, kml))
 				return kml;
-			Cerr << "Downloaded KML for '" << country << "', but no match for '" << locationIDString << "'\n";
+			log << "Downloaded KML for '" << country << "', but no match for '" << locationIDString << '\'' << std::endl;
 		}
 	}
 
@@ -85,19 +87,19 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country, const String& 
 	if (kmlMemory.find(locationId) != kmlMemory.end())
 		return true;// Another thread loaded it while we were transfering from shared to exclusive access
 
-	Cout << "Attempting to load KML data from archive for '" << country << '\'' << std::endl;
+	log << "Attempting to load KML data from archive for '" << country << '\'' << std::endl;
 
 	Zipper z;
 	const String archiveFileName(libraryPath + country + _T(".kmz"));
 	if (!z.OpenArchiveFile(archiveFileName))
 	{
-		Cerr << "Failed to open '" << archiveFileName << "' for input\n";
+		log << "Failed to open '" << archiveFileName << "' for input" << std::endl;
 		return false;
 	}
 
 	std::string bytes;
 	if (!z.ExtractFile(0, bytes))
-		Cerr << "Failed to extract kml file from '" << archiveFileName << "':  " << z.GetErrorString() << '\n';
+		log << "Failed to extract kml file from '" << archiveFileName << "':  " << z.GetErrorString() << std::endl;
 
 	std::unordered_map<String, String> tempMap;
 	GeometryExtractionArguments args(country, tempMap);
@@ -126,32 +128,33 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	if (FileExists(kmzFileName))
 		return true;// Another thread downloaded it while we were transfering from shared to exclusive access
 
-	Cout << "Attempting to download KML data for '" << country << '\'' << std::endl;
-	GlobalKMLFetcher fetcher;
+	log << "Attempting to download KML data for '" << country << '\'' << " at detail level " << static_cast<int>(detailLevel) << std::endl;
+	GlobalKMLFetcher fetcher(log);
 	std::string result;
 	if (!fetcher.FetchKML(country, detailLevel, result))
 	{
-		Cerr << "Failed to download KML for '" << country << "'\n";
+		log << "Failed to download KML for '" << country << '\'' << std::endl;
 		return false;
 	}
 
 	Zipper z;
 	if (!z.OpenArchiveBytes(result))
 	{
-		Cerr << "Failed to open kmz data\n";
+		log << "Failed to open kmz data" << std::endl;
 		return false;
 	}
 
 	std::string unzippedKML;
 	if (!z.ExtractFile(0, unzippedKML))
 	{
-		Cerr << "Failed to extract file from kmz archive\n";
+		log << "Failed to extract file from kmz archive" << std::endl;
 		return false;
 	}
 
 	z.CloseArchive();
 
-	if (detailLevel == GlobalKMLFetcher::DetailLevel::SubNational2)
+	// New (v3.6) GADM format does not require fixing
+	/*if (detailLevel == GlobalKMLFetcher::DetailLevel::SubNational2)
 	{
 		String modifiedKML;
 		ParentRegionFinderArguments args(country, modifiedKML, *this);
@@ -162,18 +165,17 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 		// Also need to write the remainder of the file (after the last placemark tag)
 		modifiedKML.append(unzippedKMLString.substr(args.sourceTellP));
 		unzippedKML = UString::ToNarrowString(modifiedKML);
-	}
+	}*/
 
-	std::string zippedModifiedKML;
 	if (!z.CreateArchiveFile(kmzFileName))
 	{
-		Cerr << "Failed to create kmz archive\n";
+		log << "Failed to create kmz archive" << std::endl;
 		return false;
 	}
 
 	if (!z.AddFile(country + _T(".kml"), unzippedKML))
 	{
-		Cerr << "Failed to add kml data to archive\n";
+		log << "Failed to add kml data to archive" << std::endl;
 		return false;
 	}
 
@@ -205,7 +207,7 @@ String KMLLibraryManager::ExtractName(const String& kmlData, const std::string::
 }
 
 bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
-	PlacemarkFunction func, AdditionalArguments& args)
+	PlacemarkFunction func, AdditionalArguments& args) const
 {
 	const String placemarkStartTag(_T("<Placemark>"));
 	std::string::size_type next(0);
@@ -215,7 +217,7 @@ bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
 		const std::string::size_type placemarkEnd(kmlData.find(placemarkEndTag, next));
 		if (placemarkEnd == std::string::npos)
 		{
-			Cerr << "Failed to find expected placemark end tag\n";
+			log << "Failed to find expected placemark end tag" << std::endl;
 			return false;
 		}
 
@@ -280,15 +282,23 @@ bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
 	// I think <MultiGeometry> is only necessary if there are multiple polygons, although
 	// gadm.org seems to wrap all polygon tags in multigeometry tags, so for now we'll
 	// leave this.
-	const String geometryStartTag(_T("<MultiGeometry>"));
-	const std::string::size_type geometryStart(kmlData.find(geometryStartTag, offset));
+	const String multiGeometryStartTag(_T("<MultiGeometry>"));
+	const String multiGeometryEndTag(_T("</MultiGeometry>"));
+	String geometryEndTag(multiGeometryEndTag);
+	std::string::size_type geometryStart(kmlData.find(multiGeometryStartTag, offset));
 	if (geometryStart == std::string::npos)
 	{
-		Cerr << "Failed to find geometry start tag\n";
-		return false;
+		const String geometryStartTag(_T("<Polygon>"));
+		geometryEndTag = _T("</Polygon>");
+		geometryStart = kmlData.find(geometryStartTag, offset);
+		if (geometryStart == std::string::npos)
+		{
+			Cerr << "Failed to find geometry start tag\n";
+			return false;
+		}
 	}
 
-	const String geometryEndTag(_T("</MultiGeometry>"));
+	
 	const std::string::size_type geometryEnd(kmlData.find(geometryEndTag, geometryStart));
 	if (geometryEnd == std::string::npos)
 	{
@@ -321,7 +331,7 @@ bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
 }
 
 bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
-	const std::string::size_type& offset, AdditionalArguments& args)
+	const std::string::size_type& offset, AdditionalArguments& args) const
 {
 	const String name(ExtractName(kmlData, offset));
 	const String placemarkNameString(CreatePlacemarkNameString(name));
@@ -334,14 +344,14 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 		const auto placemarkEnd(kmlData.find(_T("</Placemark>"), offset));
 		if (placemarkEnd == std::string::npos)
 		{
-			Cerr << "Failed to match expected end of placemark\n";
+			log << "Failed to match expected end of placemark" << std::endl;
 			return false;
 		}
 
 		if (!placemarkArgs.self.LookupParentRegionName(placemarkArgs.countryName,
 			name, kmlData.substr(offset, placemarkEnd - offset), parentRegionName))
 		{
-			Cerr << "Failed to find parent region name (geometry method) for " << name << '\n';
+			log << "Failed to find parent region name (geometry method) for " << name << '\'' << std::endl;
 			return true;// Non-fatal - could be an area for which eBird does not have a region defined, or eBird combines what is actually multiple administrative areas
 		}
 	}
@@ -349,7 +359,7 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 	{
 		if (!placemarkArgs.self.LookupParentRegionName(placemarkArgs.countryName, name, parentRegionName))
 		{
-			Cerr << "Failed to find parent region name (unique name method) for " << name << '\n';
+			log << "Failed to find parent region name (unique name method) for " << name << std::endl;
 			return true;// Non-fatal - could be an area for which eBird does not have a region defined, or eBird combines what is actually multiple administrative areas
 		}
 	}
@@ -363,7 +373,7 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 	placemarkArgs.sourceTellP = kmlData.find(endNameTag, startOfNameTag);
 	if (placemarkArgs.sourceTellP == std::string::npos)
 	{
-		Cerr << "Failed to find expected end name tag\n";
+		log << "Failed to find expected end name tag" << std::endl;
 		return false;
 	}
 	placemarkArgs.sourceTellP += endNameTag.length();
@@ -694,7 +704,7 @@ bool KMLLibraryManager::BoundingBoxWithinParentBox(const GeometryInfo::BoundingB
 
 bool KMLLibraryManager::GetParentGeometryInfo(const String& country)
 {
-	GlobalKMLFetcher fetcher;
+	GlobalKMLFetcher fetcher(log);
 	std::string result;
 	if (!fetcher.FetchKML(country, GlobalKMLFetcher::DetailLevel::SubNational1, result))
 		return false;

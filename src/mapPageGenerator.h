@@ -13,6 +13,7 @@
 #include "throttledSection.h"
 #include "kmlLibraryManager.h"
 #include "utilities/uString.h"
+#include "logging/combinedLogger.h"
 
 // Standard C++ headers
 #include <map>
@@ -32,6 +33,7 @@ public:
 
 private:
 	static const String birdProbabilityTableName;
+	CombinedLogger<typename std::basic_ostream<String::value_type>> log;
 
 	struct NamePair
 	{
@@ -59,10 +61,7 @@ private:
 
 	typedef GoogleFusionTablesInterface GFTI;
 
-	static const unsigned int mapsAPIRateLimit;
-	static const ThrottledSection::Clock::duration mapsAPIMinDuration;
 	static const ThrottledSection::Clock::duration fusionTablesAPIMinDuration;
-	ThrottledSection mapsAPIRateLimiter;
 	ThrottledSection fusionTablesAPIRateLimiter;
 
 	mutable EBirdInterface ebi;
@@ -160,7 +159,7 @@ private:
 		MapJobInfo() = default;
 		MapJobInfo(CountyInfo& info, const ObservationInfo& frequencyInfo,
 			const std::vector<EBirdInterface::RegionInfo>& regionNames, MapPageGenerator& mpg)
-			: info(info), frequencyInfo(frequencyInfo), regionNames(regionNames), mpg(mpg) {}
+			: info(info), frequencyInfo(frequencyInfo), regionNames(regionNames), mpg(mpg){}
 
 		CountyInfo& info;
 		const ObservationInfo& frequencyInfo;

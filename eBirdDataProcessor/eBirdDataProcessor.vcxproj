@@ -165,6 +165,7 @@
     <ClInclude Include="..\src\googleMapsInterface.h" />
     <ClInclude Include="..\src\kernelDensityEstimation.h" />
     <ClInclude Include="..\src\kmlLibraryManager.h" />
+    <ClInclude Include="..\src\logging\combinedLogger.h" />
     <ClInclude Include="..\src\mapPageGenerator.h" />
     <ClInclude Include="..\src\stringUtilities.h" />
     <ClInclude Include="..\src\threadPool.h" />

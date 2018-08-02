@@ -7,7 +7,6 @@
 
 // Local headers
 #include "mapPageGenerator.h"
-#include "googleMapsInterface.h"
 #include "stringUtilities.h"
 #include "utilities.h"
 #include "utilities/mutexUtilities.h"
@@ -38,17 +37,18 @@ const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = 
 	NamePair(_T("Nov"), _T("November")),
 	NamePair(_T("Dec"), _T("December"))};
 
-const unsigned int MapPageGenerator::mapsAPIRateLimit(45);// [requests per sec] (actual limit is 50/sec, but our algorithm isn't perfect...)
-const ThrottledSection::Clock::duration MapPageGenerator::mapsAPIMinDuration(std::chrono::milliseconds(static_cast<long long>(1000.0 / mapsAPIRateLimit)));// 50 requests per second
 const ThrottledSection::Clock::duration MapPageGenerator::fusionTablesAPIMinDuration(std::chrono::milliseconds(static_cast<long long>(60000.0 / GFTI::writeRequestRateLimit)));// 30 requests per minute
 
 const unsigned int MapPageGenerator::columnCount(42);
 const unsigned int MapPageGenerator::importCellCountLimit(100000);
 const unsigned int MapPageGenerator::importSizeLimit(1024 * 1024);// 1 MB
 
-MapPageGenerator::MapPageGenerator(const String& kmlLibraryPath, const String& eBirdAPIKey) : mapsAPIRateLimiter(mapsAPIMinDuration),
-	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), ebi(eBirdAPIKey), kmlLibrary(kmlLibraryPath, eBirdAPIKey)
+MapPageGenerator::MapPageGenerator(const String& kmlLibraryPath, const String& eBirdAPIKey) :
+	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), ebi(eBirdAPIKey), kmlLibrary(kmlLibraryPath, eBirdAPIKey, log)
 {
+	log.Add(Cout);
+	std::unique_ptr<OFStream> f(std::make_unique<OFStream>("temp.log"));
+	log.Add(std::move(f));
 }
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const String& htmlFileName,
@@ -238,7 +238,7 @@ bool MapPageGenerator::CreateFusionTable(
 	{
 		if (t.name.compare(birdProbabilityTableName) == 0 && t.columns.size() == columnCount)// TODO:  Better check necessary?
 		{
-			Cout << "Found existing table " << t.tableId << std::endl;
+			log << "Found existing table " << t.tableId << std::endl;
 			tableId = t.tableId;
 
 			if (GetExistingCountyData(existingData, fusionTables, tableId))
@@ -259,7 +259,7 @@ bool MapPageGenerator::CreateFusionTable(
 		}
 
 		tableId = tableInfo.tableId;
-		Cout << "Created new fusion table " << tableId << std::endl;
+		log << "Created new fusion table " << tableId << std::endl;
 		fusionTablesAPIRateLimiter.Wait();
 		if (!fusionTables.SetTableAccess(tableInfo.tableId, GoogleFusionTablesInterface::TableAccess::Public))
 			Cerr << "Failed to make table public\n";
@@ -268,7 +268,7 @@ bool MapPageGenerator::CreateFusionTable(
 	const auto invalidSpeciesDataRowsToDelete(FindInvalidSpeciesDataToRemove(fusionTables, tableId));
 	if (invalidSpeciesDataRowsToDelete.size() > 0)
 	{
-		Cout << "Deleting " << invalidSpeciesDataRowsToDelete.size() << " rows with invalid species data" << std::endl;
+		log << "Deleting " << invalidSpeciesDataRowsToDelete.size() << " rows with invalid species data" << std::endl;
 		if (!GetConfirmationFromUser())
 			return false;
 
@@ -282,7 +282,7 @@ bool MapPageGenerator::CreateFusionTable(
 	const auto duplicateRowsToDelete(FindDuplicatesAndBlanksToRemove(existingData));
 	if (duplicateRowsToDelete.size() > 0)
 	{
-		Cout << "Deleting " << duplicateRowsToDelete.size() << " duplicate or blank entires" << std::endl;
+		log << "Deleting " << duplicateRowsToDelete.size() << " duplicate or blank entires" << std::endl;
 		if (!GetConfirmationFromUser())
 			return false;
 
@@ -296,7 +296,7 @@ bool MapPageGenerator::CreateFusionTable(
 	const auto rowsToDelete(DetermineDeleteUpdateAdd(existingData, observationProbabilities));
 	if (rowsToDelete.size() > 0)
 	{
-		Cout << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
+		log << "Deleting " << rowsToDelete.size() << " rows to prepare for update" << std::endl;
 		if (!GetConfirmationFromUser())
 			return false;
 
@@ -310,11 +310,11 @@ bool MapPageGenerator::CreateFusionTable(
 	if (observationProbabilities.size() == 0)
 	{
 		// TODO:  Wouldn't have populated lat/lon stuff yet.
-		Cout << "All data up-to-date" << std::endl;
+		log << "All data up-to-date" << std::endl;
 		return true;
 	}
 
-	Cout << "Retrieving county location data" << std::endl;
+	log << "Retrieving county location data" << std::endl;
 	const auto countryCodes(GetCountryCodeList(observationProbabilities));
 	const auto countries(ebi.GetSubRegions(_T("world"), EBirdInterface::RegionType::Country));
 	for (const auto& c : countries)
@@ -322,11 +322,37 @@ bool MapPageGenerator::CreateFusionTable(
 	for (const auto& c : countryCodes)
 		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c);
 
+	// Eliminate observations that are not reported at the lowest available region detail
+	observationProbabilities.erase(std::remove_if(observationProbabilities.begin(), observationProbabilities.end(), [this](const EBirdDataProcessor::YearFrequencyInfo& y)
+	{
+		const String countryCode(Utilities::ExtractCountryFromRegionCode(y.locationCode));
+		const String stateCode(Utilities::ExtractStateFromRegionCode(y.locationCode));
+		const auto& subRegionList(countryRegionInfoMap[countryCode]);
+		if (subRegionList.size() == 1 && stateCode.empty())
+			return false;// No subregions
+		else if (subRegionList.size() > 1 && stateCode.empty())
+			return true;// Subregions exist, but none was specified
+
+		const String matchString(countryCode + _T("-") + stateCode);
+		for (const auto& sr : subRegionList)
+		{
+			if (sr.code.substr(0, matchString.length()).compare(matchString) == 0)
+			{
+				if (sr.code.length() > matchString.length() &&
+					sr.code[matchString.length()] == Char('-'))
+					return true;
+				return false;
+			}
+		}
+		return false;
+	}), observationProbabilities.end());
+
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
-	ThreadPool pool(std::thread::hardware_concurrency() * 2, /*mapsAPIRateLimit*/0);
+	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 	auto countyIt(countyInfo.begin());
 	for (const auto& entry : observationProbabilities)
 	{
+		assert(entry.locationCode.length() >= 2);
 		countyIt->frequencyInfo = std::move(entry.frequencyInfo);
 		countyIt->probabilities = std::move(entry.probabilities);
 		countyIt->code = entry.locationCode;
@@ -349,7 +375,7 @@ bool MapPageGenerator::CreateFusionTable(
 	southwestLatitude = 18.79;
 	southwestLongitude = 171.7;
 
-	Cout << "Preparing data for upload" << std::endl;
+	log << "Preparing data for upload" << std::endl;
 	OStringStream ss;
 	unsigned int rowCount(0);
 	unsigned int cellCount(0);
@@ -391,13 +417,13 @@ bool MapPageGenerator::CreateFusionTable(
 
 	if (!VerifyTableStyles(fusionTables, tableId, styleIds))
 	{
-		Cerr << "Failed to verify table styles\n";
+		log << "Failed to verify table styles" << std::endl;
 		return false;
 	}
 
 	if (!VerifyTableTemplates(fusionTables, tableId, templateIds))
 	{
-		Cerr << "Failed to verify table templates\n";
+		log << "Failed to verify table templates" << std::endl;
 		return false;
 	}
 
@@ -923,9 +949,15 @@ void MapPageGenerator::LookupAndAssignKML(CountyInfo& data)
 {
 	String countryName, stateName;
 	LookupEBirdRegionNames(data.country, data.state, countryName, stateName);
+	if (countryName.empty())// Should never happen
+	{
+		log << data.country << " - " << data.state << std::endl;
+		log << "info map size = " << countryRegionInfoMap[data.country].size() << std::endl;
+		assert(false);
+	}
 	data.geometryKML = kmlLibrary.GetKML(countryName, stateName, data.county);
 	if (data.geometryKML.empty())
-		Cerr << "\rWarning:  Geometry not found for '" << data.code << "'\n";
+		log << "\rWarning:  Geometry not found for '" << data.code << '\'' << std::endl;
 }
 
 void MapPageGenerator::AddRegionCodesToMap(const String& parentCode, const EBirdInterface::RegionType& regionType)
@@ -959,7 +991,7 @@ void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
 			countryIt = eBirdRegionCodeToNameMap.find(countryCode);
 			if (countryIt == eBirdRegionCodeToNameMap.end())
 			{
-				Cerr << "Failed to lookup country name for code '" << countryCode << "'\n";
+				log << "Failed to lookup country name for code '" << countryCode << '\'' << std::endl;
 				return;
 			}
 
@@ -970,11 +1002,25 @@ void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
 	else
 		country = countryIt->second;
 
+	if (subRegion1Code.empty())
+		return;
+
 	auto subNational1It(eBirdRegionCodeToNameMap.find(fullSubRegionCode));
 	if (subNational1It == eBirdRegionCodeToNameMap.end())
 	{
-		//Cerr << "Failed to lookup region name for code '" << fullSubRegionCode << "'\n";// Expect this for countries without subregions
-		return;
+		MutexUtilities::AccessUpgrader exclusiveLock(lock);
+		subNational1It = eBirdRegionCodeToNameMap.find(fullSubRegionCode);
+		if (subNational1It == eBirdRegionCodeToNameMap.end())// Confirmed - still need to do this work
+		{
+			AddRegionCodesToMap(countryCode, EBirdInterface::RegionType::SubNational1);
+
+			subNational1It = eBirdRegionCodeToNameMap.find(fullSubRegionCode);
+			if (subNational1It == eBirdRegionCodeToNameMap.end())
+			{
+				log << "Failed to lookup region name for code '" << fullSubRegionCode << '\'' << std::endl;
+				return;
+			}
+		}
 	}
 
 	subRegion1 = subNational1It->second;
@@ -984,12 +1030,25 @@ void MapPageGenerator::MapJobInfo::DoJob()
 {
 	info.country = Utilities::ExtractCountryFromRegionCode(frequencyInfo.locationCode);
 	info.state = Utilities::ExtractStateFromRegionCode(frequencyInfo.locationCode);
+	String stateName(info.state), countryName(info.country);
 	for (const auto& r : regionNames)
 	{
+		if (r.code.compare(info.country) == 0)
+			countryName = r.name;
+		else if (r.code.compare(info.country + _T("-") + info.state) == 0)
+			stateName = r.name;
+
 		if (r.code.compare(frequencyInfo.locationCode) == 0)
 		{
-			info.county = r.name;
-			info.name = AssembleCountyName(info.country, info.state, info.county);
+			auto hyphen(frequencyInfo.locationCode.find(Char('-')));
+			if (hyphen != std::string::npos)
+			{
+				hyphen = frequencyInfo.locationCode.find(Char('-'), hyphen + 1);
+				if (hyphen != std::string::npos)
+					info.county = r.name;
+			}
+
+			info.name = AssembleCountyName(countryName, stateName, info.county);
 			break;
 		}
 	}

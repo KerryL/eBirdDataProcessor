@@ -4,3 +4,6 @@
 [submodule "src/utilities"]
 	path = src/utilities
 	url = https://github.com/KerryL/utilities.git
+[submodule "src/logging"]
+	path = src/logging
+	url = https://github.com/KerryL/logging.git

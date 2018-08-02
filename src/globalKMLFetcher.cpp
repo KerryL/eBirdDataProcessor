@@ -21,7 +21,7 @@ using namespace std::chrono_literals;
 // check this to make sure we comply, or we should include a robots.txt parser here to automatically update
 const ThrottledSection::Clock::duration GlobalKMLFetcher::gadmCrawlDelay(std::chrono::steady_clock::duration(10s));
 
-GlobalKMLFetcher::GlobalKMLFetcher() : rateLimiter(gadmCrawlDelay)
+GlobalKMLFetcher::GlobalKMLFetcher(std::basic_ostream<String::value_type>& log) : log(log), rateLimiter(gadmCrawlDelay)
 {
 	DoGeneralCurlConfiguration();
 }
@@ -45,7 +45,7 @@ bool GlobalKMLFetcher::FetchKML(const String& country, const DetailLevel& level,
 	auto it(countryCodeMap.find(country));
 	if (it == countryCodeMap.end())
 	{
-		Cerr << "Failed to find match for '" << country << "' in available KML library\n";
+		log << "Failed to find match for '" << country << "' in available KML library" << std::endl;
 		return false;
 	}
 
@@ -125,7 +125,7 @@ bool GlobalKMLFetcher::DoGeneralCurlConfiguration()
 
 	if (!curl)
 	{
-		Cerr << "Failed to initialize CURL" << std::endl;
+		log << "Failed to initialize CURL" << std::endl;
 		return false;
 	}
 
@@ -147,7 +147,7 @@ bool GlobalKMLFetcher::DoGeneralCurlConfiguration()
 	headerList = curl_slist_append(headerList, "Connection: Keep-Alive");
 	if (!headerList)
 	{
-		Cerr << "Failed to append keep alive to header\n";
+		log << "Failed to append keep alive to header" << std::endl;
 		return false;
 	}
 

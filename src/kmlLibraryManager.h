@@ -19,12 +19,13 @@
 class KMLLibraryManager
 {
 public:
-	KMLLibraryManager(const String& libraryPath, const String& eBirdAPIKey);
+	KMLLibraryManager(const String& libraryPath, const String& eBirdAPIKey, std::basic_ostream<String::value_type>& log);
 
 	String GetKML(const String& country, const String& subNational1, const String& subNational2);
 
 private:
 	const String libraryPath;
+	std::basic_ostream<String::value_type>& log;
 
 	typedef std::unordered_map<String, String> KMLMapType;
 	KMLMapType kmlMemory;
@@ -74,9 +75,9 @@ private:
 
 	typedef bool(*PlacemarkFunction)(const String&, const std::string::size_type&, AdditionalArguments&);
 
-	static bool ForEachPlacemarkTag(const String& kmlData, PlacemarkFunction func, AdditionalArguments& args);
+	bool ForEachPlacemarkTag(const String& kmlData, PlacemarkFunction func, AdditionalArguments& args) const;
 	static bool ExtractRegionGeometry(const String& kmlData, const std::string::size_type& offset, AdditionalArguments& args);
-	static bool FixPlacemarkNames(const String& kmlData, const std::string::size_type& offset, AdditionalArguments& args);
+	bool FixPlacemarkNames(const String& kmlData, const std::string::size_type& offset, AdditionalArguments& args) const;
 	static bool ExtractParentRegionGeometry(const String& kmlData, const std::string::size_type& offset, AdditionalArguments& args);
 
 	static bool ContainsMoreThanOneMatch(const String& s, const String& pattern);
