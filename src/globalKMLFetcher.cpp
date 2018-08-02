@@ -12,8 +12,8 @@
 #include <cassert>
 
 const String GlobalKMLFetcher::userAgent(_T("eBirdDataProcessor"));
-const String GlobalKMLFetcher::gadmCountryURL(_T("https://gadm.org/download_country.html"));
-const String GlobalKMLFetcher::gadmDownloadBaseURL(_T("https://biogeo.ucdavis.edu/data/gadm2.8/"));
+const String GlobalKMLFetcher::gadmCountryURL(_T("https://gadm.org/download_country_v3.html"));
+const String GlobalKMLFetcher::gadmDownloadBaseURL(_T("https://biogeo.ucdavis.edu/data/gadm3.6/"));
 const bool GlobalKMLFetcher::verbose(false);
 
 using namespace std::chrono_literals;
@@ -115,7 +115,7 @@ String GlobalKMLFetcher::BuildDownloadURL(const String& countryFile, const Detai
 {
 	OStringStream levelIndex;
 	levelIndex << static_cast<unsigned int>(level);
-	return gadmDownloadBaseURL + _T("kmz/") + countryFile.substr(0, 3) + _T("_adm") + levelIndex.str() + _T(".kmz");
+	return gadmDownloadBaseURL + _T("kmz/gadm36_") + countryFile.substr(0, 3) + _T("_") + levelIndex.str() + _T(".kmz");
 }
 
 bool GlobalKMLFetcher::DoGeneralCurlConfiguration()

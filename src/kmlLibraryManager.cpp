@@ -130,7 +130,10 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	GlobalKMLFetcher fetcher;
 	std::string result;
 	if (!fetcher.FetchKML(country, detailLevel, result))
+	{
+		Cerr << "Failed to download KML for '" << country << "'\n";
 		return false;
+	}
 
 	Zipper z;
 	if (!z.OpenArchiveBytes(result))
@@ -240,11 +243,17 @@ String KMLLibraryManager::ExtractTagValue(const String& kmlData,
 	const std::string::size_type& offset, const String& tag)
 {
 	const String startTag(_T("<") + tag + _T(">"));
-	const String endTag(_T("</") + tag + _T(">"));
 	const auto start(kmlData.find(startTag, offset));
 	if (start == std::string::npos)
 		return String();
 
+	const String endTag([&tag]()
+	{
+		const auto space(tag.find(_T(" ")));
+		if (space == std::string::npos)
+			return _T("</") + tag + _T(">");
+		return _T("</") + tag.substr(0, space) + _T(">");
+	}());
 	const auto end(kmlData.find(endTag, start));
 	if (end == std::string::npos)
 		return String();
@@ -287,7 +296,18 @@ bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
 		return false;
 	}
 
-	const String name(ExtractName(kmlData, offset));
+	// Some historical KML library data is in GADM 2.8 format - new format is GADM 3.6
+	// Difference is primarily the way placemark names are stored.  We try the 3.6 way first, and if it fails we try the 2.8 way.
+	String name;
+	const String nameSR1(ExtractTagValue(kmlData, offset, _T("SimpleData name=\"NAME_1\"")));
+	const String nameSR2(ExtractTagValue(kmlData, offset, _T("SimpleData name=\"NAME_2\"")));
+	if (nameSR1.empty())
+		name = ExtractName(kmlData, offset);
+	else if (nameSR2.empty())
+		name = nameSR1;
+	else
+		name = nameSR1 + _T(":") + nameSR2;
+
 	if (name.empty())
 	{
 		Cerr << "Failed to extract placemark name from KML data\n";

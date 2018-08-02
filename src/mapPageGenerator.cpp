@@ -323,7 +323,7 @@ bool MapPageGenerator::CreateFusionTable(
 		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c);
 
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
-	ThreadPool pool(std::thread::hardware_concurrency() * 2, mapsAPIRateLimit);
+	ThreadPool pool(std::thread::hardware_concurrency() * 2, /*mapsAPIRateLimit*/0);
 	auto countyIt(countyInfo.begin());
 	for (const auto& entry : observationProbabilities)
 	{
