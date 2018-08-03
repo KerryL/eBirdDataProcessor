@@ -180,8 +180,8 @@ private:
 		const String& originalSubNational1, const String& newSubNational1) const;
 
 	static bool StringsAreSimilar(const String& a, const String& b);
-	static std::vector<String> KMLLibraryManager::GenerateLetterPairs(const String& s);
-	static std::vector<String> KMLLibraryManager::GenerateWordLetterPairs(const String& s);
+	static std::vector<String> GenerateLetterPairs(const String& s);
+	static std::vector<String> GenerateWordLetterPairs(const String& s);
 
 	bool OpenKMLArchive(const String& fileName, String& kml) const;
 };

@@ -956,6 +956,7 @@ void MapPageGenerator::LookupAndAssignKML(CountyInfo& data)
 		log << "info map size = " << countryRegionInfoMap[data.country].size() << std::endl;
 		for (const auto& c : countryRegionInfoMap[data.country])
 			log << c.code << " :: " << c.name << std::endl;
+		log << eBirdRegionCodeToNameMap.find(data.country)->second << std::endl;
 		assert(false);
 	}
 	data.geometryKML = kmlLibrary.GetKML(countryName, stateName, data.county);
