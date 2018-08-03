@@ -172,6 +172,18 @@ private:
 	MutexUtilities::AccessManager geometryManager;
 
 	static bool FileExists(const String& fileName);
+
+	bool CheckForInexactMatch(const String& locationId, String& kml) const;
+	static String ExtractCountryFromLocationId(const String& id);
+	static String ExtractSubNational1FromLocationId(const String& id);
+	bool MakeCorrectionInKMZ(const String& country,
+		const String& originalSubNational1, const String& newSubNational1) const;
+
+	static bool StringsAreSimilar(const String& a, const String& b);
+	static std::vector<String> KMLLibraryManager::GenerateLetterPairs(const String& s);
+	static std::vector<String> KMLLibraryManager::GenerateWordLetterPairs(const String& s);
+
+	bool OpenKMLArchive(const String& fileName, String& kml) const;
 };
 
 #endif// KML_LIBRARY_MANAGER_H_
