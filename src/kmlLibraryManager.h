@@ -167,6 +167,7 @@ private:
 	bool NonLockingGetKMLFromMemory(const String& locationId, String& kml) const;
 
 	mutable std::shared_mutex mutex;
+	mutable std::mutex userInputMutex;
 	MutexUtilities::AccessManager loadManager;
 	MutexUtilities::AccessManager downloadManager;
 	MutexUtilities::AccessManager geometryManager;

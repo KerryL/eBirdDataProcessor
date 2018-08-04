@@ -959,6 +959,7 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 		const auto lowerSN1KMZ(StringUtilities::ToLower(sn1KMZ));
 		if (StringsAreSimilar(lowerSN1, lowerSN1KMZ))
 		{
+			std::unique_lock<std::mutex> lock(userInputMutex);
 			Cout << subNational1 << ", " << country << " (eBird) appears to be similar to\n"
 				<< sn1KMZ << ", " << country << " (GADM).  Are these different spellings for the same place? (y/n)" << std::endl;
 			String response;
