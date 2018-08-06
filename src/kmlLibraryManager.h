@@ -11,6 +11,8 @@
 #include "eBirdInterface.h"
 #include "utilities/uString.h"
 #include "utilities/mutexUtilities.h"
+#include "throttledSection.h"
+#include "googleMapsInterface.h"
 
 // Standard C++ headers
 #include <unordered_map>
@@ -19,13 +21,18 @@
 class KMLLibraryManager
 {
 public:
-	KMLLibraryManager(const String& libraryPath, const String& eBirdAPIKey, std::basic_ostream<String::value_type>& log);
+	KMLLibraryManager(const String& libraryPath, const String& eBirdAPIKey,
+		const String& mapsAPIKey, std::basic_ostream<String::value_type>& log);
 
 	String GetKML(const String& country, const String& subNational1, const String& subNational2);
 
 private:
 	const String libraryPath;
 	std::basic_ostream<String::value_type>& log;
+
+	static const ThrottledSection::Clock::duration mapsAccessDelta;
+	mutable ThrottledSection mapsAPIRateLimiter;
+	GoogleMapsInterface mapsInterface;
 
 	typedef std::unordered_map<String, String> KMLMapType;
 	KMLMapType kmlMemory;
@@ -102,6 +109,8 @@ private:
 	bool LookupParentRegionName(const String& country, const String& subregion2Name, const String& childKML, String& parentRegionName);
 
 	std::vector<EBirdInterface::RegionInfo> FindRegionsWithSubRegionMatchingName(const String& country, const String& name);
+
+	static bool GetUserConfirmation();
 
 	struct GeometryInfo
 	{

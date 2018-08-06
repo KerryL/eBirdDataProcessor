@@ -43,11 +43,11 @@ const unsigned int MapPageGenerator::columnCount(42);
 const unsigned int MapPageGenerator::importCellCountLimit(100000);
 const unsigned int MapPageGenerator::importSizeLimit(1024 * 1024);// 1 MB
 
-MapPageGenerator::MapPageGenerator(const String& kmlLibraryPath, const String& eBirdAPIKey) :
-	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), ebi(eBirdAPIKey), kmlLibrary(kmlLibraryPath, eBirdAPIKey, log)
+MapPageGenerator::MapPageGenerator(const String& kmlLibraryPath, const String& eBirdAPIKey, const String& mapsAPIKey) :
+	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), ebi(eBirdAPIKey), kmlLibrary(kmlLibraryPath, eBirdAPIKey, mapsAPIKey, log)
 {
 	log.Add(Cout);
-	std::unique_ptr<OFStream> f(std::make_unique<OFStream>("temp.log"));
+	std::unique_ptr<OFStream> f(std::make_unique<OFStream>("temp.log"));// TODO:  Remove
 	log.Add(std::move(f));
 }
 
@@ -951,6 +951,7 @@ void MapPageGenerator::LookupAndAssignKML(CountyInfo& data)
 	LookupEBirdRegionNames(data.country, data.state, countryName, stateName);
 	if (countryName.empty())// Should never happen
 	{
+		std::shared_lock<std::shared_mutex> l(codeToNameMapMutex);
 		log << "BAD THING HERE!" << std::endl;
 		log << data.country << " - " << data.state << std::endl;
 		log << "info map size = " << countryRegionInfoMap[data.country].size() << std::endl;
@@ -1002,6 +1003,8 @@ void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
 			country = countryIt->second;
 			AddRegionCodesToMap(countryCode, EBirdInterface::RegionType::SubNational1);
 		}
+		else
+			country = countryIt->second;// Can't just pass through and make assignment before returning from function - need to do this before we give up mutex ownership to avoid possibility of invalidating iterator
 	}
 	else
 		country = countryIt->second;
@@ -1024,10 +1027,13 @@ void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
 				log << "Failed to lookup region name for code '" << fullSubRegionCode << '\'' << std::endl;
 				return;
 			}
+			subRegion1 = subNational1It->second;// Can't just pass through and make assignment before returning from function - need to do this before we give up mutex ownership to avoid possibility of invalidating iterator
 		}
+		else
+			subRegion1 = subNational1It->second;
 	}
-
-	subRegion1 = subNational1It->second;
+	else
+		subRegion1 = subNational1It->second;
 }
 
 void MapPageGenerator::MapJobInfo::DoJob()

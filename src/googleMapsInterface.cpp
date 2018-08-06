@@ -12,6 +12,7 @@
 const String GoogleMapsInterface::apiRoot(_T("https://maps.googleapis.com/maps/api/"));
 const String GoogleMapsInterface::directionsEndPoint(_T("directions/json"));
 const String GoogleMapsInterface::geocodeEndPoint(_T("geocode/json"));
+const String GoogleMapsInterface::placeSearchEndPoint(_T("place/textsearch/json"));
 const String GoogleMapsInterface::statusKey(_T("status"));
 const String GoogleMapsInterface::okStatus(_T("OK"));
 const String GoogleMapsInterface::errorMessageKey(_T("error_message"));
@@ -38,6 +39,7 @@ const String GoogleMapsInterface::viewportKey(_T("viewport"));
 const String GoogleMapsInterface::addressComponentsKey(_T("address_components"));
 const String GoogleMapsInterface::longNameKey(_T("long_name"));
 const String GoogleMapsInterface::shortNameKey(_T("short_name"));
+const String GoogleMapsInterface::nameKey(_T("name"));
 const String GoogleMapsInterface::typesKey(_T("types"));
 const String GoogleMapsInterface::placeIDKey(_T("place_id"));
 
@@ -381,6 +383,108 @@ bool GoogleMapsInterface::LookupCoordinates(const String& searchString,
 	southwestLatitude = info.front().southwestBound.latitude;
 	southwestLongitude = info.front().southwestBound.longitude;
 
+	return true;
+}
+
+bool GoogleMapsInterface::LookupPlace(const String& searchString, std::vector<PlaceInfo>& info, String* statusRet) const
+{
+	const String requestURL(apiRoot + placeSearchEndPoint
+		+ _T("?query=") + SanitizeAddress(searchString) + _T("&key=") + apiKey);
+	std::string response;
+	if (!DoCURLGet(requestURL, response))
+	{
+		Cerr << "Failed to process GET request\n";
+		return false;
+	}
+
+	return ProcessPlaceResponse(UString::ToStringType(response), info, statusRet);
+}
+
+bool GoogleMapsInterface::ProcessPlaceResponse(const String& response, std::vector<PlaceInfo>& info, String* statusRet) const
+{
+	cJSON *root(cJSON_Parse(UString::ToNarrowString(response).c_str()));
+	if (!root)
+	{
+		Cerr << "Failed to parse response (GoogleMapsInterface::ProcessPlaceResponse)\n";
+		Cerr << response << '\n';
+		return false;
+	}
+
+	String status;
+	if (!ReadJSON(root, statusKey, status))
+	{
+		Cerr << "Failed to read status information\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	if (statusRet)
+		*statusRet = status;
+
+	if (status.compare(okStatus) != 0)
+	{
+		Cerr << "Places request response is not OK.  Status = " << status << '\n';
+
+		String errorMessage;
+		if (ReadJSON(root, errorMessageKey, errorMessage))
+			Cerr << errorMessage << '\n';
+
+		cJSON_Delete(root);
+		return false;
+	}
+
+	cJSON* results(cJSON_GetObjectItem(root, UString::ToNarrowString(resultsKey).c_str()));
+	if (!results)
+	{
+		Cerr << "Failed to read places results\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	info.resize(cJSON_GetArraySize(results));
+	unsigned int i(0);
+	for (auto& resultInfo : info)
+	{
+		cJSON* resultEntry(cJSON_GetArrayItem(results, i));
+		if (!resultEntry)
+		{
+			Cerr << "Failed to get result entry " << i << '\n';
+			cJSON_Delete(root);
+			return false;
+		}
+
+		GeocodeInfo tempGeometry;
+		if (!ProcessGeometry(resultEntry, tempGeometry))
+		{
+			cJSON_Delete(root);
+			return false;
+		}
+
+		resultInfo.latitude = tempGeometry.location.latitude;
+		resultInfo.longitude = tempGeometry.location.longitude;
+		resultInfo.neLatitude = tempGeometry.northeastViewport.longitude;
+		resultInfo.neLongitude = tempGeometry.northeastViewport.longitude;
+		resultInfo.swLatitude = tempGeometry.southwestViewport.longitude;
+		resultInfo.swLongitude = tempGeometry.southwestViewport.longitude;
+
+		if (!ReadJSON(resultEntry, formattedAddressKey, resultInfo.formattedAddress))
+		{
+			Cerr << "Failed to read formatted address\n";
+			cJSON_Delete(root);
+			return false;
+		}
+
+		if (!ReadJSON(resultEntry, nameKey, resultInfo.name))
+		{
+			Cerr << "Failed to read name\n";
+			cJSON_Delete(root);
+			return false;
+		}
+
+		++i;
+	}
+
+	cJSON_Delete(root);
 	return true;
 }
 

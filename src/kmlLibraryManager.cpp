@@ -16,8 +16,13 @@
 #include <cctype>
 #include <mutex>
 
+using namespace std::chrono_literals;
+const ThrottledSection::Clock::duration KMLLibraryManager::mapsAccessDelta(std::chrono::steady_clock::duration(20ms));// 50 requests per second
+
 KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
-	const String& eBirdAPIKey, std::basic_ostream<String::value_type>& log) : libraryPath(libraryPath), log(log), ebi(eBirdAPIKey)
+	const String& eBirdAPIKey, const String& mapsAPIKey,
+	std::basic_ostream<String::value_type>& log) : libraryPath(libraryPath), log(log),
+	mapsAPIRateLimiter(mapsAccessDelta), mapsInterface(_T("eBirdDataProcessor"), mapsAPIKey), ebi(eBirdAPIKey)
 {
 }
 
@@ -957,32 +962,67 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 
 		const auto sn1KMZ(ExtractSubNational1FromLocationId(it->first));
 		const auto lowerSN1KMZ(StringUtilities::ToLower(sn1KMZ));
+
+		std::vector<GoogleMapsInterface::PlaceInfo> eBirdPlaceInfo;
+		mapsAPIRateLimiter.Wait();
+		if (mapsInterface.LookupPlace(subNational1 + _T(",") + country, eBirdPlaceInfo))
+		{
+			for (const auto& p : eBirdPlaceInfo)
+				log << "eBird place match -> " << p.formattedAddress << ", " << p.latitude << ", " << p.longitude << std::endl;
+			std::vector<GoogleMapsInterface::PlaceInfo> gadmPlaceInfo;
+			mapsAPIRateLimiter.Wait();
+			if (mapsInterface.LookupPlace(sn1KMZ + _T(",") + country, eBirdPlaceInfo))
+			{
+				for (const auto& p1 : gadmPlaceInfo)
+				{
+					log << "GADM place match -> " << p1.formattedAddress << ", " << p1.latitude << ", " << p1.longitude << std::endl;
+					for (const auto& p2 : eBirdPlaceInfo)
+					{
+						if (p1.name.compare(p2.name) == 0)
+						{
+							std::unique_lock<std::mutex> lock(userInputMutex);
+							Cout << subNational1 << ", " << country << " (eBird) and\n"
+								<< sn1KMZ << ", " << country << " (GADM) both result in Google Maps search result\n"
+								<< p1.name << ".  Are these different spellings for the same place? (y/n)" << std::endl;
+							if (GetUserConfirmation())
+							{
+								kml = it->second;
+								return MakeCorrectionInKMZ(country, sn1KMZ, subNational1);
+							}
+						}
+					}
+				}
+			}
+		}
+
 		if (StringsAreSimilar(lowerSN1, lowerSN1KMZ))
 		{
 			std::unique_lock<std::mutex> lock(userInputMutex);
 			Cout << subNational1 << ", " << country << " (eBird) appears to be similar to\n"
 				<< sn1KMZ << ", " << country << " (GADM).  Are these different spellings for the same place? (y/n)" << std::endl;
-			String response;
-			bool responseBool(false);
-			while (response.empty())
-			{
-				Cin >> response;
-				if (StringUtilities::ToLower(response).compare(_T("y")) == 0)
-				{
-					responseBool = true;
-					break;
-				}
-				if (StringUtilities::ToLower(response).compare(_T("n")) == 0)
-					break;
-				response.clear();
-			}
 
-			if (responseBool)
+			if (GetUserConfirmation())
 			{
 				kml = it->second;
 				return MakeCorrectionInKMZ(country, sn1KMZ, subNational1);
 			}
 		}
+	}
+
+	return false;
+}
+
+bool KMLLibraryManager::GetUserConfirmation()
+{
+	String response;
+	while (response.empty())
+	{
+		Cin >> response;
+		if (StringUtilities::ToLower(response).compare(_T("y")) == 0)
+			return true;
+		if (StringUtilities::ToLower(response).compare(_T("n")) == 0)
+			return false;
+		response.clear();
 	}
 
 	return false;

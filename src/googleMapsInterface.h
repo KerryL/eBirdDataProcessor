@@ -69,12 +69,27 @@ public:
 		double& southwestLatitude, double& southwestLongitude,
 		const std::vector<String>& preferNamesContaining = std::vector<String>(), String* statusRet = nullptr) const;
 
+	struct PlaceInfo
+	{
+		String formattedAddress;
+		String name;
+		double latitude;
+		double longitude;
+		double neLatitude;
+		double neLongitude;
+		double swLatitude;
+		double swLongitude;
+	};
+
+	bool LookupPlace(const String& searchString, std::vector<PlaceInfo>& info, String* statusRet = nullptr) const;
+
 private:
 	const String apiKey;
 
 	static const String apiRoot;
 	static const String directionsEndPoint;
 	static const String geocodeEndPoint;
+	static const String placeSearchEndPoint;
 	static const String statusKey;
 	static const String okStatus;
 	static const String errorMessageKey;
@@ -101,6 +116,7 @@ private:
 	static const String addressComponentsKey;
 	static const String longNameKey;
 	static const String shortNameKey;
+	static const String nameKey;
 	static const String typesKey;
 	static const String placeIDKey;
 
@@ -154,6 +170,8 @@ private:
 	bool ProcessGeometry(cJSON* results, GeocodeInfo& info) const;
 	bool ReadLatLongPair(cJSON* json, GeocodeInfo::LatLongPair& latLong) const;
 	bool ReadBoundsPair(cJSON* json, GeocodeInfo::LatLongPair& northeast, GeocodeInfo::LatLongPair& southwest) const;
+
+	bool ProcessPlaceResponse(const String& response, std::vector<PlaceInfo>& info, String* statusRet) const;
 };
 
 #endif// GOOGLE_MAPS_INTERFACE_H_
