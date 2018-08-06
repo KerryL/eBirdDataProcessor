@@ -454,17 +454,44 @@ bool GoogleMapsInterface::ProcessPlaceResponse(const String& response, std::vect
 		}
 
 		GeocodeInfo tempGeometry;
-		if (!ProcessGeometry(resultEntry, tempGeometry))
+		cJSON* geometry(cJSON_GetObjectItem(resultEntry, UString::ToNarrowString(geometryKey).c_str()));
+		if (!geometry)
 		{
-			cJSON_Delete(root);
+			Cerr << "Failed to read geometry information\n";
+			return false;
+		}
+
+		cJSON* location(cJSON_GetObjectItem(geometry, UString::ToNarrowString(locationKey).c_str()));
+		if (!location)
+		{
+			Cerr << "Failed to find location\n";
+			return false;
+		}
+
+		if (!ReadLatLongPair(location, tempGeometry.location))
+		{
+			Cerr << "Failed to read location\n";
+			return false;
+		}
+
+		cJSON* viewport(cJSON_GetObjectItem(geometry, UString::ToNarrowString(viewportKey).c_str()));
+		if (!viewport)
+		{
+			Cerr << "Failed to find viewport\n";
+			return false;
+		}
+
+		if (!ReadBoundsPair(viewport, tempGeometry.northeastViewport, tempGeometry.southwestViewport))
+		{
+			Cerr << "Failed to read viewport\n";
 			return false;
 		}
 
 		resultInfo.latitude = tempGeometry.location.latitude;
 		resultInfo.longitude = tempGeometry.location.longitude;
-		resultInfo.neLatitude = tempGeometry.northeastViewport.longitude;
+		resultInfo.neLatitude = tempGeometry.northeastViewport.latitude;
 		resultInfo.neLongitude = tempGeometry.northeastViewport.longitude;
-		resultInfo.swLatitude = tempGeometry.southwestViewport.longitude;
+		resultInfo.swLatitude = tempGeometry.southwestViewport.latitude;
 		resultInfo.swLongitude = tempGeometry.southwestViewport.longitude;
 
 		if (!ReadJSON(resultEntry, formattedAddressKey, resultInfo.formattedAddress))
