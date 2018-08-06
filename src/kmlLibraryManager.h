@@ -189,7 +189,7 @@ private:
 	bool MakeCorrectionInKMZ(const String& country,
 		const String& originalSubNational1, const String& newSubNational1) const;
 
-	static bool StringsAreSimilar(const String& a, const String& b);
+	static bool StringsAreSimilar(const String& a, const String& b, const double& threshold);
 	static std::vector<String> GenerateLetterPairs(const String& s);
 	static std::vector<String> GenerateWordLetterPairs(const String& s);
 

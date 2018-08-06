@@ -238,9 +238,10 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 		return false;
 	}
 
-	NonLockingLoadKMLFromLibrary(country, locationId, kml);
+	if (!z.CloseArchive())
+		return false;
 
-	return z.CloseArchive();
+	return NonLockingLoadKMLFromLibrary(country, locationId, kml);
 }
 
 bool KMLLibraryManager::FileExists(const String& fileName)
@@ -954,6 +955,10 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 	if (country.length() == locationId.length())
 		return false;// Ignore the possibility of inexact matches of country names
 
+	std::vector<GoogleMapsInterface::PlaceInfo> eBirdPlaceInfo;
+	mapsAPIRateLimiter.Wait();
+	mapsInterface.LookupPlace(subNational1 + _T(",") + country, eBirdPlaceInfo);
+
 	auto it(kmlMemory.begin());
 	for (; it != kmlMemory.end(); ++it)
 	{
@@ -963,26 +968,21 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 		const auto sn1KMZ(ExtractSubNational1FromLocationId(it->first));
 		const auto lowerSN1KMZ(StringUtilities::ToLower(sn1KMZ));
 
-		std::vector<GoogleMapsInterface::PlaceInfo> eBirdPlaceInfo;
-		mapsAPIRateLimiter.Wait();
-		if (mapsInterface.LookupPlace(subNational1 + _T(",") + country, eBirdPlaceInfo))
+		if (!eBirdPlaceInfo.empty() && StringsAreSimilar(lowerSN1, lowerSN1KMZ, 0.1))// Very lax but non-zero tolerance to cut down on google maps requests
 		{
-			for (const auto& p : eBirdPlaceInfo)
-				log << "eBird place match -> " << p.formattedAddress << ", " << p.latitude << ", " << p.longitude << std::endl;
 			std::vector<GoogleMapsInterface::PlaceInfo> gadmPlaceInfo;
 			mapsAPIRateLimiter.Wait();
-			if (mapsInterface.LookupPlace(sn1KMZ + _T(",") + country, eBirdPlaceInfo))
+			if (mapsInterface.LookupPlace(sn1KMZ + _T(",") + country, gadmPlaceInfo))
 			{
 				for (const auto& p1 : gadmPlaceInfo)
 				{
-					log << "GADM place match -> " << p1.formattedAddress << ", " << p1.latitude << ", " << p1.longitude << std::endl;
 					for (const auto& p2 : eBirdPlaceInfo)
 					{
 						if (p1.name.compare(p2.name) == 0)
 						{
 							std::unique_lock<std::mutex> lock(userInputMutex);
 							Cout << subNational1 << ", " << country << " (eBird) and\n"
-								<< sn1KMZ << ", " << country << " (GADM) both result in Google Maps search result\n"
+								<< sn1KMZ << ", " << country << " (GADM) both have Google Maps search result\n"
 								<< p1.name << ".  Are these different spellings for the same place? (y/n)" << std::endl;
 							if (GetUserConfirmation())
 							{
@@ -995,7 +995,8 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 			}
 		}
 
-		if (StringsAreSimilar(lowerSN1, lowerSN1KMZ))
+		const double threshold(0.5);
+		if (StringsAreSimilar(lowerSN1, lowerSN1KMZ, threshold))
 		{
 			std::unique_lock<std::mutex> lock(userInputMutex);
 			Cout << subNational1 << ", " << country << " (eBird) appears to be similar to\n"
@@ -1073,7 +1074,7 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const String& country,
 		UString::ToNarrowString(archiveFileName).c_str()) == 0;
 }
 
-bool KMLLibraryManager::StringsAreSimilar(const String& a, const String& b)
+bool KMLLibraryManager::StringsAreSimilar(const String& a, const String& b, const double& threshold)
 {
 	const auto pairs1(GenerateWordLetterPairs(a));
 	auto pairs2(GenerateWordLetterPairs(b));
@@ -1096,7 +1097,6 @@ bool KMLLibraryManager::StringsAreSimilar(const String& a, const String& b)
 		}
 	}
 
-	const double threshold(0.5);
 	return 2.0 * intersection / unionValue > threshold;
 }
 
