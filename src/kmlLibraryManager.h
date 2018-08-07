@@ -17,6 +17,7 @@
 // Standard C++ headers
 #include <unordered_map>
 #include <shared_mutex>
+#include <unordered_set>
 
 class KMLLibraryManager
 {
@@ -177,9 +178,17 @@ private:
 
 	mutable std::shared_mutex mutex;
 	mutable std::mutex userInputMutex;
+	mutable std::mutex gMapResultMutexeBird;
+	mutable std::mutex gMapResultMutexGADM;
+	mutable std::mutex userAlreadyAnsweredMutex;
 	MutexUtilities::AccessManager loadManager;
 	MutexUtilities::AccessManager downloadManager;
 	MutexUtilities::AccessManager geometryManager;
+
+	// Sloppy to use mutable here - needs redesign
+	mutable std::map<String, std::vector<GoogleMapsInterface::PlaceInfo>> eBirdNameGMapResults;
+	mutable std::map<String, std::vector<GoogleMapsInterface::PlaceInfo>> gadmNameGMapResults;
+	mutable std::unordered_set<String> userAnsweredList;
 
 	static bool FileExists(const String& fileName);
 
