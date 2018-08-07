@@ -69,7 +69,13 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 bool KMLLibraryManager::GetKMLFromMemory(const String& locationId, String& kml) const
 {
 	std::shared_lock<std::shared_mutex> lock(mutex);
-	return NonLockingGetKMLFromMemory(locationId, kml);
+	if (NonLockingGetKMLFromMemory(locationId, kml))
+	{
+		std::lock_guard<std::mutex> mappedLock(mappedMutex);
+		kmlMappedList.insert(locationId);
+		return true;
+	}
+	return false;
 }
 
 bool KMLLibraryManager::CountryLoadedFromLibrary(const String& country) const
@@ -952,6 +958,9 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 	const auto country(ExtractCountryFromLocationId(locationId));
 	const auto subNational1(ExtractSubNational1FromLocationId(locationId));
 	const auto lowerSN1(StringUtilities::ToLower(subNational1));
+	// TODO:  Sub-national 2 cases may not be properly handled here
+	// It is also possible that sub-division levels do not match between eBird and GADM (i.e. a level 1 sub-division in eBird may be a level 2 sub-division in GADM)
+	// For this case, we currently require manual editing of the file
 	if (country.length() == locationId.length())
 		return false;// Ignore the possibility of inexact matches of country names
 
@@ -965,7 +974,11 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 			mapsAPIRateLimiter.Wait();
 			if (mapsInterface.LookupPlace(searchString, eBirdPlaceInfo))
 				eBirdNameGMapResults[searchString] = eBirdPlaceInfo;
+			else
+				eBirdNameGMapResults[searchString] = std::vector<GoogleMapsInterface::PlaceInfo>();// Empty vector to show that search failed
 		}
+		else if (it->second.size() == 0)// No results returned from search
+			return false;
 		else
 			eBirdPlaceInfo = it->second;
 	}
@@ -976,24 +989,34 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 		if (country.compare(ExtractCountryFromLocationId(it->first)) != 0)
 			continue;
 
+		{
+			std::lock_guard<std::mutex> lock(mappedMutex);
+			if (kmlMappedList.find(it->first) != kmlMappedList.end())
+				continue;
+		}
+
 		const auto sn1KMZ(ExtractSubNational1FromLocationId(it->first));
 		const auto lowerSN1KMZ(StringUtilities::ToLower(sn1KMZ));
 
-		if (!eBirdPlaceInfo.empty() && StringsAreSimilar(lowerSN1, lowerSN1KMZ, 0.1))// Very lax but non-zero tolerance to cut down on google maps requests
+		if (!eBirdPlaceInfo.empty()/* && StringsAreSimilar(lowerSN1, lowerSN1KMZ, 0.1)*/)// Very lax but non-zero tolerance to cut down on google maps requests
 		{
 			std::vector<GoogleMapsInterface::PlaceInfo> gadmPlaceInfo;
 			{
 				std::lock_guard<std::mutex> lock(gMapResultMutexGADM);
 				const String searchString(sn1KMZ + _T(", ") + country);
-				auto it(gadmNameGMapResults.find(searchString));
-				if (it == gadmNameGMapResults.end())
+				auto gadmIt(gadmNameGMapResults.find(searchString));
+				if (gadmIt == gadmNameGMapResults.end())
 				{
 					mapsAPIRateLimiter.Wait();
 					if (mapsInterface.LookupPlace(searchString, gadmPlaceInfo))
 						gadmNameGMapResults[searchString] = gadmPlaceInfo;
+					else
+						gadmNameGMapResults[searchString] = std::vector<GoogleMapsInterface::PlaceInfo>();// Empty vector to show that search failed
 				}
+				else if (gadmIt->second.size() == 0)// No results returned from search
+					continue;// TODO:  Not good because it skips manual fix section
 				else
-					gadmPlaceInfo = it->second;
+					gadmPlaceInfo = gadmIt->second;
 			}
 
 			for (const auto& p1 : gadmPlaceInfo)
@@ -1064,16 +1087,43 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const String& country,
 		return false;
 
 	const String prefix(_T("SimpleData name=\"NAME_1\">"));
+	const String prefix2(_T("SimpleData name=\"NAME_2\">"));
 	const String searchString(prefix + originalSubNational1 + _T("</"));
-	const auto fixLocation(rawKML.find(searchString));
+	auto fixLocation(rawKML.find(searchString));
+	bool removeName1(false);
 	if (fixLocation == std::string::npos)
 	{
+		// Possible that lack of match is due to difference in sub-region level - try NAME_2
+		const auto colon(originalSubNational1.find(Char(':')));
+		if (colon != std::string::npos)
+		{
+			const String searchString2(prefix2 + originalSubNational1.substr(colon + 1) + _T("</"));
+			fixLocation = rawKML.find(searchString);
+			if (fixLocation == std::string::npos)
+			{
+				log << "Failed to find position for name correction" << std::endl;
+				return false;
+			}
+			removeName1 = true;
+		}
+
 		log << "Failed to find position for name correction" << std::endl;
-		return false;
+				return false;
 	}
 
 	String modifiedKML(rawKML.substr(0, fixLocation) + prefix + newSubNational1);
 	modifiedKML.append(rawKML.substr(fixLocation + prefix.length() + originalSubNational1.length()));
+
+	if (removeName1)
+	{
+		std::string::size_type startRemoval(0);
+		std::string::size_type newStart;
+		while (newStart = modifiedKML.find(prefix, startRemoval), newStart < fixLocation)
+			startRemoval = newStart;
+		auto endRemoval(modifiedKML.find(prefix2, startRemoval));
+		assert(endRemoval != std::string::npos);
+		modifiedKML.erase(modifiedKML.begin() + startRemoval, modifiedKML.begin() + endRemoval);
+	}
 
 	const String tempExtension(_T(".transaction"));
 	Zipper z;
@@ -1141,6 +1191,8 @@ std::vector<String> KMLLibraryManager::GenerateWordLetterPairs(const String& s)
 	String token;
 	while (std::getline(ss, token, Char(' ')))
 	{
+		if (token.empty())
+			continue;
 		const auto pairs(GenerateLetterPairs(token));
 		wordLetterPairs.insert(wordLetterPairs.end(), pairs.begin(), pairs.end());
 	}

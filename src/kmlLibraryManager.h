@@ -181,6 +181,7 @@ private:
 	mutable std::mutex gMapResultMutexeBird;
 	mutable std::mutex gMapResultMutexGADM;
 	mutable std::mutex userAlreadyAnsweredMutex;
+	mutable std::mutex mappedMutex;
 	MutexUtilities::AccessManager loadManager;
 	MutexUtilities::AccessManager downloadManager;
 	MutexUtilities::AccessManager geometryManager;
@@ -189,6 +190,7 @@ private:
 	mutable std::map<String, std::vector<GoogleMapsInterface::PlaceInfo>> eBirdNameGMapResults;
 	mutable std::map<String, std::vector<GoogleMapsInterface::PlaceInfo>> gadmNameGMapResults;
 	mutable std::unordered_set<String> userAnsweredList;
+	mutable std::unordered_set<String> kmlMappedList;
 
 	static bool FileExists(const String& fileName);
 

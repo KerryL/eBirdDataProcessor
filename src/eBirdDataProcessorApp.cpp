@@ -27,6 +27,7 @@ int main(int argc, char *argv[])
 	return app.Run(argc, argv);
 }
 
+#include "kmlLibraryManager.h"
 int EBirdDataProcessorApp::Run(int argc, char *argv[])
 {
 	if (argc != 2)
@@ -39,6 +40,9 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	EBDPConfigFile configFile;
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
+
+	/*KMLLibraryManager kml(configFile.GetConfig().kmlLibraryPath, configFile.GetConfig().eBirdApiKey, configFile.GetConfig().googleMapsAPIKey, Cout);
+	kml.GetKML(_T("Azerbaijan"), _T("Sumqayit"), String());*/
 
 	if (!configFile.GetConfig().eBirdDatasetPath.empty())// Ignore all other options and generate global frequency data
 	{
