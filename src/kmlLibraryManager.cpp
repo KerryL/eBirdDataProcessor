@@ -1098,7 +1098,7 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const String& country,
 		if (colon != std::string::npos)
 		{
 			const String searchString2(prefix2 + originalSubNational1.substr(colon + 1) + _T("</"));
-			fixLocation = rawKML.find(searchString);
+			fixLocation = rawKML.find(searchString2);
 			if (fixLocation == std::string::npos)
 			{
 				log << "Failed to find position for name correction" << std::endl;
@@ -1106,9 +1106,11 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const String& country,
 			}
 			removeName1 = true;
 		}
-
-		log << "Failed to find position for name correction" << std::endl;
-				return false;
+		else
+		{
+			log << "Failed to find position for name correction" << std::endl;
+			return false;
+		}
 	}
 
 	String modifiedKML(rawKML.substr(0, fixLocation) + prefix + newSubNational1);
@@ -1119,10 +1121,11 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const String& country,
 		std::string::size_type startRemoval(0);
 		std::string::size_type newStart;
 		while (newStart = modifiedKML.find(prefix, startRemoval), newStart < fixLocation)
-			startRemoval = newStart;
-		auto endRemoval(modifiedKML.find(prefix2, startRemoval));
+			startRemoval = newStart + prefix.length();
+		auto endRemoval(modifiedKML.find(prefix, startRemoval));
+		// TODO:  Will the endRemoval position always be equal to the fixLocation?
 		assert(endRemoval != std::string::npos);
-		modifiedKML.erase(modifiedKML.begin() + startRemoval, modifiedKML.begin() + endRemoval);
+		modifiedKML.erase(modifiedKML.begin() + startRemoval, modifiedKML.begin() + endRemoval + prefix.length());
 	}
 
 	const String tempExtension(_T(".transaction"));

@@ -42,7 +42,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		return 1;
 
 	/*KMLLibraryManager kml(configFile.GetConfig().kmlLibraryPath, configFile.GetConfig().eBirdApiKey, configFile.GetConfig().googleMapsAPIKey, Cout);
-	kml.GetKML(_T("Azerbaijan"), _T("Sumqayit"), String());*/
+	kml.GetKML(_T("Azerbaijan"), _T("Sumqayit"), String());
+	kml.GetKML(_T("Finland"), _T("Pirkanmaa"), String());//*/
 
 	if (!configFile.GetConfig().eBirdDatasetPath.empty())// Ignore all other options and generate global frequency data
 	{
