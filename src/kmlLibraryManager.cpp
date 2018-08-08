@@ -379,12 +379,20 @@ bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
 	// Some historical KML library data is in GADM 2.8 format - new format is GADM 3.6
 	// Difference is primarily the way placemark names are stored.  We try the 3.6 way first, and if it fails we try the 2.8 way.
 	String name;
-	const String nameSR1(ExtractTagValue(kmlData, offset, _T("SimpleData name=\"NAME_1\"")));
-	const String nameSR2(ExtractTagValue(kmlData, offset, _T("SimpleData name=\"NAME_2\"")));
+	const String name1SearchString(_T("SimpleData name=\"NAME_1\""));
+	const String nameSR1(ExtractTagValue(kmlData, offset, name1SearchString));
+	const String nameSR2([&kmlData, &offset, &geometryStart]()
+	{
+		const String name2SearchString(_T("SimpleData name=\"NAME_2\""));
+		if (kmlData.find(name2SearchString) < geometryStart)
+			return ExtractTagValue(kmlData, offset, name2SearchString);
+		return String();
+	}());
 	bool useCountryNameOnly(false);
 	if (nameSR1.empty())
 	{
-		const String nameSR0(ExtractTagValue(kmlData, offset, _T("SimpleData name=\"NAME_0\"")));
+		const String name0SearchString(_T("SimpleData name=\"NAME_0\""));
+		const String nameSR0(ExtractTagValue(kmlData, offset, name0SearchString));
 		if (nameSR0.empty())
 			name = ExtractName(kmlData, offset);
 		else
