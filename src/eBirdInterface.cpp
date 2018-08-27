@@ -269,7 +269,7 @@ std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservatio
 	const bool& includeProvisional, const bool& hotspotsOnly)
 {
 	OStringStream request;
-	request << apiRoot << observationDataPath << region << '/' << recentPath << '/'
+	request << apiRoot << observationDataPath << region << '/' << recentPath
 		<< speciesCode << "?back=" << recentPeriod
 		<< "&includeProvisional=";
 
