@@ -20,11 +20,11 @@
 class EBirdDatasetInterface
 {
 public:
-	bool ExtractGlobalFrequencyData(const String& fileName);
-	bool WriteFrequencyFiles(const String& frequencyDataPath) const;
+	bool ExtractGlobalFrequencyData(const UString::String& fileName);
+	bool WriteFrequencyFiles(const UString::String& frequencyDataPath) const;
 
 private:
-	static const String nameIndexFileName;
+	static const UString::String nameIndexFileName;
 
 	struct Date
 	{
@@ -63,20 +63,20 @@ private:
 
 	struct FrequencyData
 	{
-		std::set<String> checklistIDs;
+		std::set<UString::String> checklistIDs;
 		std::map<uint16_t, SpeciesData> speciesList;
 	};
 
-	std::unordered_map<String, uint16_t> nameIndexMap;
+	std::unordered_map<UString::String, uint16_t> nameIndexMap;
 
 	typedef std::array<FrequencyData, 12> YearFrequencyData;
-	std::unordered_map<String, YearFrequencyData> frequencyMap;// Key is fully qualified eBird region name
+	std::unordered_map<UString::String, YearFrequencyData> frequencyMap;// Key is fully qualified eBird region name
 
 	struct Observation
 	{
-		String commonName;
-		String checklistID;
-		String regionCode;
+		UString::String commonName;
+		UString::String checklistID;
+		UString::String regionCode;
 
 		Date date;
 
@@ -87,31 +87,31 @@ private:
 	void ProcessObservationData(const Observation& observation);
 	void RemoveRarities();
 
-	static bool ParseLine(const String& line, Observation& observation);
+	static bool ParseLine(const UString::String& line, Observation& observation);
 	static unsigned int GetMonthIndex(const Date& date);
-	static bool HeaderMatchesExpectedFormat(const String& line);
-	static Date ConvertStringToDate(const String& s);
-	static bool IncludeInLikelihoodCalculation(const String& commonName);
+	static bool HeaderMatchesExpectedFormat(const UString::String& line);
+	static Date ConvertStringToDate(const UString::String& s);
+	static bool IncludeInLikelihoodCalculation(const UString::String& commonName);
 
-	bool WriteNameIndexFile(const String& frequencyDataPath) const;
+	bool WriteNameIndexFile(const UString::String& frequencyDataPath) const;
 
 	static bool SerializeMonthData(std::ofstream& file, const FrequencyData& data);
 	template<typename T>
 	static bool Write(std::ofstream& file, const T& data);
 
-	static String GetPath(const String& regionCode);
-	static bool EnsureFolderExists(const String& dir);
-	static bool FolderExists(const String& dir);
-	static bool CreateFolder(const String& dir);
+	static UString::String GetPath(const UString::String& regionCode);
+	static bool EnsureFolderExists(const UString::String& dir);
+	static bool FolderExists(const UString::String& dir);
+	static bool CreateFolder(const UString::String& dir);
 
 	template<typename T>
-	static bool ParseInto(const String& s, T& value);
+	static bool ParseInto(const UString::String& s, T& value);
 
 	struct LineProcessJobInfo : public ThreadPool::JobInfoBase
 	{
-		LineProcessJobInfo(const String& line, EBirdDatasetInterface &ebdi) : line(line), ebdi(ebdi) {}
+		LineProcessJobInfo(const UString::String& line, EBirdDatasetInterface &ebdi) : line(line), ebdi(ebdi) {}
 
-		const String line;
+		const UString::String line;
 		EBirdDatasetInterface& ebdi;
 
 		void DoJob() override
@@ -120,7 +120,7 @@ private:
 		}
 	};
 
-	bool ProcessLine(const String& line);
+	bool ProcessLine(const UString::String& line);
 
 	std::mutex mutex;
 };
@@ -134,9 +134,9 @@ bool EBirdDatasetInterface::Write(std::ofstream& file, const T& data)
 }
 
 template<typename T>
-bool EBirdDatasetInterface::ParseInto(const String& s, T& value)
+bool EBirdDatasetInterface::ParseInto(const UString::String& s, T& value)
 {
-	IStringStream ss(s);
+	UString::IStringStream ss(s);
 	return !(ss >> value).fail();
 }
 

@@ -20,7 +20,7 @@ typedef void CURL;
 class GlobalKMLFetcher
 {
 public:
-	GlobalKMLFetcher(std::basic_ostream<String::value_type>& log);
+	GlobalKMLFetcher(std::basic_ostream<UString::String::value_type>& log);
 	~GlobalKMLFetcher();
 
 	enum class DetailLevel
@@ -30,29 +30,29 @@ public:
 		SubNational2// Most detail (i.e. county equivalent)
 	};
 
-	bool FetchKML(const String& country, const DetailLevel& level, std::string& zippedFileContents);
+	bool FetchKML(const UString::String& country, const DetailLevel& level, std::string& zippedFileContents);
 
 private:
-	static const String userAgent;
-	static const String gadmCountryURL;
-	static const String gadmDownloadBaseURL;
+	static const UString::String userAgent;
+	static const UString::String gadmCountryURL;
+	static const UString::String gadmDownloadBaseURL;
 	static const bool verbose;
 
-	std::basic_ostream<String::value_type>& log;
+	std::basic_ostream<UString::String::value_type>& log;
 
 	static const ThrottledSection::Clock::duration gadmCrawlDelay;
 	ThrottledSection rateLimiter;
 
-	bool GetCountryListPage(String& html);
-	String BuildRequestString(const String& countryCode) const;
+	bool GetCountryListPage(UString::String& html);
+	UString::String BuildRequestString(const UString::String& countryCode) const;
 
-	static std::map<String, String> ExtractCountryCodeMap(const String& html);// Key is country name, value is county code
-	String BuildDownloadURL(const String& countryFile, const DetailLevel& level);
+	static std::map<UString::String, UString::String> ExtractCountryCodeMap(const UString::String& html);// Key is country name, value is county code
+	UString::String BuildDownloadURL(const UString::String& countryFile, const DetailLevel& level);
 
 	CURL* curl = nullptr;
 	struct curl_slist* headerList = nullptr;
 	bool DoGeneralCurlConfiguration();
-	bool DoCURLGet(const String& url, std::string &response);
+	bool DoCURLGet(const UString::String& url, std::string &response);
 	static size_t CURLWriteCallback(char *ptr, size_t size, size_t nmemb, void *userData);
 };
 

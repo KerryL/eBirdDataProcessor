@@ -14,29 +14,28 @@
 // Standard C++ headers
 #include <vector>
 
-
 class Zipper
 {
 public:
 	~Zipper();
 
-	bool CreateArchiveFile(const String& fileName);
+	bool CreateArchiveFile(const UString::String& fileName);
 	//bool CreateArchiveBytes(const std::string& bytes);// Currently not working, so removed from interface
 
-	bool OpenArchiveFile(const String& fileName);
+	bool OpenArchiveFile(const UString::String& fileName);
 	bool OpenArchiveBytes(const std::string& bytes);
 
 	bool CloseArchive();
 	bool ArchiveIsOpen() const { return archive != nullptr; }
 
-	std::vector<String> ListContents() const;
+	std::vector<UString::String> ListContents() const;
 
-	bool ExtractFile(const String& fileName, std::string& bytes);
+	bool ExtractFile(const UString::String& fileName, std::string& bytes);
 	bool ExtractFile(const zip_int64_t& index, std::string& bytes);
 
-	bool AddFile(const String& fileNameInArchive, std::string& bytes);
+	bool AddFile(const UString::String& fileNameInArchive, std::string& bytes);
 
-	String GetErrorString() const;
+	UString::String GetErrorString() const;
 
 private:
 	zip_t* archive = nullptr;
@@ -44,9 +43,9 @@ private:
 
 	bool ReadAndCloseFile(zip_file_t* file, std::string& bytes) const;
 
-	String errorString;
+	UString::String errorString;
 
-	bool OpenArchiveFile(const String& fileName, const int& flags);
+	bool OpenArchiveFile(const UString::String& fileName, const int& flags);
 	bool OpenArchiveBytes(const std::string& bytes, const int& flags);
 };
 

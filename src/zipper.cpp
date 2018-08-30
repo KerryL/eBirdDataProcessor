@@ -16,7 +16,7 @@ Zipper::~Zipper()
 		CloseArchive();
 }
 
-bool Zipper::OpenArchiveFile(const String& fileName)
+bool Zipper::OpenArchiveFile(const UString::String& fileName)
 {
 	writeChanges = false;
 	return OpenArchiveFile(fileName, ZIP_RDONLY);
@@ -46,16 +46,16 @@ bool Zipper::CloseArchive()
 	return false;
 }
 
-String Zipper::GetErrorString() const
+UString::String Zipper::GetErrorString() const
 {
 	return UString::ToStringType(zip_strerror(archive));
 }
 
-std::vector<String> Zipper::ListContents() const
+std::vector<UString::String> Zipper::ListContents() const
 {
 	assert(archive && "Archive not yet open");
 	const zip_int64_t numFiles(zip_get_num_entries(archive, 0));
-	std::vector<String> fileList;
+	std::vector<UString::String> fileList;
 
 	zip_int64_t i;
 	for (i = 0; i < numFiles; ++i)
@@ -63,7 +63,7 @@ std::vector<String> Zipper::ListContents() const
 		struct zip_stat s;
 		zip_stat_init(&s);
 		if (zip_stat_index(archive, i, 0, &s) != 0)
-			return std::vector<String>();
+			return std::vector<UString::String>();
 
 		if (s.valid & ZIP_STAT_NAME)
 			fileList.push_back(UString::ToStringType(s.name));
@@ -72,7 +72,7 @@ std::vector<String> Zipper::ListContents() const
 	return fileList;
 }
 
-bool Zipper::ExtractFile(const String& fileName, std::string& bytes)
+bool Zipper::ExtractFile(const UString::String& fileName, std::string& bytes)
 {
 	assert(archive && "Archive not yet open");
 	struct zip_stat s;
@@ -146,7 +146,7 @@ bool Zipper::ReadAndCloseFile(zip_file_t* file, std::string& bytes) const
 	return zip_fclose(file) == 0;
 }
 
-bool Zipper::CreateArchiveFile(const String& fileName)
+bool Zipper::CreateArchiveFile(const UString::String& fileName)
 {
 	writeChanges = true;
 	return OpenArchiveFile(fileName, ZIP_CREATE | ZIP_EXCL);
@@ -158,7 +158,7 @@ bool Zipper::CreateArchiveFile(const String& fileName)
 	return OpenArchiveBytes(bytes, ZIP_CREATE);
 }*/
 
-bool Zipper::OpenArchiveFile(const String& fileName, const int& flags)
+bool Zipper::OpenArchiveFile(const UString::String& fileName, const int& flags)
 {
 	assert(!archive && "Must only open one file at a time per object");
 	archive = zip_open(UString::ToNarrowString(fileName).c_str(), flags, nullptr);
@@ -176,7 +176,7 @@ bool Zipper::OpenArchiveBytes(const std::string& bytes, const int& flags)
 	return archive != nullptr;
 }
 
-bool Zipper::AddFile(const String& fileNameInArchive, std::string& bytes)
+bool Zipper::AddFile(const UString::String& fileNameInArchive, std::string& bytes)
 {
 	assert(archive && "Archive not yet open");
 	zip_source_t* buffer(zip_source_buffer_create(static_cast<const void*>(bytes.c_str()), bytes.length(), 0, nullptr));

@@ -19,19 +19,19 @@
 using namespace std::chrono_literals;
 const ThrottledSection::Clock::duration KMLLibraryManager::mapsAccessDelta(std::chrono::steady_clock::duration(20ms));// 50 requests per second
 
-KMLLibraryManager::KMLLibraryManager(const String& libraryPath,
-	const String& eBirdAPIKey, const String& mapsAPIKey,
-	std::basic_ostream<String::value_type>& log) : libraryPath(libraryPath), log(log),
+KMLLibraryManager::KMLLibraryManager(const UString::String& libraryPath,
+	const UString::String& eBirdAPIKey, const UString::String& mapsAPIKey,
+	std::basic_ostream<UString::String::value_type>& log) : libraryPath(libraryPath), log(log),
 	mapsAPIRateLimiter(mapsAccessDelta), mapsInterface(_T("eBirdDataProcessor"), mapsAPIKey), ebi(eBirdAPIKey)
 {
 }
 
-String KMLLibraryManager::GetKML(const String& country, const String& subNational1, const String& subNational2)
+UString::String KMLLibraryManager::GetKML(const UString::String& country, const UString::String& subNational1, const UString::String& subNational2)
 {
 	assert(!country.empty());
 	assert((!subNational2.empty() && !subNational1.empty()) || subNational2.empty());
-	const String locationIDString(BuildLocationIDString(country, subNational1, subNational2));
-	String kml;
+	const UString::String locationIDString(BuildLocationIDString(country, subNational1, subNational2));
+	UString::String kml;
 	if (GetKMLFromMemory(locationIDString, kml))
 		return kml;
 
@@ -39,8 +39,8 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 		return kml;
 	else if (CountryLoadedFromLibrary(country))
 	{
-		log << "Loaded KML for '" << country << "', but no match for '" << locationIDString << '\'' << std::endl;
-		return String();
+		//log << "Loaded KML for '" << country << "', but no match for '" << locationIDString << '\'' << std::endl;
+		return UString::String();
 	}
 
 	const GlobalKMLFetcher::DetailLevel detailLevel([subNational1, subNational2]()
@@ -59,14 +59,14 @@ String KMLLibraryManager::GetKML(const String& country, const String& subNationa
 		return kml;
 	else if (FileExists(libraryPath + country + _T(".kmz")))
 	{
-		log << "Downloaded KML for '" << country << "', but no match for '" << locationIDString << '\'' << std::endl;
-		return String();
+		//log << "Downloaded KML for '" << country << "', but no match for '" << locationIDString << '\'' << std::endl;
+		return UString::String();
 	}
 
 	return kml;
 }
 
-bool KMLLibraryManager::GetKMLFromMemory(const String& locationId, String& kml) const
+bool KMLLibraryManager::GetKMLFromMemory(const UString::String& locationId, UString::String& kml) const
 {
 	std::shared_lock<std::shared_mutex> lock(mutex);
 	if (NonLockingGetKMLFromMemory(locationId, kml))
@@ -78,7 +78,7 @@ bool KMLLibraryManager::GetKMLFromMemory(const String& locationId, String& kml) 
 	return false;
 }
 
-bool KMLLibraryManager::CountryLoadedFromLibrary(const String& country) const
+bool KMLLibraryManager::CountryLoadedFromLibrary(const UString::String& country) const
 {
 	auto it(kmlMemory.cbegin());
 	for (; it != kmlMemory.end(); ++it)
@@ -89,7 +89,7 @@ bool KMLLibraryManager::CountryLoadedFromLibrary(const String& country) const
 	return false;
 }
 
-bool KMLLibraryManager::NonLockingGetKMLFromMemory(const String& locationId, String& kml) const
+bool KMLLibraryManager::NonLockingGetKMLFromMemory(const UString::String& locationId, UString::String& kml) const
 {
 	auto it(kmlMemory.find(locationId));
 	if (it == kmlMemory.end())
@@ -104,24 +104,24 @@ bool KMLLibraryManager::NonLockingGetKMLFromMemory(const String& locationId, Str
 	return true;
 }
 
-String KMLLibraryManager::ExtractCountryFromLocationId(const String& id)
+UString::String KMLLibraryManager::ExtractCountryFromLocationId(const UString::String& id)
 {
-	const auto colon(id.find(Char(':')));
+	const auto colon(id.find(UString::Char(':')));
 	if (colon == std::string::npos)
 		return id;
 	return id.substr(0, colon);
 }
 
-String KMLLibraryManager::ExtractSubNational1FromLocationId(const String& id)
+UString::String KMLLibraryManager::ExtractSubNational1FromLocationId(const UString::String& id)
 {
-	const auto colon(id.find(Char(':')));
+	const auto colon(id.find(UString::Char(':')));
 	if (colon == std::string::npos)
-		return String();
+		return UString::String();
 	return id.substr(colon + 1);// TODO:  Handle properly when subnationl2 is included, too?
 }
 
 // Load by country
-bool KMLLibraryManager::LoadKMLFromLibrary(const String& country, const String& locationId, String& kml)
+bool KMLLibraryManager::LoadKMLFromLibrary(const UString::String& country, const UString::String& locationId, UString::String& kml)
 {
 	if (!loadManager.TryAccess(country))
 	{
@@ -136,10 +136,10 @@ bool KMLLibraryManager::LoadKMLFromLibrary(const String& country, const String& 
 	return NonLockingLoadKMLFromLibrary(country, locationId, kml);
 }
 
-bool KMLLibraryManager::OpenKMLArchive(const String& fileName, String& kml) const
+bool KMLLibraryManager::OpenKMLArchive(const UString::String& fileName, UString::String& kml) const
 {
 	Zipper z;
-	const String archiveFileName(fileName);
+	const UString::String archiveFileName(fileName);
 	if (!z.OpenArchiveFile(archiveFileName))
 	{
 		log << "Failed to open '" << archiveFileName << "' for input" << std::endl;
@@ -158,15 +158,15 @@ bool KMLLibraryManager::OpenKMLArchive(const String& fileName, String& kml) cons
 }
 
 // Load by country
-bool KMLLibraryManager::NonLockingLoadKMLFromLibrary(const String& country, const String& locationId, String& kml)
+bool KMLLibraryManager::NonLockingLoadKMLFromLibrary(const UString::String& country, const UString::String& locationId, UString::String& kml)
 {
-	log << "Attempting to load KML data from archive for '" << country << '\'' << std::endl;
+	//log << "Attempting to load KML data from archive for '" << country << '\'' << std::endl;
 
-	String rawKML;
+	UString::String rawKML;
 	if (!OpenKMLArchive(libraryPath + country + _T(".kmz"), rawKML))
 		return false;
 
-	std::unordered_map<String, String> tempMap;
+	std::unordered_map<UString::String, UString::String> tempMap;
 	GeometryExtractionArguments args(country, tempMap);
 	if (!ForEachPlacemarkTag(rawKML, ExtractRegionGeometry, args))
 		return false;
@@ -179,8 +179,8 @@ bool KMLLibraryManager::NonLockingLoadKMLFromLibrary(const String& country, cons
 }
 
 // Download by country
-bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
-	const GlobalKMLFetcher::DetailLevel& detailLevel, const String& locationId, String& kml)
+bool KMLLibraryManager::DownloadAndStoreKML(const UString::String& country,
+	const GlobalKMLFetcher::DetailLevel& detailLevel, const UString::String& locationId, UString::String& kml)
 {
 	if (!downloadManager.TryAccess(country))
 	{
@@ -189,11 +189,11 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	}
 
 	MutexUtilities::AccessManager::AccessHelper helper(country, downloadManager);
-	const String kmzFileName(libraryPath + country + _T(".kmz"));
+	const UString::String kmzFileName(libraryPath + country + _T(".kmz"));
 	if (FileExists(kmzFileName))
 		return GetKMLFromMemory(locationId, kml);// Another thread downloaded it while we were transfering from shared to exclusive access
 
-	log << "Attempting to download KML data for '" << country << '\'' << " at detail level " << static_cast<int>(detailLevel) << std::endl;
+	//log << "Attempting to download KML data for '" << country << '\'' << " at detail level " << static_cast<int>(detailLevel) << std::endl;
 	GlobalKMLFetcher fetcher(log);
 	std::string result;
 	if (!fetcher.FetchKML(country, detailLevel, result))
@@ -250,40 +250,40 @@ bool KMLLibraryManager::DownloadAndStoreKML(const String& country,
 	return LoadKMLFromLibrary(country, locationId, kml);
 }
 
-bool KMLLibraryManager::FileExists(const String& fileName)
+bool KMLLibraryManager::FileExists(const UString::String& fileName)
 {
 	struct stat buffer;
 	return stat(UString::ToNarrowString(fileName).c_str(), &buffer) == 0;
 }
 
-String KMLLibraryManager::BuildLocationIDString(const String& country,
-	const String& subNational1, const String& subNational2)
+UString::String KMLLibraryManager::BuildLocationIDString(const UString::String& country,
+	const UString::String& subNational1, const UString::String& subNational2)
 {
 	if (subNational1.empty())
 		return country;
 	return country + _T(":") + BuildSubNationalIDString(subNational1, subNational2);
 }
 
-String KMLLibraryManager::BuildSubNationalIDString(const String& subNational1, const String& subNational2)
+UString::String KMLLibraryManager::BuildSubNationalIDString(const UString::String& subNational1, const UString::String& subNational2)
 {
 	if (subNational2.empty())
 		return subNational1;
 	return subNational1 + _T(":") + subNational2;
 }
 
-String KMLLibraryManager::ExtractName(const String& kmlData, const std::string::size_type& offset)
+UString::String KMLLibraryManager::ExtractName(const UString::String& kmlData, const std::string::size_type& offset)
 {
 	return ExtractTagValue(kmlData, offset, _T("name"));
 }
 
-bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
+bool KMLLibraryManager::ForEachPlacemarkTag(const UString::String& kmlData,
 	PlacemarkFunction func, AdditionalArguments& args) const
 {
-	const String placemarkStartTag(_T("<Placemark>"));
+	const UString::String placemarkStartTag(_T("<Placemark>"));
 	std::string::size_type next(0);
 	while (next = kmlData.find(placemarkStartTag, next), next != std::string::npos)
 	{
-		const String placemarkEndTag(_T("</Placemark>"));
+		const UString::String placemarkEndTag(_T("</Placemark>"));
 		const std::string::size_type placemarkEnd(kmlData.find(placemarkEndTag, next));
 		if (placemarkEnd == std::string::npos)
 		{
@@ -311,15 +311,15 @@ bool KMLLibraryManager::ForEachPlacemarkTag(const String& kmlData,
 	return true;
 }
 
-String KMLLibraryManager::ExtractTagValue(const String& kmlData,
-	const std::string::size_type& offset, const String& tag)
+UString::String KMLLibraryManager::ExtractTagValue(const UString::String& kmlData,
+	const std::string::size_type& offset, const UString::String& tag)
 {
-	const String startTag(_T("<") + tag + _T(">"));
+	const UString::String startTag(_T("<") + tag + _T(">"));
 	const auto start(kmlData.find(startTag, offset));
 	if (start == std::string::npos)
-		return String();
+		return UString::String();
 
-	const String endTag([&tag]()
+	const UString::String endTag([&tag]()
 	{
 		const auto space(tag.find(_T(" ")));
 		if (space == std::string::npos)
@@ -328,37 +328,37 @@ String KMLLibraryManager::ExtractTagValue(const String& kmlData,
 	}());
 	const auto end(kmlData.find(endTag, start));
 	if (end == std::string::npos)
-		return String();
+		return UString::String();
 
 	return kmlData.substr(start + startTag.length(), end - start - startTag.length());
 }
 
-String KMLLibraryManager::ExtractDescription(const String& kmlData, const std::string::size_type& offset)
+UString::String KMLLibraryManager::ExtractDescription(const UString::String& kmlData, const std::string::size_type& offset)
 {
 	return ExtractTagValue(kmlData, offset, _T("description"));
 }
 
-bool KMLLibraryManager::DescriptionIsUnwanted(const String& kmlData, const std::string::size_type& offset)
+bool KMLLibraryManager::DescriptionIsUnwanted(const UString::String& kmlData, const std::string::size_type& offset)
 {
-	const String bodyOfWaterDescription(_T("<![CDATA[Water body]]>"));
-	const String description(ExtractDescription(kmlData, offset));
+	const UString::String bodyOfWaterDescription(_T("<![CDATA[Water body]]>"));
+	const UString::String description(ExtractDescription(kmlData, offset));
 	return description.compare(bodyOfWaterDescription) == 0;
 }
 
-bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
+bool KMLLibraryManager::ExtractRegionGeometry(const UString::String& kmlData,
 	const std::string::size_type& offset, AdditionalArguments& args)
 {
 	// NOTE:  Possibly need to search for <Polygon> tag if <MultiGeometry> is not found.
 	// I think <MultiGeometry> is only necessary if there are multiple polygons, although
 	// gadm.org seems to wrap all polygon tags in multigeometry tags, so for now we'll
 	// leave this.
-	const String multiGeometryStartTag(_T("<MultiGeometry>"));
-	const String multiGeometryEndTag(_T("</MultiGeometry>"));
-	String geometryEndTag(multiGeometryEndTag);
+	const UString::String multiGeometryStartTag(_T("<MultiGeometry>"));
+	const UString::String multiGeometryEndTag(_T("</MultiGeometry>"));
+	UString::String geometryEndTag(multiGeometryEndTag);
 	std::string::size_type geometryStart(kmlData.find(multiGeometryStartTag, offset));
 	if (geometryStart == std::string::npos)
 	{
-		const String geometryStartTag(_T("<Polygon>"));
+		const UString::String geometryStartTag(_T("<Polygon>"));
 		geometryEndTag = _T("</Polygon>");
 		geometryStart = kmlData.find(geometryStartTag, offset);
 		if (geometryStart == std::string::npos)
@@ -378,21 +378,21 @@ bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
 
 	// Some historical KML library data is in GADM 2.8 format - new format is GADM 3.6
 	// Difference is primarily the way placemark names are stored.  We try the 3.6 way first, and if it fails we try the 2.8 way.
-	String name;
-	const String name1SearchString(_T("SimpleData name=\"NAME_1\""));
-	const String nameSR1(ExtractTagValue(kmlData, offset, name1SearchString));
-	const String nameSR2([&kmlData, &offset, &geometryStart]()
+	UString::String name;
+	const UString::String name1SearchString(_T("SimpleData name=\"NAME_1\""));
+	const UString::String nameSR1(ExtractTagValue(kmlData, offset, name1SearchString));
+	const UString::String nameSR2([&kmlData, &offset, &geometryStart]()
 	{
-		const String name2SearchString(_T("SimpleData name=\"NAME_2\""));
+		const UString::String name2SearchString(_T("SimpleData name=\"NAME_2\""));
 		if (kmlData.find(name2SearchString) < geometryStart)
 			return ExtractTagValue(kmlData, offset, name2SearchString);
-		return String();
+		return UString::String();
 	}());
 	bool useCountryNameOnly(false);
 	if (nameSR1.empty())
 	{
-		const String name0SearchString(_T("SimpleData name=\"NAME_0\""));
-		const String nameSR0(ExtractTagValue(kmlData, offset, name0SearchString));
+		const UString::String name0SearchString(_T("SimpleData name=\"NAME_0\""));
+		const UString::String nameSR0(ExtractTagValue(kmlData, offset, name0SearchString));
 		if (nameSR0.empty())
 			name = ExtractName(kmlData, offset);
 		else
@@ -410,7 +410,7 @@ bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
 	}
 
 	auto& geometryArgs(static_cast<GeometryExtractionArguments&>(args));
-	const String key([&useCountryNameOnly, &geometryArgs, &name]()
+	const UString::String key([&useCountryNameOnly, &geometryArgs, &name]()
 	{
 		if (useCountryNameOnly)
 			return geometryArgs.countryName;
@@ -420,15 +420,15 @@ bool KMLLibraryManager::ExtractRegionGeometry(const String& kmlData,
 	return true;
 }
 
-bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
+bool KMLLibraryManager::FixPlacemarkNames(const UString::String& kmlData,
 	const std::string::size_type& offset, AdditionalArguments& args) const
 {
-	const String name(ExtractName(kmlData, offset));
-	const String placemarkNameString(CreatePlacemarkNameString(name));
+	const UString::String name(ExtractName(kmlData, offset));
+	const UString::String placemarkNameString(CreatePlacemarkNameString(name));
 
 	auto& placemarkArgs(static_cast<ParentRegionFinderArguments&>(args));
 
-	String parentRegionName;
+	UString::String parentRegionName;
 	if (ContainsMoreThanOneMatch(kmlData, placemarkNameString))
 	{
 		const auto placemarkEnd(kmlData.find(_T("</Placemark>"), offset));
@@ -456,10 +456,10 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 
 	const auto startOfNameTag(kmlData.find(_T("<name>"), offset));// Required to ensure new insert occurs at same place in file as original tag
 
-	const String locationID(placemarkArgs.self.BuildSubNationalIDString(parentRegionName, name));
+	const UString::String locationID(placemarkArgs.self.BuildSubNationalIDString(parentRegionName, name));
 	placemarkArgs.modifiedKML.append(kmlData.substr(placemarkArgs.sourceTellP, startOfNameTag - placemarkArgs.sourceTellP) + CreatePlacemarkNameString(locationID));
 
-	const String endNameTag(_T("</name>"));
+	const UString::String endNameTag(_T("</name>"));
 	placemarkArgs.sourceTellP = kmlData.find(endNameTag, startOfNameTag);
 	if (placemarkArgs.sourceTellP == std::string::npos)
 	{
@@ -471,7 +471,7 @@ bool KMLLibraryManager::FixPlacemarkNames(const String& kmlData,
 	return true;
 }
 
-bool KMLLibraryManager::ExtractParentRegionGeometry(const String& kmlData,
+bool KMLLibraryManager::ExtractParentRegionGeometry(const UString::String& kmlData,
 	const std::string::size_type& offset, AdditionalArguments& args)
 {
 	const auto placemarkEnd(kmlData.find(_T("</Placemark>"), offset));
@@ -481,19 +481,19 @@ bool KMLLibraryManager::ExtractParentRegionGeometry(const String& kmlData,
 		return false;
 	}
 
-	const String name(ExtractName(kmlData, offset));
+	const UString::String name(ExtractName(kmlData, offset));
 	auto& placemarkArgs(static_cast<ParentGeometryExtractionArguments&>(args));
 	placemarkArgs.geometryInfo.insert(std::make_pair(BuildLocationIDString(
-		placemarkArgs.countryName, name, String()), GeometryInfo(kmlData.substr(offset, placemarkEnd - offset))));
+		placemarkArgs.countryName, name, UString::String()), GeometryInfo(kmlData.substr(offset, placemarkEnd - offset))));
 	return true;
 }
 
-String KMLLibraryManager::CreatePlacemarkNameString(const String& name)
+UString::String KMLLibraryManager::CreatePlacemarkNameString(const UString::String& name)
 {
 	return _T("<name>") + name + _T("</name>");
 }
 
-bool KMLLibraryManager::ContainsMoreThanOneMatch(const String& s, const String& pattern)
+bool KMLLibraryManager::ContainsMoreThanOneMatch(const UString::String& s, const UString::String& pattern)
 {
 	auto location(s.find(pattern));
 	if (location == std::string::npos)
@@ -502,7 +502,7 @@ bool KMLLibraryManager::ContainsMoreThanOneMatch(const String& s, const String& 
 	return s.find(pattern, location + 1) != std::string::npos;
 }
 
-bool KMLLibraryManager::LookupParentRegionName(const String& country, const String& subregion2Name, String& parentRegionName)
+bool KMLLibraryManager::LookupParentRegionName(const UString::String& country, const UString::String& subregion2Name, UString::String& parentRegionName)
 {
 	auto sr1List(GetSubRegion1Data(country));
 	if (sr1List.empty())
@@ -524,10 +524,10 @@ bool KMLLibraryManager::LookupParentRegionName(const String& country, const Stri
 	return false;
 }
 
-void KMLLibraryManager::ExpandSaintAbbr(String& s)
+void KMLLibraryManager::ExpandSaintAbbr(UString::String& s)
 {
 	// Assumes this abbreviation occurs at most once
-	const String saintAbbr(_T("st."));
+	const UString::String saintAbbr(_T("st."));
 	auto start(s.find(saintAbbr));
 	if (start == std::string::npos)
 		return;
@@ -535,10 +535,10 @@ void KMLLibraryManager::ExpandSaintAbbr(String& s)
 	s.replace(start, saintAbbr.length(), _T("saint"));
 }
 
-void KMLLibraryManager::ExpandSainteAbbr(String& s)
+void KMLLibraryManager::ExpandSainteAbbr(UString::String& s)
 {
 	// Assumes this abbreviation occurs at most once
-	const String saintAbbr(_T("ste."));
+	const UString::String saintAbbr(_T("ste."));
 	auto start(s.find(saintAbbr));
 	if (start == std::string::npos)
 		return;
@@ -546,9 +546,9 @@ void KMLLibraryManager::ExpandSainteAbbr(String& s)
 	s.replace(start, saintAbbr.length(), _T("sainte"));
 }
 
-bool KMLLibraryManager::RegionNamesMatch(const String& name1, const String& name2)
+bool KMLLibraryManager::RegionNamesMatch(const UString::String& name1, const UString::String& name2)
 {
-	String lower1(name1), lower2(name2);
+	UString::String lower1(name1), lower2(name2);
 	std::transform(lower1.begin(), lower1.end(), lower1.begin(), ::tolower);
 	std::transform(lower2.begin(), lower2.end(), lower2.begin(), ::tolower);
 
@@ -558,11 +558,11 @@ bool KMLLibraryManager::RegionNamesMatch(const String& name1, const String& name
 	ExpandSainteAbbr(lower1);
 	ExpandSainteAbbr(lower2);
 
-	lower1.erase(std::remove_if(lower1.begin(), lower1.end(), [](const Char& c)
+	lower1.erase(std::remove_if(lower1.begin(), lower1.end(), [](const UString::Char& c)
 	{
 		return !std::isalnum(c);
 	}), lower1.end());
-	lower2.erase(std::remove_if(lower2.begin(), lower2.end(), [](const Char& c)
+	lower2.erase(std::remove_if(lower2.begin(), lower2.end(), [](const UString::Char& c)
 	{
 		return !std::isalnum(c);
 	}), lower2.end());
@@ -570,7 +570,7 @@ bool KMLLibraryManager::RegionNamesMatch(const String& name1, const String& name
 	return lower1.compare(lower2) == 0;
 }
 
-const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion1Data(const String& countryName)
+const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion1Data(const UString::String& countryName)
 {
 	std::shared_lock<std::shared_mutex> sharedLock(mutex);
 	auto it(subRegion1Data.find(countryName));
@@ -585,9 +585,9 @@ const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion1D
 	return it->second;
 }
 
-const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion2Data(const String& countryName, const EBirdInterface::RegionInfo& regionInfo)
+const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion2Data(const UString::String& countryName, const EBirdInterface::RegionInfo& regionInfo)
 {
-	const String locationID(BuildLocationIDString(countryName, regionInfo.name, String()));
+	const UString::String locationID(BuildLocationIDString(countryName, regionInfo.name, UString::String()));
 	std::shared_lock<std::shared_mutex> sharedLock(mutex);
 	auto it(subRegion2Data.find(locationID));
 	if (it == subRegion2Data.end())
@@ -601,8 +601,8 @@ const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion2D
 	return it->second;
 }
 
-bool KMLLibraryManager::LookupParentRegionName(const String& country,
-	const String& subregion2Name, const String& childKML, String& parentRegionName)
+bool KMLLibraryManager::LookupParentRegionName(const UString::String& country,
+	const UString::String& subregion2Name, const UString::String& childKML, UString::String& parentRegionName)
 {
 	auto parentCandidates(FindRegionsWithSubRegionMatchingName(country, subregion2Name));
 	const GeometryInfo childInfo(childKML);
@@ -729,9 +729,9 @@ bool KMLLibraryManager::SegmentsIntersect(const GeometryInfo::Point& segment1Poi
 	return false;// Not parallel, but non-intersecting
 }
 
-KMLLibraryManager::GeometryInfo KMLLibraryManager::GetGeometryInfoByName(const String& countryName, const String& parentName)
+KMLLibraryManager::GeometryInfo KMLLibraryManager::GetGeometryInfoByName(const UString::String& countryName, const UString::String& parentName)
 {
-	const String indexString(BuildLocationIDString(countryName, parentName, String()));
+	const UString::String indexString(BuildLocationIDString(countryName, parentName, UString::String()));
 	std::shared_lock<std::shared_mutex> lock(mutex);
 	auto it(geometryInfo.find(indexString));
 	if (it == geometryInfo.end())
@@ -742,7 +742,7 @@ KMLLibraryManager::GeometryInfo KMLLibraryManager::GetGeometryInfoByName(const S
 		if (it == geometryInfo.end())
 		{
 			if (!GetParentGeometryInfo(countryName))
-				return GeometryInfo(String());
+				return GeometryInfo(UString::String());
 
 			return geometryInfo.find(indexString)->second;
 		}
@@ -751,7 +751,7 @@ KMLLibraryManager::GeometryInfo KMLLibraryManager::GetGeometryInfoByName(const S
 	return it->second;
 }
 
-std::vector<EBirdInterface::RegionInfo> KMLLibraryManager::FindRegionsWithSubRegionMatchingName(const String& country, const String& name)
+std::vector<EBirdInterface::RegionInfo> KMLLibraryManager::FindRegionsWithSubRegionMatchingName(const UString::String& country, const UString::String& name)
 {
 	auto subRegion1List(GetSubRegion1Data(country));
 	subRegion1List.erase(std::remove_if(subRegion1List.begin(), subRegion1List.end(), [&country, &name, this](const EBirdInterface::RegionInfo& regionInfo)
@@ -792,7 +792,7 @@ bool KMLLibraryManager::BoundingBoxWithinParentBox(const GeometryInfo::BoundingB
 	return true;
 }
 
-bool KMLLibraryManager::GetParentGeometryInfo(const String& country)
+bool KMLLibraryManager::GetParentGeometryInfo(const UString::String& country)
 {
 	GlobalKMLFetcher fetcher(log);
 	std::string result;
@@ -819,7 +819,7 @@ bool KMLLibraryManager::GetParentGeometryInfo(const String& country)
 	return ForEachPlacemarkTag(UString::ToStringType(unzippedKML), ExtractParentRegionGeometry, args);
 }
 
-bool KMLLibraryManager::ContainsOnlyWhitespace(const String& s)
+bool KMLLibraryManager::ContainsOnlyWhitespace(const UString::String& s)
 {
 	for (const auto& c : s)
 	{
@@ -830,7 +830,7 @@ bool KMLLibraryManager::ContainsOnlyWhitespace(const String& s)
 	return true;
 }
 
-KMLLibraryManager::GeometryInfo::GeometryInfo(const String& kml) : polygons(ExtractPolygons(kml)), bbox(ComputeBoundingBox(polygons))
+KMLLibraryManager::GeometryInfo::GeometryInfo(const UString::String& kml) : polygons(ExtractPolygons(kml)), bbox(ComputeBoundingBox(polygons))
 {
 }
 
@@ -872,29 +872,29 @@ KMLLibraryManager::GeometryInfo::BoundingBox KMLLibraryManager::GeometryInfo::Co
 	return bb;
 }
 
-KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::ExtractPolygons(const String& kml)
+KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::ExtractPolygons(const UString::String& kml)
 {
 	// Assuming that it's not necessary to check for <outerBoundaryIs> and <LinearRing> tags
 
 	PolygonList polygons;
-	const String coordinatesStartTag(_T("<coordinates>"));
+	const UString::String coordinatesStartTag(_T("<coordinates>"));
 	std::string::size_type startIndex(0);
 	while (startIndex = kml.find(coordinatesStartTag, startIndex), startIndex != std::string::npos)
 	{
-		const String coordinatesEndTag(_T("</coordinates>"));
+		const UString::String coordinatesEndTag(_T("</coordinates>"));
 		const auto endIndex(kml.find(coordinatesEndTag, startIndex));
 		if (endIndex == std::string::npos)
 			break;
 
-		IStringStream ss(kml.substr(startIndex + coordinatesStartTag.length(), endIndex - startIndex - coordinatesStartTag.length()));
-		String line;
+		UString::IStringStream ss(kml.substr(startIndex + coordinatesStartTag.length(), endIndex - startIndex - coordinatesStartTag.length()));
+		UString::String line;
 		std::vector<Point> polygon;
 		while (std::getline(ss, line))
 		{
 			if (ContainsOnlyWhitespace(line))
 				continue;
 
-			IStringStream lineSS(line);
+			UString::IStringStream lineSS(line);
 			Point p;
 			if ((lineSS >> p.longitude).fail())
 			{
@@ -961,7 +961,7 @@ double KMLLibraryManager::Vector2D::Dot(const Vector2D& v) const
 
 // If this method is called, we can assume that the data for this country IS loaded into kmlMemory,
 // but no match was found for the locationId.
-bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& kml) const
+bool KMLLibraryManager::CheckForInexactMatch(const UString::String& locationId, UString::String& kml) const
 {
 	const auto country(ExtractCountryFromLocationId(locationId));
 	const auto subNational1(ExtractSubNational1FromLocationId(locationId));
@@ -975,7 +975,7 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 	std::vector<GoogleMapsInterface::PlaceInfo> eBirdPlaceInfo;
 	{
 		std::lock_guard<std::mutex> lock(gMapResultMutexeBird);
-		const String searchString(subNational1 + _T(", ") + country);
+		const UString::String searchString(subNational1 + _T(", ") + country);
 		auto it(eBirdNameGMapResults.find(searchString));
 		if (it == eBirdNameGMapResults.end())
 		{
@@ -1006,12 +1006,12 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 		const auto sn1KMZ(ExtractSubNational1FromLocationId(it->first));
 		const auto lowerSN1KMZ(StringUtilities::ToLower(sn1KMZ));
 
-		if (!eBirdPlaceInfo.empty()/* && StringsAreSimilar(lowerSN1, lowerSN1KMZ, 0.1)*/)// Very lax but non-zero tolerance to cut down on google maps requests
+		if (!eBirdPlaceInfo.empty()/* && UString::StringsAreSimilar(lowerSN1, lowerSN1KMZ, 0.1)*/)// Very lax but non-zero tolerance to cut down on google maps requests
 		{
 			std::vector<GoogleMapsInterface::PlaceInfo> gadmPlaceInfo;
 			{
 				std::lock_guard<std::mutex> lock(gMapResultMutexGADM);
-				const String searchString(sn1KMZ + _T(", ") + country);
+				const UString::String searchString(sn1KMZ + _T(", ") + country);
 				auto gadmIt(gadmNameGMapResults.find(searchString));
 				if (gadmIt == gadmNameGMapResults.end())
 				{
@@ -1048,7 +1048,7 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 		}
 
 		const double threshold(0.5);
-		const String userInputKey(lowerSN1 + _T(":") + lowerSN1KMZ);
+		const UString::String userInputKey(lowerSN1 + _T(":") + lowerSN1KMZ);
 		std::lock_guard<std::mutex> answeredListLock(userAlreadyAnsweredMutex);
 		if (StringsAreSimilar(lowerSN1, lowerSN1KMZ, threshold) && userAnsweredList.find(userInputKey) == userAnsweredList.end())
 		{
@@ -1061,7 +1061,7 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 			{
 				kml = it->second;
 				return MakeCorrectionInKMZ(country, sn1KMZ, subNational1);
-			}
+			}//*/// Removed because Google Maps method is more reliable, and bulk of cleanup work is done
 		}
 	}
 
@@ -1070,7 +1070,7 @@ bool KMLLibraryManager::CheckForInexactMatch(const String& locationId, String& k
 
 bool KMLLibraryManager::GetUserConfirmation()
 {
-	String response;
+	UString::String response;
 	while (response.empty())
 	{
 		Cin >> response;
@@ -1084,30 +1084,30 @@ bool KMLLibraryManager::GetUserConfirmation()
 	return false;
 }
 
-bool KMLLibraryManager::MakeCorrectionInKMZ(const String& country,
-	const String& originalSubNational1, const String& newSubNational1) const
+bool KMLLibraryManager::MakeCorrectionInKMZ(const UString::String& country,
+	const UString::String& originalSubNational1, const UString::String& newSubNational1) const
 {
-	log << "Attempting to load KML data from archive for '" << country << "' for name correction" << std::endl;
+	//log << "Attempting to load KML data from archive for '" << country << "' for name correction" << std::endl;
 
-	String rawKML;
-	String archiveFileName(libraryPath + country + _T(".kmz"));
+	UString::String rawKML;
+	UString::String archiveFileName(libraryPath + country + _T(".kmz"));
 	if (!OpenKMLArchive(archiveFileName, rawKML))
 		return false;
 
-	const String prefix(_T("SimpleData name=\"NAME_1\">"));
-	const String prefix2(_T("SimpleData name=\"NAME_2\">"));
-	String adjustedOriginalSN1(originalSubNational1);
-	const String searchString(prefix + originalSubNational1 + _T("</"));
+	const UString::String prefix(_T("SimpleData name=\"NAME_1\">"));
+	const UString::String prefix2(_T("SimpleData name=\"NAME_2\">"));
+	UString::String adjustedOriginalSN1(originalSubNational1);
+	const UString::String searchString(prefix + originalSubNational1 + _T("</"));
 	auto fixLocation(rawKML.find(searchString));
 	bool removeName1(false);
 	if (fixLocation == std::string::npos)
 	{
 		// Possible that lack of match is due to difference in sub-region level - try NAME_2
-		const auto colon(originalSubNational1.find(Char(':')));
+		const auto colon(originalSubNational1.find(UString::Char(':')));
 		if (colon != std::string::npos)
 		{
 			adjustedOriginalSN1 = originalSubNational1.substr(colon + 1);
-			const String searchString2(prefix2 + adjustedOriginalSN1 + _T("</"));
+			const UString::String searchString2(prefix2 + adjustedOriginalSN1 + _T("</"));
 			fixLocation = rawKML.find(searchString2);
 			if (fixLocation == std::string::npos)
 			{
@@ -1123,7 +1123,7 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const String& country,
 		}
 	}
 
-	String modifiedKML(rawKML.substr(0, fixLocation) + prefix + newSubNational1);
+	UString::String modifiedKML(rawKML.substr(0, fixLocation) + prefix + newSubNational1);
 	modifiedKML.append(rawKML.substr(fixLocation + prefix.length() + adjustedOriginalSN1.length()));
 
 	if (removeName1)
@@ -1138,7 +1138,7 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const String& country,
 		modifiedKML.erase(modifiedKML.begin() + startRemoval, modifiedKML.begin() + fixLocation + prefix.length());
 	}
 
-	const String tempExtension(_T(".transaction"));
+	const UString::String tempExtension(_T(".transaction"));
 	Zipper z;
 	if (!z.CreateArchiveFile(archiveFileName + tempExtension))
 	{
@@ -1161,13 +1161,13 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const String& country,
 		UString::ToNarrowString(archiveFileName).c_str()) == 0;
 }
 
-bool KMLLibraryManager::StringsAreSimilar(const String& a, const String& b, const double& threshold)
+bool KMLLibraryManager::StringsAreSimilar(const UString::String& a, const UString::String& b, const double& threshold)
 {
 	const auto pairs1(GenerateWordLetterPairs(a));
 	auto pairs2(GenerateWordLetterPairs(b));
 
-	unsigned int intersection(0);
-	unsigned int unionValue(pairs1.size() + pairs2.size());
+	size_t intersection(0);
+	size_t unionValue(pairs1.size() + pairs2.size());
 
 	for (const auto& p1 : pairs1)
 	{
@@ -1187,22 +1187,22 @@ bool KMLLibraryManager::StringsAreSimilar(const String& a, const String& b, cons
 	return 2.0 * intersection / unionValue > threshold;
 }
 
-std::vector<String> KMLLibraryManager::GenerateLetterPairs(const String& s)
+std::vector<UString::String> KMLLibraryManager::GenerateLetterPairs(const UString::String& s)
 {
-	std::vector<String> pairs(s.length() - 1);
+	std::vector<UString::String> pairs(s.length() - 1);
 	unsigned int i;
 	for (i = 0; i < pairs.size(); ++i)
 		pairs[i] = s.substr(i, 2);
 	return pairs;
 }
 
-std::vector<String> KMLLibraryManager::GenerateWordLetterPairs(const String& s)
+std::vector<UString::String> KMLLibraryManager::GenerateWordLetterPairs(const UString::String& s)
 {
-	std::vector<String> wordLetterPairs;
+	std::vector<UString::String> wordLetterPairs;
 
-	IStringStream ss(s);
-	String token;
-	while (std::getline(ss, token, Char(' ')))
+	UString::IStringStream ss(s);
+	UString::String token;
+	while (std::getline(ss, token, UString::Char(' ')))
 	{
 		if (token.empty())
 			continue;

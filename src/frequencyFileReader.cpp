@@ -10,19 +10,19 @@
 // Standard C++ headers
 #include <locale>
 
-const String FrequencyFileReader::nameIndexFileName(_T("nameIndexMap.csv"));
+const UString::String FrequencyFileReader::nameIndexFileName(_T("nameIndexMap.csv"));
 
-FrequencyFileReader::FrequencyFileReader(const String& rootPath) : rootPath(rootPath)
+FrequencyFileReader::FrequencyFileReader(const UString::String& rootPath) : rootPath(rootPath)
 {
 }
 
-String FrequencyFileReader::GenerateFileName(const String& regionCode)
+UString::String FrequencyFileReader::GenerateFileName(const UString::String& regionCode)
 {
-	const String countryCode(Utilities::ExtractCountryFromRegionCode(regionCode));
+	const UString::String countryCode(Utilities::ExtractCountryFromRegionCode(regionCode));
 	return rootPath + countryCode + _T("/") + regionCode + _T(".bin");
 }
 	
-bool FrequencyFileReader::ReadRegionData(const String& regionCode,
+bool FrequencyFileReader::ReadRegionData(const UString::String& regionCode,
 	EBirdDataProcessor::FrequencyDataYear& frequencyData, EBirdDataProcessor::DoubleYear& checklistCounts)
 {
 	if (indexToNameMap.empty())
@@ -31,7 +31,7 @@ bool FrequencyFileReader::ReadRegionData(const String& regionCode,
 			return false;
 	}
 	
-	const String fileName(GenerateFileName(regionCode));
+	const UString::String fileName(GenerateFileName(regionCode));
 	std::ifstream file(fileName, std::ios::binary);
 	if (!file.good() || !file.is_open())
 	{
@@ -55,8 +55,8 @@ bool FrequencyFileReader::ReadNameIndexData()
 	if (!indexToNameMap.empty())// In case of data race
 		return true;
 
-	const String fileName(rootPath + nameIndexFileName);
-	IFStream file(fileName);
+	const UString::String fileName(rootPath + nameIndexFileName);
+	UString::IFStream file(fileName);
 	if (!file.good() || !file.is_open())
 	{
 		Cerr << "Failed to open '" << fileName << "' for input\n";
@@ -65,12 +65,12 @@ bool FrequencyFileReader::ReadNameIndexData()
 
 	file.imbue(std::locale());
 	
-	String line;
+	UString::String line;
 	while (std::getline(file, line))
 	{
-		IStringStream ss(line);
-		String commonName;
-		if (!std::getline(ss, commonName, Char(',')))
+		UString::IStringStream ss(line);
+		UString::String commonName;
+		if (!std::getline(ss, commonName, UString::Char(',')))
 		{
 			Cerr << "Failed to parse name\n";
 			return false;

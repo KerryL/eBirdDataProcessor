@@ -11,9 +11,9 @@
 // Standard C++ headers
 #include <cassert>
 
-const String GlobalKMLFetcher::userAgent(_T("eBirdDataProcessor"));
-const String GlobalKMLFetcher::gadmCountryURL(_T("https://gadm.org/download_country_v3.html"));
-const String GlobalKMLFetcher::gadmDownloadBaseURL(_T("https://biogeo.ucdavis.edu/data/gadm3.6/"));
+const UString::String GlobalKMLFetcher::userAgent(_T("eBirdDataProcessor"));
+const UString::String GlobalKMLFetcher::gadmCountryURL(_T("https://gadm.org/download_country_v3.html"));
+const UString::String GlobalKMLFetcher::gadmDownloadBaseURL(_T("https://biogeo.ucdavis.edu/data/gadm3.6/"));
 const bool GlobalKMLFetcher::verbose(false);
 
 using namespace std::chrono_literals;
@@ -21,7 +21,7 @@ using namespace std::chrono_literals;
 // check this to make sure we comply, or we should include a robots.txt parser here to automatically update
 const ThrottledSection::Clock::duration GlobalKMLFetcher::gadmCrawlDelay(std::chrono::steady_clock::duration(10s));
 
-GlobalKMLFetcher::GlobalKMLFetcher(std::basic_ostream<String::value_type>& log) : log(log), rateLimiter(gadmCrawlDelay)
+GlobalKMLFetcher::GlobalKMLFetcher(std::basic_ostream<UString::String::value_type>& log) : log(log), rateLimiter(gadmCrawlDelay)
 {
 	DoGeneralCurlConfiguration();
 }
@@ -35,9 +35,9 @@ GlobalKMLFetcher::~GlobalKMLFetcher()
 		curl_easy_cleanup(curl);
 }
 
-bool GlobalKMLFetcher::FetchKML(const String& country, const DetailLevel& level, std::string& zippedFileContents)
+bool GlobalKMLFetcher::FetchKML(const UString::String& country, const DetailLevel& level, std::string& zippedFileContents)
 {
-	String html;
+	UString::String html;
 	if (!GetCountryListPage(html))
 		return false;
 
@@ -49,14 +49,14 @@ bool GlobalKMLFetcher::FetchKML(const String& country, const DetailLevel& level,
 		return false;
 	}
 
-	const String downloadURL(BuildDownloadURL(it->second, level));
+	const UString::String downloadURL(BuildDownloadURL(it->second, level));
 	if (!DoCURLGet(downloadURL, zippedFileContents))
 		return false;
 
 	return true;
 }
 
-bool GlobalKMLFetcher::GetCountryListPage(String& html)
+bool GlobalKMLFetcher::GetCountryListPage(UString::String& html)
 {
 	std::string response;
 	if (!DoCURLGet(gadmCountryURL, response))
@@ -66,30 +66,30 @@ bool GlobalKMLFetcher::GetCountryListPage(String& html)
 	return true;
 }
 
-String GlobalKMLFetcher::BuildRequestString(const String& countryCode) const
+UString::String GlobalKMLFetcher::BuildRequestString(const UString::String& countryCode) const
 {
-	OStringStream ss;
+	UString::OStringStream ss;
 	ss << "cnt=" << countryCode
 		<< "&thm=kmz%23Google+Earth+kmz&OK=OK&_submit_check=1";
 	return ss.str();
 }
 
-std::map<String, String> GlobalKMLFetcher::ExtractCountryCodeMap(const String& html)
+std::map<UString::String, UString::String> GlobalKMLFetcher::ExtractCountryCodeMap(const UString::String& html)
 {
-	const String listStartTag(_T("<select class=\"form-control\" id=\"countrySelect\", name=\"country\""));
-	const String listEndTag(_T("</select>"));
+	const UString::String listStartTag(_T("<select class=\"form-control\" id=\"countrySelect\", name=\"country\""));
+	const UString::String listEndTag(_T("</select>"));
 	auto listStart(html.find(listStartTag));
 	auto listEnd(html.find(listEndTag));
 	if (listStart == std::string::npos || listEnd == std::string::npos)
-		return std::map<String, String>();
+		return std::map<UString::String, UString::String>();
 
-	std::map<String, String> countryCodeMap;
+	std::map<UString::String, UString::String> countryCodeMap;
 	auto currentPosition(listStart);
 	while (currentPosition < listEnd)
 	{
-		const String entryTagStart(_T("<option value=\""));
-		const String entryTagMiddle(_T("\">"));
-		const String entryTagEnd(_T("</option>"));
+		const UString::String entryTagStart(_T("<option value=\""));
+		const UString::String entryTagMiddle(_T("\">"));
+		const UString::String entryTagEnd(_T("</option>"));
 
 		const auto entryStart(html.find(entryTagStart, currentPosition));
 		const auto entryMiddle(html.find(entryTagMiddle, entryStart));
@@ -99,8 +99,8 @@ std::map<String, String> GlobalKMLFetcher::ExtractCountryCodeMap(const String& h
 			entryMiddle != std::string::npos &&
 			entryEnd != std::string::npos)
 		{
-			const String countryCode(html.substr(entryStart + entryTagStart.length(), entryMiddle - entryStart - entryTagStart.length()));
-			const String countryName(html.substr(entryMiddle + entryTagMiddle.length(), entryEnd - entryMiddle - entryTagMiddle.length()));
+			const UString::String countryCode(html.substr(entryStart + entryTagStart.length(), entryMiddle - entryStart - entryTagStart.length()));
+			const UString::String countryName(html.substr(entryMiddle + entryTagMiddle.length(), entryEnd - entryMiddle - entryTagMiddle.length()));
 			if (!countryCode.empty() && !countryName.empty())
 				countryCodeMap[countryName] = countryCode;
 		}
@@ -111,9 +111,9 @@ std::map<String, String> GlobalKMLFetcher::ExtractCountryCodeMap(const String& h
 	return countryCodeMap;
 }
 
-String GlobalKMLFetcher::BuildDownloadURL(const String& countryFile, const DetailLevel& level)
+UString::String GlobalKMLFetcher::BuildDownloadURL(const UString::String& countryFile, const DetailLevel& level)
 {
-	OStringStream levelIndex;
+	UString::OStringStream levelIndex;
 	levelIndex << static_cast<unsigned int>(level);
 	return gadmDownloadBaseURL + _T("kmz/gadm36_") + countryFile.substr(0, 3) + _T("_") + levelIndex.str() + _T(".kmz");
 }
@@ -166,7 +166,7 @@ bool GlobalKMLFetcher::DoGeneralCurlConfiguration()
 	return true;
 }
 
-bool GlobalKMLFetcher::DoCURLGet(const String& url, std::string &response)
+bool GlobalKMLFetcher::DoCURLGet(const UString::String& url, std::string &response)
 {
 	assert(curl);
 
@@ -195,7 +195,7 @@ bool GlobalKMLFetcher::DoCURLGet(const String& url, std::string &response)
 //		ptr			= char*
 //		size		= size_t indicating number of elements of size nmemb
 //		nmemb		= size_t indicating size of each element
-//		userData	= void* (must be pointer to String)
+//		userData	= void* (must be pointer to UString::)
 //
 // Output Arguments:
 //		None

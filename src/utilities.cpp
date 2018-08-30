@@ -12,25 +12,25 @@
 namespace Utilities
 {
 
-String ExtractCountryFromRegionCode(const String& regionCode)
+UString::String ExtractCountryFromRegionCode(const UString::String& regionCode)
 {
 	return regionCode.substr(0, 2);
 }
 
-String ExtractStateFromRegionCode(const String& regionCode)
+UString::String ExtractStateFromRegionCode(const UString::String& regionCode)
 {
 	// For US, states abbreviations are all 2 characters, but this isn't universal.  Need to find the hyphen.
 	// eBird does guarantee that country abbreviations are two characters, however.
 	const std::string::size_type start(3);
 	if (regionCode.length() < start)
-		return String();
+		return UString::String();
 
 	const std::string::size_type length(regionCode.find('-', start) - start);
 	assert(length != std::string::npos);
 	return regionCode.substr(start, length);
 }
 
-String StripExtension(const String& fileName)
+UString::String StripExtension(const UString::String& fileName)
 {
 	const auto extStart(fileName.find_last_of(_T(".")));
 	if (extStart == std::string::npos)
@@ -38,16 +38,16 @@ String StripExtension(const String& fileName)
 	return fileName.substr(0, extStart);
 }
 
-String SanitizeCommas(const String& s)
+UString::String SanitizeCommas(const UString::String& s)
 {
-	String clean(s);
+	UString::String clean(s);
 	ReplaceAll(_T(","), _T("&#44;"), clean);
 	return clean;
 }
 
-String Unsanitize(const String& s)
+UString::String Unsanitize(const UString::String& s)
 {
-	String dirty(s);
+	UString::String dirty(s);
 	ReplaceAll(_T("&#44;"), _T(","), dirty);
 	ReplaceAll(_T("&#47;"), _T("/"), dirty);
 	ReplaceAll(_T("&#39;"), _T("'"), dirty);
@@ -55,7 +55,7 @@ String Unsanitize(const String& s)
 	return dirty;
 }
 
-void ReplaceAll(const String& pattern, const String& replaceWith, String& s)
+void ReplaceAll(const UString::String& pattern, const UString::String& replaceWith, UString::String& s)
 {
 	std::string::size_type position(0);
 	while (position = s.find(pattern, position), position != std::string::npos)

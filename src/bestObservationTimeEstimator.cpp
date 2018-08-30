@@ -13,7 +13,7 @@
 #include <iomanip>
 #include <sstream>
 
-String BestObservationTimeEstimator::EstimateBestObservationTime(
+UString::String BestObservationTimeEstimator::EstimateBestObservationTime(
 	const std::vector<EBirdInterface::ObservationInfo>& observationInfo)
 {
 	if (observationInfo.size() < 3)
@@ -30,8 +30,8 @@ String BestObservationTimeEstimator::EstimateBestObservationTime(
 			return a.observationDate.tm_min < b.observationDate.tm_min;
 		});
 
-		OStringStream ss;
-		ss << std::setfill(Char('0'));
+		UString::OStringStream ss;
+		ss << std::setfill(UString::Char('0'));
 		for (const auto& o : obsInfoSortable)
 		{
 			if (ss.str().empty())
@@ -79,8 +79,8 @@ String BestObservationTimeEstimator::EstimateBestObservationTime(
 	auto peaks(FindPeaks(pdfEstimate));
 	assert(peaks.size() > 0);
 
-	OStringStream ss;
-	ss << std::setfill(Char('0'));
+	UString::OStringStream ss;
+	ss << std::setfill(UString::Char('0'));
 	bool lastWasRangeStart(false);
 	const auto lastPeakPtr([&peaks]() -> TimeProbability*
 	{
@@ -195,7 +195,7 @@ std::vector<BestObservationTimeEstimator::TimeProbability> BestObservationTimeEs
 		else
 			type = TimeProbability::Peak;
 
-		peaks.push_back(TimeProbability(std::distance(pdf.begin(), pdfIt), type));
+		peaks.push_back(TimeProbability(static_cast<double>(std::distance(pdf.begin(), pdfIt)), type));
 	}
 
 	assert(peaks.back().type != TimeProbability::RangeStart);

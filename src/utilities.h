@@ -11,12 +11,12 @@
 
 namespace Utilities
 {
-String ExtractCountryFromRegionCode(const String& regionCode);
-String ExtractStateFromRegionCode(const String& regionCode);
-String StripExtension(const String& fileName);
-String SanitizeCommas(const String& s);
-String Unsanitize(const String& s);
-void ReplaceAll(const String& pattern, const String& replaceWith, String& s);
+UString::String ExtractCountryFromRegionCode(const UString::String& regionCode);
+UString::String ExtractStateFromRegionCode(const UString::String& regionCode);
+UString::String StripExtension(const UString::String& fileName);
+UString::String SanitizeCommas(const UString::String& s);
+UString::String Unsanitize(const UString::String& s);
+void ReplaceAll(const UString::String& pattern, const UString::String& replaceWith, UString::String& s);
 }
 
 #endif// UTILITES_H_

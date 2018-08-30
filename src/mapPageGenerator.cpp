@@ -22,7 +22,7 @@
 #include <mutex>
 #include <cmath>
 
-const String MapPageGenerator::birdProbabilityTableName(_T("Bird Probability Table"));
+const UString::String MapPageGenerator::birdProbabilityTableName(_T("Bird Probability Table"));
 const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = {
 	NamePair(_T("Jan"), _T("January")),
 	NamePair(_T("Feb"), _T("February")),
@@ -43,25 +43,25 @@ const unsigned int MapPageGenerator::columnCount(42);
 const unsigned int MapPageGenerator::importCellCountLimit(100000);
 const unsigned int MapPageGenerator::importSizeLimit(1024 * 1024);// 1 MB
 
-MapPageGenerator::MapPageGenerator(const String& kmlLibraryPath, const String& eBirdAPIKey, const String& mapsAPIKey) :
+MapPageGenerator::MapPageGenerator(const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const UString::String& mapsAPIKey) :
 	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), ebi(eBirdAPIKey), kmlLibrary(kmlLibraryPath, eBirdAPIKey, mapsAPIKey, log)
 {
 	log.Add(Cout);
-	std::unique_ptr<OFStream> f(std::make_unique<OFStream>("temp.log"));// TODO:  Remove
+	std::unique_ptr<UString::OFStream> f(std::make_unique<UString::OFStream>("temp.log"));// TODO:  Remove
 	log.Add(std::move(f));
 }
 
-bool MapPageGenerator::WriteBestLocationsViewerPage(const String& htmlFileName,
-	const String& googleMapsKey, const String& eBirdAPIKey,
+bool MapPageGenerator::WriteBestLocationsViewerPage(const UString::String& htmlFileName,
+	const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
 	const std::vector<ObservationInfo>& observationProbabilities,
-	const String& clientId, const String& clientSecret)
+	const UString::String& clientId, const UString::String& clientSecret)
 {
-	OStringStream contents;
+	UString::OStringStream contents;
 	const Keys keys(googleMapsKey, eBirdAPIKey, clientId, clientSecret);
 	WriteHeadSection(contents, keys, observationProbabilities);
 	WriteBody(contents);
 
-	OFStream file(htmlFileName.c_str());
+	UString::OFStream file(htmlFileName.c_str());
 	if (!file.is_open() || !file.good())
 	{
 		Cerr << "Failed to open '" << htmlFileName << "' for output\n";
@@ -72,7 +72,7 @@ bool MapPageGenerator::WriteBestLocationsViewerPage(const String& htmlFileName,
 	return true;
 }
 
-void MapPageGenerator::WriteHeadSection(OStream& f, const Keys& keys,
+void MapPageGenerator::WriteHeadSection(UString::OStream& f, const Keys& keys,
 	const std::vector<ObservationInfo>& observationProbabilities)
 {
 	f << "<!DOCTYPE html>\n"
@@ -97,7 +97,7 @@ void MapPageGenerator::WriteHeadSection(OStream& f, const Keys& keys,
 	f << "  </head>\n";
 }
 
-void MapPageGenerator::WriteBody(OStream& f)
+void MapPageGenerator::WriteBody(UString::OStream& f)
 {
 	f << "  <body>\n"
 		<< "    <div id=\"map\"></div>\n"
@@ -116,12 +116,12 @@ void MapPageGenerator::WriteBody(OStream& f)
 		<< "</html>";
 }
 
-void MapPageGenerator::WriteScripts(OStream& f, const Keys& keys,
+void MapPageGenerator::WriteScripts(UString::OStream& f, const Keys& keys,
 	const std::vector<ObservationInfo>& observationProbabilities)
 {
 	double northeastLatitude, northeastLongitude;
 	double southwestLatitude, southwestLongitude;
-	String tableId;
+	UString::String tableId;
 	std::vector<unsigned int> styleIds;
 	std::vector<unsigned int> templateIds;
 
@@ -221,7 +221,7 @@ bool MapPageGenerator::CreateFusionTable(
 	std::vector<ObservationInfo> observationProbabilities,
 	double& northeastLatitude, double& northeastLongitude,
 	double& southwestLatitude, double& southwestLongitude,
-	String& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
+	UString::String& tableId, const Keys& keys, std::vector<unsigned int>& styleIds,
 	std::vector<unsigned int>& templateIds)
 {
 	GFTI fusionTables(_T("Bird Probability Tool"), keys.clientId, keys.clientSecret);
@@ -325,21 +325,21 @@ bool MapPageGenerator::CreateFusionTable(
 	// Eliminate observations that are not reported at the lowest available region detail
 	observationProbabilities.erase(std::remove_if(observationProbabilities.begin(), observationProbabilities.end(), [this](const EBirdDataProcessor::YearFrequencyInfo& y)
 	{
-		const String countryCode(Utilities::ExtractCountryFromRegionCode(y.locationCode));
-		const String stateCode(Utilities::ExtractStateFromRegionCode(y.locationCode));
+		const UString::String countryCode(Utilities::ExtractCountryFromRegionCode(y.locationCode));
+		const UString::String stateCode(Utilities::ExtractStateFromRegionCode(y.locationCode));
 		const auto& subRegionList(countryRegionInfoMap[countryCode]);
 		if (subRegionList.size() == 1 && stateCode.empty())
 			return false;// No subregions
 		else if (subRegionList.size() > 1 && stateCode.empty())
 			return true;// Subregions exist, but none was specified
 
-		const String matchString(countryCode + _T("-") + stateCode);
+		const UString::String matchString(countryCode + _T("-") + stateCode);
 		for (const auto& sr : subRegionList)
 		{
 			if (sr.code.substr(0, matchString.length()).compare(matchString) == 0)
 			{
 				if (sr.code.length() > matchString.length() &&
-					sr.code[matchString.length()] == Char('-'))
+					sr.code[matchString.length()] == UString::Char('-'))
 					return true;
 				return false;
 			}
@@ -376,7 +376,7 @@ bool MapPageGenerator::CreateFusionTable(
 	southwestLongitude = 171.7;
 
 	log << "Preparing data for upload" << std::endl;
-	OStringStream ss;
+	UString::OStringStream ss;
 	unsigned int rowCount(0);
 	unsigned int cellCount(0);
 	for (const auto& c : countyInfo)
@@ -402,7 +402,7 @@ bool MapPageGenerator::CreateFusionTable(
 			if (!UploadBuffer(fusionTables, tableId, ss.str()))
 				return false;
 
-			ss.str(String());
+			ss.str(UString::String());
 			ss.clear();
 			rowCount = 0;
 			cellCount = 0;
@@ -430,13 +430,13 @@ bool MapPageGenerator::CreateFusionTable(
 	return true;
 }
 
-std::vector<String> MapPageGenerator::GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities)
+std::vector<UString::String> MapPageGenerator::GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities)
 {
-	std::set<String> codes;
+	std::set<UString::String> codes;
 	for (const auto& o : observationProbabilities)
 		codes.insert(o.locationCode.substr(0, 2));
 
-	std::vector<String> codesVector(codes.size());
+	std::vector<UString::String> codesVector(codes.size());
 	auto it(codesVector.begin());
 	for (const auto& c : codes)
 	{
@@ -450,7 +450,7 @@ std::vector<String> MapPageGenerator::GetCountryCodeList(const std::vector<Obser
 bool MapPageGenerator::GetConfirmationFromUser()
 {
 	Cout << "Continue? (y/n) ";
-	String response;
+	UString::String response;
 	while (response.empty())
 	{
 		Cin >> response;
@@ -465,7 +465,7 @@ bool MapPageGenerator::GetConfirmationFromUser()
 }
 
 bool MapPageGenerator::DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables,
-	const String& tableId, const std::vector<unsigned int>& rowIds)
+	const UString::String& tableId, const std::vector<unsigned int>& rowIds)
 {
 	const unsigned int maxDeleteSize(500);
 	auto startIt(rowIds.begin());
@@ -483,7 +483,7 @@ bool MapPageGenerator::DeleteRowsBatch(GoogleFusionTablesInterface& fusionTables
 	return true;
 }
 
-bool MapPageGenerator::UploadBuffer(GFTI& fusionTables, const String& tableId, const String& buffer)
+bool MapPageGenerator::UploadBuffer(GFTI& fusionTables, const UString::String& tableId, const UString::String& buffer)
 {
 	fusionTablesAPIRateLimiter.Wait();
 	if (!fusionTables.Import(tableId, buffer))
@@ -529,11 +529,11 @@ bool MapPageGenerator::ProcessJSONQueryResponse(cJSON* root, std::vector<CountyI
 	return true;
 }
 
-bool MapPageGenerator::ProcessCSVQueryResponse(const String& csvData, std::vector<CountyInfo>& data)
+bool MapPageGenerator::ProcessCSVQueryResponse(const UString::String& csvData, std::vector<CountyInfo>& data)
 {
-	IStringStream inData(csvData);
-	String line;
-	const String headingLine(_T("rowid,State,County,Country,Name,Code,Geometry,Probability-Jan,Probability-Feb,Probability-Mar,Probability-Apr,Probability-May,Probability-Jun,Probability-Jul,Probability-Aug,Probability-Sep,Probability-Oct,Probability-Nov,Probability-Dec"));
+	UString::IStringStream inData(csvData);
+	UString::String line;
+	const UString::String headingLine(_T("rowid,State,County,Country,Name,Code,Geometry,Probability-Jan,Probability-Feb,Probability-Mar,Probability-Apr,Probability-May,Probability-Jun,Probability-Jul,Probability-Aug,Probability-Sep,Probability-Oct,Probability-Nov,Probability-Dec"));
 	std::getline(inData, line);
 	if (line.compare(headingLine) != 0)
 	{
@@ -552,9 +552,9 @@ bool MapPageGenerator::ProcessCSVQueryResponse(const String& csvData, std::vecto
 	return true;
 }
 
-bool MapPageGenerator::ProcessCSVQueryLine(const String& line, CountyInfo& info)
+bool MapPageGenerator::ProcessCSVQueryLine(const UString::String& line, CountyInfo& info)
 {
-	IStringStream ss(line);
+	UString::IStringStream ss(line);
 	if (!EBirdDataProcessor::ParseToken(ss, _T("row ID"), info.rowId))
 		return false;
 
@@ -589,12 +589,12 @@ bool MapPageGenerator::ProcessCSVQueryLine(const String& line, CountyInfo& info)
 }
 
 bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
-	GFTI& fusionTables, const String& tableId)
+	GFTI& fusionTables, const UString::String& tableId)
 {
 	cJSON* root(nullptr);
-	String csvData;
-	const String query(_T("SELECT ROWID,State,County,Country,Name,Code,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM ") + tableId);
-	const String nonTypedOption(_T("&typed=false"));
+	UString::String csvData;
+	const UString::String query(_T("SELECT ROWID,State,County,Country,Name,Code,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM ") + tableId);
+	const UString::String nonTypedOption(_T("&typed=false"));
 	if (!fusionTables.SubmitQuery(query + nonTypedOption, root, &csvData))
 		return false;
 
@@ -612,7 +612,7 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 	unsigned int count(0);
 	do
 	{
-		OStringStream offsetAndLimit;
+		UString::OStringStream offsetAndLimit;
 		offsetAndLimit << " OFFSET " << count * batchSize << " LIMIT " << batchSize;
 		if (!fusionTables.SubmitQuery(query + offsetAndLimit.str() + nonTypedOption, root))
 			return false;
@@ -728,15 +728,15 @@ std::vector<unsigned int> MapPageGenerator::DetermineDeleteUpdateAdd(
 }
 
 std::vector<unsigned int> MapPageGenerator::FindInvalidSpeciesDataToRemove(
-	GFTI& fusionTables, const String& tableId)
+	GFTI& fusionTables, const UString::String& tableId)
 {
 	std::vector<unsigned int> invalidRows;
 	for (const auto& month : monthNames)
 	{
 		cJSON* root(nullptr);
-		String csvData;
-		const String query(_T("SELECT ROWID FROM ") + tableId + _T(" WHERE 'Species-") + month.shortName + _T("' MATCHES '(0.00%)'"));
-		const String nonTypedOption(_T("&typed=false"));
+		UString::String csvData;
+		const UString::String query(_T("SELECT ROWID FROM ") + tableId + _T(" WHERE 'Species-") + month.shortName + _T("' MATCHES '(0.00%)'"));
+		const UString::String nonTypedOption(_T("&typed=false"));
 		if (!fusionTables.SubmitQuery(query + nonTypedOption, root, &csvData))
 			break;
 
@@ -758,7 +758,7 @@ std::vector<unsigned int> MapPageGenerator::FindInvalidSpeciesDataToRemove(
 		unsigned int count(0);
 		do
 		{
-			OStringStream offsetAndLimit;
+			UString::OStringStream offsetAndLimit;
 			offsetAndLimit << " OFFSET " << count * batchSize << " LIMIT " << batchSize;
 			if (!fusionTables.SubmitQuery(query + offsetAndLimit.str() + nonTypedOption, root))
 				break;
@@ -934,7 +934,7 @@ bool MapPageGenerator::CopyExistingDataForCounty(const ObservationInfo& entry,
 	return false;
 }
 
-String MapPageGenerator::AssembleCountyName(const String& country, const String& state, const String& county)
+UString::String MapPageGenerator::AssembleCountyName(const UString::String& country, const UString::String& state, const UString::String& county)
 {
 	if (county.empty())
 	{
@@ -947,7 +947,7 @@ String MapPageGenerator::AssembleCountyName(const String& country, const String&
 
 void MapPageGenerator::LookupAndAssignKML(CountyInfo& data)
 {
-	String countryName, stateName;
+	UString::String countryName, stateName;
 	LookupEBirdRegionNames(data.country, data.state, countryName, stateName);
 	if (countryName.empty())// Should never happen
 	{
@@ -965,21 +965,21 @@ void MapPageGenerator::LookupAndAssignKML(CountyInfo& data)
 		log << "\rWarning:  Geometry not found for '" << data.code << '\'' << std::endl;
 }
 
-void MapPageGenerator::AddRegionCodesToMap(const String& parentCode, const EBirdInterface::RegionType& regionType)
+void MapPageGenerator::AddRegionCodesToMap(const UString::String& parentCode, const EBirdInterface::RegionType& regionType)
 {
 	auto regionInfo(ebi.GetSubRegions(parentCode, regionType));
 	for (const auto& r : regionInfo)
 		eBirdRegionCodeToNameMap[r.code] = r.name;
 }
 
-void MapPageGenerator::LookupEBirdRegionNames(const String& countryCode,
-	const String& subRegion1Code, String& country, String& subRegion1)
+void MapPageGenerator::LookupEBirdRegionNames(const UString::String& countryCode,
+	const UString::String& subRegion1Code, UString::String& country, UString::String& subRegion1)
 {
-	const String fullSubRegionCode([&countryCode, &subRegion1Code]()
+	const UString::String fullSubRegionCode([&countryCode, &subRegion1Code]()
 	{
 		if (subRegion1Code.empty())
 			return countryCode;
-		return countryCode + Char('-') + subRegion1Code;
+		return countryCode + UString::Char('-') + subRegion1Code;
 	}());
 	std::shared_lock<std::shared_mutex> lock(codeToNameMapMutex);
 	auto countryIt(eBirdRegionCodeToNameMap.find(countryCode));
@@ -1040,7 +1040,7 @@ void MapPageGenerator::MapJobInfo::DoJob()
 {
 	info.country = Utilities::ExtractCountryFromRegionCode(frequencyInfo.locationCode);
 	info.state = Utilities::ExtractStateFromRegionCode(frequencyInfo.locationCode);
-	String stateName(info.state), countryName(info.country);
+	UString::String stateName(info.state), countryName(info.country);
 	for (const auto& r : regionNames)
 	{
 		if (r.code.compare(info.country) == 0)
@@ -1050,10 +1050,10 @@ void MapPageGenerator::MapJobInfo::DoJob()
 
 		if (r.code.compare(frequencyInfo.locationCode) == 0)
 		{
-			auto hyphen(frequencyInfo.locationCode.find(Char('-')));
+			auto hyphen(frequencyInfo.locationCode.find(UString::Char('-')));
 			if (hyphen != std::string::npos)
 			{
-				hyphen = frequencyInfo.locationCode.find(Char('-'), hyphen + 1);
+				hyphen = frequencyInfo.locationCode.find(UString::Char('-'), hyphen + 1);
 				if (hyphen != std::string::npos)
 					info.county = r.name;
 			}
@@ -1093,13 +1093,13 @@ GoogleFusionTablesInterface::TableInfo MapPageGenerator::BuildTableLayout()
 	return tableInfo;
 }
 
-String MapPageGenerator::CleanQueryString(const String& s)
+UString::String MapPageGenerator::CleanQueryString(const UString::String& s)
 {
-	String clean;
+	UString::String clean;
 
 	for (const auto& c : s)
 	{
-		if (c == Char('\''))
+		if (c == UString::Char('\''))
 			clean.append(_T("''"));
 		else
 			clean.push_back(c);
@@ -1108,7 +1108,7 @@ String MapPageGenerator::CleanQueryString(const String& s)
 	return clean;
 }
 
-String MapPageGenerator::ComputeColor(const double& frequency)
+UString::String MapPageGenerator::ComputeColor(const double& frequency)
 {
 	const Color minColor(0.0, 0.75, 0.365);// Greenish
 	const Color maxColor(1.0, 0.0, 0.0);// Red
@@ -1132,15 +1132,15 @@ MapPageGenerator::Color MapPageGenerator::InterpolateColor(
 		minVal + (maxVal - minVal) * value);
 }
 
-String MapPageGenerator::ColorToHexString(const Color& c)
+UString::String MapPageGenerator::ColorToHexString(const Color& c)
 {
-	OStringStream hex;
+	UString::OStringStream hex;
 	hex << "#" << std::hex
-		<< std::setw(2) << std::setfill(Char('0')) << static_cast<int>(c.red * 255.0)
-		<< std::setw(2) << std::setfill(Char('0')) << static_cast<int>(c.green * 255.0)
-		<< std::setw(2) << std::setfill(Char('0')) << static_cast<int>(c.blue * 255.0);
+		<< std::setw(2) << std::setfill(UString::Char('0')) << static_cast<int>(c.red * 255.0)
+		<< std::setw(2) << std::setfill(UString::Char('0')) << static_cast<int>(c.green * 255.0)
+		<< std::setw(2) << std::setfill(UString::Char('0')) << static_cast<int>(c.blue * 255.0);
 
-	String hexString(hex.str());
+	UString::String hexString(hex.str());
 	std::transform(hexString.begin(), hexString.end(), hexString.begin(), ::toupper);
 	return hexString;
 }
@@ -1195,7 +1195,7 @@ MapPageGenerator::Color MapPageGenerator::ColorFromHSV(
 }
 
 bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTables,
-	const String& tableId, std::vector<unsigned int>& styleIds)
+	const UString::String& tableId, std::vector<unsigned int>& styleIds)
 {
 	std::vector<GoogleFusionTablesInterface::StyleInfo> styles;
 	if (!fusionTables.ListStyles(tableId, styles))
@@ -1229,8 +1229,8 @@ bool MapPageGenerator::VerifyTableStyles(GoogleFusionTablesInterface& fusionTabl
 	return true;
 }
 
-GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const String& tableId,
-	const String& month)
+GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const UString::String& tableId,
+	const UString::String& month)
 {
 	GoogleFusionTablesInterface::StyleInfo style;
 	style.name = month;
@@ -1247,7 +1247,7 @@ GoogleFusionTablesInterface::StyleInfo MapPageGenerator::CreateStyle(const Strin
 }
 
 bool MapPageGenerator::VerifyTableTemplates(GoogleFusionTablesInterface& fusionTables,
-	const String& tableId, std::vector<unsigned int>& templateIds)
+	const UString::String& tableId, std::vector<unsigned int>& templateIds)
 {
 	std::vector<GoogleFusionTablesInterface::TemplateInfo> templates;
 	if (!fusionTables.ListTemplates(tableId, templates))
@@ -1282,13 +1282,13 @@ bool MapPageGenerator::VerifyTableTemplates(GoogleFusionTablesInterface& fusionT
 }
 
 GoogleFusionTablesInterface::TemplateInfo MapPageGenerator::CreateTemplate(
-	const String& tableId, const String& month)
+	const UString::String& tableId, const UString::String& month)
 {
 	GoogleFusionTablesInterface::TemplateInfo info;
 	info.name = month;
 	info.tableId = tableId;
 
-	OStringStream ss;
+	UString::OStringStream ss;
 	ss << "<div class='googft-info-window' style='font-family: sans-serif'>\n"
 		<< "<p><b>{Name}</b></p>\n"
 		<< "<p>Probability of Observing a Lifer: {Probability-" << std::setprecision(2) << std::fixed << month << "}%</p>\n"
@@ -1301,9 +1301,9 @@ GoogleFusionTablesInterface::TemplateInfo MapPageGenerator::CreateTemplate(
 	return info;
 }
 
-String MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProcessor::FrequencyInfo>& info)
+UString::String MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProcessor::FrequencyInfo>& info)
 {
-	OStringStream ss;
+	UString::OStringStream ss;
 	ss << std::setprecision(2) << std::fixed;
 	for (const auto& s : info)
 	{
@@ -1317,7 +1317,7 @@ String MapPageGenerator::BuildSpeciesInfoString(const std::vector<EBirdDataProce
 	return ss.str();
 }
 
-std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegionList(const String& countryCode) const
+std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegionList(const UString::String& countryCode) const
 {
 	auto regionList(ebi.GetSubRegions(countryCode, EBirdInterface::RegionType::MostDetailAvailable));
 	if (regionList.empty())// most detail available is country - use as-is
@@ -1327,11 +1327,11 @@ std::vector<EBirdInterface::RegionInfo> MapPageGenerator::GetFullCountrySubRegio
 		return std::vector<EBirdInterface::RegionInfo>(1, countryInfo->second);
 	}
 
-	const auto firstDash(regionList.front().code.find(Char('-')));
+	const auto firstDash(regionList.front().code.find(UString::Char('-')));
 	if (firstDash == std::string::npos)
 		return regionList;// I don't think we should ever get here?
 
-	const auto secondDash(regionList.front().code.find(Char('-'), firstDash + 1));
+	const auto secondDash(regionList.front().code.find(UString::Char('-'), firstDash + 1));
 	if (secondDash == std::string::npos)// most detail available is subregion 1 - use as-is
 		return regionList;
 

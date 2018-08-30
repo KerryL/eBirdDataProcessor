@@ -17,19 +17,19 @@
 class FrequencyFileReader
 {
 public:
-	FrequencyFileReader(const String& rootPath);
+	FrequencyFileReader(const UString::String& rootPath);
 	
-	bool ReadRegionData(const String& regionCode,
+	bool ReadRegionData(const UString::String& regionCode,
 		EBirdDataProcessor::FrequencyDataYear& frequencyData, EBirdDataProcessor::DoubleYear& checklistCounts);
 	
 private:
-	static const String nameIndexFileName;
-	const String rootPath;
+	static const UString::String nameIndexFileName;
+	const UString::String rootPath;
 	
-	String GenerateFileName(const String& regionCode);
+	UString::String GenerateFileName(const UString::String& regionCode);
 	
 	std::mutex mutex;
-	std::map<uint16_t, String> indexToNameMap;
+	std::map<uint16_t, UString::String> indexToNameMap;
 	bool ReadNameIndexData();
 	
 	bool DeserializeMonthData(std::ifstream& file, std::vector<EBirdDataProcessor::FrequencyInfo>& monthData, double& checklistCount) const;

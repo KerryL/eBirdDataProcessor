@@ -11,62 +11,62 @@
 // Standard C++ headers
 #include <cassert>
 
-const String GoogleFusionTablesInterface::apiRoot(_T("https://www.googleapis.com/fusiontables/v2/"));
-const String GoogleFusionTablesInterface::apiRootUpload(_T("https://www.googleapis.com/upload/fusiontables/v2/"));
-const String GoogleFusionTablesInterface::tablesEndPoint(_T("tables"));
-const String GoogleFusionTablesInterface::queryEndPoint(_T("query"));
-const String GoogleFusionTablesInterface::importEndPoint(_T("/import"));
-const String GoogleFusionTablesInterface::columnsEndPoint(_T("/columns"));
-const String GoogleFusionTablesInterface::stylesEndPoint(_T("/styles"));
-const String GoogleFusionTablesInterface::templatesEndPoint(_T("/templates"));
-const String GoogleFusionTablesInterface::copyEndPoint(_T("/copy"));
-const String GoogleFusionTablesInterface::tableListKindText(_T("fusiontables#tableList"));
-const String GoogleFusionTablesInterface::tableKindText(_T("fusiontables#table"));
-const String GoogleFusionTablesInterface::columnKindText(_T("fusiontables#column"));
-const String GoogleFusionTablesInterface::importKindText(_T("fusiontables#import"));
-const String GoogleFusionTablesInterface::queryResponseKindText(_T("fusiontables#sqlresponse"));
-const String GoogleFusionTablesInterface::styleSettingListText(_T("fusiontables#styleSettingList"));
-const String GoogleFusionTablesInterface::styleSettingKindText(_T("fusiontables#styleSetting"));
-const String GoogleFusionTablesInterface::columnListKindText(_T("fusiontables#columnList"));
-const String GoogleFusionTablesInterface::fromColumnKindText(_T("fusiontables#fromColumn"));
-const String GoogleFusionTablesInterface::templateListKindText(_T("fusiontables#templateList"));
-const String GoogleFusionTablesInterface::templateKindText(_T("fusiontables#template"));
-const String GoogleFusionTablesInterface::itemsKey(_T("items"));
-const String GoogleFusionTablesInterface::kindKey(_T("kind"));
-const String GoogleFusionTablesInterface::tableIdKey(_T("tableId"));
-const String GoogleFusionTablesInterface::styleIdKey(_T("styleId"));
-const String GoogleFusionTablesInterface::nameKey(_T("name"));
-const String GoogleFusionTablesInterface::columnIdKey(_T("columnId"));
-const String GoogleFusionTablesInterface::columnsKey(_T("columns"));
-const String GoogleFusionTablesInterface::typeKey(_T("type"));
-const String GoogleFusionTablesInterface::descriptionKey(_T("description"));
-const String GoogleFusionTablesInterface::isExportableKey(_T("isExportable"));
-const String GoogleFusionTablesInterface::errorKey(_T("error"));
-const String GoogleFusionTablesInterface::codeKey(_T("code"));
-const String GoogleFusionTablesInterface::messageKey(_T("message"));
-const String GoogleFusionTablesInterface::numberOfRowsImportedKey(_T("numRowsReceived"));
-const String GoogleFusionTablesInterface::columnNameKey(_T("columnName"));
-const String GoogleFusionTablesInterface::fillColorStylerKey(_T("fillColorStyler"));
-const String GoogleFusionTablesInterface::templateIdKey(_T("templateId"));
-const String GoogleFusionTablesInterface::bodyKey(_T("body"));
+const UString::String GoogleFusionTablesInterface::apiRoot(_T("https://www.googleapis.com/fusiontables/v2/"));
+const UString::String GoogleFusionTablesInterface::apiRootUpload(_T("https://www.googleapis.com/upload/fusiontables/v2/"));
+const UString::String GoogleFusionTablesInterface::tablesEndPoint(_T("tables"));
+const UString::String GoogleFusionTablesInterface::queryEndPoint(_T("query"));
+const UString::String GoogleFusionTablesInterface::importEndPoint(_T("/import"));
+const UString::String GoogleFusionTablesInterface::columnsEndPoint(_T("/columns"));
+const UString::String GoogleFusionTablesInterface::stylesEndPoint(_T("/styles"));
+const UString::String GoogleFusionTablesInterface::templatesEndPoint(_T("/templates"));
+const UString::String GoogleFusionTablesInterface::copyEndPoint(_T("/copy"));
+const UString::String GoogleFusionTablesInterface::tableListKindText(_T("fusiontables#tableList"));
+const UString::String GoogleFusionTablesInterface::tableKindText(_T("fusiontables#table"));
+const UString::String GoogleFusionTablesInterface::columnKindText(_T("fusiontables#column"));
+const UString::String GoogleFusionTablesInterface::importKindText(_T("fusiontables#import"));
+const UString::String GoogleFusionTablesInterface::queryResponseKindText(_T("fusiontables#sqlresponse"));
+const UString::String GoogleFusionTablesInterface::styleSettingListText(_T("fusiontables#styleSettingList"));
+const UString::String GoogleFusionTablesInterface::styleSettingKindText(_T("fusiontables#styleSetting"));
+const UString::String GoogleFusionTablesInterface::columnListKindText(_T("fusiontables#columnList"));
+const UString::String GoogleFusionTablesInterface::fromColumnKindText(_T("fusiontables#fromColumn"));
+const UString::String GoogleFusionTablesInterface::templateListKindText(_T("fusiontables#templateList"));
+const UString::String GoogleFusionTablesInterface::templateKindText(_T("fusiontables#template"));
+const UString::String GoogleFusionTablesInterface::itemsKey(_T("items"));
+const UString::String GoogleFusionTablesInterface::kindKey(_T("kind"));
+const UString::String GoogleFusionTablesInterface::tableIdKey(_T("tableId"));
+const UString::String GoogleFusionTablesInterface::styleIdKey(_T("styleId"));
+const UString::String GoogleFusionTablesInterface::nameKey(_T("name"));
+const UString::String GoogleFusionTablesInterface::columnIdKey(_T("columnId"));
+const UString::String GoogleFusionTablesInterface::columnsKey(_T("columns"));
+const UString::String GoogleFusionTablesInterface::typeKey(_T("type"));
+const UString::String GoogleFusionTablesInterface::descriptionKey(_T("description"));
+const UString::String GoogleFusionTablesInterface::isExportableKey(_T("isExportable"));
+const UString::String GoogleFusionTablesInterface::errorKey(_T("error"));
+const UString::String GoogleFusionTablesInterface::codeKey(_T("code"));
+const UString::String GoogleFusionTablesInterface::messageKey(_T("message"));
+const UString::String GoogleFusionTablesInterface::numberOfRowsImportedKey(_T("numRowsReceived"));
+const UString::String GoogleFusionTablesInterface::columnNameKey(_T("columnName"));
+const UString::String GoogleFusionTablesInterface::fillColorStylerKey(_T("fillColorStyler"));
+const UString::String GoogleFusionTablesInterface::templateIdKey(_T("templateId"));
+const UString::String GoogleFusionTablesInterface::bodyKey(_T("body"));
 
-const String GoogleFusionTablesInterface::isDefaultKey(_T("isDefaultForTable"));
-const String GoogleFusionTablesInterface::markerOptionsKey(_T("markerOptions"));
-const String GoogleFusionTablesInterface::polylineOptionsKey(_T("polylineOptions"));
-const String GoogleFusionTablesInterface::polygonOptionsKey(_T("polygonOptions"));
+const UString::String GoogleFusionTablesInterface::isDefaultKey(_T("isDefaultForTable"));
+const UString::String GoogleFusionTablesInterface::markerOptionsKey(_T("markerOptions"));
+const UString::String GoogleFusionTablesInterface::polylineOptionsKey(_T("polylineOptions"));
+const UString::String GoogleFusionTablesInterface::polygonOptionsKey(_T("polygonOptions"));
 
-const String GoogleFusionTablesInterface::typeStringText(_T("STRING"));
-const String GoogleFusionTablesInterface::typeNumberText(_T("NUMBER"));
-const String GoogleFusionTablesInterface::typeDateTimeText(_T("DATETIME"));
-const String GoogleFusionTablesInterface::typeLocationText(_T("LOCATION"));
+const UString::String GoogleFusionTablesInterface::typeStringText(_T("STRING"));
+const UString::String GoogleFusionTablesInterface::typeNumberText(_T("NUMBER"));
+const UString::String GoogleFusionTablesInterface::typeDateTimeText(_T("DATETIME"));
+const UString::String GoogleFusionTablesInterface::typeLocationText(_T("LOCATION"));
 
-const String GoogleFusionTablesInterface::fusionTableRefreshTokenFileName(_T("~ftToken"));
+const UString::String GoogleFusionTablesInterface::fusionTableRefreshTokenFileName(_T("~ftToken"));
 
 const unsigned int GoogleFusionTablesInterface::writeRequestRateLimit(25);// [requests per minute] (actual limit is 30/min)
 
 GoogleFusionTablesInterface::GoogleFusionTablesInterface(
-	const String& userAgent, const String& oAuthClientId,
-	const String& oAuthClientSecret) : JSONInterface(userAgent)
+	const UString::String& userAgent, const UString::String& oAuthClientId,
+	const UString::String& oAuthClientSecret) : JSONInterface(userAgent)
 {
 	OAuth2Interface::Get().SetClientID(oAuthClientId);
 	OAuth2Interface::Get().SetClientSecret(oAuthClientSecret);
@@ -78,21 +78,21 @@ GoogleFusionTablesInterface::GoogleFusionTablesInterface(
 	OAuth2Interface::Get().SetTokenURL(_T("https://accounts.google.com/o/oauth2/token"));
 
 	{
-		IFStream tokenInFile(fusionTableRefreshTokenFileName.c_str());
+		UString::IFStream tokenInFile(fusionTableRefreshTokenFileName.c_str());
 		if (tokenInFile.good() && tokenInFile.is_open())
 		{
-			String token;
+			UString::String token;
 			tokenInFile >> token;
 			OAuth2Interface::Get().SetRefreshToken(token);
 		}
 	}
 
 	if (OAuth2Interface::Get().GetRefreshToken().empty())
-		OAuth2Interface::Get().SetRefreshToken(String());// This is how a new refresh token is requested
+		OAuth2Interface::Get().SetRefreshToken(UString::String());// This is how a new refresh token is requested
 
 	if (!OAuth2Interface::Get().GetRefreshToken().empty())
 	{
-		OFStream tokenOutFile(fusionTableRefreshTokenFileName.c_str());
+		UString::OFStream tokenOutFile(fusionTableRefreshTokenFileName.c_str());
 		tokenOutFile << OAuth2Interface::Get().GetRefreshToken();
 	}
 }
@@ -193,11 +193,11 @@ bool GoogleFusionTablesInterface::ListTables(std::vector<TableInfo>& tables)
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteTable(const String& tableId)
+bool GoogleFusionTablesInterface::DeleteTable(const UString::String& tableId)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId, response, AddAuthAndDeleteToCurlHeader, &authTokenData))
+	if (!DoCURLGet(apiRoot + tablesEndPoint + UString::Char('/') + tableId, response, AddAuthAndDeleteToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to delete table\n";
 		return false;
@@ -206,11 +206,11 @@ bool GoogleFusionTablesInterface::DeleteTable(const String& tableId)
 	return true;
 }
 
-bool GoogleFusionTablesInterface::CopyTable(const String& tableId, TableInfo& info)
+bool GoogleFusionTablesInterface::CopyTable(const UString::String& tableId, TableInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + copyEndPoint, std::string(),
+	if (!DoCURLPost(apiRoot + tablesEndPoint + UString::Char('/') + tableId + copyEndPoint, std::string(),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to copy table\n";
@@ -240,12 +240,12 @@ bool GoogleFusionTablesInterface::CopyTable(const String& tableId, TableInfo& in
 	return true;
 }
 
-bool GoogleFusionTablesInterface::Import(const String& tableId,
-	const String& csvData)
+bool GoogleFusionTablesInterface::Import(const UString::String& tableId,
+	const UString::String& csvData)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	if (!DoCURLPost(apiRootUpload + tablesEndPoint + Char('/') + tableId + importEndPoint + _T("?uploadType=media"), UString::ToNarrowString(csvData),
+	if (!DoCURLPost(apiRootUpload + tablesEndPoint + UString::Char('/') + tableId + importEndPoint + _T("?uploadType=media"), UString::ToNarrowString(csvData),
 		response, AddAuthAndOctetContentTypeToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to import data to table\n";
@@ -272,7 +272,7 @@ bool GoogleFusionTablesInterface::Import(const String& tableId,
 		return false;
 	}
 
-	String rowsString;
+	UString::String rowsString;
 	if (!ReadJSON(root, numberOfRowsImportedKey, rowsString))
 	{
 		Cerr << "Failed to check number of imported rows\n";
@@ -286,12 +286,12 @@ bool GoogleFusionTablesInterface::Import(const String& tableId,
 	return true;
 }
 
-bool GoogleFusionTablesInterface::ListColumns(const String& tableId,
+bool GoogleFusionTablesInterface::ListColumns(const UString::String& tableId,
 	std::vector<TableInfo::ColumnInfo>& columnInfo)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + columnsEndPoint,
+	if (!DoCURLGet(apiRoot + tablesEndPoint + UString::Char('/') + tableId + columnsEndPoint,
 		response, AddAuthToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to request column list\n";
@@ -356,7 +356,7 @@ bool GoogleFusionTablesInterface::ResponseHasError(cJSON* root)
 		return false;
 
 	unsigned int errorCode;
-	String errorMessage;
+	UString::String errorMessage;
 	if (ReadJSON(error, codeKey, errorCode) && ReadJSON(error, messageKey, errorMessage))
 		Cerr << "Response contains error " << errorCode << ":  " << errorMessage << '\n';
 	else
@@ -372,7 +372,7 @@ bool GoogleFusionTablesInterface::ResponseTooLarge(cJSON* root)
 		return false;
 
 	unsigned int errorCode;
-	String errorMessage;
+	UString::String errorMessage;
 	if (ReadJSON(error, codeKey, errorCode) && ReadJSON(error, messageKey, errorMessage))
 	{
 		if (errorCode == 503 && errorMessage.find(_T("Please use media download.")) != std::string::npos)
@@ -382,9 +382,9 @@ bool GoogleFusionTablesInterface::ResponseTooLarge(cJSON* root)
 	return false;
 }
 
-bool GoogleFusionTablesInterface::KindMatches(cJSON* root, const String& kind)
+bool GoogleFusionTablesInterface::KindMatches(cJSON* root, const UString::String& kind)
 {
-	String kindString;
+	UString::String kindString;
 	if (!ReadJSON(root, kindKey, kindString))
 		return false;
 
@@ -556,7 +556,7 @@ bool GoogleFusionTablesInterface::ReadColumn(cJSON* root, TableInfo::ColumnInfo&
 		return false;
 	}
 
-	String typeString;
+	UString::String typeString;
 	if (!ReadJSON(root, typeKey, typeString))
 	{
 		Cerr << "Failed to read column type\n";
@@ -573,13 +573,13 @@ bool GoogleFusionTablesInterface::ReadColumn(cJSON* root, TableInfo::ColumnInfo&
 	return true;
 }
 
-String GoogleFusionTablesInterface::BuildCreateTableData(const TableInfo& info)
+UString::String GoogleFusionTablesInterface::BuildCreateTableData(const TableInfo& info)
 {
 	cJSON* root(cJSON_CreateObject());
 	if (!root)
 	{
 		Cerr << "Failed to create table data\n";
-		return String();
+		return UString::String();
 	}
 
 	cJSON_AddStringToObject(root, UString::ToNarrowString(nameKey).c_str(), UString::ToNarrowString(info.name).c_str());
@@ -596,7 +596,7 @@ String GoogleFusionTablesInterface::BuildCreateTableData(const TableInfo& info)
 	{
 		Cerr << "Failed to create column array\n";
 		cJSON_Delete(root);
-		return String();
+		return UString::String();
 	}
 
 	cJSON_AddItemToObject(root, UString::ToNarrowString(columnsKey).c_str(), columns);
@@ -608,12 +608,12 @@ String GoogleFusionTablesInterface::BuildCreateTableData(const TableInfo& info)
 		{
 			Cerr << "Failed to create column information\n";
 			cJSON_Delete(root);
-			return String();
+			return UString::String();
 		}
 		cJSON_AddItemToArray(columns, columnItem);
 	}
 
-	const String data(UString::ToStringType(cJSON_Print(root)));
+	const UString::String data(UString::ToStringType(cJSON_Print(root)));
 	cJSON_Delete(root);
 	return data;
 }
@@ -630,7 +630,7 @@ cJSON* GoogleFusionTablesInterface::BuildColumnItem(const TableInfo::ColumnInfo&
 	return columnItem;
 }
 
-String GoogleFusionTablesInterface::GetColumnTypeString(
+UString::String GoogleFusionTablesInterface::GetColumnTypeString(
 	const TableInfo::ColumnInfo::ColumnType& type)
 {
 	switch (type)
@@ -651,11 +651,11 @@ String GoogleFusionTablesInterface::GetColumnTypeString(
 		assert(false);
 	}
 
-	return String();
+	return UString::String();
 }
 
 GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType
-	GoogleFusionTablesInterface::GetColumnTypeFromString(const String& s)
+	GoogleFusionTablesInterface::GetColumnTypeFromString(const UString::String& s)
 {
 	if (s.compare(typeStringText) == 0)
 		return TableInfo::ColumnInfo::ColumnType::String;
@@ -670,9 +670,9 @@ GoogleFusionTablesInterface::TableInfo::ColumnInfo::ColumnType
 	return TableInfo::ColumnInfo::ColumnType::String;
 }
 
-bool GoogleFusionTablesInterface::DeleteAllRows(const String& tableId)
+bool GoogleFusionTablesInterface::DeleteAllRows(const UString::String& tableId)
 {
-	const String deleteCommand(_T("DELETE FROM ") + tableId);
+	const UString::String deleteCommand(_T("DELETE FROM ") + tableId);
 	cJSON* root(nullptr);
 	if (!SubmitQuery(deleteCommand, root))
 		return false;
@@ -681,11 +681,11 @@ bool GoogleFusionTablesInterface::DeleteAllRows(const String& tableId)
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteRow(const String& tableId, const unsigned int& rowId)
+bool GoogleFusionTablesInterface::DeleteRow(const UString::String& tableId, const unsigned int& rowId)
 {
-	OStringStream ss;
+	UString::OStringStream ss;
 	ss << rowId;
-	const String deleteCommand(_T("DELETE FROM ") + tableId + _T(" WHERE ROWID = ") + ss.str());
+	const UString::String deleteCommand(_T("DELETE FROM ") + tableId + _T(" WHERE ROWID = ") + ss.str());
 	cJSON* root(nullptr);
 	if (!SubmitQuery(deleteCommand, root))
 		return false;
@@ -694,10 +694,10 @@ bool GoogleFusionTablesInterface::DeleteRow(const String& tableId, const unsigne
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteRows(const String& tableId,
+bool GoogleFusionTablesInterface::DeleteRows(const UString::String& tableId,
 	const std::vector<unsigned int>& rowIds)
 {
-	OStringStream ss;
+	UString::OStringStream ss;
 	for (const auto& id : rowIds)
 	{
 		if (!ss.str().empty())
@@ -705,7 +705,7 @@ bool GoogleFusionTablesInterface::DeleteRows(const String& tableId,
 		ss << id;
 	}
 
-	const String deleteCommand(_T("DELETE FROM ") + tableId + _T(" WHERE ROWID IN (") + ss.str() + _T(")"));
+	const UString::String deleteCommand(_T("DELETE FROM ") + tableId + _T(" WHERE ROWID IN (") + ss.str() + _T(")"));
 	cJSON* root(nullptr);
 	if (!SubmitQuery(deleteCommand, root))
 		return false;
@@ -714,7 +714,7 @@ bool GoogleFusionTablesInterface::DeleteRows(const String& tableId,
 	return true;
 }
 
-bool GoogleFusionTablesInterface::SetTableAccess(const String& tableId, const TableAccess& access)
+bool GoogleFusionTablesInterface::SetTableAccess(const UString::String& tableId, const TableAccess& access)
 {
 	// TODO:  implement
 	Cerr << "Setting table access permissions is not currently implemented.  You can do this"
@@ -722,7 +722,7 @@ bool GoogleFusionTablesInterface::SetTableAccess(const String& tableId, const Ta
 	return false;
 }
 
-bool GoogleFusionTablesInterface::SubmitQuery(const String& query, cJSON*& root, String* csvData)
+bool GoogleFusionTablesInterface::SubmitQuery(const UString::String& query, cJSON*& root, UString::String* csvData)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
@@ -764,7 +764,7 @@ bool GoogleFusionTablesInterface::SubmitQuery(const String& query, cJSON*& root,
 	return true;
 }
 
-bool GoogleFusionTablesInterface::SubmitQueryMediaDownload(const String& query, String& csvData)
+bool GoogleFusionTablesInterface::SubmitQueryMediaDownload(const UString::String& query, UString::String& csvData)
 {
 	std::string rawResponse;
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
@@ -780,11 +780,11 @@ bool GoogleFusionTablesInterface::SubmitQueryMediaDownload(const String& query, 
 	return true;
 }
 
-bool GoogleFusionTablesInterface::CreateStyle(const String& tableId, StyleInfo& info)
+bool GoogleFusionTablesInterface::CreateStyle(const UString::String& tableId, StyleInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint, UString::ToNarrowString(BuildCreateStyleData(info)),
+	if (!DoCURLPost(apiRoot + tablesEndPoint + UString::Char('/') + tableId + stylesEndPoint, UString::ToNarrowString(BuildCreateStyleData(info)),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to create style\n";
@@ -814,11 +814,11 @@ bool GoogleFusionTablesInterface::CreateStyle(const String& tableId, StyleInfo& 
 	return true;
 }
 
-bool GoogleFusionTablesInterface::ListStyles(const String& tableId, std::vector<StyleInfo>& styles)
+bool GoogleFusionTablesInterface::ListStyles(const UString::String& tableId, std::vector<StyleInfo>& styles)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
+	if (!DoCURLGet(apiRoot + tablesEndPoint + UString::Char('/') + tableId + stylesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to request style list\n";
 		return false;
@@ -874,13 +874,13 @@ bool GoogleFusionTablesInterface::ListStyles(const String& tableId, std::vector<
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteStyle(const String& tableId, const unsigned int& styleId)
+bool GoogleFusionTablesInterface::DeleteStyle(const UString::String& tableId, const unsigned int& styleId)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	OStringStream ss;
+	UString::OStringStream ss;
 	ss << styleId;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + stylesEndPoint + Char('/') + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
+	if (!DoCURLGet(apiRoot + tablesEndPoint + UString::Char('/') + tableId + stylesEndPoint + UString::Char('/') + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to delete style\n";
 		return false;
@@ -889,13 +889,13 @@ bool GoogleFusionTablesInterface::DeleteStyle(const String& tableId, const unsig
 	return true;
 }
 
-String GoogleFusionTablesInterface::BuildCreateStyleData(const StyleInfo& info)
+UString::String GoogleFusionTablesInterface::BuildCreateStyleData(const StyleInfo& info)
 {
 	cJSON* root(cJSON_CreateObject());
 	if (!root)
 	{
 		Cerr << "Failed to create style data\n";
-		return String();
+		return UString::String();
 	}
 
 	cJSON_AddStringToObject(root, UString::ToNarrowString(nameKey).c_str(), UString::ToNarrowString(info.name).c_str());
@@ -914,7 +914,7 @@ String GoogleFusionTablesInterface::BuildCreateStyleData(const StyleInfo& info)
 	if (info.hasPolygonOptions)
 		AddPolygonOptions(root, info.polygonOptions);
 
-	const String data(UString::ToStringType(cJSON_Print(root)));
+	const UString::String data(UString::ToStringType(cJSON_Print(root)));
 	cJSON_Delete(root);
 	return data;
 }
@@ -1048,7 +1048,7 @@ bool GoogleFusionTablesInterface::ReadOptions(cJSON* root, std::vector<StyleInfo
 	cJSON* next(root->child);
 	while (next)
 	{
-		const String key(UString::ToStringType(next->string));
+		const UString::String key(UString::ToStringType(next->string));
 
 		if (next->type == cJSON_Number)
 			info.push_back(StyleInfo::Options(key, next->valuedouble));
@@ -1085,11 +1085,11 @@ bool GoogleFusionTablesInterface::ReadOptions(cJSON* root, std::vector<StyleInfo
 	return true;
 }
 
-bool GoogleFusionTablesInterface::CreateTemplate(const String& tableId, TemplateInfo& info)
+bool GoogleFusionTablesInterface::CreateTemplate(const UString::String& tableId, TemplateInfo& info)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	if (!DoCURLPost(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint, UString::ToNarrowString(BuildCreateTemplateData(info)),
+	if (!DoCURLPost(apiRoot + tablesEndPoint + UString::Char('/') + tableId + templatesEndPoint, UString::ToNarrowString(BuildCreateTemplateData(info)),
 		response, AddAuthAndJSONContentTypeToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to create template\n";
@@ -1119,11 +1119,11 @@ bool GoogleFusionTablesInterface::CreateTemplate(const String& tableId, Template
 	return true;
 }
 
-bool GoogleFusionTablesInterface::ListTemplates(const String& tableId, std::vector<TemplateInfo>& templates)
+bool GoogleFusionTablesInterface::ListTemplates(const UString::String& tableId, std::vector<TemplateInfo>& templates)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
+	if (!DoCURLGet(apiRoot + tablesEndPoint + UString::Char('/') + tableId + templatesEndPoint, response, AddAuthToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to request template list\n";
 		return false;
@@ -1179,13 +1179,13 @@ bool GoogleFusionTablesInterface::ListTemplates(const String& tableId, std::vect
 	return true;
 }
 
-bool GoogleFusionTablesInterface::DeleteTemplate(const String& tableId, const unsigned int& templateId)
+bool GoogleFusionTablesInterface::DeleteTemplate(const UString::String& tableId, const unsigned int& templateId)
 {
 	const AuthTokenData authTokenData(OAuth2Interface::Get().GetAccessToken());
 	std::string response;
-	OStringStream ss;
+	UString::OStringStream ss;
 	ss << templateId;
-	if (!DoCURLGet(apiRoot + tablesEndPoint + Char('/') + tableId + templatesEndPoint + Char('/') + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
+	if (!DoCURLGet(apiRoot + tablesEndPoint + UString::Char('/') + tableId + templatesEndPoint + UString::Char('/') + ss.str(), response, AddAuthAndDeleteToCurlHeader, &authTokenData))
 	{
 		Cerr << "Failed to delete template\n";
 		return false;
@@ -1194,13 +1194,13 @@ bool GoogleFusionTablesInterface::DeleteTemplate(const String& tableId, const un
 	return true;
 }
 
-String GoogleFusionTablesInterface::BuildCreateTemplateData(const TemplateInfo& info)
+UString::String GoogleFusionTablesInterface::BuildCreateTemplateData(const TemplateInfo& info)
 {
 	cJSON* root(cJSON_CreateObject());
 	if (!root)
 	{
 		Cerr << "Failed to create template data\n";
-		return String();
+		return UString::String();
 	}
 
 	cJSON_AddStringToObject(root, UString::ToNarrowString(nameKey).c_str(), UString::ToNarrowString(info.name).c_str());
@@ -1211,7 +1211,7 @@ String GoogleFusionTablesInterface::BuildCreateTemplateData(const TemplateInfo& 
 	else
 		cJSON_AddFalseToObject(root, UString::ToNarrowString(isDefaultKey).c_str());
 
-	const String data(UString::ToStringType(cJSON_Print(root)));
+	const UString::String data(UString::ToStringType(cJSON_Print(root)));
 	cJSON_Delete(root);
 	return data;
 }

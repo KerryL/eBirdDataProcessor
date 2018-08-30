@@ -50,9 +50,9 @@ void ThreadPool::AddJob(std::unique_ptr<JobInfoBase> job)
 void ThreadPool::WaitForAllJobsComplete() const
 {
 	std::unique_lock<std::mutex> lock(queueMutex);
-    unsigned int maxJobQueueSize(jobQueue.size());
-    const auto originalPrecision(Cout.precision());
-    Cout.precision(1);
+	size_t maxJobQueueSize(jobQueue.size());
+	const auto originalPrecision(Cout.precision());
+	Cout.precision(1);
 	jobCompleteCondition.wait(lock, [this, &maxJobQueueSize]()
 	{
         if (jobQueue.size() > maxJobQueueSize)

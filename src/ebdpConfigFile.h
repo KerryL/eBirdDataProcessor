@@ -14,7 +14,7 @@
 class EBDPConfigFile : public ConfigFile
 {
 public:
-	EBDPConfigFile(OStream &outStream = Cout)
+	EBDPConfigFile(UString::OStream &outStream = Cout)
 		: ConfigFile(outStream) {}
 
 	EBDPConfig& GetConfig() { return config; }

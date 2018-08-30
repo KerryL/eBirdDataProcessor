@@ -31,13 +31,13 @@
 #include <numeric>
 #include <locale>
 
-const String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
+const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
 
-bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const String& fileName)
+bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fileName)
 {
 	assert(frequencyMap.empty());
 
-	IFStream dataset(fileName.c_str());
+	UString::IFStream dataset(fileName.c_str());
 	if (!dataset.good() || !dataset.is_open())
 	{
 		Cerr << "Failed to open '" << fileName << "' for input\n";
@@ -46,7 +46,7 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const String& fileName)
 
 	Cout << "Parsing observation data from '" << fileName << '\'' << std::endl;
 
-	String line;
+	UString::String line;
 	if (!std::getline(dataset, line))
 	{
 		Cerr << "Failed to read header line\n";
@@ -77,7 +77,7 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const String& fileName)
 	return true;
 }
 
-bool EBirdDatasetInterface::ProcessLine(const String& line)
+bool EBirdDatasetInterface::ProcessLine(const UString::String& line)
 {
 	Observation observation;
 	if (!ParseLine(line, observation))
@@ -107,7 +107,7 @@ void EBirdDatasetInterface::RemoveRarities()
 	}
 }
 
-bool EBirdDatasetInterface::WriteNameIndexFile(const String& frequencyDataPath) const
+bool EBirdDatasetInterface::WriteNameIndexFile(const UString::String& frequencyDataPath) const
 {
 	if (!EnsureFolderExists(frequencyDataPath))
 	{
@@ -115,7 +115,7 @@ bool EBirdDatasetInterface::WriteNameIndexFile(const String& frequencyDataPath) 
 		return false;
 	}
 
-	OFStream file(frequencyDataPath + nameIndexFileName);
+	UString::OFStream file(frequencyDataPath + nameIndexFileName);
 	file.imbue(std::locale());
 	for (const auto& pair : nameIndexMap)
 		file << pair.first << ',' << pair.second << '\n';
@@ -149,7 +149,7 @@ bool EBirdDatasetInterface::SerializeMonthData(std::ofstream& file, const Freque
 	return true;
 }
 
-bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath) const
+bool EBirdDatasetInterface::WriteFrequencyFiles(const UString::String& frequencyDataPath) const
 {
 	if (!WriteNameIndexFile(frequencyDataPath))
 		return false;
@@ -157,7 +157,7 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 	bool success(true);
 	for (const auto& entry : frequencyMap)
 	{
-		const String path(frequencyDataPath + GetPath(entry.first));
+		const UString::String path(frequencyDataPath + GetPath(entry.first));
 		if (!EnsureFolderExists(path))
 		{
 			Cerr << "Failed to create directory '" << path << "'\n";
@@ -165,7 +165,7 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 			continue;
 		}
 
-		const String fullFileName(path + entry.first + _T(".bin"));
+		const UString::String fullFileName(path + entry.first + _T(".bin"));
 		std::ofstream file(fullFileName.c_str(), std::ios::binary);
 		if (!file.is_open() || !file.good())
 		{
@@ -188,18 +188,18 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const String& frequencyDataPath)
 	return success;
 }
 
-bool EBirdDatasetInterface::IncludeInLikelihoodCalculation(const String& commonName)
+bool EBirdDatasetInterface::IncludeInLikelihoodCalculation(const UString::String& commonName)
 {
 	return commonName.find(_T(" sp.")) == std::string::npos &&// Eliminate Spuhs
-		commonName.find(Char('/')) == std::string::npos &&// Eliminate species1/species2 type entries
+		commonName.find(UString::Char('/')) == std::string::npos &&// Eliminate species1/species2 type entries
 		commonName.find(_T("hybrid")) == std::string::npos &&// Eliminate hybrids
 		commonName.find(_T("Domestic")) == std::string::npos;// Eliminate domestic birds
 }
 
-bool EBirdDatasetInterface::EnsureFolderExists(const String& dir)// Creates each level of a directory as needed to generate the full path
+bool EBirdDatasetInterface::EnsureFolderExists(const UString::String& dir)// Creates each level of a directory as needed to generate the full path
 {
 #ifdef _WIN32
-	std::string::size_type nextSlash(std::min(dir.find(Char('/')), dir.find(Char('\\'))));
+	std::string::size_type nextSlash(std::min(dir.find(UString::Char('/')), dir.find(UString::Char('\\'))));
 #else
 	std::string::size_type nextSlash(dir.find(Char('/')));
 #endif// _WIN32
@@ -213,7 +213,7 @@ bool EBirdDatasetInterface::EnsureFolderExists(const String& dir)// Creates each
 		}
 
 #ifdef _WIN32
-		nextSlash = std::min(dir.find(Char('/'), nextSlash + 1), dir.find(Char('\\'), nextSlash + 1));
+		nextSlash = std::min(dir.find(UString::Char('/'), nextSlash + 1), dir.find(UString::Char('\\'), nextSlash + 1));
 #else
 		nextSlash = dir.find(Char('/'), nextSlash + 1);
 #endif// _WIN32
@@ -228,7 +228,7 @@ bool EBirdDatasetInterface::EnsureFolderExists(const String& dir)// Creates each
 	return true;
 }
 
-bool EBirdDatasetInterface::CreateFolder(const String& dir)// Can only create one more level deep at a time
+bool EBirdDatasetInterface::CreateFolder(const UString::String& dir)// Can only create one more level deep at a time
 {
 #ifdef _WIN32
 	const auto error(_mkdir(UString::ToNarrowString(dir).c_str()));
@@ -239,7 +239,7 @@ bool EBirdDatasetInterface::CreateFolder(const String& dir)// Can only create on
 	return error == 0;
 }
 
-bool EBirdDatasetInterface::FolderExists(const String& dir)
+bool EBirdDatasetInterface::FolderExists(const UString::String& dir)
 {
 	DIR* directory(opendir(UString::ToNarrowString(dir).c_str()));
 	if (directory)
@@ -253,25 +253,25 @@ bool EBirdDatasetInterface::FolderExists(const String& dir)
 	return false;
 }
 
-String EBirdDatasetInterface::GetPath(const String& regionCode)
+UString::String EBirdDatasetInterface::GetPath(const UString::String& regionCode)
 {
-	const auto firstDash(regionCode.find(Char('-')));// Path based on country code only
+	const auto firstDash(regionCode.find(UString::Char('-')));// Path based on country code only
 	assert(firstDash != std::string::npos);
 #ifdef _WIN32
-	const Char slash('\\');
+	const UString::Char slash('\\');
 #else
 	const Char slash('/');
 #endif// _WIN32
 	return regionCode.substr(0, firstDash) + slash;
 }
 
-bool EBirdDatasetInterface::ParseLine(const String& line, Observation& observation)
+bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& observation)
 {
 	unsigned int column(0);
-	String token;
-	String countryCode, stateCode, dateString;
-	IStringStream ss(line);
-	while (std::getline(ss, token, Char('\t')))
+	UString::String token;
+	UString::String countryCode, stateCode, dateString;
+	UString::IStringStream ss(line);
+	while (std::getline(ss, token, UString::Char('\t')))
 	{
 		if (column == 4)
 			observation.commonName = token;
@@ -313,13 +313,13 @@ bool EBirdDatasetInterface::ParseLine(const String& line, Observation& observati
 	return true;
 }
 
-bool EBirdDatasetInterface::HeaderMatchesExpectedFormat(const String& line)
+bool EBirdDatasetInterface::HeaderMatchesExpectedFormat(const UString::String& line)
 {
-	const String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING BIRD ATLAS CODE	BREEDING BIRD ATLAS CATEGORY	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	 LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	FIRST NAME	LAST NAME	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS	"));
+	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING BIRD ATLAS CODE	BREEDING BIRD ATLAS CATEGORY	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	 LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	FIRST NAME	LAST NAME	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS	"));
 	return line.compare(expectedHeader) == 0;
 }
 
-EBirdDatasetInterface::Date EBirdDatasetInterface::ConvertStringToDate(const String& s)
+EBirdDatasetInterface::Date EBirdDatasetInterface::ConvertStringToDate(const UString::String& s)
 {
 	assert(s.length() == 10);
 	Date date;

@@ -8,13 +8,13 @@
 
 struct EBDPConfig
 {
-	String dataFileName;
-	String outputFileName;
+	UString::String dataFileName;
+	UString::String outputFileName;
 
-	String countryFilter;
-	String stateFilter;
-	String countyFilter;
-	String locationFilter;
+	UString::String countryFilter;
+	UString::String stateFilter;
+	UString::String countyFilter;
+	UString::String locationFilter;
 
 	enum class ListType : int
 	{
@@ -74,25 +74,25 @@ struct EBDPConfig
 	TargetNeedArea targetNeedArea;
 	unsigned int topBirdCount;
 	unsigned int recentObservationPeriod;// [days]
-	String frequencyFilePath;
-	String targetInfoFileName;
+	UString::String frequencyFilePath;
+	UString::String targetInfoFileName;
 
 	int showOnlyPhotoNeeds;
 	int showOnlyAudioNeeds;
-	String mediaFileName;
-	String mediaListHTML;
+	UString::String mediaFileName;
+	UString::String mediaListHTML;
 
-	String googleMapsAPIKey;
-	String homeLocation;
-	String eBirdApiKey;
+	UString::String googleMapsAPIKey;
+	UString::String homeLocation;
+	UString::String eBirdApiKey;
 
 	bool findMaxNeedsLocations;
-	String kmlLibraryPath;
+	UString::String kmlLibraryPath;
 
-	String oAuthClientId;
-	String oAuthClientSecret;
+	UString::String oAuthClientId;
+	UString::String oAuthClientSecret;
 
-	String eBirdDatasetPath;
+	UString::String eBirdDatasetPath;
 };
 
 #endif// EBDP_CONFIG_H_

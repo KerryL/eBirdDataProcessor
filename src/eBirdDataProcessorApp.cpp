@@ -36,86 +36,86 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		return 1;
 	}
 
-	const String configFileName(UString::ToStringType(argv[1]));
+	const UString::String configFileName(UString::ToStringType(argv[1]));
 	EBDPConfigFile configFile;
 	if (!configFile.ReadConfiguration(configFileName))
 		return 1;
 
 	/*KMLLibraryManager kml(configFile.GetConfig().kmlLibraryPath, configFile.GetConfig().eBirdApiKey, configFile.GetConfig().googleMapsAPIKey, Cout);
 	String s;
-	s = kml.GetKML(_T("Azerbaijan"), _T("Agcabädi"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Salyan"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Siyäzän"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Baki"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Länkäran"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Beyläqan"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Däväçi"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Xizi"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Qax"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Lerik"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Naxçivan"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Neftçala"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Masalli"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Biläsuvar"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Samux"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Yevlax"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Quba"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Haciqabul"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Qusar"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Kürdämir"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Qäbälä"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Säki"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Ismayilli"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Xaçmaz"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Samaxi"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Abseron"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Imisli"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Tovuz"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Balakän"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Sumqayit"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Goranboy"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Sabirabad"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Agcabädi"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Agdas"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Astara"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Qazax"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Gädäbäy"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Yardimli"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Kälbäcär"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Cälilabab"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Daskäsän"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Agstafa"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Xanlar"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Qobustan"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Mingäçevir"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Ucar"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Agsu"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Susa"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Xocali"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Gäncä"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Saatli"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Göyçay"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Bärdä"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Zärdab"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Agdam"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Cäbrayil"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Füzuli"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Laçin"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Länkäran Municipality"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Naftalan"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Oguz"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Qubadli"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Susa Municipality"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Sämkir"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Tärtär"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Xankändi"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Xocavänd"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Yevlax Municipality"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Zaqatala"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Zängilan"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("Äli Bayramli"), String());
-	s = kml.GetKML(_T("Azerbaijan"), _T("??ki Municipality"), String());
-	//kml.GetKML(_T("Finland"), _T("Pirkanmaa"), String());//*/
+	s = kml.GetKML(_T("Azerbaijan"), _T("Agcabädi"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Salyan"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Siyäzän"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Baki"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Länkäran"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Beyläqan"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Däväçi"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Xizi"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Qax"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Lerik"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Naxçivan"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Neftçala"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Masalli"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Biläsuvar"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Samux"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Yevlax"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Quba"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Haciqabul"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Qusar"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Kürdämir"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Qäbälä"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Säki"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Ismayilli"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Xaçmaz"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Samaxi"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Abseron"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Imisli"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Tovuz"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Balakän"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Sumqayit"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Goranboy"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Sabirabad"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Agcabädi"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Agdas"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Astara"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Qazax"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Gädäbäy"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Yardimli"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Kälbäcär"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Cälilabab"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Daskäsän"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Agstafa"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Xanlar"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Qobustan"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Mingäçevir"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Ucar"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Agsu"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Susa"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Xocali"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Gäncä"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Saatli"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Göyçay"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Bärdä"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Zärdab"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Agdam"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Cäbrayil"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Füzuli"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Laçin"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Länkäran Municipality"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Naftalan"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Oguz"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Qubadli"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Susa Municipality"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Sämkir"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Tärtär"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Xankändi"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Xocavänd"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Yevlax Municipality"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Zaqatala"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Zängilan"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("Äli Bayramli"), UString::String());
+	s = kml.GetKML(_T("Azerbaijan"), _T("??ki Municipality"), UString::String());
+	//kml.GetKML(_T("Finland"), _T("Pirkanmaa"), UString::String());//*/
 
 	if (!configFile.GetConfig().eBirdDatasetPath.empty())// Ignore all other options and generate global frequency data
 	{
@@ -200,13 +200,13 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	{
 		processor.SortData(configFile.GetConfig().primarySort, configFile.GetConfig().secondarySort);
 
-		const String list(processor.GenerateList(configFile.GetConfig().listType,
+		const UString::String list(processor.GenerateList(configFile.GetConfig().listType,
 			configFile.GetConfig().showOnlyPhotoNeeds, configFile.GetConfig().showOnlyAudioNeeds));
 		Cout << list << std::endl;
 
 		if (!configFile.GetConfig().outputFileName.empty())
 		{
-			OFStream outFile(configFile.GetConfig().outputFileName.c_str());
+			UString::OFStream outFile(configFile.GetConfig().outputFileName.c_str());
 			if (!outFile.is_open() || !outFile.good())
 			{
 				Cerr << "Failed to open '" << configFile.GetConfig().outputFileName << "' for output\n";

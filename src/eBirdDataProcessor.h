@@ -30,16 +30,16 @@ class FrequencyFileReader;
 class EBirdDataProcessor
 {
 public:
-	bool Parse(const String& dataFile);
-	bool ReadMediaList(const String& mediaFileName);
-	bool GenerateMediaList(const String& mediaListHTML, const String& mediaFileName);
+	bool Parse(const UString::String& dataFile);
+	bool ReadMediaList(const UString::String& mediaFileName);
+	bool GenerateMediaList(const UString::String& mediaListHTML, const UString::String& mediaFileName);
 
-	void FilterLocation(const String& location, const String& county,
-		const String& state, const String& country);
-	void FilterCounty(const String& county, const String& state,
-		const String& country);
-	void FilterState(const String& state, const String& country);
-	void FilterCountry(const String& country);
+	void FilterLocation(const UString::String& location, const UString::String& county,
+		const UString::String& state, const UString::String& country);
+	void FilterCounty(const UString::String& county, const UString::String& state,
+		const UString::String& country);
+	void FilterState(const UString::String& state, const UString::String& country);
+	void FilterCountry(const UString::String& country);
 
 	void FilterYear(const unsigned int& year);
 	void FilterMonth(const unsigned int& month);
@@ -51,84 +51,84 @@ public:
 	void SortData(const EBDPConfig::SortBy& primarySort, const EBDPConfig::SortBy& secondarySort);
 
 	void GenerateUniqueObservationsReport(const EBDPConfig::UniquenessType& type);
-	void GenerateRarityScores(const String& frequencyFilePath,
-		const EBDPConfig::ListType& listType, const String& eBirdAPIKey,
-		const String& country, const String& state, const String& county);
-	String GenerateList(const EBDPConfig::ListType& type, const int& minPhotoScore, const int& minAudioScore) const;
+	void GenerateRarityScores(const UString::String& frequencyFilePath,
+		const EBDPConfig::ListType& listType, const UString::String& eBirdAPIKey,
+		const UString::String& country, const UString::String& state, const UString::String& county);
+	UString::String GenerateList(const EBDPConfig::ListType& type, const int& minPhotoScore, const int& minAudioScore) const;
 
 	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
-		const String& outputFileName, const String& frequencyFilePath,
-		const String& country, const String& state, const String& county,
+		const UString::String& outputFileName, const UString::String& frequencyFilePath,
+		const UString::String& country, const UString::String& state, const UString::String& county,
 		const unsigned int& recentPeriod,
-		const String& hotspotInfoFileName, const String& homeLocation,
-		const String& mapApiKey, const String& eBirdApiKey) const;
+		const UString::String& hotspotInfoFileName, const UString::String& homeLocation,
+		const UString::String& mapApiKey, const UString::String& eBirdApiKey) const;
 
-	bool FindBestLocationsForNeededSpecies(const String& frequencyFilePath,
-		const String& kmlLibraryPath,
-		const String& googleMapsKey, const String& eBirdAPIKey,
-		const String& clientId, const String& clientSecret) const;
+	bool FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
+		const UString::String& kmlLibraryPath,
+		const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
+		const UString::String& clientId, const UString::String& clientSecret) const;
 		
-	static String PrepareForComparison(const String& commonName);
+	static UString::String PrepareForComparison(const UString::String& commonName);
 
 	void DoListComparison() const;
 
 	struct FrequencyInfo
 	{
-		String species;
+		UString::String species;
 		double frequency = 0.0;
-		String compareString;// Huge boost in efficiency if we pre-compute this
+		UString::String compareString;// Huge boost in efficiency if we pre-compute this
 
 		FrequencyInfo() = default;
-		FrequencyInfo(const String& species, const double& frequency) : species(species), frequency(frequency), compareString(PrepareForComparison(species)) {}
+		FrequencyInfo(const UString::String& species, const double& frequency) : species(species), frequency(frequency), compareString(PrepareForComparison(species)) {}
 	};
 
 	struct YearFrequencyInfo
 	{
 		YearFrequencyInfo() = default;
-		YearFrequencyInfo(const String& locationCode,
+		YearFrequencyInfo(const UString::String& locationCode,
 			const std::array<double, 12>& probabilities) : locationCode(locationCode), probabilities(probabilities) {}
 
-		String locationCode;
+		UString::String locationCode;
 		std::array<double, 12> probabilities;
 		std::array<std::vector<FrequencyInfo>, 12> frequencyInfo;
 	};
 
 	template<typename T>
-	static bool ParseToken(IStringStream& lineStream, const String& fieldName, T& target);
+	static bool ParseToken(UString::IStringStream& lineStream, const UString::String& fieldName, T& target);
 	
 	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
 	typedef std::array<double, 12> DoubleYear;
 
 private:
-	static const String headerLine;
+	static const UString::String headerLine;
 
 	struct Entry
 	{
-		String submissionID;
-		String commonName;
-		String scientificName;
+		UString::String submissionID;
+		UString::String commonName;
+		UString::String scientificName;
 		double taxonomicOrder;
 		int count;
-		String stateProvidence;
-		String county;
-		String location;
+		UString::String stateProvidence;
+		UString::String county;
+		UString::String location;
 		double latitude;// [deg]
 		double longitude;// [deg]
 		std::tm dateTime;
-		String protocol;
+		UString::String protocol;
 		int duration;// [min]
 		bool allObsReported;
 		double distanceTraveled;// [km]
 		double areaCovered;// [ha]
 		int numberOfObservers;
-		String breedingCode;
-		String speciesComments;
-		String checklistComments;
+		UString::String breedingCode;
+		UString::String speciesComments;
+		UString::String checklistComments;
 
 		int photoRating = -1;
 		int audioRating = -1;
 
-		String compareString;// Huge boost in efficiency if we pre-compute this
+		UString::String compareString;// Huge boost in efficiency if we pre-compute this
 	};
 
 	std::vector<Entry> data;
@@ -144,16 +144,16 @@ private:
 
 	static std::vector<Entry> DoConsolidation(const EBDPConfig::ListType& type, const std::vector<Entry>& data);
 
-	static bool ParseLine(const String& line, Entry& entry);
+	static bool ParseLine(const UString::String& line, Entry& entry);
 
 	static int DoComparison(const Entry& a, const Entry& b, const EBDPConfig::SortBy& sortBy);
 
 	template<typename T>
-	static bool InterpretToken(IStringStream& tokenStream, const String& fieldName, T& target);
-	static bool InterpretToken(IStringStream& tokenStream, const String& fieldName, String& target);
-	static bool ParseCountToken(IStringStream& lineStream, const String& fieldName, int& target);
-	static bool ParseDateTimeToken(IStringStream& lineStream, const String& fieldName,
-		std::tm& target, const String& format);
+	static bool InterpretToken(UString::IStringStream& tokenStream, const UString::String& fieldName, T& target);
+	static bool InterpretToken(UString::IStringStream& tokenStream, const UString::String& fieldName, UString::String& target);
+	static bool ParseCountToken(UString::IStringStream& lineStream, const UString::String& fieldName, int& target);
+	static bool ParseDateTimeToken(UString::IStringStream& lineStream, const UString::String& fieldName,
+		std::tm& target, const UString::String& format);
 
 	template<typename T1, typename T2>
 	static std::vector<std::pair<T1, T2>> Zip(const std::vector<T1>& v1, const std::vector<T2>& v2);
@@ -166,21 +166,21 @@ private:
 	template<typename EquivalencePredicate>
 	static void StableRemoveDuplicates(std::vector<Entry>& v, EquivalencePredicate equivalencePredicate);
 
-	static bool CommonNamesMatch(String a, String b);
-	static String StripParentheses(String s);
+	static bool CommonNamesMatch(UString::String a, UString::String b);
+	static UString::String StripParentheses(UString::String s);
 
 	void EliminateObservedSpecies(FrequencyDataYear& frequencyData) const;
 	std::vector<FrequencyInfo> GenerateYearlyFrequencyData(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
-	void RecommendHotspots(const std::set<String>& consolidatedSpeciesList,
-		const String& country, const String& state, const String& county, const unsigned int& recentPeriod,
-		const String& hotspotInfoFileName, const String& homeLocation,
-		const String& mapApiKey, const String& eBirdApiKey) const;
-	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<String>, EBirdInterface::LocationInfo>>& hotspots,
-		const String& hotspotInfoFileName, const String& homeLocation, const String& mapApiKey,
-		const String& regionCode, const String& eBirdApiKey) const;
+	void RecommendHotspots(const std::set<UString::String>& consolidatedSpeciesList,
+		const UString::String& country, const UString::String& state, const UString::String& county, const unsigned int& recentPeriod,
+		const UString::String& hotspotInfoFileName, const UString::String& homeLocation,
+		const UString::String& mapApiKey, const UString::String& eBirdApiKey) const;
+	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<UString::String>, EBirdInterface::LocationInfo>>& hotspots,
+		const UString::String& hotspotInfoFileName, const UString::String& homeLocation, const UString::String& mapApiKey,
+		const UString::String& regionCode, const UString::String& eBirdApiKey) const;
 
 	struct HotspotInfoComparer
 	{
@@ -191,11 +191,11 @@ private:
 		DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
 		std::array<std::vector<FrequencyInfo>, 12>& species) const;
 
-	static bool WriteBestLocationsViewerPage(const String& htmlFileName,
-		const String& kmlLibraryPath,
-		const String& googleMapsKey, const String& eBirdAPIKey,
+	static bool WriteBestLocationsViewerPage(const UString::String& htmlFileName,
+		const UString::String& kmlLibraryPath,
+		const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
 		const std::vector<YearFrequencyInfo>& observationProbabilities,
-		const String& clientId, const String& clientSecret);
+		const UString::String& clientId, const UString::String& clientSecret);
 
 	class CalculateProbabilityJob : public ThreadPool::JobInfoBase
 	{
@@ -216,19 +216,19 @@ private:
 		}
 	};
 
-	static std::vector<String> ListFilesInDirectory(const String& directory);
-	static bool IsNotBinFile(const String& fileName);
-	static void RemoveHighLevelFiles(std::vector<String>& fileNames);
-	static String RemoveTrailingDash(const String& s);
+	static std::vector<UString::String> ListFilesInDirectory(const UString::String& directory);
+	static bool IsNotBinFile(const UString::String& fileName);
+	static void RemoveHighLevelFiles(std::vector<UString::String>& fileNames);
+	static UString::String RemoveTrailingDash(const UString::String& s);
 
 	static void PrintListComparison(const std::vector<std::vector<Entry>>& lists);
 	static bool IndicesAreValid(const std::vector<unsigned int>& indices, const std::vector<std::vector<Entry>>& lists);
-	static String PrintInColumns(const std::vector<std::vector<String>>& cells, const unsigned int& columnSpacing);
+	static UString::String PrintInColumns(const std::vector<std::vector<UString::String>>& cells, const unsigned int& columnSpacing);
 
 	struct MediaEntry
 	{
-		String macaulayId;
-		String commonName;
+		UString::String macaulayId;
+		UString::String commonName;
 
 		enum class Type
 		{
@@ -239,8 +239,8 @@ private:
 		Type type;
 
 		int rating;
-		String date;
-		String location;
+		UString::String date;
+		UString::String location;
 
 		enum class Age
 		{
@@ -271,32 +271,32 @@ private:
 
 		Sound sound = Sound::Unknown;
 
-		String checklistId;
+		UString::String checklistId;
 	};
 
-	static bool ExtractNextMediaEntry(const String& html, std::string::size_type& position, MediaEntry& entry);
-	static void WriteNextMediaEntry(OFStream& file, const MediaEntry& entry);
-	static String GetMediaTypeString(const MediaEntry::Type& type);
-	static String GetMediaAgeString(const MediaEntry::Age& age);
-	static String GetMediaSexString(const MediaEntry::Sex& sex);
-	static String GetMediaSoundString(const MediaEntry::Sound& sound);
-	static bool ParseMediaEntry(const String& line, MediaEntry& entry);
+	static bool ExtractNextMediaEntry(const UString::String& html, std::string::size_type& position, MediaEntry& entry);
+	static void WriteNextMediaEntry(UString::OFStream& file, const MediaEntry& entry);
+	static UString::String GetMediaTypeString(const MediaEntry::Type& type);
+	static UString::String GetMediaAgeString(const MediaEntry::Age& age);
+	static UString::String GetMediaSexString(const MediaEntry::Sex& sex);
+	static UString::String GetMediaSoundString(const MediaEntry::Sound& sound);
+	static bool ParseMediaEntry(const UString::String& line, MediaEntry& entry);
 };
 
 template<typename T>
-bool EBirdDataProcessor::ParseToken(IStringStream& lineStream, const String& fieldName, T& target)
+bool EBirdDataProcessor::ParseToken(UString::IStringStream& lineStream, const UString::String& fieldName, T& target)
 {
-	String token;
-	IStringStream tokenStream;
+	UString::String token;
+	UString::IStringStream tokenStream;
 
-	if (lineStream.peek() == static_cast<int>('"'))// target string may contain commas
+	if (lineStream.peek() == static_cast<int>('"'))// target UString::String may contain commas
 	{
 		lineStream.ignore();// Skip the first quote
 
 		do// In a loop, so we can properly handle escaped double quotes.
 		{
-			String tempToken;
-			const Char quote('"');
+			UString::String tempToken;
+			const UString::Char quote('"');
 			if (!std::getline(lineStream, tempToken, quote))
 				return false;
 			token.append(tempToken);
@@ -309,7 +309,7 @@ bool EBirdDataProcessor::ParseToken(IStringStream& lineStream, const String& fie
 
 		lineStream.ignore();// Skip the next comma
 	}
-	else if (!std::getline(lineStream, token, Char(',')))
+	else if (!std::getline(lineStream, token, UString::Char(',')))
 	{
 		/*Cerr << "Failed to read token for " << fieldName << '\n';
 		return false;*/
@@ -329,7 +329,7 @@ bool EBirdDataProcessor::ParseToken(IStringStream& lineStream, const String& fie
 }
 
 template<typename T>
-bool EBirdDataProcessor::InterpretToken(IStringStream& tokenStream, const String& fieldName, T& target)
+bool EBirdDataProcessor::InterpretToken(UString::IStringStream& tokenStream, const UString::String& fieldName, T& target)
 {
 	if ((tokenStream >> target).fail())
 	{

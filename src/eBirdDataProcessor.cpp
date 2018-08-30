@@ -32,21 +32,21 @@
 #include <chrono>
 #include <set>
 
-const String EBirdDataProcessor::headerLine(_T("Submission ID,Common Name,Scientific Name,"
+const UString::String EBirdDataProcessor::headerLine(_T("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
 	"Protocol,Duration (Min),All Obs Reported,Distance Traveled (km),Area Covered (ha),"
 	"Number of Observers,Breeding Code,Species Comments,Checklist Comments"));
 
-bool EBirdDataProcessor::Parse(const String& dataFile)
+bool EBirdDataProcessor::Parse(const UString::String& dataFile)
 {
-	IFStream file(dataFile.c_str());
+	UString::IFStream file(dataFile.c_str());
 	if (!file.is_open() || !file.good())
 	{
 		Cerr << "Failed to open '" << dataFile << "' for input\n";
 		return false;
 	}
 
-	String line;
+	UString::String line;
 	unsigned int lineCount(0);
 	while (std::getline(file, line))
 	{
@@ -77,9 +77,9 @@ bool EBirdDataProcessor::Parse(const String& dataFile)
 	return true;
 }
 
-bool EBirdDataProcessor::ParseLine(const String& line, Entry& entry)
+bool EBirdDataProcessor::ParseLine(const UString::String& line, Entry& entry)
 {
-	IStringStream lineStream(line);
+	UString::IStringStream lineStream(line);
 
 	if (!ParseToken(lineStream, _T("Submission ID"), entry.submissionID))
 		return false;
@@ -138,29 +138,29 @@ bool EBirdDataProcessor::ParseLine(const String& line, Entry& entry)
 	return true;
 }
 
-bool EBirdDataProcessor::ParseCountToken(IStringStream& lineStream, const String& fieldName, int& target)
+bool EBirdDataProcessor::ParseCountToken(UString::IStringStream& lineStream, const UString::String& fieldName, int& target)
 {
 	if (lineStream.peek() == 'X')
 	{
 		target = 1;
-		String token;
-		return std::getline(lineStream, token, Char(',')).good();// This is just to advance the stream pointer
+		UString::String token;
+		return std::getline(lineStream, token, UString::Char(',')).good();// This is just to advance the stream pointer
 	}
 
 	return ParseToken(lineStream, fieldName, target);
 }
 
-bool EBirdDataProcessor::ParseDateTimeToken(IStringStream& lineStream, const String& fieldName,
-	std::tm& target, const String& format)
+bool EBirdDataProcessor::ParseDateTimeToken(UString::IStringStream& lineStream, const UString::String& fieldName,
+	std::tm& target, const UString::String& format)
 {
-	String token;
-	if (!std::getline(lineStream, token, Char(',')))// This advances the stream pointer
+	UString::String token;
+	if (!std::getline(lineStream, token, UString::Char(',')))// This advances the stream pointer
 	{
 		Cerr << "Failed to read token for " << fieldName << '\n';
 		return false;
 	}
 
-	IStringStream ss(token);
+	UString::IStringStream ss(token);
 	if ((ss >> std::get_time(&target, format.c_str())).fail())
 	{
 		Cerr << "Failed to interpret token for " << fieldName << '\n';
@@ -170,27 +170,27 @@ bool EBirdDataProcessor::ParseDateTimeToken(IStringStream& lineStream, const Str
 	return true;
 }
 
-bool EBirdDataProcessor::InterpretToken(IStringStream& tokenStream,
-	const String& /*fieldName*/, String& target)
+bool EBirdDataProcessor::InterpretToken(UString::IStringStream& tokenStream,
+	const UString::String& /*fieldName*/, UString::String& target)
 {
 	target = tokenStream.str();
 	return true;
 }
 
-void EBirdDataProcessor::FilterLocation(const String& location, const String& county,
-	const String& state, const String& country)
+void EBirdDataProcessor::FilterLocation(const UString::String& location, const UString::String& county,
+	const UString::String& state, const UString::String& country)
 {
 	if (!county.empty() || !state.empty() || !country.empty())
 		FilterCounty(county, state, country);
 
 	data.erase(std::remove_if(data.begin(), data.end(), [location](const Entry& entry)
 	{
-		return !std::regex_search(entry.location, RegEx(location));
+		return !std::regex_search(entry.location, UString::RegEx(location));
 	}), data.end());
 }
 
-void EBirdDataProcessor::FilterCounty(const String& county,
-	const String& state, const String& country)
+void EBirdDataProcessor::FilterCounty(const UString::String& county,
+	const UString::String& state, const UString::String& country)
 {
 	if (!state.empty() || !country.empty())
 		FilterState(state, country);
@@ -201,7 +201,7 @@ void EBirdDataProcessor::FilterCounty(const String& county,
 	}), data.end());
 }
 
-void EBirdDataProcessor::FilterState(const String& state, const String& country)
+void EBirdDataProcessor::FilterState(const UString::String& state, const UString::String& country)
 {
 	if (!country.empty())
 		FilterCountry(country);
@@ -212,7 +212,7 @@ void EBirdDataProcessor::FilterState(const String& state, const String& country)
 	}), data.end());
 }
 
-void EBirdDataProcessor::FilterCountry(const String& country)
+void EBirdDataProcessor::FilterCountry(const UString::String& country)
 {
 	data.erase(std::remove_if(data.begin(), data.end(), [country](const Entry& entry)
 	{
@@ -237,7 +237,7 @@ void EBirdDataProcessor::FilterWeek(const unsigned int& week)
 {
 	data.erase(std::remove_if(data.begin(), data.end(), [week](const Entry& entry)
 	{
-		StringStream ss;
+		UString::StringStream ss;
 		ss << std::put_time(&entry.dateTime, _T("%U"));
 		unsigned int entryWeek;
 		ss >> entryWeek;
@@ -259,7 +259,7 @@ void EBirdDataProcessor::FilterPartialIDs()
 	data.erase(std::remove_if(data.begin(), data.end(), [](const Entry& entry)
 	{
 		return entry.commonName.find(_T(" sp.")) != std::string::npos ||// Eliminate Spuhs
-			entry.commonName.find(Char('/')) != std::string::npos ||// Eliminate species1/species2 type entries
+			entry.commonName.find(UString::Char('/')) != std::string::npos ||// Eliminate species1/species2 type entries
 			entry.commonName.find(_T("hybrid")) != std::string::npos ||// Eliminate hybrids
 			entry.commonName.find(_T("Domestic")) != std::string::npos;// Eliminate domestic birds
 	}), data.end());
@@ -312,7 +312,7 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::RemoveHighMediaScores
 	const int& minPhotoScore, const int& minAudioScore, const std::vector<Entry>& data)
 {
 	std::vector<Entry> sublist(data);
-	std::set<String> haveMediaSet;
+	std::set<UString::String> haveMediaSet;
 	std::for_each(sublist.begin(), sublist.end(), [&minPhotoScore, &minAudioScore, &haveMediaSet](const Entry& entry)
 	{
 		if (entry.photoRating >= minPhotoScore && entry.audioRating >= minAudioScore)
@@ -354,7 +354,7 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::DoConsolidation(const
 	return data;
 }
 
-String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type,
+UString::String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type,
 	const int& minPhotoScore, const int& minAudioScore) const
 {
 	std::vector<Entry> consolidatedList;
@@ -369,7 +369,7 @@ String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type,
 	if (minAudioScore >= 0)
 		Cout << "Showing only species which do not have audio rated " << minAudioScore << " or higher\n";
 
-	OStringStream ss;
+	UString::OStringStream ss;
 	unsigned int count(1);
 	for (const auto& entry : consolidatedList)
 	{
@@ -387,12 +387,12 @@ String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& type,
 	return ss.str();
 }
 
-bool EBirdDataProcessor::CommonNamesMatch(String a, String b)
+bool EBirdDataProcessor::CommonNamesMatch(UString::String a, UString::String b)
 {
 	return PrepareForComparison(a).compare(PrepareForComparison(b)) == 0;
 }
 
-String EBirdDataProcessor::StripParentheses(String s)
+UString::String EBirdDataProcessor::StripParentheses(UString::String s)
 {
 	std::string::size_type openParen;
 	while (openParen = s.find('('), openParen != std::string::npos)
@@ -451,11 +451,11 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByWeek(con
 	auto equivalencePredicate([](const Entry& a, const Entry& b)
 	{
 		unsigned int aWeek, bWeek;
-		StringStream ss;
+		UString::StringStream ss;
 		ss << std::put_time(&a.dateTime, _T("%U"));
 		ss >> aWeek;
 		ss.clear();
-		ss.str(String());
+		ss.str(UString::String());
 		ss << std::put_time(&b.dateTime, _T("%U"));
 		ss >> bWeek;
 
@@ -487,11 +487,11 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay(cons
 }
 
 bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount,
-	const String& outputFileName, const String& frequencyFilePath,
-	const String& country, const String& state, const String& county,
+	const UString::String& outputFileName, const UString::String& frequencyFilePath,
+	const UString::String& country, const UString::String& state, const UString::String& county,
 	const unsigned int& recentPeriod,
-	const String& hotspotInfoFileName, const String& homeLocation,
-	const String& mapApiKey, const String& eBirdApiKey) const
+	const UString::String& hotspotInfoFileName, const UString::String& homeLocation,
+	const UString::String& mapApiKey, const UString::String& eBirdApiKey) const
 {
 	FrequencyFileReader frequencyFileReader(frequencyFilePath);
 	EBirdInterface ebi(eBirdApiKey);
@@ -516,7 +516,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 
 	Cout << "Writing calendar data to " << outputFileName.c_str() << std::endl;
 
-	OFStream outFile(outputFileName.c_str());
+	UString::OFStream outFile(outputFileName.c_str());
 	if (!outFile.good() || !outFile.is_open())
 	{
 		Cerr << "Failed to open '" << outputFileName << "' for output\n";
@@ -550,8 +550,8 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		outFile << std::endl;
 	}
 
-	std::set<String> consolidatedSpeciesList;
-	std::map<String, double> speciesFrequencyMap;
+	std::set<UString::String> consolidatedSpeciesList;
+	std::map<UString::String, double> speciesFrequencyMap;
 	for (i = 0; i < topBirdCount; ++i)
 	{
 		for (const auto& month : frequencyData)
@@ -663,22 +663,22 @@ void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyDa
 	}
 }
 
-void EBirdDataProcessor::RecommendHotspots(const std::set<String>& consolidatedSpeciesList,
-	const String& country, const String& state, const String& county, const unsigned int& recentPeriod,
-	const String& hotspotInfoFileName, const String& homeLocation,
-	const String& mapApiKey, const String& eBirdApiKey) const
+void EBirdDataProcessor::RecommendHotspots(const std::set<UString::String>& consolidatedSpeciesList,
+	const UString::String& country, const UString::String& state, const UString::String& county, const unsigned int& recentPeriod,
+	const UString::String& hotspotInfoFileName, const UString::String& homeLocation,
+	const UString::String& mapApiKey, const UString::String& eBirdApiKey) const
 {
 	Cout << "Checking eBird for recent sightings..." << std::endl;
 
 	EBirdInterface e(eBirdApiKey);
-	const String region(e.GetRegionCode(country, state, county));
-	std::set<String> recentSpecies;
+	const UString::String region(e.GetRegionCode(country, state, county));
+	std::set<UString::String> recentSpecies;
 
-	typedef std::vector<String> SpeciesList;
+	typedef std::vector<UString::String> SpeciesList;
 	std::map<EBirdInterface::LocationInfo, SpeciesList, HotspotInfoComparer> hotspotInfo;
 	for (const auto& species : consolidatedSpeciesList)
 	{
-		const String speciesCode(e.GetSpeciesCodeFromCommonName(species));
+		const UString::String speciesCode(e.GetSpeciesCodeFromCommonName(species));
 		const auto hotspots(e.GetHotspotsWithRecentObservationsOf(speciesCode, region, recentPeriod));
 		for (const auto& spot : hotspots)
 		{
@@ -703,7 +703,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<String>& consolidatedS
 	Cout << "\nRecommended hotspots for observing needed species:\n";
 	const unsigned int minimumHotspotCount(10);
 	unsigned int hotspotCount(0);
-	unsigned int lastHotspotSpeciesCount(0);
+	size_t lastHotspotSpeciesCount(0);
 	for (const auto& hotspot : sortedHotspots)
 	{
 		if (hotspotCount >= minimumHotspotCount && hotspot.first.size() < lastHotspotSpeciesCount)
@@ -719,14 +719,14 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<String>& consolidatedS
 		GenerateHotspotInfoFile(sortedHotspots, hotspotInfoFileName, homeLocation, mapApiKey, region, eBirdApiKey);
 }
 
-void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<String>,
-	EBirdInterface::LocationInfo>>& hotspots, const String& hotspotInfoFileName,
-	const String& homeLocation, const String& mapApiKey,
-	const String& regionCode, const String& eBirdApiKey) const
+void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<UString::String>,
+	EBirdInterface::LocationInfo>>& hotspots, const UString::String& hotspotInfoFileName,
+	const UString::String& homeLocation, const UString::String& mapApiKey,
+	const UString::String& regionCode, const UString::String& eBirdApiKey) const
 {
 	Cout << "Writing hotspot information to file..." << std::endl;
 
-	OFStream infoFile(hotspotInfoFileName.c_str());
+	UString::OFStream infoFile(hotspotInfoFileName.c_str());
 	if (!infoFile.good() || !infoFile.is_open())
 	{
 		Cerr << "Failed to open '" << hotspotInfoFileName << "' for output\n";
@@ -736,7 +736,7 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 	if (!homeLocation.empty())
 		infoFile << "Travel time and distance given from " << homeLocation << '\n';
 
-	std::map<String, String> speciesToObservationTimeMap;
+	std::map<UString::String, UString::String> speciesToObservationTimeMap;
 
 	for (const auto& h : hotspots)
 	{
@@ -744,7 +744,7 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 		if (!homeLocation.empty())
 		{
 			GoogleMapsInterface gMaps(_T("eBirdDataProcessor"), mapApiKey);
-			OStringStream ss;
+			UString::OStringStream ss;
 			ss << h.second.latitude << ',' << h.second.longitude;
 			GoogleMapsInterface::Directions travelInfo(gMaps.GetDirections(homeLocation, ss.str()));
 
@@ -785,7 +785,7 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 					return !o.dateIncludesTimeInfo;
 				}), observationInfo.end());
 
-				String bestObservationTime;
+				UString::String bestObservationTime;
 				if (observationInfo.size() > 0)
 					bestObservationTime = BestObservationTimeEstimator::EstimateBestObservationTime(observationInfo);
 
@@ -794,7 +794,7 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std
 
 			infoFile << "  " << s;
 
-			const String observationString(speciesToObservationTimeMap[s]);
+			const UString::String observationString(speciesToObservationTimeMap[s]);
 			if (!observationString.empty())
 				infoFile << " (observed " << observationString << ")\n";
 			else
@@ -812,8 +812,8 @@ void EBirdDataProcessor::GenerateUniqueObservationsReport(const EBDPConfig::Uniq
 		{
 			return [](const Entry& a, const Entry& b)
 			{
-				const String aCountry(a.stateProvidence.substr(0, 2));
-				const String bCountry(b.stateProvidence.substr(0, 2));
+				const UString::String aCountry(a.stateProvidence.substr(0, 2));
+				const UString::String bCountry(b.stateProvidence.substr(0, 2));
 				return CommonNamesMatch(a.commonName, b.commonName) &&
 					aCountry.compare(bCountry) == 0;
 			};
@@ -894,14 +894,14 @@ void EBirdDataProcessor::GenerateUniqueObservationsReport(const EBDPConfig::Uniq
 		Cout << "County:\n";
 }
 
-String EBirdDataProcessor::PrepareForComparison(const String& commonName)
+UString::String EBirdDataProcessor::PrepareForComparison(const UString::String& commonName)
 {
 	return StringUtilities::Trim(StripParentheses(commonName));
 }
 
-void EBirdDataProcessor::GenerateRarityScores(const String& frequencyFilePath,
-	const EBDPConfig::ListType& listType, const String& eBirdAPIKey,
-	const String& country, const String& state, const String& county)
+void EBirdDataProcessor::GenerateRarityScores(const UString::String& frequencyFilePath,
+	const EBDPConfig::ListType& listType, const UString::String& eBirdAPIKey,
+	const UString::String& country, const UString::String& state, const UString::String& county)
 {
 	EBirdInterface ebi(eBirdAPIKey);
 	FrequencyFileReader reader(frequencyFilePath);
@@ -937,7 +937,7 @@ void EBirdDataProcessor::GenerateRarityScores(const String& frequencyFilePath,
 
 	Cout << std::endl;
 	const unsigned int minSpace(4);
-	unsigned int longestName(0);
+	size_t longestName(0);
 	for (const auto& entry : rarityScoreData)
 	{
 		if (entry.species.length() > longestName)
@@ -945,7 +945,7 @@ void EBirdDataProcessor::GenerateRarityScores(const String& frequencyFilePath,
 	}
 
 	for (const auto& entry : rarityScoreData)
-		Cout << std::left << std::setw(longestName + minSpace) << std::setfill(Char(' ')) << entry.species << entry.frequency << "%\n";
+		Cout << std::left << std::setw(longestName + minSpace) << std::setfill(UString::Char(' ')) << entry.species << entry.frequency << "%\n";
 	Cout << std::endl;
 }
 
@@ -992,17 +992,17 @@ bool EBirdDataProcessor::HotspotInfoComparer::operator()(const EBirdInterface::L
 	return a.name < b.name;
 }
 
-bool EBirdDataProcessor::ExtractNextMediaEntry(const String& html, std::string::size_type& position, MediaEntry& entry)
+bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std::string::size_type& position, MediaEntry& entry)
 {
-	const String resultStart(_T("<div class=\"ResultsList-cell\">"));
+	const UString::String resultStart(_T("<div class=\"ResultsList-cell\">"));
 	const auto resultStartPosition(html.find(resultStart, position));
 	if (resultStartPosition == std::string::npos)
 		return false;
 
-	const String playButtonStart(_T("<div class=\"Button--play\">"));
+	const UString::String playButtonStart(_T("<div class=\"Button--play\">"));
 	const auto playButtonStartPosition(html.find(playButtonStart, resultStartPosition));
 
-	const String commonNameHeader(_T("<h3 class=\"SpecimenHeader-commonName\">"));
+	const UString::String commonNameHeader(_T("<h3 class=\"SpecimenHeader-commonName\">"));
 	const auto commonNameHeaderPosition(html.find(commonNameHeader, resultStartPosition));
 	if (commonNameHeaderPosition == std::string::npos)
 		return false;
@@ -1012,38 +1012,38 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const String& html, std::string::
 	else
 		entry.type = MediaEntry::Type::Photo;
 
-	const String endOfStartTag(_T("\">"));
+	const UString::String endOfStartTag(_T("\">"));
 	const auto commonNamePosition(html.find(endOfStartTag, commonNameHeaderPosition + commonNameHeader.length()));
 	if (commonNamePosition == std::string::npos)
 		return false;
 
-	const String endOfLinkTag(_T("</a>"));
+	const UString::String endOfLinkTag(_T("</a>"));
 	const auto commonNameEndPosition(html.find(endOfLinkTag, commonNamePosition));
 	if (commonNameEndPosition == std::string::npos)
 		return false;
 
 	entry.commonName = html.substr(commonNamePosition + endOfStartTag.length(), commonNameEndPosition - commonNamePosition - endOfStartTag.length());
 
-	const String ratingStart(_T("<div class=\"RatingStars RatingStars-"));
+	const UString::String ratingStart(_T("<div class=\"RatingStars RatingStars-"));
 	const auto ratingStartPosition(html.find(ratingStart, commonNameEndPosition));
 	if (ratingStartPosition != std::string::npos)
 	{
-		IStringStream ss(html.substr(ratingStartPosition + ratingStart.length(), 1));
+		UString::IStringStream ss(html.substr(ratingStartPosition + ratingStart.length(), 1));
 		if ((ss >> entry.rating).fail())
 			return false;
 	}
 	else
 		entry.rating = 0;
 
-	const String calendarLine(_T("<svg class=\"Icon Icon-calendar\" role=\"img\"><use xlink:href=\"#Icon--calendar\"></use></svg>"));
+	const UString::String calendarLine(_T("<svg class=\"Icon Icon-calendar\" role=\"img\"><use xlink:href=\"#Icon--calendar\"></use></svg>"));
 	const auto calendarLinePosition(html.find(calendarLine, commonNameEndPosition));
 	if (calendarLinePosition == std::string::npos)
 		return false;
-	IStringStream ss(StringUtilities::Trim(html.substr(calendarLinePosition + calendarLine.length() + 5)));
+	UString::IStringStream ss(StringUtilities::Trim(html.substr(calendarLinePosition + calendarLine.length() + 5)));
 	if (!std::getline(ss, entry.date))
 		return false;
 
-	const String locationLine(_T("<svg class=\"Icon Icon-location\" role=\"img\"><use xlink:href=\"#Icon--location\"></use></svg>"));
+	const UString::String locationLine(_T("<svg class=\"Icon Icon-location\" role=\"img\"><use xlink:href=\"#Icon--location\"></use></svg>"));
 	const auto locationLinePosition(html.find(locationLine, calendarLinePosition));
 	if (locationLinePosition == std::string::npos)
 		return false;
@@ -1053,22 +1053,22 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const String& html, std::string::
 		return false;
 	entry.location = Utilities::Unsanitize(entry.location);
 
-	const String soundStart(_T("<dt>Sounds</dt>"));
+	const UString::String soundStart(_T("<dt>Sounds</dt>"));
 	const auto soundStartPosition(html.find(soundStart, locationLinePosition));
 
-	const String ageStart(_T("<dt>Age</dt>"));
+	const UString::String ageStart(_T("<dt>Age</dt>"));
 	const auto ageStartPosition(html.find(ageStart, locationLinePosition));
 
-	const String sexStart(_T("<dt>Sex</dt>"));
+	const UString::String sexStart(_T("<dt>Sex</dt>"));
 	const auto sexStartPosition(html.find(sexStart, locationLinePosition));
 
-	const String checklistIdStart(_T("\">eBird Checklist "));
+	const UString::String checklistIdStart(_T("\">eBird Checklist "));
 	const auto checklistIdPosition(html.find(checklistIdStart, locationLinePosition));
 	if (checklistIdPosition == std::string::npos)
 		return false;
 
-	const String beginTag(_T("<dd>"));
-	const String endTag(_T("</dd>"));
+	const UString::String beginTag(_T("<dd>"));
+	const UString::String endTag(_T("</dd>"));
 	if (soundStartPosition < checklistIdPosition)
 	{
 		const auto startPosition(html.find(beginTag, soundStartPosition));
@@ -1077,7 +1077,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const String& html, std::string::
 			const auto endPosition(html.find(endTag, startPosition));
 			if (endPosition != std::string::npos)
 			{
-				const String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
+				const UString::String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
 				if (s.compare(_T("Song")) == 0)
 					entry.sound = MediaEntry::Sound::Song;
 				else if (s.compare(_T("Call")) == 0)
@@ -1098,7 +1098,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const String& html, std::string::
 			const auto endPosition(html.find(endTag, startPosition));
 			if (endPosition != std::string::npos)
 			{
-				const String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
+				const UString::String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
 				if (s.compare(_T("Adult")) == 0)
 					entry.age = MediaEntry::Age::Adult;
 				else if (s.compare(_T("Juvenile")) == 0)
@@ -1119,7 +1119,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const String& html, std::string::
 			const auto endPosition(html.find(endTag, startPosition));
 			if (endPosition != std::string::npos)
 			{
-				const String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
+				const UString::String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
 				if (s.compare(_T("Male")) == 0)
 					entry.sex = MediaEntry::Sex::Male;
 				else if (s.compare(_T("Female")) == 0)
@@ -1136,7 +1136,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const String& html, std::string::
 
 	entry.checklistId = html.substr(checklistIdPosition + checklistIdStart.length(), checklistIdEndPosition - checklistIdPosition - checklistIdStart.length());
 
-	const String macaulayIdStart(_T("\">Macaulay Library "));
+	const UString::String macaulayIdStart(_T("\">Macaulay Library "));
 	const auto macaulayIdPosition(html.find(macaulayIdStart, checklistIdEndPosition));
 	if (macaulayIdPosition == std::string::npos)
 		return false;
@@ -1151,7 +1151,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const String& html, std::string::
 	return true;
 }
 
-String EBirdDataProcessor::GetMediaTypeString(const MediaEntry::Type& type)
+UString::String EBirdDataProcessor::GetMediaTypeString(const MediaEntry::Type& type)
 {
 	if (type == MediaEntry::Type::Photo)
 		return _T("Photo");
@@ -1159,7 +1159,7 @@ String EBirdDataProcessor::GetMediaTypeString(const MediaEntry::Type& type)
 		return _T("Audio");
 }
 
-String EBirdDataProcessor::GetMediaAgeString(const MediaEntry::Age& age)
+UString::String EBirdDataProcessor::GetMediaAgeString(const MediaEntry::Age& age)
 {
 	if (age == MediaEntry::Age::Juvenile)
 		return _T("Juvenile");
@@ -1171,7 +1171,7 @@ String EBirdDataProcessor::GetMediaAgeString(const MediaEntry::Age& age)
 		return _T("Unknown");
 }
 
-String EBirdDataProcessor::GetMediaSexString(const MediaEntry::Sex& sex)
+UString::String EBirdDataProcessor::GetMediaSexString(const MediaEntry::Sex& sex)
 {
 	if (sex == MediaEntry::Sex::Male)
 		return _T("Male");
@@ -1181,7 +1181,7 @@ String EBirdDataProcessor::GetMediaSexString(const MediaEntry::Sex& sex)
 		return _T("Unknown");
 }
 
-String EBirdDataProcessor::GetMediaSoundString(const MediaEntry::Sound& sound)
+UString::String EBirdDataProcessor::GetMediaSoundString(const MediaEntry::Sound& sound)
 {
 	if (sound == MediaEntry::Sound::Song)
 		return _T("Song");
@@ -1193,7 +1193,7 @@ String EBirdDataProcessor::GetMediaSoundString(const MediaEntry::Sound& sound)
 		return _T("Other");
 }
 
-void EBirdDataProcessor::WriteNextMediaEntry(OFStream& file, const MediaEntry& entry)
+void EBirdDataProcessor::WriteNextMediaEntry(UString::OFStream& file, const MediaEntry& entry)
 {
 	file << entry.macaulayId << ','
 		<< entry.commonName << ','
@@ -1216,7 +1216,7 @@ void EBirdDataProcessor::WriteNextMediaEntry(OFStream& file, const MediaEntry& e
 // 6.  In pane that appears, expand "<body>" tag down to "<div class="ResultsList js-ResultsContainer">" level
 // 7.  Right-click on that element and choose Copy->Copy Element
 // 8.  Paste into media list html file and save
-bool EBirdDataProcessor::GenerateMediaList(const String& mediaListHTML, const String& mediaFileName)
+bool EBirdDataProcessor::GenerateMediaList(const UString::String& mediaListHTML, const UString::String& mediaFileName)
 {
 	std::ifstream htmlFile(mediaListHTML.c_str(), std::ios::binary | std::ios::ate);
 	if (!htmlFile.is_open() || !htmlFile.good())
@@ -1233,9 +1233,9 @@ bool EBirdDataProcessor::GenerateMediaList(const String& mediaListHTML, const St
 		Cerr << "Failed to read html data from file\n";
 		return false;
 	}
-	const String html(UString::ToStringType(std::string(buffer.data(), fileSize)));
+	const UString::String html(UString::ToStringType(std::string(buffer.data(), fileSize)));
 
-	OFStream mediaList(mediaFileName.c_str());
+	UString::OFStream mediaList(mediaFileName.c_str());
 	if (!mediaList.is_open() || !mediaList.good())
 	{
 		Cerr << "Failed to open '" << mediaFileName << "' for output\n";
@@ -1255,15 +1255,15 @@ bool EBirdDataProcessor::GenerateMediaList(const String& mediaListHTML, const St
 	return true;
 }
 
-bool EBirdDataProcessor::ParseMediaEntry(const String& line, MediaEntry& entry)
+bool EBirdDataProcessor::ParseMediaEntry(const UString::String& line, MediaEntry& entry)
 {
-	IStringStream lineStream(line);
+	UString::IStringStream lineStream(line);
 
 	if (!ParseToken(lineStream, _T("Macaulay Library ID"), entry.macaulayId))
 		return false;
 	if (!ParseToken(lineStream, _T("Common Name"), entry.commonName))
 		return false;
-	String temp;
+	UString::String temp;
 	if (!ParseToken(lineStream, _T("Media Type"), temp))
 		return false;
 
@@ -1311,16 +1311,16 @@ bool EBirdDataProcessor::ParseMediaEntry(const String& line, MediaEntry& entry)
 	return true;
 }
 
-bool EBirdDataProcessor::ReadMediaList(const String& mediaFileName)
+bool EBirdDataProcessor::ReadMediaList(const UString::String& mediaFileName)
 {
-	IFStream mediaFile(mediaFileName.c_str());
+	UString::IFStream mediaFile(mediaFileName.c_str());
 	if (!mediaFile.is_open() || !mediaFile.good())
 	{
 		Cerr << "Failed to open '" << mediaFileName << "' for input" << std::endl;
 		return false;
 	}
 
-	String line;
+	UString::String line;
 	if (!std::getline(mediaFile, line))// Discard header line
 	{
 		Cerr << "Media file is empty\n";
@@ -1355,16 +1355,16 @@ bool EBirdDataProcessor::ReadMediaList(const String& mediaFileName)
 	return true;
 }
 
-std::vector<String> EBirdDataProcessor::ListFilesInDirectory(const String& directory)
+std::vector<UString::String> EBirdDataProcessor::ListFilesInDirectory(const UString::String& directory)
 {
 	DIR *dir(opendir(UString::ToNarrowString(directory).c_str()));
 	if (!dir)
 	{
 		Cerr << "Failed to open directory '" << directory << "'\n";
-		return std::vector<String>();
+		return std::vector<UString::String>();
 	}
 
-	std::vector<String> fileNames;
+	std::vector<UString::String> fileNames;
 	struct dirent *ent;
 	while (ent = readdir(dir), ent)
 	{
@@ -1375,10 +1375,10 @@ std::vector<String> EBirdDataProcessor::ListFilesInDirectory(const String& direc
 		assert(ent->d_type != DT_UNKNOWN && "Cannot properly iterate through this filesystem");
 		if (ent->d_type == DT_DIR)
 		{
-			const String folder(UString::ToStringType(ent->d_name) + _T("/"));
-			const String subPath(directory + folder);
+			const UString::String folder(UString::ToStringType(ent->d_name) + _T("/"));
+			const UString::String subPath(directory + folder);
 			auto subDirFiles(ListFilesInDirectory(subPath));
-			/*std::for_each(subDirFiles.begin(), subDirFiles.end(), [&folder](String& s)
+			/*std::for_each(subDirFiles.begin(), subDirFiles.end(), [&folder](UString::String& s)
 			{
 				s = folder + s;
 			});*/
@@ -1392,25 +1392,25 @@ std::vector<String> EBirdDataProcessor::ListFilesInDirectory(const String& direc
 	return fileNames;
 }
 
-bool EBirdDataProcessor::IsNotBinFile(const String& fileName)
+bool EBirdDataProcessor::IsNotBinFile(const UString::String& fileName)
 {
-	const String desiredExtension(_T(".bin"));
+	const UString::String desiredExtension(_T(".bin"));
 		if (fileName.length() < desiredExtension.length())
 			return true;
 
 	return fileName.substr(fileName.length() - 4).compare(desiredExtension) != 0;
 }
 
-void EBirdDataProcessor::RemoveHighLevelFiles(std::vector<String>& fileNames)
+void EBirdDataProcessor::RemoveHighLevelFiles(std::vector<UString::String>& fileNames)
 {
-	std::set<String> removeList;
+	std::set<UString::String> removeList;
 	for (const auto& f : fileNames)
 	{
-		const auto firstDash(f.find(Char('-')));
+		const auto firstDash(f.find(UString::Char('-')));
 		if (firstDash == std::string::npos)
 			continue;// Nothing to remove - this is the highest level file we have
 
-		const auto secondDash(f.find(Char('-'), firstDash + 1));
+		const auto secondDash(f.find(UString::Char('-'), firstDash + 1));
 		if (secondDash == std::string::npos)
 		{
 			if (f.substr(firstDash).compare(_T("-.bin")) == 0)// Nothing to remove - this is the highest level file we have
@@ -1418,30 +1418,30 @@ void EBirdDataProcessor::RemoveHighLevelFiles(std::vector<String>& fileNames)
 		}
 		else
 		{
-			const String stateFileName(f.substr(0, secondDash) + _T(".bin"));
+			const UString::String stateFileName(f.substr(0, secondDash) + _T(".bin"));
 			removeList.insert(stateFileName);
 		}
 
-		const String countryFileName(f.substr(0, firstDash) + _T("-.bin"));
+		const UString::String countryFileName(f.substr(0, firstDash) + _T("-.bin"));
 		removeList.insert(countryFileName);
 	}
 
-	fileNames.erase(std::remove_if(fileNames.begin(), fileNames.end(), [&removeList](const String& f)
+	fileNames.erase(std::remove_if(fileNames.begin(), fileNames.end(), [&removeList](const UString::String& f)
 	{
 		return std::find(removeList.begin(), removeList.end(),  f) != removeList.end();
 	}), fileNames.end());
 }
 
-String EBirdDataProcessor::RemoveTrailingDash(const String& s)
+UString::String EBirdDataProcessor::RemoveTrailingDash(const UString::String& s)
 {
-	if (s.back() != Char('-'))
+	if (s.back() != UString::Char('-'))
 		return s;
 	return s.substr(0, s.length() - 1);
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequencyFilePath,
-	const String& kmlLibraryPath, const String& googleMapsKey, const String& eBirdAPIKey,
-	const String& clientId, const String& clientSecret) const
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
+	const UString::String& kmlLibraryPath, const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
+	const UString::String& clientId, const UString::String& clientSecret) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
@@ -1472,7 +1472,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const String& frequen
 
 	if (!googleMapsKey.empty())
 	{
-		const String fileName(_T("bestLocations.html"));
+		const UString::String fileName(_T("bestLocations.html"));
 		if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, googleMapsKey, eBirdAPIKey, newSightingProbability, clientId, clientSecret))
 		{
 			Cerr << "Faild to create Google Maps best locations page\n";
@@ -1515,10 +1515,10 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 	return true;
 }
 
-bool EBirdDataProcessor::WriteBestLocationsViewerPage(const String& htmlFileName,
-	const String& kmlLibraryPath, const String& googleMapsKey, const String& eBirdAPIKey,
+bool EBirdDataProcessor::WriteBestLocationsViewerPage(const UString::String& htmlFileName,
+	const UString::String& kmlLibraryPath, const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
 	const std::vector<YearFrequencyInfo>& observationProbabilities,
-	const String& clientId, const String& clientSecret)
+	const UString::String& clientId, const UString::String& clientSecret)
 {
 	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, googleMapsKey);
 	return generator.WriteBestLocationsViewerPage(htmlFileName,
@@ -1555,12 +1555,12 @@ void EBirdDataProcessor::DoListComparison() const
 void EBirdDataProcessor::PrintListComparison(const std::vector<std::vector<Entry>>& lists)
 {
 	std::vector<unsigned int> indexList(lists.size(), 0);
-	std::vector<std::vector<String>> listData(lists.size() + 1);// first index is column, second is row
+	std::vector<std::vector<UString::String>> listData(lists.size() + 1);// first index is column, second is row
 
 	listData.front().push_back(_T("Species"));
 	for (unsigned int i = 0; i < lists.size(); ++i)
 	{
-		OStringStream ss;
+		UString::OStringStream ss;
 		ss << lists[i].front().dateTime.tm_year + 1900;
 		listData[i + 1].push_back(ss.str());
 	}
@@ -1569,7 +1569,7 @@ void EBirdDataProcessor::PrintListComparison(const std::vector<std::vector<Entry
 	{
 		double minTaxonomicOrder(std::numeric_limits<double>::max());
 		unsigned int minIndex(0);
-		String compareString;
+		UString::String compareString;
 		for (unsigned int i = 0; i < lists.size(); ++i)
 		{
 			if (indexList[i] < lists[i].size() && lists[i][indexList[i]].taxonomicOrder < minTaxonomicOrder)
@@ -1590,17 +1590,17 @@ void EBirdDataProcessor::PrintListComparison(const std::vector<std::vector<Entry
 				++indexList[i];
 			}
 			else
-				listData[i + 1].push_back(String());
+				listData[i + 1].push_back(UString::String());
 		}
 	}
 
 	for (auto& col : listData)
-		col.push_back(String());
+		col.push_back(UString::String());
 
 	listData.front().push_back(_T("Total"));
 	for (unsigned int i = 0; i < lists.size(); ++i)
 	{
-		OStringStream ss;
+		UString::OStringStream ss;
 		ss << lists[i].size();
 		listData[i + 1].push_back(ss.str());
 	}
@@ -1620,9 +1620,9 @@ bool EBirdDataProcessor::IndicesAreValid(const std::vector<unsigned int>& indice
 	return false;
 }
 
-String EBirdDataProcessor::PrintInColumns(const std::vector<std::vector<String>>& cells, const unsigned int& columnSpacing)
+UString::String EBirdDataProcessor::PrintInColumns(const std::vector<std::vector<UString::String>>& cells, const unsigned int& columnSpacing)
 {
-	std::vector<unsigned int> widths(cells.size(), 0);
+	std::vector<size_t> widths(cells.size(), 0);
 	for (unsigned int i = 0; i < cells.size(); ++i)
 	{
 		for (const auto& row : cells[i])
@@ -1635,7 +1635,7 @@ String EBirdDataProcessor::PrintInColumns(const std::vector<std::vector<String>>
 	for (auto& w : widths)
 		w += columnSpacing;
 
-	OStringStream ss;
+	UString::OStringStream ss;
 	ss << std::setfill(_T(' '));
 	for (unsigned int i = 0; i < cells.front().size(); ++i)
 	{
