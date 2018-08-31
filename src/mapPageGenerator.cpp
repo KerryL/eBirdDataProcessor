@@ -381,7 +381,7 @@ bool MapPageGenerator::CreateFusionTable(
 	unsigned int cellCount(0);
 	for (const auto& c : countyInfo)
 	{
-		assert(!c.state.empty() && !c.country.empty() && !c.county.empty() && !c.name.empty() && !c.code.empty());
+		assert(!c.country.empty() && !c.name.empty() && !c.code.empty());
 		ss << c.state << ',' << c.county << ',' << c.country << ",\"" << c.name << "\","
 			<< c.code << ",\"" << c.geometryKML << '"';
 

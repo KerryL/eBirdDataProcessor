@@ -1047,7 +1047,7 @@ bool KMLLibraryManager::CheckForInexactMatch(const UString::String& locationId, 
 			}
 		}
 
-		const double threshold(0.5);
+		/*const double threshold(0.5);
 		const UString::String userInputKey(lowerSN1 + _T(":") + lowerSN1KMZ);
 		std::lock_guard<std::mutex> answeredListLock(userAlreadyAnsweredMutex);
 		if (StringsAreSimilar(lowerSN1, lowerSN1KMZ, threshold) && userAnsweredList.find(userInputKey) == userAnsweredList.end())
@@ -1061,8 +1061,8 @@ bool KMLLibraryManager::CheckForInexactMatch(const UString::String& locationId, 
 			{
 				kml = it->second;
 				return MakeCorrectionInKMZ(country, sn1KMZ, subNational1);
-			}//*/// Removed because Google Maps method is more reliable, and bulk of cleanup work is done
-		}
+			}
+		}//*/// Removed because Google Maps method is more reliable, and bulk of cleanup work is done
 	}
 
 	return false;
