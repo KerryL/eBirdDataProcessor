@@ -44,7 +44,8 @@ const unsigned int MapPageGenerator::importCellCountLimit(100000);
 const unsigned int MapPageGenerator::importSizeLimit(1024 * 1024);// 1 MB
 
 MapPageGenerator::MapPageGenerator(const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
-	const UString::String& mapsAPIKey, const bool& cleanUpLocationNames) :
+	const UString::String& mapsAPIKey, const std::vector<UString::String>& highDetailCountries,
+	const bool& cleanUpLocationNames) : highDetailCountries(highDetailCountries),
 	fusionTablesAPIRateLimiter(fusionTablesAPIMinDuration), ebi(eBirdAPIKey),
 	kmlLibrary(kmlLibraryPath, eBirdAPIKey, mapsAPIKey, log, cleanUpLocationNames)
 {
@@ -322,9 +323,15 @@ bool MapPageGenerator::CreateFusionTable(
 	for (const auto& c : countries)
 		countryLevelRegionInfoMap[c.code] = c;
 	for (const auto& c : countryCodes)
+	{
+		if (std::find(highDetailCountries.begin(), highDetailCountries.end(), countryLevelRegionInfoMap[c].name) == highDetailCountries.end())
+			continue;
+		else if (std::find(highDetailCountries.begin(), highDetailCountries.end(), c) == highDetailCountries.end())
+			continue;
 		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c);
+	}
 
-	// Eliminate observations that are not reported at the lowest available region detail
+	// Eliminate observations that are not reported at the lowest available region detail for high detail areas
 	observationProbabilities.erase(std::remove_if(observationProbabilities.begin(), observationProbabilities.end(), [this](const EBirdDataProcessor::YearFrequencyInfo& y)
 	{
 		const UString::String countryCode(Utilities::ExtractCountryFromRegionCode(y.locationCode));

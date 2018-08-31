@@ -66,7 +66,8 @@ public:
 	bool FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
 		const UString::String& kmlLibraryPath,
 		const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
-		const UString::String& clientId, const UString::String& clientSecret, const bool& cleanUpLocationNames) const;
+		const UString::String& clientId, const UString::String& clientSecret,
+		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const;
 		
 	static UString::String PrepareForComparison(const UString::String& commonName);
 
@@ -189,30 +190,34 @@ private:
 
 	bool ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
 		DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
-		std::array<std::vector<FrequencyInfo>, 12>& species) const;
+		std::array<std::vector<FrequencyInfo>, 12>& species, const bool& useHighDetail) const;
+	void FinishLowDetailConsolidation(std::vector<YearFrequencyInfo>& probabilityData) const;
 
 	static bool WriteBestLocationsViewerPage(const UString::String& htmlFileName,
 		const UString::String& kmlLibraryPath,
 		const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
 		const std::vector<YearFrequencyInfo>& observationProbabilities,
-		const UString::String& clientId, const UString::String& clientSecret, const bool& cleanUpLocationNames);
+		const UString::String& clientId, const UString::String& clientSecret,
+		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames);
 
 	class CalculateProbabilityJob : public ThreadPool::JobInfoBase
 	{
 	public:
 		CalculateProbabilityJob(YearFrequencyInfo& frequencyInfo, FrequencyDataYear&& occurrenceData,
-			DoubleYear&& checklistCounts, const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo),
-			occurrenceData(occurrenceData), checklistCounts(checklistCounts), ebdp(ebdp) {}
+			DoubleYear&& checklistCounts, const bool& useHighDetail, const EBirdDataProcessor& ebdp)
+			: frequencyInfo(frequencyInfo), occurrenceData(occurrenceData), checklistCounts(checklistCounts),
+			useHighDetail(useHighDetail), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
 		FrequencyDataYear occurrenceData;
 		DoubleYear checklistCounts;
+		const bool useHighDetail;
 		const EBirdDataProcessor& ebdp;
 
 		void DoJob() override
 		{
 			ebdp.ComputeNewSpeciesProbability(std::move(occurrenceData), std::move(checklistCounts),
-				frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
+				frequencyInfo.probabilities, frequencyInfo.frequencyInfo, useHighDetail);
 		}
 	};
 

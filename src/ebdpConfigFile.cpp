@@ -51,6 +51,7 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem(_T("FIND_MAX_NEEDS"), config.findMaxNeedsLocations);
 	AddConfigItem(_T("KML_LIBRARY"), config.kmlLibraryPath);
+	AddConfigItem(_T("HIGH_DETAIL"), config.highDetailCountries);
 
 	AddConfigItem(_T("OAUTH_CLIENT_ID"), config.oAuthClientId);
 	AddConfigItem(_T("OAUTH_CLIENT_SECRET"), config.oAuthClientSecret);

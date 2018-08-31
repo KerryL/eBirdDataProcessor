@@ -106,7 +106,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			configFile.GetConfig().frequencyFilePath, configFile.GetConfig().kmlLibraryPath,
 			configFile.GetConfig().googleMapsAPIKey, configFile.GetConfig().eBirdApiKey,
 			configFile.GetConfig().oAuthClientId, configFile.GetConfig().oAuthClientSecret,
-			configFile.GetConfig().cleanupKMLLocationNames))
+			configFile.GetConfig().highDetailCountries, configFile.GetConfig().cleanupKMLLocationNames))
 			return 1;
 	}
     else if (configFile.GetConfig().generateTargetCalendar)

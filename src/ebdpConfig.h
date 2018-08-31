@@ -77,6 +77,7 @@ struct EBDPConfig
 	UString::String frequencyFilePath;
 	UString::String targetInfoFileName;
 	bool cleanupKMLLocationNames;
+	std::vector<UString::String> highDetailCountries;
 
 	int showOnlyPhotoNeeds;
 	int showOnlyAudioNeeds;

@@ -1441,7 +1441,8 @@ UString::String EBirdDataProcessor::RemoveTrailingDash(const UString::String& s)
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
 	const UString::String& kmlLibraryPath, const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
-	const UString::String& clientId, const UString::String& clientSecret, const bool& cleanUpLocationNames) const
+	const UString::String& clientId, const UString::String& clientSecret,
+	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
@@ -1463,18 +1464,22 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts))
 			return false;
 
+		const bool useHighDetail();
+
 		probEntryIt->locationCode = RemoveTrailingDash(regionCode);
-		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData), std::move(checklistCounts), *this));
+		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData), std::move(checklistCounts), useHighDetail, *this));
 		++probEntryIt;
 	}
 
 	pool.WaitForAllJobsComplete();
 
+	FinishLowDetailConsolidation(newSightingProbability);
+
 	if (!googleMapsKey.empty())
 	{
 		const UString::String fileName(_T("bestLocations.html"));
 		if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, googleMapsKey, eBirdAPIKey,
-			newSightingProbability, clientId, clientSecret, cleanUpLocationNames))
+			newSightingProbability, clientId, clientSecret, highDetailCountries, cleanUpLocationNames))
 		{
 			Cerr << "Faild to create Google Maps best locations page\n";
 		}
@@ -1483,9 +1488,13 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	return true;
 }
 
+void EBirdDataProcessor::FinishLowDetailConsolidation(std::vector<YearFrequencyInfo>& probabilityData) const
+{
+}
+
 bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
 	DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
-	std::array<std::vector<FrequencyInfo>, 12>& species) const
+	std::array<std::vector<FrequencyInfo>, 12>& species, const bool& useHighDetail) const
 {
 	EliminateObservedSpecies(frequencyData);
 
@@ -1519,9 +1528,10 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const UString::String& htmlFileName,
 	const UString::String& kmlLibraryPath, const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
 	const std::vector<YearFrequencyInfo>& observationProbabilities,
-	const UString::String& clientId, const UString::String& clientSecret, const bool& cleanUpLocationNames)
+	const UString::String& clientId, const UString::String& clientSecret,
+	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames)
 {
-	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, googleMapsKey, cleanUpLocationNames);
+	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, googleMapsKey, highDetailCountries, cleanUpLocationNames);
 	return generator.WriteBestLocationsViewerPage(htmlFileName,
 		googleMapsKey, eBirdAPIKey, observationProbabilities, clientId, clientSecret);
 }

@@ -24,7 +24,8 @@ class MapPageGenerator
 {
 public:
 	MapPageGenerator(const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
-		const UString::String& mapsAPIKey, const bool& cleanUpLocationNames);
+		const UString::String& mapsAPIKey, const std::vector<UString::String>& highDetailCountries,
+		const bool& cleanUpLocationNames);
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
 	bool WriteBestLocationsViewerPage(const UString::String& htmlFileName,
@@ -35,6 +36,8 @@ public:
 private:
 	static const UString::String birdProbabilityTableName;
 	CombinedLogger<typename std::basic_ostream<UString::String::value_type>> log;
+
+	const std::vector<UString::String> highDetailCountries;
 
 	struct NamePair
 	{
