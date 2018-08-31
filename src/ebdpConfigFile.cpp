@@ -43,6 +43,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("FREQUENCY_FILES"), config.frequencyFilePath);
 	AddConfigItem(_T("TARGET_INFO_FILE_NAME"), config.targetInfoFileName);
 	AddConfigItem(_T("RECENT_PERIOD"), config.recentObservationPeriod);
+	AddConfigItem(_T("CLEANUP_KML_NAMES"), config.cleanupKMLLocationNames);
 
 	AddConfigItem(_T("GOOGLE_MAPS_KEY"), config.googleMapsAPIKey);
 	AddConfigItem(_T("HOME_LOCATION"), config.homeLocation);
@@ -84,6 +85,7 @@ void EBDPConfigFile::AssignDefaults()
 	config.showOnlyPhotoNeeds = -1;
 	config.showOnlyAudioNeeds = -1;
 	config.findMaxNeedsLocations = false;
+	config.cleanupKMLLocationNames = false;
 
 	config.doComparison = false;
 }

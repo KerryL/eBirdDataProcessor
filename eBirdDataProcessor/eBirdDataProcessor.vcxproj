@@ -92,7 +92,7 @@
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(CURL)/lib;$(OPENSSL)/lib64;$(LIBZIP)/lib</AdditionalLibraryDirectories>
-      <AdditionalDependencies>libcurl-d.lib;ws2_32.lib;libeay32MDd.lib;ssleay32MDd.lib;zip.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalDependencies>libcurl-d.lib;ws2_32.lib;libeay32MDd.lib;ssleay32MDd.lib;zip.lib;wldap32.lib;%(AdditionalDependencies)</AdditionalDependencies>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">

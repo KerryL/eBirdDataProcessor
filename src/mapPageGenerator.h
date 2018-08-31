@@ -23,7 +23,8 @@
 class MapPageGenerator
 {
 public:
-	MapPageGenerator(const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const UString::String& mapsAPIKey);
+	MapPageGenerator(const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
+		const UString::String& mapsAPIKey, const bool& cleanUpLocationNames);
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
 	bool WriteBestLocationsViewerPage(const UString::String& htmlFileName,
@@ -193,6 +194,8 @@ private:
 
 	std::vector<EBirdInterface::RegionInfo> GetFullCountrySubRegionList(const UString::String& countryCode) const;
 	void LookupEBirdRegionNames(const UString::String& countryCode, const UString::String& subRegion1Code, UString::String& country, UString::String& subRegion1);
+
+	static UString::String WrapEmptyString(const UString::String& s);
 };
 
 template<typename T>

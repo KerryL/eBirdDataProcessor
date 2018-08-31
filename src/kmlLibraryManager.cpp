@@ -21,8 +21,9 @@ const ThrottledSection::Clock::duration KMLLibraryManager::mapsAccessDelta(std::
 
 KMLLibraryManager::KMLLibraryManager(const UString::String& libraryPath,
 	const UString::String& eBirdAPIKey, const UString::String& mapsAPIKey,
-	std::basic_ostream<UString::String::value_type>& log) : libraryPath(libraryPath), log(log),
-	mapsAPIRateLimiter(mapsAccessDelta), mapsInterface(_T("eBirdDataProcessor"), mapsAPIKey), ebi(eBirdAPIKey)
+	std::basic_ostream<UString::String::value_type>& log, const bool& cleanUpLocationNames) : libraryPath(libraryPath),
+	log(log), cleanUpLocationNames(cleanUpLocationNames), mapsAPIRateLimiter(mapsAccessDelta),
+	mapsInterface(_T("eBirdDataProcessor"), mapsAPIKey), ebi(eBirdAPIKey)
 {
 }
 
@@ -97,7 +98,9 @@ bool KMLLibraryManager::NonLockingGetKMLFromMemory(const UString::String& locati
 		if (!CountryLoadedFromLibrary(ExtractCountryFromLocationId(locationId)))
 			return false;
 
-		return CheckForInexactMatch(locationId, kml);
+		if (cleanUpLocationNames)
+			return CheckForInexactMatch(locationId, kml);
+		return false;
 	}
 
 	kml = it->second;

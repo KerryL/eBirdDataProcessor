@@ -23,13 +23,14 @@ class KMLLibraryManager
 {
 public:
 	KMLLibraryManager(const UString::String& libraryPath, const UString::String& eBirdAPIKey,
-		const UString::String& mapsAPIKey, std::basic_ostream<UString::String::value_type>& log);
+		const UString::String& mapsAPIKey, std::basic_ostream<UString::String::value_type>& log, const bool& cleanUpLocationNames);
 
 	UString::String GetKML(const UString::String& country, const UString::String& subNational1, const UString::String& subNational2);
 
 private:
 	const UString::String libraryPath;
 	std::basic_ostream<UString::String::value_type>& log;
+	const bool cleanUpLocationNames;
 
 	static const ThrottledSection::Clock::duration mapsAccessDelta;
 	mutable ThrottledSection mapsAPIRateLimiter;

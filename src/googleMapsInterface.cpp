@@ -394,6 +394,7 @@ bool GoogleMapsInterface::LookupPlace(const UString::String& searchString, std::
 	if (!DoCURLGet(requestURL, response))
 	{
 		Cerr << "Failed to process GET request\n";
+		Cerr << requestURL << '\n';
 		return false;
 	}
 

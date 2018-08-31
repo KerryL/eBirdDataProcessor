@@ -76,6 +76,7 @@ struct EBDPConfig
 	unsigned int recentObservationPeriod;// [days]
 	UString::String frequencyFilePath;
 	UString::String targetInfoFileName;
+	bool cleanupKMLLocationNames;
 
 	int showOnlyPhotoNeeds;
 	int showOnlyAudioNeeds;

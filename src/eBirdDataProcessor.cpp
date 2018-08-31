@@ -1441,7 +1441,7 @@ UString::String EBirdDataProcessor::RemoveTrailingDash(const UString::String& s)
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
 	const UString::String& kmlLibraryPath, const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
-	const UString::String& clientId, const UString::String& clientSecret) const
+	const UString::String& clientId, const UString::String& clientSecret, const bool& cleanUpLocationNames) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
@@ -1473,7 +1473,8 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	if (!googleMapsKey.empty())
 	{
 		const UString::String fileName(_T("bestLocations.html"));
-		if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, googleMapsKey, eBirdAPIKey, newSightingProbability, clientId, clientSecret))
+		if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, googleMapsKey, eBirdAPIKey,
+			newSightingProbability, clientId, clientSecret, cleanUpLocationNames))
 		{
 			Cerr << "Faild to create Google Maps best locations page\n";
 		}
@@ -1518,9 +1519,9 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const UString::String& htmlFileName,
 	const UString::String& kmlLibraryPath, const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
 	const std::vector<YearFrequencyInfo>& observationProbabilities,
-	const UString::String& clientId, const UString::String& clientSecret)
+	const UString::String& clientId, const UString::String& clientSecret, const bool& cleanUpLocationNames)
 {
-	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, googleMapsKey);
+	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, googleMapsKey, cleanUpLocationNames);
 	return generator.WriteBestLocationsViewerPage(htmlFileName,
 		googleMapsKey, eBirdAPIKey, observationProbabilities, clientId, clientSecret);
 }
