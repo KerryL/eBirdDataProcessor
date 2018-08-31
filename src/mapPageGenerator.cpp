@@ -267,7 +267,7 @@ bool MapPageGenerator::CreateFusionTable(
 			Cerr << "Failed to make table public\n";
 	}
 
-	/*const auto invalidSpeciesDataRowsToDelete(FindInvalidSpeciesDataToRemove(fusionTables, tableId));
+	const auto invalidSpeciesDataRowsToDelete(FindInvalidSpeciesDataToRemove(fusionTables, tableId));
 	if (invalidSpeciesDataRowsToDelete.size() > 0)
 	{
 		log << "Deleting " << invalidSpeciesDataRowsToDelete.size() << " rows with invalid species data" << std::endl;
@@ -307,7 +307,7 @@ bool MapPageGenerator::CreateFusionTable(
 			Cerr << "Failed to remove rows for update\n";
 			return false;
 		}
-	}*/
+	}
 
 	if (observationProbabilities.size() == 0)
 	{
@@ -328,8 +328,6 @@ bool MapPageGenerator::CreateFusionTable(
 	observationProbabilities.erase(std::remove_if(observationProbabilities.begin(), observationProbabilities.end(), [this](const EBirdDataProcessor::YearFrequencyInfo& y)
 	{
 		const UString::String countryCode(Utilities::ExtractCountryFromRegionCode(y.locationCode));
-		if (countryCode.compare(_T("TR")) != 0)// TODO:  Remove
-			return true;
 		const UString::String stateCode(Utilities::ExtractStateFromRegionCode(y.locationCode));
 		const auto& subRegionList(countryRegionInfoMap[countryCode]);
 		if (subRegionList.size() == 1 && stateCode.empty())
