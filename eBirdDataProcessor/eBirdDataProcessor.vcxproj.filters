@@ -111,6 +111,9 @@
     <ClCompile Include="..\src\utilities.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\utilities\cppSocket.cpp">
+      <Filter>Source Files\utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
@@ -193,6 +196,9 @@
     </ClInclude>
     <ClInclude Include="..\src\logging\combinedLogger.h">
       <Filter>Header Files\logging</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utilities\cppSocket.h">
+      <Filter>Header Files\utilities</Filter>
     </ClInclude>
   </ItemGroup>
 </Project>

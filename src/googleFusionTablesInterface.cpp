@@ -73,7 +73,7 @@ GoogleFusionTablesInterface::GoogleFusionTablesInterface(
 	OAuth2Interface::Get().SetScope(_T("https://www.googleapis.com/auth/fusiontables"));
 	OAuth2Interface::Get().SetAuthenticationURL(_T("https://accounts.google.com/o/oauth2/auth"));
 	OAuth2Interface::Get().SetResponseType(_T("code"));
-	OAuth2Interface::Get().SetRedirectURI(_T("oob"));
+	OAuth2Interface::Get().SetRedirectURI(_T("http://127.0.0.1:28080"));
 	OAuth2Interface::Get().SetGrantType(_T("authorization_code"));
 	OAuth2Interface::Get().SetTokenURL(_T("https://accounts.google.com/o/oauth2/token"));
 

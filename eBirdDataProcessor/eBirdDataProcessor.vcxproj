@@ -75,7 +75,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(CURL)/include;../src;$(LIBZIP)/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(CURL)/lib/Debug;$(OPENSSL)/lib;$(LIBZIP)/lib</AdditionalLibraryDirectories>
@@ -97,7 +97,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(CURL)/include;../src;$(LIBZIP)/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <RuntimeLibrary>MultiThreadedDLL</RuntimeLibrary>
     </ClCompile>
     <Link>
@@ -115,7 +115,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(CURL)/include;../src;$(LIBZIP)/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
@@ -148,6 +148,7 @@
     <ClCompile Include="..\src\throttledSection.cpp" />
     <ClCompile Include="..\src\utilities.cpp" />
     <ClCompile Include="..\src\utilities\configFile.cpp" />
+    <ClCompile Include="..\src\utilities\cppSocket.cpp" />
     <ClCompile Include="..\src\utilities\mutexUtilities.cpp" />
     <ClCompile Include="..\src\utilities\uString.cpp" />
     <ClCompile Include="..\src\zipper.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="..\src\throttledSection.h" />
     <ClInclude Include="..\src\utilities.h" />
     <ClInclude Include="..\src\utilities\configFile.h" />
+    <ClInclude Include="..\src\utilities\cppSocket.h" />
     <ClInclude Include="..\src\utilities\mutexUtilities.h" />
     <ClInclude Include="..\src\utilities\uString.h" />
     <ClInclude Include="..\src\zipper.h" />
