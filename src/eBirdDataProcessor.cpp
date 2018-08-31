@@ -1455,6 +1455,8 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 	FrequencyFileReader reader(frequencyFilePath);
 
+	std::unordered_map<UString::String, ConsolidationData> consolidatationData;
+
 	auto probEntryIt(newSightingProbability.begin());
 	for (const auto& f : fileNames)
 	{
@@ -1464,16 +1466,36 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts))
 			return false;
 
-		const bool useHighDetail();
+		const auto countryCode(Utilities::ExtractCountryFromRegionCode(regionCode));
+		const bool useHighDetail(std::find(highDetailCountries.begin(), highDetailCountries.end(), countryCode) != highDetailCountries.end());
 
 		probEntryIt->locationCode = RemoveTrailingDash(regionCode);
-		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData), std::move(checklistCounts), useHighDetail, *this));
-		++probEntryIt;
+		if (useHighDetail)
+		{
+			pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData), std::move(checklistCounts), *this));
+			++probEntryIt;
+		}
+		else
+		{
+			if (consolidatationData.find(countryCode) == consolidatationData.end())
+			{
+				for (auto& c : consolidatationData[countryCode].checklistCounts)
+					c = 0.0;
+			}
+			AddConsolidationData(consolidatationData[countryCode], std::move(occurrenceData), std::move(checklistCounts));
+		}
 	}
 
 	pool.WaitForAllJobsComplete();
 
-	FinishLowDetailConsolidation(newSightingProbability);
+	for (auto& f : consolidatationData)
+	{
+		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(f.second.occurrenceData), std::move(f.second.checklistCounts), *this));
+		++probEntryIt;
+	}
+
+	pool.WaitForAllJobsComplete();
+	newSightingProbability.erase(probEntryIt, newSightingProbability.end());// Remove extra entries (only needed if every country were done in high detail)
 
 	if (!googleMapsKey.empty())
 	{
@@ -1488,13 +1510,31 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	return true;
 }
 
-void EBirdDataProcessor::FinishLowDetailConsolidation(std::vector<YearFrequencyInfo>& probabilityData) const
+void EBirdDataProcessor::ConvertProbabilityToCounts(FrequencyDataYear& newData, const std::array<double, 12>& newCounts)
 {
+}
+
+void EBirdDataProcessor::ConvertCountsToProbability(FrequencyDataYear& newData, const std::array<double, 12>& newCounts)
+{
+}
+
+void EBirdDataProcessor::AddConsolidationData(ConsolidationData& existingData,
+	FrequencyDataYear&& newData, std::array<double, 12>&& newCounts)
+{
+	ConvertProbabilityToCounts(existingData.occurrenceData, existingData.checklistCounts);
+	ConvertProbabilityToCounts(newData, newCounts);
+
+	for (unsigned int i = 0; i < newCounts.size(); ++i)
+		existingData.checklistCounts[i] += newCounts[i];
+
+	// TODO:  Add probabilities (when species match!) and insert new species
+
+	ConvertCountsToProbability(existingData.occurrenceData, existingData.checklistCounts);
 }
 
 bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
 	DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
-	std::array<std::vector<FrequencyInfo>, 12>& species, const bool& useHighDetail) const
+	std::array<std::vector<FrequencyInfo>, 12>& species) const
 {
 	EliminateObservedSpecies(frequencyData);
 

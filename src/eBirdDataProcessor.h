@@ -190,8 +190,7 @@ private:
 
 	bool ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
 		DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
-		std::array<std::vector<FrequencyInfo>, 12>& species, const bool& useHighDetail) const;
-	void FinishLowDetailConsolidation(std::vector<YearFrequencyInfo>& probabilityData) const;
+		std::array<std::vector<FrequencyInfo>, 12>& species) const;
 
 	static bool WriteBestLocationsViewerPage(const UString::String& htmlFileName,
 		const UString::String& kmlLibraryPath,
@@ -204,20 +203,18 @@ private:
 	{
 	public:
 		CalculateProbabilityJob(YearFrequencyInfo& frequencyInfo, FrequencyDataYear&& occurrenceData,
-			DoubleYear&& checklistCounts, const bool& useHighDetail, const EBirdDataProcessor& ebdp)
-			: frequencyInfo(frequencyInfo), occurrenceData(occurrenceData), checklistCounts(checklistCounts),
-			useHighDetail(useHighDetail), ebdp(ebdp) {}
+			DoubleYear&& checklistCounts, const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo),
+			occurrenceData(occurrenceData), checklistCounts(checklistCounts), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
 		FrequencyDataYear occurrenceData;
 		DoubleYear checklistCounts;
-		const bool useHighDetail;
 		const EBirdDataProcessor& ebdp;
 
 		void DoJob() override
 		{
 			ebdp.ComputeNewSpeciesProbability(std::move(occurrenceData), std::move(checklistCounts),
-				frequencyInfo.probabilities, frequencyInfo.frequencyInfo, useHighDetail);
+				frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
 		}
 	};
 
@@ -286,6 +283,15 @@ private:
 	static UString::String GetMediaSexString(const MediaEntry::Sex& sex);
 	static UString::String GetMediaSoundString(const MediaEntry::Sound& sound);
 	static bool ParseMediaEntry(const UString::String& line, MediaEntry& entry);
+
+	struct ConsolidationData
+	{
+		FrequencyDataYear occurrenceData;
+		std::array<double, 12> checklistCounts;
+	};
+	static void AddConsolidationData(ConsolidationData& existingData, FrequencyDataYear&& newData, std::array<double, 12>&& newCounts);
+	static void ConvertProbabilityToCounts(FrequencyDataYear& newData, const std::array<double, 12>& newCounts);
+	static void ConvertCountsToProbability(FrequencyDataYear& newData, const std::array<double, 12>& newCounts);
 };
 
 template<typename T>

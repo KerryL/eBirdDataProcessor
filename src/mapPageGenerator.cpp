@@ -324,9 +324,7 @@ bool MapPageGenerator::CreateFusionTable(
 		countryLevelRegionInfoMap[c.code] = c;
 	for (const auto& c : countryCodes)
 	{
-		if (std::find(highDetailCountries.begin(), highDetailCountries.end(), countryLevelRegionInfoMap[c].name) == highDetailCountries.end())
-			continue;
-		else if (std::find(highDetailCountries.begin(), highDetailCountries.end(), c) == highDetailCountries.end())
+		if (std::find(highDetailCountries.begin(), highDetailCountries.end(), c) == highDetailCountries.end())
 			continue;
 		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c);
 	}

@@ -192,6 +192,16 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 		configurationOK = false;
 	}
 
+	for (const auto& c : config.highDetailCountries)
+	{
+		if (c.length() != 2)
+		{
+			Cerr << GetKey(config.highDetailCountries) << " must use 2-letter country codes\n";
+			configurationOK = false;
+			break;
+		}
+	}
+
 	return configurationOK;
 }
 
