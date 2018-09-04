@@ -290,8 +290,8 @@ private:
 		std::array<double, 12> checklistCounts;
 	};
 	static void AddConsolidationData(ConsolidationData& existingData, FrequencyDataYear&& newData, std::array<double, 12>&& newCounts);
-	static void ConvertProbabilityToCounts(FrequencyDataYear& newData, const std::array<double, 12>& newCounts);
-	static void ConvertCountsToProbability(FrequencyDataYear& newData, const std::array<double, 12>& newCounts);
+	static void ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 12>& counts);
+	static void ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 12>& counts);
 };
 
 template<typename T>

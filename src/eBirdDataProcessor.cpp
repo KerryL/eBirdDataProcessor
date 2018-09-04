@@ -1469,9 +1469,9 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 		const auto countryCode(Utilities::ExtractCountryFromRegionCode(regionCode));
 		const bool useHighDetail(std::find(highDetailCountries.begin(), highDetailCountries.end(), countryCode) != highDetailCountries.end());
 
-		probEntryIt->locationCode = RemoveTrailingDash(regionCode);
 		if (useHighDetail)
 		{
+			probEntryIt->locationCode = RemoveTrailingDash(regionCode);
 			pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData), std::move(checklistCounts), *this));
 			++probEntryIt;
 		}
@@ -1490,6 +1490,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 
 	for (auto& f : consolidatationData)
 	{
+		probEntryIt->locationCode = f.first;
 		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(f.second.occurrenceData), std::move(f.second.checklistCounts), *this));
 		++probEntryIt;
 	}
@@ -1510,12 +1511,22 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	return true;
 }
 
-void EBirdDataProcessor::ConvertProbabilityToCounts(FrequencyDataYear& newData, const std::array<double, 12>& newCounts)
+void EBirdDataProcessor::ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 12>& counts)
 {
+	for (unsigned int i = 0; i < counts.size(); ++i)
+	{
+		for (auto& entry : data[i])
+			entry.frequency = static_cast<int>(entry.frequency * counts[i] + 0.5);
+	}
 }
 
-void EBirdDataProcessor::ConvertCountsToProbability(FrequencyDataYear& newData, const std::array<double, 12>& newCounts)
+void EBirdDataProcessor::ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 12>& counts)
 {
+	for (unsigned int i = 0; i < counts.size(); ++i)
+	{
+		for (auto& entry : data[i])
+			entry.frequency /= counts[i];
+	}
 }
 
 void EBirdDataProcessor::AddConsolidationData(ConsolidationData& existingData,
@@ -1525,9 +1536,27 @@ void EBirdDataProcessor::AddConsolidationData(ConsolidationData& existingData,
 	ConvertProbabilityToCounts(newData, newCounts);
 
 	for (unsigned int i = 0; i < newCounts.size(); ++i)
+	{
 		existingData.checklistCounts[i] += newCounts[i];
 
-	// TODO:  Add probabilities (when species match!) and insert new species
+		for (const auto& newEntry : newData[i])
+		{
+			bool found(false);
+			
+			for (auto& existingEntry : existingData.occurrenceData[i])
+			{
+				if (newEntry.compareString.compare(existingEntry.compareString) == 0)
+				{
+					existingEntry.frequency += newEntry.frequency;
+					found = true;
+					break;
+				}
+			}
+
+			if (!found)
+				existingData.occurrenceData[i].push_back(newEntry);
+		}
+	}
 
 	ConvertCountsToProbability(existingData.occurrenceData, existingData.checklistCounts);
 }
