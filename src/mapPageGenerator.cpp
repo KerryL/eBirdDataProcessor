@@ -244,6 +244,13 @@ bool MapPageGenerator::CreateFusionTable(
 			log << "Found existing table " << t.tableId << std::endl;
 			tableId = t.tableId;
 
+			cJSON* root(nullptr);
+			UString::String csvData;
+			const UString::String query(_T("SELECT ROWID,State,County,Country,Name,Code,Geometry,'Probability-Jan','Probability-Feb','Probability-Mar','Probability-Apr','Probability-May','Probability-Jun','Probability-Jul','Probability-Aug','Probability-Sep','Probability-Oct','Probability-Nov','Probability-Dec' FROM ") + tableId);
+			const UString::String nonTypedOption(_T("&typed=false"));
+			if (!fusionTables.SubmitQuery(query + nonTypedOption, root, &csvData))
+				return false;
+
 			if (GetExistingCountyData(existingData, fusionTables, tableId))
 				break;
 
@@ -329,26 +336,26 @@ bool MapPageGenerator::CreateFusionTable(
 		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c);
 	}
 
-	// Eliminate observations that are not reported at the lowest available region detail for high detail areas
+	// Eliminate observations that are not reported at the highest available region detail for high detail areas
 	observationProbabilities.erase(std::remove_if(observationProbabilities.begin(), observationProbabilities.end(), [this](const EBirdDataProcessor::YearFrequencyInfo& y)
 	{
 		const UString::String countryCode(Utilities::ExtractCountryFromRegionCode(y.locationCode));
+		if (std::find(highDetailCountries.begin(), highDetailCountries.end(), countryCode) == highDetailCountries.end())
+			return false;// Not a high detail country
+
 		const UString::String stateCode(Utilities::ExtractStateFromRegionCode(y.locationCode));
 		const auto& subRegionList(countryRegionInfoMap[countryCode]);
-		if (subRegionList.size() == 1 && stateCode.empty())
-			return false;// No subregions
-		else if (subRegionList.size() > 1 && stateCode.empty())
-			return true;// Subregions exist, but none was specified
+		if (stateCode.empty())
+			return subRegionList.size() > 1;// Either there are no subregions (return false to keep) or there are (return true to remove)
 
 		const UString::String matchString(countryCode + _T("-") + stateCode);
 		for (const auto& sr : subRegionList)
 		{
-			if (sr.code.substr(0, matchString.length()).compare(matchString) == 0)
+			if (sr.code.substr(0, matchString.length()).compare(matchString) == 0)// Country and state match
 			{
 				if (sr.code.length() > matchString.length() &&
-					sr.code[matchString.length()] == UString::Char('-'))
-					return true;
-				return false;
+					sr.code[matchString.length()] == UString::Char('-'))// Subregion list entry also has county specifier
+					return y.locationCode.length() < countryCode.length() + stateCode.length() + 1;// Must be specified at county level
 			}
 		}
 		return false;
@@ -638,21 +645,30 @@ bool MapPageGenerator::GetExistingCountyData(std::vector<CountyInfo>& data,
 	if (csvData.empty())// Shouldn't have no root and also no csvData
 		return false;
 
-	const unsigned int batchSize(500);
-	unsigned int count(0);
+	unsigned int batchSize(100);
+	bool noMoreRecords(false);
 	do
 	{
 		UString::OStringStream offsetAndLimit;
-		offsetAndLimit << " OFFSET " << count * batchSize << " LIMIT " << batchSize;
+		offsetAndLimit << " OFFSET " << data.size() << " LIMIT " << batchSize;
 		if (!fusionTables.SubmitQuery(query + offsetAndLimit.str() + nonTypedOption, root))
+		{
+			if (batchSize > 1)
+			{
+				batchSize = std::max(1U, batchSize / 2);
+				continue;
+			}
 			return false;
+		}
+		// TODO:  Could also try to make batch size bigger if we find that we're way under 10 MB limit
 
+		const size_t originalSize(data.size());
 		if (!ProcessJSONQueryResponse(root, data))
 			return false;
 
 		root = nullptr;
-		++count;
-	} while (data.size() == count * batchSize);
+		noMoreRecords = data.size() - originalSize == 0;
+	} while (!noMoreRecords);
 	return true;
 	//return ProcessCSVQueryResponse(csvData, data);
 }
