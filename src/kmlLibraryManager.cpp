@@ -163,7 +163,7 @@ bool KMLLibraryManager::OpenKMLArchive(const UString::String& fileName, UString:
 // Load by country
 bool KMLLibraryManager::NonLockingLoadKMLFromLibrary(const UString::String& country, const UString::String& locationId, UString::String& kml)
 {
-	//log << "Attempting to load KML data from archive for '" << country << '\'' << std::endl;
+	log << "Attempting to load KML data from archive for '" << country << '\'' << std::endl;
 
 	UString::String rawKML;
 	if (!OpenKMLArchive(libraryPath + country + _T(".kmz"), rawKML))
@@ -196,7 +196,7 @@ bool KMLLibraryManager::DownloadAndStoreKML(const UString::String& country,
 	if (FileExists(kmzFileName))
 		return GetKMLFromMemory(locationId, kml);// Another thread downloaded it while we were transfering from shared to exclusive access
 
-	//log << "Attempting to download KML data for '" << country << '\'' << " at detail level " << static_cast<int>(detailLevel) << std::endl;
+	log << "Attempting to download KML data for '" << country << '\'' << " at detail level " << static_cast<int>(detailLevel) << std::endl;
 	GlobalKMLFetcher fetcher(log);
 	std::string result;
 	if (!fetcher.FetchKML(country, detailLevel, result))

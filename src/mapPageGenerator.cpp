@@ -332,7 +332,10 @@ bool MapPageGenerator::CreateFusionTable(
 	for (const auto& c : countryCodes)
 	{
 		if (std::find(highDetailCountries.begin(), highDetailCountries.end(), c) == highDetailCountries.end())
+		{
+			countryRegionInfoMap[c] = std::vector<EBirdInterface::RegionInfo>(1, countryLevelRegionInfoMap[c]);
 			continue;
+		}
 		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c);
 	}
 
@@ -998,7 +1001,15 @@ void MapPageGenerator::LookupAndAssignKML(CountyInfo& data)
 	assert(!countryName.empty());
 	data.geometryKML = kmlLibrary.GetKML(countryName, stateName, data.county);
 	if (data.geometryKML.empty())
-		log << "\rWarning:  Geometry not found for '" << data.code << '\'' << std::endl;
+	{
+
+		log << "\rWarning:  Geometry not found for '" << data.code << "\' (" << countryName;
+		if (!stateName.empty())
+			log << ", " << stateName;
+		if (!data.county.empty())
+			log << ", " << data.county;
+		log << ')' << std::endl;
+	}
 }
 
 void MapPageGenerator::AddRegionCodesToMap(const UString::String& parentCode, const EBirdInterface::RegionType& regionType)
