@@ -374,7 +374,9 @@ bool MapPageGenerator::CreateFusionTable(
 		countyIt->probabilities = std::move(entry.probabilities);
 		countyIt->code = entry.locationCode;
 
-		const auto& nameLookupData(countryRegionInfoMap.find(entry.locationCode.substr(0, 2))->second);
+		const auto nameIt(countryRegionInfoMap.find(entry.locationCode.substr(0, 2)));
+		assert(nameIt != countryRegionInfoMap.end());
+		const auto& nameLookupData(nameIt->second);
 		if (!CopyExistingDataForCounty(entry, existingData, *countyIt, nameLookupData))
 			pool.AddJob(std::make_unique<MapJobInfo>(
 				*countyIt, entry, nameLookupData, *this));
