@@ -1030,7 +1030,7 @@ void MapPageGenerator::LookupEBirdRegionNames(const UString::String& countryCode
 			return countryCode;
 		return countryCode + UString::Char('-') + subRegion1Code;
 	}());
-	std::shared_lock<std::shared_mutex> lock(codeToNameMapMutex);
+	std::shared_lock<std::shared_timed_mutex> lock(codeToNameMapMutex);
 	auto countryIt(eBirdRegionCodeToNameMap.find(countryCode));
 	if (countryIt == eBirdRegionCodeToNameMap.end())
 	{

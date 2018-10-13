@@ -69,7 +69,7 @@ UString::String KMLLibraryManager::GetKML(const UString::String& country, const 
 
 bool KMLLibraryManager::GetKMLFromMemory(const UString::String& locationId, UString::String& kml) const
 {
-	std::shared_lock<std::shared_mutex> lock(mutex);
+	std::shared_lock<std::shared_timed_mutex> lock(mutex);
 	if (NonLockingGetKMLFromMemory(locationId, kml))
 	{
 		std::lock_guard<std::mutex> mappedLock(mappedMutex);
@@ -174,7 +174,7 @@ bool KMLLibraryManager::NonLockingLoadKMLFromLibrary(const UString::String& coun
 	if (!ForEachPlacemarkTag(rawKML, ExtractRegionGeometry, args))
 		return false;
 
-	std::lock_guard<std::shared_mutex> lock(mutex);
+	std::lock_guard<std::shared_timed_mutex> lock(mutex);
 	//kmlMemory.merge(std::move(tempMap));// requires C++ 17 - not sure if there's any reason to prefer it over line below
 	kmlMemory.insert(tempMap.begin(), tempMap.end());
 
@@ -575,7 +575,7 @@ bool KMLLibraryManager::RegionNamesMatch(const UString::String& name1, const USt
 
 const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion1Data(const UString::String& countryName)
 {
-	std::shared_lock<std::shared_mutex> sharedLock(mutex);
+	std::shared_lock<std::shared_timed_mutex> sharedLock(mutex);
 	auto it(subRegion1Data.find(countryName));
 	if (it == subRegion1Data.end())
 	{
@@ -591,7 +591,7 @@ const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion1D
 const std::vector<EBirdInterface::RegionInfo>& KMLLibraryManager::GetSubRegion2Data(const UString::String& countryName, const EBirdInterface::RegionInfo& regionInfo)
 {
 	const UString::String locationID(BuildLocationIDString(countryName, regionInfo.name, UString::String()));
-	std::shared_lock<std::shared_mutex> sharedLock(mutex);
+	std::shared_lock<std::shared_timed_mutex> sharedLock(mutex);
 	auto it(subRegion2Data.find(locationID));
 	if (it == subRegion2Data.end())
 	{
@@ -735,7 +735,7 @@ bool KMLLibraryManager::SegmentsIntersect(const GeometryInfo::Point& segment1Poi
 KMLLibraryManager::GeometryInfo KMLLibraryManager::GetGeometryInfoByName(const UString::String& countryName, const UString::String& parentName)
 {
 	const UString::String indexString(BuildLocationIDString(countryName, parentName, UString::String()));
-	std::shared_lock<std::shared_mutex> lock(mutex);
+	std::shared_lock<std::shared_timed_mutex> lock(mutex);
 	auto it(geometryInfo.find(indexString));
 	if (it == geometryInfo.end())
 	{
