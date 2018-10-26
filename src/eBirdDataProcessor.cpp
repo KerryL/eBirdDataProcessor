@@ -1012,20 +1012,36 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	else
 		entry.type = MediaEntry::Type::Photo;
 
-	const UString::String endOfStartTag(_T("\">"));
-	const auto commonNamePosition(html.find(endOfStartTag, commonNameHeaderPosition + commonNameHeader.length()));
-	if (commonNamePosition == std::string::npos)
+	const UString::String endOfLinkStartTag(_T("\">"));
+	const auto endOfLinkPosition(html.find(endOfLinkStartTag, commonNameHeaderPosition + commonNameHeader.length()));
+
+	const UString::String endOfCommonNameBlock(_T("</h3>"));
+	const auto endOfCommonNamePosition(html.find(endOfCommonNameBlock, commonNameHeaderPosition + commonNameHeader.length()));
+	if (endOfCommonNamePosition == std::string::npos)
 		return false;
 
-	const UString::String endOfLinkTag(_T("</a>"));
-	const auto commonNameEndPosition(html.find(endOfLinkTag, commonNamePosition));
-	if (commonNameEndPosition == std::string::npos)
-		return false;
+	if (endOfCommonNamePosition < endOfLinkPosition)// Can happend when there is no link around the common name (like for sputs)
+	{
+		const UString::String endOfLineTag(_T("\n"));
+		const auto commonNameEndPosition(html.find(endOfLineTag, commonNameHeaderPosition + commonNameHeader.length() + 1));
+		if (commonNameEndPosition == std::string::npos)
+			return false;
 
-	entry.commonName = html.substr(commonNamePosition + endOfStartTag.length(), commonNameEndPosition - commonNamePosition - endOfStartTag.length());
+		entry.commonName = StringUtilities::Trim(html.substr(commonNameHeaderPosition + commonNameHeader.length() + 1,
+			commonNameEndPosition - commonNameHeaderPosition - commonNameHeader.length() - 1));
+	}
+	else
+	{
+		const UString::String endOfLinkTag(_T("</a>"));
+		const auto commonNameEndPosition(html.find(endOfLinkTag, endOfLinkPosition));
+		if (commonNameEndPosition == std::string::npos)
+			return false;
+
+		entry.commonName = html.substr(endOfLinkPosition + endOfLinkStartTag.length(), commonNameEndPosition - endOfLinkPosition - endOfLinkStartTag.length());
+	}
 
 	const UString::String ratingStart(_T("<div class=\"RatingStars RatingStars-"));
-	const auto ratingStartPosition(html.find(ratingStart, commonNameEndPosition));
+	const auto ratingStartPosition(html.find(ratingStart, endOfCommonNamePosition));
 	if (ratingStartPosition != std::string::npos)
 	{
 		UString::IStringStream ss(html.substr(ratingStartPosition + ratingStart.length(), 1));
@@ -1036,7 +1052,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 		entry.rating = 0;
 
 	const UString::String calendarLine(_T("<svg class=\"Icon Icon-calendar\" role=\"img\"><use xlink:href=\"#Icon--calendar\"></use></svg>"));
-	const auto calendarLinePosition(html.find(calendarLine, commonNameEndPosition));
+	const auto calendarLinePosition(html.find(calendarLine, endOfCommonNamePosition));
 	if (calendarLinePosition == std::string::npos)
 		return false;
 	UString::IStringStream ss(StringUtilities::Trim(html.substr(calendarLinePosition + calendarLine.length() + 5)));
@@ -1130,6 +1146,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 		}
 	}
 
+	const UString::String endOfLinkTag(_T("</a>"));
 	const auto checklistIdEndPosition(html.find(endOfLinkTag, checklistIdPosition));
 	if (checklistIdEndPosition == std::string::npos)
 		return false;

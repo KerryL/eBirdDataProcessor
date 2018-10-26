@@ -94,7 +94,7 @@ std::vector<EBirdInterface::LocationInfo> EBirdInterface::GetHotspotsInRegion(co
 	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
-		Cerr << "Failed to parse returned UString::String (GetHotspotsInRegion())\n";
+		Cerr << "Failed to parse returned string (GetHotspotsInRegion())\n";
 		Cerr << response.c_str() << '\n';
 		return std::vector<LocationInfo>();
 	}
@@ -291,7 +291,7 @@ std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservatio
 	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
-		Cerr << "Failed to parse returned UString::String (GetRecentObservationsOfSpeciesInRegion())\n";
+		Cerr << "Failed to parse returned string (GetRecentObservationsOfSpeciesInRegion())\n";
 		Cerr << response.c_str() << '\n';
 		return std::vector<ObservationInfo>();
 	}
@@ -373,7 +373,7 @@ bool EBirdInterface::FetchEBirdNameData()
 	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
-		Cerr << "Failed to parse returned UString::String (GetScientificNameFromCommonName())\n";
+		Cerr << "Failed to parse returned string (GetScientificNameFromCommonName())\n";
 		Cerr << response.c_str() << '\n';
 		return false;
 	}
@@ -526,7 +526,7 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 	cJSON *root(cJSON_Parse(response.c_str()));
 	if (!root)
 	{
-		Cerr << "Failed to parse returned UString::String (GetSubRegions())\n";
+		Cerr << "Failed to parse returned string (GetSubRegions())\n";
 		Cerr << "Request was: " << request.str() << '\n';
 		Cerr << "Response was: " << response.c_str() << '\n';
 		return std::vector<RegionInfo>();

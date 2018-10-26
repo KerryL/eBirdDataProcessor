@@ -389,7 +389,7 @@ bool GoogleMapsInterface::LookupCoordinates(const UString::String& searchString,
 bool GoogleMapsInterface::LookupPlace(const UString::String& searchString, std::vector<PlaceInfo>& info, UString::String* statusRet) const
 {
 	const UString::String requestURL(apiRoot + placeSearchEndPoint
-		+ _T("?query=") + SanitizeAddress(searchString) + _T("&key=") + apiKey);
+		+ _T("?query=") + SanitizeAddress(searchString) + _T("&key=") + apiKey + _T("&fields=name,formatted_address,geometry"));// NOTE:  Fields parameter is important to prevent being billed for contact and atmosphere data
 	std::string response;
 	if (!DoCURLGet(requestURL, response))
 	{

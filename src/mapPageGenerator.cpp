@@ -50,8 +50,8 @@ MapPageGenerator::MapPageGenerator(const UString::String& kmlLibraryPath, const 
 	kmlLibrary(kmlLibraryPath, eBirdAPIKey, mapsAPIKey, log, cleanUpLocationNames)
 {
 	log.Add(Cout);
-	std::unique_ptr<UString::OFStream> f(std::make_unique<UString::OFStream>("temp.log"));// TODO:  Remove
-	log.Add(std::move(f));
+	/*std::unique_ptr<UString::OFStream> f(std::make_unique<UString::OFStream>("temp.log"));// TODO:  Remove
+	log.Add(std::move(f));//*/
 }
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const UString::String& htmlFileName,
