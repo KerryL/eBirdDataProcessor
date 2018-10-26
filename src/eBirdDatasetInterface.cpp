@@ -201,7 +201,7 @@ bool EBirdDatasetInterface::EnsureFolderExists(const UString::String& dir)// Cre
 #ifdef _WIN32
 	std::string::size_type nextSlash(std::min(dir.find(UString::Char('/')), dir.find(UString::Char('\\'))));
 #else
-	std::string::size_type nextSlash(dir.find(Char('/')));
+	std::string::size_type nextSlash(dir.find(UString::Char('/')));
 #endif// _WIN32
 	while (nextSlash != std::string::npos)
 	{
@@ -215,7 +215,7 @@ bool EBirdDatasetInterface::EnsureFolderExists(const UString::String& dir)// Cre
 #ifdef _WIN32
 		nextSlash = std::min(dir.find(UString::Char('/'), nextSlash + 1), dir.find(UString::Char('\\'), nextSlash + 1));
 #else
-		nextSlash = dir.find(Char('/'), nextSlash + 1);
+		nextSlash = dir.find(UString::Char('/'), nextSlash + 1);
 #endif// _WIN32
 	}
 
@@ -260,7 +260,7 @@ UString::String EBirdDatasetInterface::GetPath(const UString::String& regionCode
 #ifdef _WIN32
 	const UString::Char slash('\\');
 #else
-	const Char slash('/');
+	const UString::Char slash('/');
 #endif// _WIN32
 	return regionCode.substr(0, firstDash) + slash;
 }

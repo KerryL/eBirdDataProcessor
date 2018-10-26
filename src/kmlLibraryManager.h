@@ -177,7 +177,7 @@ private:
 	bool GetKMLFromMemory(const UString::String& locationId, UString::String& kml) const;
 	bool NonLockingGetKMLFromMemory(const UString::String& locationId, UString::String& kml) const;
 
-	mutable std::shared_mutex mutex;
+	mutable std::shared_timed_mutex mutex;
 	mutable std::mutex userInputMutex;
 	mutable std::mutex gMapResultMutexeBird;
 	mutable std::mutex gMapResultMutexGADM;

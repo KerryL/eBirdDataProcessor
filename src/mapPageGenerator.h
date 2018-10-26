@@ -69,7 +69,7 @@ private:
 	ThrottledSection fusionTablesAPIRateLimiter;
 
 	mutable EBirdInterface ebi;
-	std::shared_mutex codeToNameMapMutex;
+	std::shared_timed_mutex codeToNameMapMutex;
 	std::unordered_map<UString::String, UString::String> eBirdRegionCodeToNameMap;
 	void AddRegionCodesToMap(const UString::String& parentCode, const EBirdInterface::RegionType& regionType);
 
