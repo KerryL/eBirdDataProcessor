@@ -81,7 +81,12 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	if (configFile.GetConfig().dayFilter > 0)
 		processor.FilterDay(configFile.GetConfig().dayFilter);
+		
+	// Remove entries that don't contain the specified comment string
+	if (!configFile.GetConfig().commentGroupString.empty())
+		processor.FilterCommentString(configFile.GetConfig().commentGroupString);
 
+	// Other filter criteria
 	if (!configFile.GetConfig().includePartialIDs)
 		processor.FilterPartialIDs();
 

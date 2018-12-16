@@ -59,6 +59,8 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("DATASET"), config.eBirdDatasetPath);
 
 	AddConfigItem(_T("COMPARE"), config.doComparison);
+	
+	AddConfigItem(_T("COMMENT_GROUP"), config.commentGroupString);
 }
 
 void EBDPConfigFile::AssignDefaults()

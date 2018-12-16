@@ -254,6 +254,14 @@ void EBirdDataProcessor::FilterDay(const unsigned int& day)
 	}), data.end());
 }
 
+void EBirdDataProcessor::FilterCommentString(const UString::String& commentString)
+{
+	data.erase(std::remove_if(data.begin(), data.end(), [&commentString](const Entry& entry)
+	{
+		return entry.checklistComments.find(commentString) == UString::String::npos;
+	}), data.end());
+}
+
 void EBirdDataProcessor::FilterPartialIDs()
 {
 	data.erase(std::remove_if(data.begin(), data.end(), [](const Entry& entry)

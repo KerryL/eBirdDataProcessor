@@ -95,6 +95,8 @@ struct EBDPConfig
 	UString::String oAuthClientSecret;
 
 	UString::String eBirdDatasetPath;
+	
+	UString::String commentGroupString;
 };
 
 #endif// EBDP_CONFIG_H_

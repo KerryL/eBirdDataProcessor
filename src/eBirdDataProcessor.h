@@ -47,6 +47,8 @@ public:
 	void FilterDay(const unsigned int& day);
 
 	void FilterPartialIDs();
+	
+	void FilterCommentString(const UString::String& commentString);
 
 	void SortData(const EBDPConfig::SortBy& primarySort, const EBDPConfig::SortBy& secondarySort);
 
