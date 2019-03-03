@@ -35,6 +35,32 @@ public:
 
 	std::vector<LocationInfo> GetHotspotsWithRecentObservationsOf(
 		const UString::String& speciesCode, const UString::String& region, const unsigned int& recentPeriod);
+		
+	enum class Protocol
+	{
+		Incidental,// P20
+		Stationary,// P21
+		Traveling,// P22
+		Area,// P23
+		Banding,// P33
+		RustyBlackbirdSMB,// P41
+		CWCPointCount,// P46
+		CWCAreaSearch, //P47
+		Random,// P48
+		OiledBirds,// P52
+		NocturnalFlightCall,// P54
+		AudobonCoastalBirdSurvey,// P58
+		TNCCaliforniaWaterbirdCount,// P59
+		Paleagic,// P60
+		Historical,// P62
+		CaliforniaBrownPelicanSurvey,// P69
+		PROALAS,// P73
+		InternationalShorebirdSurvey,// P74
+		TricoloredBlackbirdWinterSurvey,//P75
+		Other// Another dozen or so protocols which are no longer active for new observation data
+	};
+	
+	static Protocol MapProtocolCodeToProtocol(const std::string& code);
 
 	struct ObservationInfo
 	{
@@ -51,6 +77,9 @@ public:
 		bool observationReviewed;
 		bool observationValid;
 		bool locationPrivate;
+		double distance = 0.0;// [km]
+		unsigned int duration = 0;// [min]
+		Protocol protocol = Protocol::Otber;
 
 		bool dateIncludesTimeInfo = true;
 	};

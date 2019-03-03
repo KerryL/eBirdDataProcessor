@@ -777,3 +777,50 @@ std::vector<EBirdInterface::SubNational1Info> EBirdInterface::BuildSubNational1I
 
 	return info;
 }
+
+EBirdInterface::Protocol EBirdInterface::MapProtocolCodeToProtocol(const std::string& code)
+{
+	assert(code.length() == 3);
+	assert(code[0] == 'P');
+	
+	if (code.compare("P20") == 0)
+		return Protocol::Incidental;
+	else if (code.compare("P21") == 0)
+		return Protocol::Stationary;
+	else if (code.compare("P22") == 0)
+		return Protocol::Traveling;
+	else if (code.compare("P23") == 0)
+		return Protocol::Area;
+	else if (code.compare("P33") == 0)
+		return Protocol::Banding;
+	else if (code.compare("P41") == 0)
+		return Protocol::RustyBlackbirdSMB;
+	else if (code.compare("P46") == 0)
+		return Protocol::CWCPointCount;
+	else if (code.compare("P47") == 0)
+		return Protocol::CWCAreaSearch;
+	else if (code.compare("P48") == 0)
+		return Protocol::Random;
+	else if (code.compare("P52") == 0)
+		return Protocol::OiledBirds;
+	else if (code.compare("P54") == 0)
+		return Protocol::NocturnalFlightCall;
+	else if (code.compare("P58") == 0)
+		return Protocol::AudobonCoastalBirdSurvey;
+	else if (code.compare("P59") == 0)
+		return Protocol::TNCCaliforniaWaterbirdCount;
+	else if (code.compare("P60") == 0)
+		return Protocol::Paleagic;
+	else if (code.compare("P62") == 0)
+		return Protocol::Historical;
+	else if (code.compare("P69") == 0)
+		return Protocol::CaliforniaBrownPelicanSurvey;
+	else if (code.compare("P73") == 0)
+		return Protocol::PROALAS;
+	else if (code.compare("P74") == 0)
+		return Protocol::InternationalShorebirdSurvey;
+	else if (code.compare("P75") == 0)
+		return Protocol::TricoloredBlackbirdWinterSurvey;
+
+	return Protocol::Other;
+}

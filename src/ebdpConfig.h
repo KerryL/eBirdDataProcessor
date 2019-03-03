@@ -31,6 +31,7 @@ struct EBDPConfig
 	bool generateRarityScores;
 	bool speciesCountOnly;// Primarily for plotting
 	bool includePartialIDs;
+	bool generateTimeOfDayData;
 
 	unsigned int yearFilter;
 	unsigned int monthFilter;

@@ -16,51 +16,7 @@
 UString::String BestObservationTimeEstimator::EstimateBestObservationTime(
 	const std::vector<EBirdInterface::ObservationInfo>& observationInfo)
 {
-	if (observationInfo.size() < 3)
-	{
-		auto obsInfoSortable(observationInfo);
-		std::sort(obsInfoSortable.begin(), obsInfoSortable.end(),
-			[](const EBirdInterface::ObservationInfo& a, const EBirdInterface::ObservationInfo& b)
-		{
-			if (a.observationDate.tm_hour < b.observationDate.tm_hour)
-				return true;
-			else if (a.observationDate.tm_hour > b.observationDate.tm_hour)
-				return false;
-
-			return a.observationDate.tm_min < b.observationDate.tm_min;
-		});
-
-		UString::OStringStream ss;
-		ss << std::setfill(UString::Char('0'));
-		for (const auto& o : obsInfoSortable)
-		{
-			if (ss.str().empty())
-				ss << "at ";
-			else
-				ss << " and ";
-
-			ss << std::setw(2) << o.observationDate.tm_hour << ':' << std::setw(2) << o.observationDate.tm_min;
-		}
-
-		return ss.str();
-	}
-
-	// For ease of processing, convert times to a double representation of time as fractional hours since midnight
-	std::vector<double> inputTimes(observationInfo.size());
-	auto inputIt(inputTimes.begin());
-	for (const auto& o : observationInfo)
-		*(inputIt++) = o.observationDate.tm_hour + o.observationDate.tm_min / 60.0;
-
-	// Estimate the probability distribution by binning into 1-hour wide slots
-	const double minimum(0.0);// hours since midnight
-	const unsigned int pdfPointCount(24);
-	const double step(1.0);// hours
-	std::vector<double> pdfRange(pdfPointCount);
-	std::generate(pdfRange.begin(), pdfRange.end(), Sequence(minimum, step));
-
-	KernelDensityEstimation kde;
-	std::vector<double> pdfEstimate(kde.ComputePDF(inputTimes, pdfRange,
-		std::max(1.0, KernelDensityEstimation::EstimateOptimalBandwidth(inputTimes))));
+	const auto pdf(EstimateBestObservationTimePDF(observationInfo));
 
 	// Examine PDF to give insight into observation times.  There can be (multiple) obvious peaks
 	// where we should list out certain hours, or PDF can be flat over several hours, in which
@@ -123,6 +79,66 @@ UString::String BestObservationTimeEstimator::EstimateBestObservationTime(
 	}
 
 	return ss.str();
+}
+
+std::array<double, 24> BestObservationTimeEstimator::EstimateBestObservationTimePDF(
+	const std::vector<EBirdInterface::ObservationInfo>& observationInfo)
+{
+	// TODO:  Modify this entire method to make use of duration (if available) and to disregard observations that have no time associated with them
+	// This should use only:  Historic protocols that include start time and duration, traveling, stationary, paleagic, incidental, (any others?)
+	if (observationInfo.size() < 3)
+	{
+		auto obsInfoSortable(observationInfo);
+		std::sort(obsInfoSortable.begin(), obsInfoSortable.end(),
+			[](const EBirdInterface::ObservationInfo& a, const EBirdInterface::ObservationInfo& b)
+		{
+			if (a.observationDate.tm_hour < b.observationDate.tm_hour)
+				return true;
+			else if (a.observationDate.tm_hour > b.observationDate.tm_hour)
+				return false;
+
+			return a.observationDate.tm_min < b.observationDate.tm_min;
+		});
+
+		/*UString::OStringStream ss;
+		ss << std::setfill(UString::Char('0'));
+		for (const auto& o : obsInfoSortable)
+		{
+			if (ss.str().empty())
+				ss << "at ";
+			else
+				ss << " and ";
+
+			ss << std::setw(2) << o.observationDate.tm_hour << ':' << std::setw(2) << o.observationDate.tm_min;
+		}
+
+		return ss.str();*/
+		// TODO:  Modify this to generate PDF with peaks at the time(s) of the observations with magnitude = 1/numObs
+	}
+
+	// For ease of processing, convert times to a double representation of time as fractional hours since midnight
+	std::vector<double> inputTimes(observationInfo.size());
+	auto inputIt(inputTimes.begin());
+	for (const auto& o : observationInfo)
+		*(inputIt++) = o.observationDate.tm_hour + o.observationDate.tm_min / 60.0;
+
+	// Estimate the probability distribution by binning into 1-hour wide slots
+	const double minimum(0.0);// hours since midnight
+	const unsigned int pdfPointCount(24);
+	const double step(1.0);// hours
+	std::vector<double> pdfRange(pdfPointCount);
+	std::generate(pdfRange.begin(), pdfRange.end(), Sequence(minimum, step));
+
+	KernelDensityEstimation kde;
+	std::vector<double> pdfEstimate(kde.ComputePDF(inputTimes, pdfRange,
+		std::max(1.0, KernelDensityEstimation::EstimateOptimalBandwidth(inputTimes))));
+
+	std::array<double, 24> pdfArray;
+	assert(pdfEstimate.size() == pdfArray.size());
+	for (unsigned int i = 0; i < pdfArray.size(); ++i)
+		pdfArray[i] = pdfEstimate[i];
+
+	return pdfArray;
 }
 
 bool BestObservationTimeEstimator::IsNocturnal(const std::vector<double>& pdf)

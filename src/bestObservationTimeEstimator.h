@@ -13,6 +13,7 @@ class BestObservationTimeEstimator
 {
 public:
 	static UString::String EstimateBestObservationTime(const std::vector<EBirdInterface::ObservationInfo>& observationInfo);
+	static std::array<double, 24> EstimateBestObservationTimePDF(const std::vector<EBirdInterface::ObservationInfo>& observationInfo);
 
 private:
 	struct Sequence

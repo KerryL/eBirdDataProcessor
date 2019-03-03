@@ -21,6 +21,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("SCORE_RARITIES"), config.generateRarityScores);
 	AddConfigItem(_T("SPECIES_COUNT_ONLY"), config.speciesCountOnly);
 	AddConfigItem(_T("INCLUDE_PARTIAL_IDS"), config.includePartialIDs);
+	AddConfigItem(_T("TIME_OF_DAY_DATA"), config.generateTimeOfDayData);
 
 	AddConfigItem(_T("MEDIA_LIST_HTML"), config.mediaListHTML);
 	AddConfigItem(_T("MEDIA_FILE"), config.mediaFileName);
