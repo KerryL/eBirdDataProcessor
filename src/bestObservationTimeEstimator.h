@@ -9,11 +9,16 @@
 // Local headers
 #include "eBirdInterface.h"
 
+// Standard C++ headers
+#include <array>
+
 class BestObservationTimeEstimator
 {
 public:
+	typedef std::array<double, 48> PDFArray;
+
 	static UString::String EstimateBestObservationTime(const std::vector<EBirdInterface::ObservationInfo>& observationInfo);
-	static std::array<double, 24> EstimateBestObservationTimePDF(const std::vector<EBirdInterface::ObservationInfo>& observationInfo);
+	static PDFArray EstimateBestObservationTimePDF(const std::vector<EBirdInterface::ObservationInfo>& observationInfo);
 
 private:
 	struct Sequence
@@ -30,8 +35,8 @@ private:
 		unsigned int i;
 	};
 
-	static bool IsNocturnal(const std::vector<double>& pdf);
-	static bool HasFlatPDF(const std::vector<double>& pdf);
+	static bool IsNocturnal(const PDFArray& pdf);
+	static bool HasFlatPDF(const PDFArray& pdf);
 
 	struct TimeProbability
 	{
@@ -49,7 +54,7 @@ private:
 		TimeProbability(const double &time, const Type& type) : time(time), type(type) {}
 	};
 
-	static std::vector<TimeProbability> FindPeaks(const std::vector<double>& pdf);
+	static std::vector<TimeProbability> FindPeaks(const PDFArray& pdf);
 };
 
 #endif// BEST_OBSERVATION_TIME_ESTIMATOR_H_

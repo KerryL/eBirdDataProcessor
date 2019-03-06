@@ -16,7 +16,28 @@
 UString::String BestObservationTimeEstimator::EstimateBestObservationTime(
 	const std::vector<EBirdInterface::ObservationInfo>& observationInfo)
 {
-	const auto pdf(EstimateBestObservationTimePDF(observationInfo));
+	auto pdfEstimate(EstimateBestObservationTimePDF(observationInfo));
+	if (observationInfo.size() < 3)
+	{
+		UString::OStringStream ss;
+		ss << std::setfill(UString::Char('0'));
+		unsigned int i(0);
+		for (const auto& o : pdfEstimate)
+		{
+			++i;
+			if (o != 1.0)
+				continue;
+
+			if (ss.str().empty())
+				ss << "at ";
+			else
+				ss << " and ";
+
+			ss << std::setw(2) << i - 1 << ":00";
+		}
+
+		return ss.str();
+	}
 
 	// Examine PDF to give insight into observation times.  There can be (multiple) obvious peaks
 	// where we should list out certain hours, or PDF can be flat over several hours, in which
@@ -28,7 +49,7 @@ UString::String BestObservationTimeEstimator::EstimateBestObservationTime(
 	unsigned int shift(0);
 	if (isNocturnal)
 	{
-		std::rotate(pdfEstimate.begin(), pdfEstimate.begin() + pdfPointCount / 2, pdfEstimate.end());
+		std::rotate(pdfEstimate.begin(), pdfEstimate.begin() + pdfEstimate.size() / 2, pdfEstimate.end());
 		shift = 12;
 	}
 
@@ -81,11 +102,11 @@ UString::String BestObservationTimeEstimator::EstimateBestObservationTime(
 	return ss.str();
 }
 
-std::array<double, 24> BestObservationTimeEstimator::EstimateBestObservationTimePDF(
+BestObservationTimeEstimator::PDFArray BestObservationTimeEstimator::EstimateBestObservationTimePDF(
 	const std::vector<EBirdInterface::ObservationInfo>& observationInfo)
 {
 	// TODO:  Modify this entire method to make use of duration (if available) and to disregard observations that have no time associated with them
-	// This should use only:  Historic protocols that include start time and duration, traveling, stationary, paleagic, incidental, (any others?)
+	// TODO:  How to normalize based on number of checklists submitted?
 	if (observationInfo.size() < 3)
 	{
 		auto obsInfoSortable(observationInfo);
@@ -100,20 +121,11 @@ std::array<double, 24> BestObservationTimeEstimator::EstimateBestObservationTime
 			return a.observationDate.tm_min < b.observationDate.tm_min;
 		});
 
-		/*UString::OStringStream ss;
-		ss << std::setfill(UString::Char('0'));
+		PDFArray exactTimes;
+		std::for_each(exactTimes.begin(), exactTimes.end(), [](double& a) { a = 0.0; });
 		for (const auto& o : obsInfoSortable)
-		{
-			if (ss.str().empty())
-				ss << "at ";
-			else
-				ss << " and ";
-
-			ss << std::setw(2) << o.observationDate.tm_hour << ':' << std::setw(2) << o.observationDate.tm_min;
-		}
-
-		return ss.str();*/
-		// TODO:  Modify this to generate PDF with peaks at the time(s) of the observations with magnitude = 1/numObs
+			exactTimes[o.observationDate.tm_hour + static_cast<int>(o.observationDate.tm_min / 60.0 + 0.5)] = 1.0;
+		return exactTimes;
 	}
 
 	// For ease of processing, convert times to a double representation of time as fractional hours since midnight
@@ -133,7 +145,7 @@ std::array<double, 24> BestObservationTimeEstimator::EstimateBestObservationTime
 	std::vector<double> pdfEstimate(kde.ComputePDF(inputTimes, pdfRange,
 		std::max(1.0, KernelDensityEstimation::EstimateOptimalBandwidth(inputTimes))));
 
-	std::array<double, 24> pdfArray;
+	PDFArray pdfArray;
 	assert(pdfEstimate.size() == pdfArray.size());
 	for (unsigned int i = 0; i < pdfArray.size(); ++i)
 		pdfArray[i] = pdfEstimate[i];
@@ -141,7 +153,7 @@ std::array<double, 24> BestObservationTimeEstimator::EstimateBestObservationTime
 	return pdfArray;
 }
 
-bool BestObservationTimeEstimator::IsNocturnal(const std::vector<double>& pdf)
+bool BestObservationTimeEstimator::IsNocturnal(const PDFArray& pdf)
 {
 	// Assume nocturnal if the middle 50% of the day has less liklihood of
 	// observation than the first and last quarter combined
@@ -162,7 +174,7 @@ bool BestObservationTimeEstimator::IsNocturnal(const std::vector<double>& pdf)
 	return nighttimeProbability > daytimeProbability;
 }
 
-bool BestObservationTimeEstimator::HasFlatPDF(const std::vector<double>& pdf)
+bool BestObservationTimeEstimator::HasFlatPDF(const PDFArray& pdf)
 {
 	const double uniformProbability(1.0 / pdf.size());
 	const double allowedVariation(0.5);// [% of uniform]
@@ -183,7 +195,7 @@ bool BestObservationTimeEstimator::HasFlatPDF(const std::vector<double>& pdf)
 }
 
 std::vector<BestObservationTimeEstimator::TimeProbability> BestObservationTimeEstimator::FindPeaks(
-	const std::vector<double>& pdf)
+	const PDFArray& pdf)
 {
 	// If there is a time where observation is twice as likely as another time, this 
 	// is significant.  Less variation than that is not significant.

@@ -79,7 +79,7 @@ public:
 		bool locationPrivate;
 		double distance = 0.0;// [km]
 		unsigned int duration = 0;// [min]
-		Protocol protocol = Protocol::Otber;
+		Protocol protocol = Protocol::Other;
 
 		bool dateIncludesTimeInfo = true;
 	};

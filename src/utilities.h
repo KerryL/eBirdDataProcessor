@@ -16,6 +16,7 @@ UString::String ExtractStateFromRegionCode(const UString::String& regionCode);
 UString::String StripExtension(const UString::String& fileName);
 UString::String SanitizeCommas(const UString::String& s);
 UString::String Unsanitize(const UString::String& s);
+UString::String BuildRegionCode(const UString::String& country, const UString::String& state, const UString::String& county);
 void ReplaceAll(const UString::String& pattern, const UString::String& replaceWith, UString::String& s);
 }
 

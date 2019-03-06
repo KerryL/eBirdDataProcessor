@@ -9,6 +9,7 @@
 // Local headers
 #include "utilities/uString.h"
 #include "threadPool.h"
+#include "eBirdInterface.h"
 
 // Standard C++ headers
 #include <unordered_map>
@@ -22,6 +23,18 @@ class EBirdDatasetInterface
 public:
 	bool ExtractGlobalFrequencyData(const UString::String& fileName);
 	bool WriteFrequencyFiles(const UString::String& frequencyDataPath) const;
+
+	enum class TimeOfDayPeriod
+	{
+		Year,
+		Month,
+		Week
+	};
+
+	bool ExtractTimeOfDayInfo(const UString::String& fileName,
+		const std::vector<UString::String>& commonNames,
+		const UString::String& regionCode);
+	bool WriteTimeOfDayFiles(const UString::String& dataFileName, const TimeOfDayPeriod& period) const;
 
 private:
 	static const UString::String nameIndexFileName;
@@ -39,6 +52,13 @@ private:
 		bool operator<(const Date& d) const;
 		bool operator>(const Date& d) const;
 		int operator-(const Date& d) const;// Returns delta in approx. # of days
+		Date operator+(const int& days) const;
+	};
+
+	struct Time
+	{
+		unsigned int hour;// [0-23]
+		unsigned int minute;// [0-59]
 	};
 
 	struct SpeciesData
@@ -80,11 +100,33 @@ private:
 
 		Date date;
 
+		bool includesTime;
+		Time time;
+
+		bool includesCount;
+		unsigned int count;
+
+		bool includesDistance;
+		double distance = 0.0;// [km]
+
+		bool includesDuration;
+		unsigned int duration = 0;// [min]
+
 		bool completeChecklist;
 		bool approved;
 	};
 
-	void ProcessObservationData(const Observation& observation);
+	std::vector<UString::String> speciesNamesTimeOfDay;
+	UString::String regionCodeTimeOfDay;
+	std::unordered_map<UString::String, std::vector<Observation>> timeOfDayObservationMap;// Key is species common name
+	bool RegionMatches(const UString::String& regionCode) const;
+
+	static UString::String GenerateMonthHeaderRow(const UString::String& species);
+	static UString::String GenerateWeekHeaderRow(const UString::String& species);
+
+	void ProcessObservationDataFrequency(const Observation& observation);
+	void ProcessObservationDataTimeOfDay(const Observation& observation);
+	typedef void (EBirdDatasetInterface::*ProcessFunction)(const Observation& observation);
 	void RemoveRarities();
 
 	static bool ParseLine(const UString::String& line, Observation& observation);
@@ -106,23 +148,31 @@ private:
 
 	template<typename T>
 	static bool ParseInto(const UString::String& s, T& value);
+	static bool ParseInto(const UString::String& s, Time& value);
 
 	struct LineProcessJobInfo : public ThreadPool::JobInfoBase
 	{
-		LineProcessJobInfo(const UString::String& line, EBirdDatasetInterface &ebdi) : line(line), ebdi(ebdi) {}
+		LineProcessJobInfo(const UString::String& line, EBirdDatasetInterface &ebdi,
+			ProcessFunction processFunction) : line(line), ebdi(ebdi), processFunction(processFunction) {}
 
 		const UString::String line;
 		EBirdDatasetInterface& ebdi;
+		ProcessFunction processFunction;
 
 		void DoJob() override
 		{
-			ebdi.ProcessLine(line);
+			ebdi.ProcessLine(line, processFunction);
 		}
 	};
 
-	bool ProcessLine(const UString::String& line);
+	bool DoDatasetParsing(const UString::String& fileName, ProcessFunction processFunction);
+
+	bool ProcessLine(const UString::String& line, ProcessFunction processFunction);
 
 	std::mutex mutex;
+
+	static std::vector<EBirdInterface::ObservationInfo> GetObservationsWithinDateRange(
+		const std::vector<Observation>& observations, const Date& beginRange, const Date& endRange);// inclusive of endpoints
 };
 
 template<typename T>

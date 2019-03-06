@@ -5,6 +5,7 @@
 
 // Local headers
 #include "eBirdDatasetInterface.h"
+#include "bestObservationTimeEstimator.h"
 
 // POSIX headers
 #include <sys/types.h>
@@ -34,6 +35,15 @@
 const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
 
 bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fileName)
+{
+	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataFrequency))
+		return false;
+	RemoveRarities();
+
+	return true;
+}
+
+bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, ProcessFunction processFunction)
 {
 	assert(frequencyMap.empty());
 
@@ -66,18 +76,17 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fi
 		if (lineCount % 1000000 == 0)
 			Cout << "  " << lineCount << " records read" << std::endl;
 
-		pool.AddJob(std::make_unique<LineProcessJobInfo>(line, *this));
+		pool.AddJob(std::make_unique<LineProcessJobInfo>(line, *this, processFunction));
 		++lineCount;
 	}
 
 	pool.WaitForAllJobsComplete();
 	Cout << "Finished parsing " << lineCount << " lines from dataset" << std::endl;
-	RemoveRarities();
 
 	return true;
 }
 
-bool EBirdDatasetInterface::ProcessLine(const UString::String& line)
+bool EBirdDatasetInterface::ProcessLine(const UString::String& line, ProcessFunction processFunction)
 {
 	Observation observation;
 	if (!ParseLine(line, observation))
@@ -86,7 +95,7 @@ bool EBirdDatasetInterface::ProcessLine(const UString::String& line)
 		return false;
 	}
 
-	ProcessObservationData(observation);
+	(this->*processFunction)(observation);
 	return true;
 }
 
@@ -265,16 +274,41 @@ UString::String EBirdDatasetInterface::GetPath(const UString::String& regionCode
 	return regionCode.substr(0, firstDash) + slash;
 }
 
+bool EBirdDatasetInterface::ParseInto(const UString::String& s, Time& value)
+{
+	UString::IStringStream ss(s);
+	UString::String token;
+	if (!std::getline(ss, token, UString::Char(':')))
+		return false;
+
+	if (!ParseInto(token, value.hour))
+		return false;
+
+	if (!std::getline(ss, token, UString::Char(':')))
+		return false;
+
+	if (!ParseInto(token, value.minute))
+		return false;
+
+	return true;
+}
+
 bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& observation)
 {
 	unsigned int column(0);
 	UString::String token;
-	UString::String countryCode, stateCode, dateString;
+	UString::String countryCode, stateCode;
 	UString::IStringStream ss(line);
 	while (std::getline(ss, token, UString::Char('\t')))
 	{
 		if (column == 4)
 			observation.commonName = token;
+		else if (column == 8)
+		{
+			observation.includesCount = token.compare(_T("X")) != 0;
+			if (observation.includesCount && !ParseInto(token, observation.count))
+				return false;
+		}
 		else if (column == 13)
 			countryCode = token;
 		else if (column == 15)
@@ -282,15 +316,33 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 		else if (column == 17)
 			observation.regionCode = token;
 		else if (column == 27)
-			dateString = token;
-		else if (column == 32)
+			observation.date = ConvertStringToDate(token);
+		else if (column == 28)
+		{
+			observation.includesTime = !token.empty();
+			if (observation.includesTime && !ParseInto(token, observation.time))
+				return false;
+		}
+		else if (column == 30)
 			observation.checklistID = token;
-		else if (column == 40)
+		else if (column == 34)
+		{
+			observation.includesDuration = !token.empty();
+			if (observation.includesDuration && !ParseInto(token, observation.duration))
+				return false;
+		}
+		else if (column == 35)
+		{
+			observation.includesDistance = !token.empty();
+			if (observation.includesDistance && !ParseInto(token, observation.distance))
+				return false;
+		}
+		else if (column == 38)
 		{
 			if (!ParseInto(token, observation.completeChecklist))
 				return false;
 		}
-		else if (column == 43)
+		else if (column == 41)
 		{
 			if (!ParseInto(token, observation.approved))
 				return false;
@@ -308,14 +360,163 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 			observation.regionCode = countryCode;
 	}
 
-	observation.date = ConvertStringToDate(dateString);
+	return true;
+}
+
+bool EBirdDatasetInterface::ExtractTimeOfDayInfo(const UString::String& fileName,
+	const std::vector<UString::String>& commonNames, const UString::String& regionCode)
+{
+	assert(!regionCode.empty());
+	assert(!commonNames.empty());
+
+	speciesNamesTimeOfDay = commonNames;
+	regionCodeTimeOfDay = regionCode;
+
+	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataTimeOfDay))
+		return false;
 
 	return true;
 }
 
+bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileName, const TimeOfDayPeriod& period) const
+{
+	UString::OFStream dataFile(dataFileName);
+	if (!dataFile.is_open() || !dataFile.good())
+	{
+		Cerr << "Failed to open '" << dataFileName << "' for output\n";
+		return false;
+	}
+
+	// Each row corresponds to a time of day
+	// Each column corresponds to a species-time of year (PDFs are columns)
+
+	BestObservationTimeEstimator::PDFArray dummy;
+	UString::OStringStream headerRow;
+	std::vector<UString::OStringStream> rows(dummy.size());
+	const double increment(24.0 / dummy.size());// [hr]
+	double t(0.0);
+	for (auto& r : rows)
+	{
+		r << t << ',';
+		t += increment;
+	}
+
+	for (const auto& species : timeOfDayObservationMap)
+	{
+		// Group by time period, then for each time period generate PDF and write row to file
+		std::vector<std::vector<EBirdInterface::ObservationInfo>> observations;
+		Date beginDate;
+		beginDate.day = 1;
+		beginDate.month = 1;
+		if (period == TimeOfDayPeriod::Year)
+		{
+			headerRow << species.first << ',';
+			observations.resize(1);
+			const Date endDate(beginDate + 365);
+			observations[0] = GetObservationsWithinDateRange(species.second, beginDate, endDate);
+		}
+		else if (period == TimeOfDayPeriod::Month)
+		{
+			headerRow << GenerateMonthHeaderRow(species.first);
+			observations.resize(12);
+			for (auto& o : observations)
+			{
+				const Date endDate(beginDate + 30);
+				o = GetObservationsWithinDateRange(species.second, beginDate, endDate);
+				beginDate = endDate + 1;
+			}
+		}
+		else if (period == TimeOfDayPeriod::Week)
+		{
+			headerRow << GenerateWeekHeaderRow(species.first);
+			observations.resize(52);
+			for (auto& o : observations)
+			{
+				const Date endDate(beginDate + 7);
+				o = GetObservationsWithinDateRange(species.second, beginDate, endDate);
+				beginDate = endDate + 1;
+			}
+		}
+
+		for (const auto& o : observations)
+		{
+			const auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
+			for (unsigned int i = 0; i < pdf.size(); ++i)
+				rows[i] << pdf[i] << ',';
+		}
+	}
+
+	dataFile << headerRow.str() << '\n';
+	for (auto& r : rows)
+		dataFile << r.str() << '\n';
+
+	return true;
+}
+
+std::vector<EBirdInterface::ObservationInfo> EBirdDatasetInterface::GetObservationsWithinDateRange(
+	const std::vector<Observation>& observations, const Date& beginRange, const Date& endRange)
+{
+	std::vector<EBirdInterface::ObservationInfo> relevantObservations;
+	for (const auto& o : observations)
+	{
+		if (o.date.month < beginRange.month || (o.date.month == beginRange.month && o.date.day < beginRange.day))
+			continue;
+		else if (o.date.month > endRange.month || (o.date.month == endRange.month && o.date.day > endRange.day))
+			continue;
+
+		EBirdInterface::ObservationInfo observationToAdd;
+		observationToAdd.commonName = o.commonName;
+		observationToAdd.count = o.count;
+		if (o.includesDistance)
+			observationToAdd.distance = o.distance;
+		if (o.includesDuration)
+			observationToAdd.duration = o.duration;
+		observationToAdd.dateIncludesTimeInfo = o.includesTime;
+		observationToAdd.observationDate.tm_year = o.date.year - 1900;
+		observationToAdd.observationDate.tm_mon = o.date.month - 1;
+		observationToAdd.observationDate.tm_mday = o.date.day;
+		if (o.includesTime)
+		{
+			observationToAdd.observationDate.tm_hour = o.time.hour;
+			observationToAdd.observationDate.tm_min = o.time.minute;
+			observationToAdd.observationDate.tm_sec = 0;
+		}
+		observationToAdd.observationValid = o.approved;
+		relevantObservations.push_back(observationToAdd);
+	}
+
+	return relevantObservations;
+}
+
+UString::String EBirdDatasetInterface::GenerateMonthHeaderRow(const UString::String& species)
+{
+	UString::OStringStream ss;
+	ss << "January (" << species <<
+		"),February (" << species <<
+		"),March (" << species <<
+		"),April (" << species <<
+		"),May (" << species <<
+		"),June (" << species <<
+		"),July (" << species <<
+		"),August (" << species <<
+		"),September (" << species <<
+		"),October (" << species <<
+		"),November (" << species <<
+		"),December (" << species << "),";
+	return ss.str();
+}
+
+UString::String EBirdDatasetInterface::GenerateWeekHeaderRow(const UString::String& species)
+{
+	UString::OStringStream ss;
+	for (unsigned int i = 1; i <= 52; ++i)
+		ss << "Week " << i << " (" << species << "),";
+	return ss.str();
+}
+
 bool EBirdDatasetInterface::HeaderMatchesExpectedFormat(const UString::String& line)
 {
-	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING BIRD ATLAS CODE	BREEDING BIRD ATLAS CATEGORY	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	 LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	FIRST NAME	LAST NAME	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS	"));
+	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING BIRD ATLAS CODE	BREEDING BIRD ATLAS CATEGORY	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	 LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS"));
 	return line.compare(expectedHeader) == 0;
 }
 
@@ -379,7 +580,7 @@ bool EBirdDatasetInterface::Date::operator>(const Date& d) const
 	return d < *this;
 }
 
-void EBirdDatasetInterface::ProcessObservationData(const Observation& observation)
+void EBirdDatasetInterface::ProcessObservationDataFrequency(const Observation& observation)
 {
 	if (!observation.approved)
 		return;
@@ -400,6 +601,27 @@ void EBirdDatasetInterface::ProcessObservationData(const Observation& observatio
 		entry[monthIndex].checklistIDs.insert(observation.checklistID);
 		++speciesInfo.occurrenceCount;
 	}
+}
+
+void EBirdDatasetInterface::ProcessObservationDataTimeOfDay(const Observation& observation)
+{
+	if (!observation.approved)
+		return;
+	else if (std::find(speciesNamesTimeOfDay.begin(), speciesNamesTimeOfDay.end(), observation.commonName) == speciesNamesTimeOfDay.end())
+		return;
+	else if (!RegionMatches(observation.regionCode))
+		return;
+
+	std::lock_guard<std::mutex> lock(mutex);
+	timeOfDayObservationMap[observation.commonName].push_back(observation);
+}
+
+bool EBirdDatasetInterface::RegionMatches(const UString::String& regionCode) const
+{
+	if (regionCode.length() < regionCodeTimeOfDay.length())
+		return false;
+
+	return regionCodeTimeOfDay.substr(0, regionCode.length()).compare(regionCode) == 0;
 }
 
 unsigned int EBirdDatasetInterface::GetMonthIndex(const Date& date)
@@ -434,4 +656,25 @@ int EBirdDatasetInterface::Date::operator-(const Date& d) const
 	return (static_cast<int>(year) - static_cast<int>(d.year)) * 365
 		+ (static_cast<int>(month) - static_cast<int>(d.month)) * 31
 		+ (static_cast<int>(day) - static_cast<int>(d.day));
+}
+
+EBirdDatasetInterface::Date EBirdDatasetInterface::Date::operator+(const int& days) const
+{
+	const time_t oneDay = 24 * 60 * 60;
+	struct tm thisTime;
+	thisTime.tm_hour = 12;
+	thisTime.tm_min = 0;
+	thisTime.tm_sec = 0;
+	thisTime.tm_mon = month - 1;
+	thisTime.tm_mday = day;
+	thisTime.tm_year = year - 1900;
+
+	time_t startDate(std::mktime(&thisTime) + days * oneDay);
+	thisTime = *localtime(&startDate);
+
+	Date newDate;
+	newDate.day = thisTime.tm_mday;
+	newDate.year = thisTime.tm_year + 1900;
+	newDate.month = thisTime.tm_mon + 1;
+	return newDate;
 }

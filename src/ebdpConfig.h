@@ -31,7 +31,8 @@ struct EBDPConfig
 	bool generateRarityScores;
 	bool speciesCountOnly;// Primarily for plotting
 	bool includePartialIDs;
-	bool generateTimeOfDayData;
+	UString::String timeOfDayOutputFile;
+	std::vector<UString::String> timeOfDataCommonNames;
 
 	unsigned int yearFilter;
 	unsigned int monthFilter;

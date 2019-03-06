@@ -9,6 +9,7 @@
 #include "ebdpConfigFile.h"
 #include "utilities/uString.h"
 #include "eBirdDatasetInterface.h"
+#include "utilities.h"
 
 // Standard C++ headers
 #include <cassert>
@@ -43,9 +44,13 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!configFile.GetConfig().eBirdDatasetPath.empty())
 	{
 		EBirdDatasetInterface dataset;
-		if (configFile.GetConfig().generateTimeOfDayData)
+		if (!configFile.GetConfig().timeOfDayOutputFile.empty())
 		{
-			// TODO:  Implement
+			const auto regionCode(Utilities::BuildRegionCode(configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter));
+			if (!dataset.ExtractTimeOfDayInfo(configFile.GetConfig().eBirdDatasetPath, configFile.GetConfig().timeOfDataCommonNames, regionCode))
+				return 1;
+			if (!dataset.WriteTimeOfDayFiles(configFile.GetConfig().timeOfDayOutputFile, EBirdDatasetInterface::TimeOfDayPeriod::Week))
+				return 1;
 		}
 		else// Ignore all other options and generate global frequency data
 		{
@@ -53,8 +58,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 				return 1;
 			if (dataset.WriteFrequencyFiles(configFile.GetConfig().frequencyFilePath))
 				return 1;
-			return 0;
 		}
+		return 0;
 	}
 
 	EBirdDataProcessor processor;
