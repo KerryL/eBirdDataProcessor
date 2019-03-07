@@ -102,7 +102,7 @@ bool EBDPConfigFile::ConfigIsOK()
 	if (!GeneralConfigIsOK())
 		configurationOK = false;
 
-	if (!FrequencyHarvestConfigIsOK())
+	if (!FrequencyHarvestConfigIsOK() && !TimeOfDayConfigIsOK())
 		configurationOK = false;
 
 	if (!TargetCalendarConfigIsOK())
@@ -117,9 +117,26 @@ bool EBDPConfigFile::ConfigIsOK()
 	return configurationOK;
 }
 
+bool EBDPConfigFile::TimeOfDayConfigIsOK()
+{
+	bool configurationOK(true);
+
+	if (!config.eBirdDatasetPath.empty() &&
+		(config.timeOfDataCommonNames.empty() || config.timeOfDayOutputFile.empty()))
+	{
+		Cerr << "Time-of-day analysis requires " << GetKey(config.timeOfDayOutputFile) << " and at least one " << GetKey(config.timeOfDataCommonNames) << '\n';
+		configurationOK = false;
+	}
+
+	return configurationOK;
+}
+
 bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 {
 	bool configurationOK(true);
+
+	if (!config.timeOfDataCommonNames.empty() || !config.timeOfDayOutputFile.empty())
+		return true;
 
 	if (!config.eBirdDatasetPath.empty() && config.frequencyFilePath.empty())
 	{

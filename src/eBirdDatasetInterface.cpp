@@ -31,6 +31,7 @@
 #include <algorithm>
 #include <numeric>
 #include <locale>
+#include <chrono>// For benchmarking
 
 const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
 
@@ -46,6 +47,9 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fi
 bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, ProcessFunction processFunction)
 {
 	assert(frequencyMap.empty());
+
+	typedef std::chrono::high_resolution_clock Clock;
+	const auto startTime(Clock::now());
 
 	UString::IFStream dataset(fileName.c_str());
 	if (!dataset.good() || !dataset.is_open())
@@ -71,6 +75,7 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, Pr
 
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 	uint64_t lineCount(0);
+	const auto loopStartTime(Clock::now());
 	while (std::getline(dataset, line))
 	{
 		if (lineCount % 1000000 == 0)
@@ -80,8 +85,16 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, Pr
 		++lineCount;
 	}
 
+	const auto loopEndTime(Clock::now());
 	pool.WaitForAllJobsComplete();
+	const auto finishedTime(Clock::now());
 	Cout << "Finished parsing " << lineCount << " lines from dataset" << std::endl;
+
+	using floatingSec = std::chrono::duration<double, std::ratio<1, 1>>;
+	std::cout << "Total time = " << floatingSec(finishedTime - startTime).count() << '\n';
+	std::cout << "Header time = " << floatingSec(loopStartTime - startTime).count() << '\n';
+	std::cout << "Loop time = " << floatingSec(loopEndTime - loopStartTime).count() << '\n';
+	std::cout << "After loop time = " << floatingSec(finishedTime - loopEndTime).count() << '\n';
 
 	return true;
 }
@@ -401,6 +414,60 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 		t += increment;
 	}
 
+	std::vector<Observation> allObsVector(allObservationsInRegion.size());
+	auto it(allObservationsInRegion.begin());
+	for (unsigned int i = 0; i < allObsVector.size(); ++it, ++i)
+		allObsVector[i] = it->second;
+
+	std::vector<BestObservationTimeEstimator::PDFArray> allObsPDF;
+
+	{
+		std::vector<std::vector<EBirdInterface::ObservationInfo>> allObservations;
+		// Group by time period, then for each time period generate PDF and write row to file
+		std::vector<std::vector<EBirdInterface::ObservationInfo>> observations;
+		Date beginDate;
+		beginDate.day = 1;
+		beginDate.month = 1;
+		const UString::String allObsString(_T("All Observations"));
+		if (period == TimeOfDayPeriod::Year)
+		{
+			headerRow << allObsString << ',';
+			observations.resize(1);
+			const Date endDate(beginDate + 365);
+			allObservations[0] = GetObservationsWithinDateRange(allObsVector, beginDate, endDate);
+		}
+		else if (period == TimeOfDayPeriod::Month)
+		{
+			headerRow << GenerateMonthHeaderRow(allObsString);
+			allObservations.resize(12);
+			for (auto& o : allObservations)
+			{
+				const Date endDate(beginDate + 30);
+				o = GetObservationsWithinDateRange(allObsVector, beginDate, endDate);
+				beginDate = endDate + 1;
+			}
+		}
+		else if (period == TimeOfDayPeriod::Week)
+		{
+			headerRow << GenerateWeekHeaderRow(allObsString);
+			observations.resize(52);
+			for (auto& o : allObservations)
+			{
+				const Date endDate(beginDate + 7);
+				o = GetObservationsWithinDateRange(allObsVector, beginDate, endDate);
+				beginDate = endDate + 1;
+			}
+		}
+
+		for (const auto& o : allObservations)
+		{
+			const auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
+			for (unsigned int i = 0; i < pdf.size(); ++i)
+				rows[i] << pdf[i] << ',';
+			allObsPDF.push_back(std::move(pdf));
+		}
+	}
+
 	for (const auto& species : timeOfDayObservationMap)
 	{
 		// Group by time period, then for each time period generate PDF and write row to file
@@ -438,11 +505,18 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 			}
 		}
 
+		unsigned int ti(0);
 		for (const auto& o : observations)
 		{
 			const auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
 			for (unsigned int i = 0; i < pdf.size(); ++i)
-				rows[i] << pdf[i] << ',';
+			{
+				if (pdf[i] > 0.0)
+					rows[i] << pdf[i] / allObsPDF[ti][i] << ',';// Normalize based on total number of checklists per time period
+				else
+					rows[i] << "0,";
+			}
+			++ti;
 		}
 	}
 
@@ -607,9 +681,17 @@ void EBirdDatasetInterface::ProcessObservationDataTimeOfDay(const Observation& o
 {
 	if (!observation.approved)
 		return;
-	else if (std::find(speciesNamesTimeOfDay.begin(), speciesNamesTimeOfDay.end(), observation.commonName) == speciesNamesTimeOfDay.end())
-		return;
 	else if (!RegionMatches(observation.regionCode))
+		return;
+
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		allObservationsInRegion[observation.checklistID] = observation;
+	}
+
+	// TODO:  Also filter out groups?  Currently observations made by multiple people sharing a checklist may create some bias...
+
+	if (std::find(speciesNamesTimeOfDay.begin(), speciesNamesTimeOfDay.end(), observation.commonName) == speciesNamesTimeOfDay.end())
 		return;
 
 	std::lock_guard<std::mutex> lock(mutex);

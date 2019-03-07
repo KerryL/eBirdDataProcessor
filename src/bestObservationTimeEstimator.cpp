@@ -106,7 +106,6 @@ BestObservationTimeEstimator::PDFArray BestObservationTimeEstimator::EstimateBes
 	const std::vector<EBirdInterface::ObservationInfo>& observationInfo)
 {
 	// TODO:  Modify this entire method to make use of duration (if available) and to disregard observations that have no time associated with them
-	// TODO:  How to normalize based on number of checklists submitted?
 	if (observationInfo.size() < 3)
 	{
 		auto obsInfoSortable(observationInfo);

@@ -26,6 +26,7 @@ private:
 	void AssignDefaults() override;
 	bool ConfigIsOK() override;
 
+	bool TimeOfDayConfigIsOK();
 	bool FrequencyHarvestConfigIsOK();
 	bool TargetCalendarConfigIsOK();
 	bool FindMaxNeedsConfigIsOK();

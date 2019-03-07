@@ -46,7 +46,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		EBirdDatasetInterface dataset;
 		if (!configFile.GetConfig().timeOfDayOutputFile.empty())
 		{
-			const auto regionCode(Utilities::BuildRegionCode(configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter));
+			EBirdInterface ebi(configFile.GetConfig().eBirdApiKey);
+			const auto regionCode(ebi.GetRegionCode(configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter));
 			if (!dataset.ExtractTimeOfDayInfo(configFile.GetConfig().eBirdDatasetPath, configFile.GetConfig().timeOfDataCommonNames, regionCode))
 				return 1;
 			if (!dataset.WriteTimeOfDayFiles(configFile.GetConfig().timeOfDayOutputFile, EBirdDatasetInterface::TimeOfDayPeriod::Week))

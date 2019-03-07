@@ -119,6 +119,7 @@ private:
 	std::vector<UString::String> speciesNamesTimeOfDay;
 	UString::String regionCodeTimeOfDay;
 	std::unordered_map<UString::String, std::vector<Observation>> timeOfDayObservationMap;// Key is species common name
+	std::unordered_map<UString::String, Observation> allObservationsInRegion;// Key is checklist ID
 	bool RegionMatches(const UString::String& regionCode) const;
 
 	static UString::String GenerateMonthHeaderRow(const UString::String& species);

@@ -65,17 +65,4 @@ void ReplaceAll(const UString::String& pattern, const UString::String& replaceWi
 	}
 }
 
-UString::String BuildRegionCode(const UString::String& country, const UString::String& state, const UString::String& county)
-{
-	UString::String code(country);
-	if (!state.empty())
-	{
-		code.append(UString::String(_T("-")) + state);
-		if (!county.empty())
-			code.append(UString::String(_T("-")) + county);
-	}
-
-	return code;
-}
-
 }// namespace Utilities
