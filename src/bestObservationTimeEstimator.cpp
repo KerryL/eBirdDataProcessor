@@ -105,7 +105,6 @@ UString::String BestObservationTimeEstimator::EstimateBestObservationTime(
 BestObservationTimeEstimator::PDFArray BestObservationTimeEstimator::EstimateBestObservationTimePDF(
 	const std::vector<EBirdInterface::ObservationInfo>& observationInfo)
 {
-	// TODO:  Modify this entire method to make use of duration (if available) and to disregard observations that have no time associated with them
 	if (observationInfo.size() < 3)
 	{
 		auto obsInfoSortable(observationInfo);
@@ -122,16 +121,30 @@ BestObservationTimeEstimator::PDFArray BestObservationTimeEstimator::EstimateBes
 
 		PDFArray exactTimes;
 		std::for_each(exactTimes.begin(), exactTimes.end(), [](double& a) { a = 0.0; });
+		// TODO:  Modify this to make use of duration (if available) and to disregard observations that have no time data
 		for (const auto& o : obsInfoSortable)
 			exactTimes[o.observationDate.tm_hour + static_cast<int>(o.observationDate.tm_min / 60.0 + 0.5)] = 1.0;
 		return exactTimes;
 	}
 
 	// For ease of processing, convert times to a double representation of time as fractional hours since midnight
-	std::vector<double> inputTimes(observationInfo.size());
-	auto inputIt(inputTimes.begin());
+	std::vector<double> inputTimes;
 	for (const auto& o : observationInfo)
-		*(inputIt++) = o.observationDate.tm_hour + o.observationDate.tm_min / 60.0;
+	{
+		if (!o.dateIncludesTimeInfo)
+			continue;
+
+		const unsigned int increment(15);// [min]
+		const double startTime(floor((o.observationDate.tm_hour * 60.0 + o.observationDate.tm_min + increment / 2.0) / increment) * increment / 60.0);// Rounded to nearest 15 minute increment
+		if (o.duration > 0)
+		{
+			const unsigned int incrementsSpanned(o.duration / increment);
+			for (unsigned int i = 0; i < incrementsSpanned; ++i)
+				inputTimes.push_back((startTime + i * increment) / incrementsSpanned);
+		}
+		else
+			inputTimes.push_back(startTime);
+	}
 
 	// Estimate the probability distribution by binning into 1-hour wide slots
 	const double minimum(0.0);// hours since midnight
