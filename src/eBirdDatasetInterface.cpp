@@ -463,8 +463,11 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 		{
 			const auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
 			const double sum(std::accumulate(pdf.begin(), pdf.end(), 0.0));
-			for (unsigned int i = 0; i < pdf.size(); ++i)
-				rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
+			if (sum > 0.0)
+			{
+				for (unsigned int i = 0; i < pdf.size(); ++i)
+					rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
+			}
 			allObsPDF.push_back(std::move(pdf));
 		}
 	}
@@ -525,8 +528,17 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 			}
 
 			const double sum(std::accumulate(pdf.begin(), pdf.end(), 0.0));
-			for (unsigned int i = 0; i < pdf.size(); ++i)
-				rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
+			if (sum > 0.0)
+			{
+				for (unsigned int i = 0; i < pdf.size(); ++i)
+					rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
+			}
+			else
+			{
+				for (unsigned int i = 0; i < pdf.size(); ++i)
+					rows[i] << "0,";
+			}
+
 			++j;
 		}
 	}
