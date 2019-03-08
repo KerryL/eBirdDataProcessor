@@ -462,8 +462,9 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 		for (const auto& o : allObservations)
 		{
 			const auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
+			const double sum(std::accumulate(pdf.begin(), pdf.end(), 0.0));
 			for (unsigned int i = 0; i < pdf.size(); ++i)
-				rows[i] << pdf[i] << ',';
+				rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
 			allObsPDF.push_back(std::move(pdf));
 		}
 	}
@@ -509,13 +510,9 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 		for (const auto& o : observations)
 		{
 			const auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
+			const double sum(std::accumulate(pdf.begin(), pdf.end(), 0.0));
 			for (unsigned int i = 0; i < pdf.size(); ++i)
-			{
-				if (pdf[i] > 0.0)
-					rows[i] << pdf[i] / allObsPDF[ti][i] << ',';// Normalize based on total number of checklists per time period
-				else
-					rows[i] << "0,";
-			}
+				rows[i] << pdf[i] / sum / (24.0 / pdf.size()) * (1.0 - allObsPDF[ti][i]) << ',';// Normalize based on total number of checklists per time period
 			++ti;
 		}
 	}
