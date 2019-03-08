@@ -155,6 +155,7 @@
     <ClCompile Include="..\src\utilities.cpp" />
     <ClCompile Include="..\src\utilities\configFile.cpp" />
     <ClCompile Include="..\src\utilities\cppSocket.cpp" />
+    <ClCompile Include="..\src\utilities\memoryMappedFile.cpp" />
     <ClCompile Include="..\src\utilities\mutexUtilities.cpp" />
     <ClCompile Include="..\src\utilities\uString.cpp" />
     <ClCompile Include="..\src\zipper.cpp" />
@@ -185,6 +186,7 @@
     <ClInclude Include="..\src\utilities.h" />
     <ClInclude Include="..\src\utilities\configFile.h" />
     <ClInclude Include="..\src\utilities\cppSocket.h" />
+    <ClInclude Include="..\src\utilities\memoryMappedFile.h" />
     <ClInclude Include="..\src\utilities\mutexUtilities.h" />
     <ClInclude Include="..\src\utilities\uString.h" />
     <ClInclude Include="..\src\zipper.h" />

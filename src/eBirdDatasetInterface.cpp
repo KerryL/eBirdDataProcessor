@@ -6,6 +6,7 @@
 // Local headers
 #include "eBirdDatasetInterface.h"
 #include "bestObservationTimeEstimator.h"
+#include "utilities/memoryMappedFile.h"
 
 // POSIX headers
 #include <sys/types.h>
@@ -14,6 +15,7 @@
 // Windows headers
 #ifdef _WIN32
 #include <direct.h>
+#undef AddJob
 
 #pragma warning(push)
 #pragma warning(disable:4505)
@@ -51,50 +53,57 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, Pr
 	typedef std::chrono::high_resolution_clock Clock;
 	const auto startTime(Clock::now());
 
-	UString::IFStream dataset(fileName.c_str());
-	if (!dataset.good() || !dataset.is_open())
+	try
 	{
-		Cerr << "Failed to open '" << fileName << "' for input\n";
-		return false;
+		MemoryMappedFile dataset(fileName.c_str());
+		if (!dataset.IsOpenAndGood())
+		{
+			Cerr << "Failed to open '" << fileName << "' for input\n";
+			return false;
+		}
+
+		Cout << "Parsing observation data from '" << fileName << '\'' << std::endl;
+
+		std::string line;
+		if (!dataset.ReadNextLine(line))
+		{
+			Cerr << "Failed to read header line\n";
+			return false;
+		}
+
+		if (!HeaderMatchesExpectedFormat(UString::ToStringType(line)))
+		{
+			Cerr << "Header line has unexpected format\n";
+			return false;
+		}
+
+		ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
+		uint64_t lineCount(0);
+		const auto loopStartTime(Clock::now());
+		while (dataset.ReadNextLine(line))
+		{
+			if (lineCount % 1000000 == 0)
+				Cout << "  " << lineCount << " records read" << std::endl;
+
+			pool.AddJob(std::make_unique<LineProcessJobInfo>(UString::ToStringType(line), *this, processFunction));
+			++lineCount;
+		}
+
+		const auto loopEndTime(Clock::now());
+		pool.WaitForAllJobsComplete();
+		const auto finishedTime(Clock::now());
+		Cout << "Finished parsing " << lineCount << " lines from dataset" << std::endl;
+
+		using floatingSec = std::chrono::duration<double, std::ratio<1, 1>>;
+		std::cout << "Total time = " << floatingSec(finishedTime - startTime).count() << '\n';
+		std::cout << "Header time = " << floatingSec(loopStartTime - startTime).count() << '\n';
+		std::cout << "Loop time = " << floatingSec(loopEndTime - loopStartTime).count() << '\n';
+		std::cout << "After loop time = " << floatingSec(finishedTime - loopEndTime).count() << '\n';
 	}
-
-	Cout << "Parsing observation data from '" << fileName << '\'' << std::endl;
-
-	UString::String line;
-	if (!std::getline(dataset, line))
+	catch (const std::exception& ex)
 	{
-		Cerr << "Failed to read header line\n";
-		return false;
+		std::cerr << ex.what() << '\n';
 	}
-
-	if (!HeaderMatchesExpectedFormat(line))
-	{
-		Cerr << "Header line has unexpected format\n";
-		return false;
-	}
-
-	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
-	uint64_t lineCount(0);
-	const auto loopStartTime(Clock::now());
-	while (std::getline(dataset, line))
-	{
-		if (lineCount % 1000000 == 0)
-			Cout << "  " << lineCount << " records read" << std::endl;
-
-		pool.AddJob(std::make_unique<LineProcessJobInfo>(line, *this, processFunction));
-		++lineCount;
-	}
-
-	const auto loopEndTime(Clock::now());
-	pool.WaitForAllJobsComplete();
-	const auto finishedTime(Clock::now());
-	Cout << "Finished parsing " << lineCount << " lines from dataset" << std::endl;
-
-	using floatingSec = std::chrono::duration<double, std::ratio<1, 1>>;
-	std::cout << "Total time = " << floatingSec(finishedTime - startTime).count() << '\n';
-	std::cout << "Header time = " << floatingSec(loopStartTime - startTime).count() << '\n';
-	std::cout << "Loop time = " << floatingSec(loopEndTime - loopStartTime).count() << '\n';
-	std::cout << "After loop time = " << floatingSec(finishedTime - loopEndTime).count() << '\n';
 
 	return true;
 }
@@ -432,7 +441,7 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 		if (period == TimeOfDayPeriod::Year)
 		{
 			headerRow << allObsString << ',';
-			observations.resize(1);
+			allObservations.resize(1);
 			const Date endDate(beginDate + 365);
 			allObservations[0] = GetObservationsWithinDateRange(allObsVector, beginDate, endDate);
 		}
@@ -450,7 +459,7 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 		else if (period == TimeOfDayPeriod::Week)
 		{
 			headerRow << GenerateWeekHeaderRow(allObsString);
-			observations.resize(52);
+			allObservations.resize(52);
 			for (auto& o : allObservations)
 			{
 				const Date endDate(beginDate + 7);
