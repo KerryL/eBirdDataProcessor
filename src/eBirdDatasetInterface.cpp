@@ -50,9 +50,6 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, Pr
 {
 	assert(frequencyMap.empty());
 
-	typedef std::chrono::high_resolution_clock Clock;
-	const auto startTime(Clock::now());
-
 	try
 	{
 		MemoryMappedFile dataset(fileName.c_str());
@@ -79,30 +76,17 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, Pr
 
 		ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 		uint64_t lineCount(0);
-		const auto loopStartTime(Clock::now());
 		while (dataset.ReadNextLine(line))
 		{
 			if (lineCount % 1000000 == 0)
-			{
 				Cout << "  " << lineCount << " records read" << std::endl;
-				if (lineCount > 0)
-					break;
-			}
 
 			pool.AddJob(std::make_unique<LineProcessJobInfo>(UString::ToStringType(line), *this, processFunction));
 			++lineCount;
 		}
 
-		const auto loopEndTime(Clock::now());
 		pool.WaitForAllJobsComplete();
-		const auto finishedTime(Clock::now());
 		Cout << "Finished parsing " << lineCount << " lines from dataset" << std::endl;
-
-		using floatingSec = std::chrono::duration<double, std::ratio<1, 1>>;
-		std::cout << "Total time = " << floatingSec(finishedTime - startTime).count() << '\n';
-		std::cout << "Header time = " << floatingSec(loopStartTime - startTime).count() << '\n';
-		std::cout << "Loop time = " << floatingSec(loopEndTime - loopStartTime).count() << '\n';
-		std::cout << "After loop time = " << floatingSec(finishedTime - loopEndTime).count() << '\n';
 	}
 	catch (const std::exception& ex)
 	{
@@ -423,6 +407,7 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 	std::vector<UString::OStringStream> rows(dummy.size());
 	const double increment(24.0 / dummy.size());// [hr]
 	double t(0.0);
+	headerRow << "Time (hr)";
 	for (auto& r : rows)
 	{
 		r << t << ',';

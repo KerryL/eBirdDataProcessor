@@ -110,7 +110,7 @@ void KernelDensityEstimation::SetKernelType(const KernelType& type)
 //		None
 //
 // Return Value:
-//		std::vector<double>
+//		double
 //
 //==========================================================================
 double KernelDensityEstimation::EstimateOptimalBandwidth(
@@ -126,14 +126,42 @@ double KernelDensityEstimation::EstimateOptimalBandwidth(
 
 //==========================================================================
 // Class:			KernelDensityEstimation
+// Function:		EstimateOptimalBandwidth
+//
+// Description:		Uses "rule of thumb" to estimate an optimal bandwidth.
+//
+// Input Arguments:
+//		values		= std::vector<std::pair<double, double>>&
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		double
+//
+//==========================================================================
+double KernelDensityEstimation::EstimateOptimalBandwidth(const std::vector<std::pair<double, double>>& v)
+{
+	// TODO:  Implement smarter method here
+	std::vector<double> v2(v.size());
+	typedef std::vector<std::pair<double, double>>::const_iterator IT1Type;
+	typedef std::vector<double>::iterator IT2Type;
+	for (std::pair<IT1Type, IT2Type> its(std::make_pair(v.begin(), v2.begin())); its.first != v.end(); ++its.first, ++its.second)
+		*its.second = its.first->first;
+
+	return EstimateOptimalBandwidth(v2);
+}
+
+//==========================================================================
+// Class:			KernelDensityEstimation
 // Function:		GetUniqueValues
 //
 // Description:		Uses Kernel Density Estimation to find the significantly
 //					unique values in the specified vector.
 //
 // Input Arguments:
-//		values		= std::vector<double>&
-//		pdfRange	= std::vector<double>&, values at which PDF should be computed
+//		values		= const std::vector<double>&
+//		pdfRange	= const std::vector<double>&, values at which PDF should be computed
 //		bandwidth	= const double&
 //
 // Output Arguments:
@@ -156,6 +184,43 @@ std::vector<double> KernelDensityEstimation::ComputePDF(
 		double kernelSum(0.0);
 		for (j = 0; j < values.size(); j++)
 			kernelSum += kernel((pdfRange[i] - values[j]) / bandwidth);
+		pdfEstimate[i] = factor * kernelSum;
+	}
+
+	return pdfEstimate;
+}
+
+//==========================================================================
+// Class:			KernelDensityEstimation
+// Function:		GetUniqueValues
+//
+// Description:		Uses Kernel Density Estimation to find the significantly
+//					unique values in the specified vector.
+//
+// Input Arguments:
+//		values		= const std::vector<std::pair<double, double>>&
+//		pdfRange	= const std::vector<double>&, values at which PDF should be computed
+//		bandwidth	= const double&
+//
+// Output Arguments:
+//		None
+//
+// Return Value:
+//		std::vector<double>
+//
+//==========================================================================
+std::vector<double> KernelDensityEstimation::ComputePDF(const std::vector<std::pair<double, double>>& values,
+	const std::vector<double>& pdfRange, const double& bandwidth) const
+{
+	// Estimate the probability distribution over the range of input data
+	std::vector<double> pdfEstimate(pdfRange.size());
+	const double factor(1.0 / static_cast<double>(values.size()) / bandwidth);
+	unsigned int i, j;
+	for (i = 0; i < pdfEstimate.size(); i++)
+	{
+		double kernelSum(0.0);
+		for (j = 0; j < values.size(); j++)
+			kernelSum += kernel((pdfRange[i] - values[j].first) / bandwidth) * values[j].second;
 		pdfEstimate[i] = factor * kernelSum;
 	}
 

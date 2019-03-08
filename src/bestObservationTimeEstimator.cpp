@@ -123,12 +123,12 @@ BestObservationTimeEstimator::PDFArray BestObservationTimeEstimator::EstimateBes
 		std::for_each(exactTimes.begin(), exactTimes.end(), [](double& a) { a = 0.0; });
 		// TODO:  Modify this to make use of duration (if available) and to disregard observations that have no time data
 		for (const auto& o : obsInfoSortable)
-			exactTimes[o.observationDate.tm_hour + static_cast<int>(o.observationDate.tm_min / 60.0 + 0.5)] = 1.0;
+			exactTimes[std::max(o.observationDate.tm_hour + static_cast<int>(o.observationDate.tm_min / 60.0 + 0.5), static_cast<int>(exactTimes.size()) - 1)] = 1.0;
 		return exactTimes;
 	}
 
 	// For ease of processing, convert times to a double representation of time as fractional hours since midnight
-	std::vector<double> inputTimes;
+	std::vector<std::pair<double, double>> inputTimes;// <time (hr), weight>
 	for (const auto& o : observationInfo)
 	{
 		if (!o.dateIncludesTimeInfo)
@@ -140,24 +140,23 @@ BestObservationTimeEstimator::PDFArray BestObservationTimeEstimator::EstimateBes
 		{
 			const unsigned int incrementsSpanned(o.duration / increment);
 			for (unsigned int i = 0; i < incrementsSpanned; ++i)
-				inputTimes.push_back((startTime + i * increment) / incrementsSpanned);
+				inputTimes.push_back(std::make_pair(startTime + i * increment / 60.0, 1.0 / incrementsSpanned));
 		}
 		else
-			inputTimes.push_back(startTime);
+			inputTimes.push_back(std::make_pair(startTime, 1.0));
 	}
 
-	// Estimate the probability distribution by binning into 1-hour wide slots
+	// Estimate the probability distribution by binning into x-hour wide slots
 	const double minimum(0.0);// hours since midnight
-	const unsigned int pdfPointCount(24);
-	const double step(1.0);// hours
-	std::vector<double> pdfRange(pdfPointCount);
+	PDFArray pdfArray;
+	const double step(24.0 / pdfArray.size());// hours
+	std::vector<double> pdfRange(pdfArray.size());
 	std::generate(pdfRange.begin(), pdfRange.end(), Sequence(minimum, step));
 
 	KernelDensityEstimation kde;
 	std::vector<double> pdfEstimate(kde.ComputePDF(inputTimes, pdfRange,
 		std::max(1.0, KernelDensityEstimation::EstimateOptimalBandwidth(inputTimes))));
 
-	PDFArray pdfArray;
 	assert(pdfEstimate.size() == pdfArray.size());
 	for (unsigned int i = 0; i < pdfArray.size(); ++i)
 		pdfArray[i] = pdfEstimate[i];

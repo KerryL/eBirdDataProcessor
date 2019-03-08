@@ -33,11 +33,17 @@ public:
 
 	void SetKernelType(const KernelType& type);
 
+	// For unweighted samples
 	std::vector<double> ComputePDF(const std::vector<double>& values,
 		const std::vector<double>& pdfRange,
 		const double& bandwidth) const;
-
 	static double EstimateOptimalBandwidth(const std::vector<double>& v);
+
+	// For weighted samples
+	std::vector<double> ComputePDF(const std::vector<std::pair<double, double>>& values,
+		const std::vector<double>& pdfRange,
+		const double& bandwidth) const;
+	static double EstimateOptimalBandwidth(const std::vector<std::pair<double, double>>& v);
 
 	template <typename T>
 	static double ComputeStandardDeviation(const std::vector<T>& v);
