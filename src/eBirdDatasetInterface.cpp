@@ -506,14 +506,28 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 			}
 		}
 
-		unsigned int ti(0);
+		unsigned int j(0);
 		for (const auto& o : observations)
 		{
-			const auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
+			const double excludeFactor(0.1);
+			const double excludeLimit(excludeFactor * *std::max_element(allObsPDF[j].begin(), allObsPDF[j].end()));
+
+			auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
+			for (unsigned int i = 0; i < pdf.size(); ++i)
+			{
+				// If we do this blindly, times when there are very few checklists submitted can
+				// have an overwhelming scale effect on the PDFs, so we automatically exclude
+				// times where there are very few observations
+				if (allObsPDF[j][i] < excludeLimit)
+					pdf[i] = 0.0;
+				else
+					pdf[i] /= allObsPDF[j][i];// Normalize based on total number of checklists per time period
+			}
+
 			const double sum(std::accumulate(pdf.begin(), pdf.end(), 0.0));
 			for (unsigned int i = 0; i < pdf.size(); ++i)
-				rows[i] << pdf[i] / sum / (24.0 / pdf.size()) * (1.0 - allObsPDF[ti][i]) << ',';// Normalize based on total number of checklists per time period
-			++ti;
+				rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
+			++j;
 		}
 	}
 
