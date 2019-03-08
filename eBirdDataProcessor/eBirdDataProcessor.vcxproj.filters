@@ -117,6 +117,9 @@
     <ClCompile Include="..\src\utilities\memoryMappedFile.cpp">
       <Filter>Source Files\utilities</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\utilities\profiler.cpp">
+      <Filter>Source Files\utilities</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
@@ -204,6 +207,9 @@
       <Filter>Header Files\utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\src\utilities\memoryMappedFile.h">
+      <Filter>Header Files\utilities</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\utilities\profiler.h">
       <Filter>Header Files\utilities</Filter>
     </ClInclude>
   </ItemGroup>

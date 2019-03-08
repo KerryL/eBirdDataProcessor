@@ -83,7 +83,11 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, Pr
 		while (dataset.ReadNextLine(line))
 		{
 			if (lineCount % 1000000 == 0)
+			{
 				Cout << "  " << lineCount << " records read" << std::endl;
+				if (lineCount > 0)
+					break;
+			}
 
 			pool.AddJob(std::make_unique<LineProcessJobInfo>(UString::ToStringType(line), *this, processFunction));
 			++lineCount;
@@ -315,11 +319,13 @@ bool EBirdDatasetInterface::ParseInto(const UString::String& s, Time& value)
 	return true;
 }
 
+// TODO:  The below method is where the bulk of the time is spent - need to improve this somehow
 bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& observation)
 {
 	unsigned int column(0);
-	UString::String token;
 	UString::String countryCode, stateCode;
+
+	UString::String token;
 	UString::IStringStream ss(line);
 	while (std::getline(ss, token, UString::Char('\t')))
 	{

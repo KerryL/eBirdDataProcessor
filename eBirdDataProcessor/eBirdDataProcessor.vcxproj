@@ -157,6 +157,7 @@
     <ClCompile Include="..\src\utilities\cppSocket.cpp" />
     <ClCompile Include="..\src\utilities\memoryMappedFile.cpp" />
     <ClCompile Include="..\src\utilities\mutexUtilities.cpp" />
+    <ClCompile Include="..\src\utilities\profiler.cpp" />
     <ClCompile Include="..\src\utilities\uString.cpp" />
     <ClCompile Include="..\src\zipper.cpp" />
   </ItemGroup>
@@ -188,6 +189,7 @@
     <ClInclude Include="..\src\utilities\cppSocket.h" />
     <ClInclude Include="..\src\utilities\memoryMappedFile.h" />
     <ClInclude Include="..\src\utilities\mutexUtilities.h" />
+    <ClInclude Include="..\src\utilities\profiler.h" />
     <ClInclude Include="..\src\utilities\uString.h" />
     <ClInclude Include="..\src\zipper.h" />
   </ItemGroup>
