@@ -407,7 +407,7 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 	std::vector<UString::OStringStream> rows(dummy.size());
 	const double increment(24.0 / dummy.size());// [hr]
 	double t(0.0);
-	headerRow << "Time (hr)";
+	headerRow << "Time (hr),";
 	for (auto& r : rows)
 	{
 		r << t << ',';
@@ -468,6 +468,11 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 				for (unsigned int i = 0; i < pdf.size(); ++i)
 					rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
 			}
+			else
+			{
+				for (auto& r : rows)
+					r << "0,";
+			}	
 			allObsPDF.push_back(std::move(pdf));
 		}
 	}
@@ -535,8 +540,8 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 			}
 			else
 			{
-				for (unsigned int i = 0; i < pdf.size(); ++i)
-					rows[i] << "0,";
+				for (auot& r : rows)
+					r << "0,";
 			}
 
 			++j;
