@@ -47,15 +47,17 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		if (!configFile.GetConfig().timeOfDayOutputFile.empty())
 		{
 			EBirdInterface ebi(configFile.GetConfig().eBirdApiKey);
-			const auto regionCode(ebi.GetRegionCode(configFile.GetConfig().countryFilter, configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter));
-			if (!dataset.ExtractTimeOfDayInfo(configFile.GetConfig().eBirdDatasetPath, configFile.GetConfig().timeOfDataCommonNames, regionCode))
+			const auto regionCode(ebi.GetRegionCode(configFile.GetConfig().countryFilter,
+				configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter));
+			if (!dataset.ExtractTimeOfDayInfo(configFile.GetConfig().eBirdDatasetPath,
+				configFile.GetConfig().timeOfDataCommonNames, regionCode, configFile.GetConfig().splitRegionDataFile))
 				return 1;
 			if (!dataset.WriteTimeOfDayFiles(configFile.GetConfig().timeOfDayOutputFile, EBirdDatasetInterface::TimeOfDayPeriod::Week))
 				return 1;
 		}
 		else// Ignore all other options and generate global frequency data
 		{
-			if (!dataset.ExtractGlobalFrequencyData(configFile.GetConfig().eBirdDatasetPath))
+			if (!dataset.ExtractGlobalFrequencyData(configFile.GetConfig().eBirdDatasetPath, configFile.GetConfig().splitRegionDataFile))
 				return 1;
 			if (dataset.WriteFrequencyFiles(configFile.GetConfig().frequencyFilePath))
 				return 1;

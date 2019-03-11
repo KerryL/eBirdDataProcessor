@@ -37,16 +37,19 @@
 
 const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
 
-bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fileName)
+bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fileName,
+	const UString::String& regionDataOutputFileName)
 {
-	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataFrequency))
+	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataFrequency,
+		regionDataOutputFileName))
 		return false;
 	RemoveRarities();
 
 	return true;
 }
 
-bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, ProcessFunction processFunction)
+bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
+	ProcessFunction processFunction, const UString::String& regionDataOutputFileName)
 {
 	assert(frequencyMap.empty());
 
@@ -73,6 +76,10 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName, Pr
 			Cerr << "Header line has unexpected format\n";
 			return false;
 		}
+
+		regionDataOutputFile.open(regionDataOutputFileName);
+		if (regionDataOutputFile.is_open() && regionDataOutputFile.good())
+			regionDataOutputFile << UString::ToStringType(line) << '\n';
 
 		ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 		uint64_t lineCount(0);
@@ -103,6 +110,15 @@ bool EBirdDatasetInterface::ProcessLine(const UString::String& line, ProcessFunc
 	{
 		Cerr << "Failure parsing data line\n";
 		return false;
+	}
+
+	if (regionDataOutputFile.is_open())
+	{
+		if (RegionMatches(observation.regionCode))
+		{
+			std::lock_guard<std::mutex> lock(regionWriteMutex);
+			regionDataOutputFile << line << '\n';
+		}
 	}
 
 	(this->*processFunction)(observation);
@@ -376,7 +392,8 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 }
 
 bool EBirdDatasetInterface::ExtractTimeOfDayInfo(const UString::String& fileName,
-	const std::vector<UString::String>& commonNames, const UString::String& regionCode)
+	const std::vector<UString::String>& commonNames, const UString::String& regionCode,
+	const UString::String& regionDataOutputFileName)
 {
 	assert(!regionCode.empty());
 	assert(!commonNames.empty());
@@ -384,13 +401,15 @@ bool EBirdDatasetInterface::ExtractTimeOfDayInfo(const UString::String& fileName
 	speciesNamesTimeOfDay = commonNames;
 	regionCodeTimeOfDay = regionCode;
 
-	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataTimeOfDay))
+	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataTimeOfDay,
+		regionDataOutputFileName))
 		return false;
 
 	return true;
 }
 
-bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileName, const TimeOfDayPeriod& period) const
+bool EBirdDatasetInterface::WriteTimeOfDayFiles(
+	const UString::String& dataFileName, const TimeOfDayPeriod& period) const
 {
 	UString::OFStream dataFile(dataFileName);
 	if (!dataFile.is_open() || !dataFile.good())
@@ -472,7 +491,7 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 			{
 				for (auto& r : rows)
 					r << "0,";
-			}	
+			}
 			allObsPDF.push_back(std::move(pdf));
 		}
 	}
@@ -540,7 +559,7 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 			}
 			else
 			{
-				for (auot& r : rows)
+				for (auto& r : rows)
 					r << "0,";
 			}
 
@@ -731,7 +750,7 @@ bool EBirdDatasetInterface::RegionMatches(const UString::String& regionCode) con
 	if (regionCode.length() < regionCodeTimeOfDay.length())
 		return false;
 
-	return regionCodeTimeOfDay.substr(0, regionCode.length()).compare(regionCode) == 0;
+	return regionCode.substr(0, regionCodeTimeOfDay.length()).compare(regionCodeTimeOfDay) == 0;
 }
 
 unsigned int EBirdDatasetInterface::GetMonthIndex(const Date& date)

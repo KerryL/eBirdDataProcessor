@@ -21,7 +21,7 @@
 class EBirdDatasetInterface
 {
 public:
-	bool ExtractGlobalFrequencyData(const UString::String& fileName);
+	bool ExtractGlobalFrequencyData(const UString::String& fileName, const UString::String& regionDataOutputFileName);
 	bool WriteFrequencyFiles(const UString::String& frequencyDataPath) const;
 
 	enum class TimeOfDayPeriod
@@ -33,7 +33,7 @@ public:
 
 	bool ExtractTimeOfDayInfo(const UString::String& fileName,
 		const std::vector<UString::String>& commonNames,
-		const UString::String& regionCode);
+		const UString::String& regionCode, const UString::String& regionDataOutputFileName);
 	bool WriteTimeOfDayFiles(const UString::String& dataFileName, const TimeOfDayPeriod& period) const;
 
 private:
@@ -118,6 +118,7 @@ private:
 
 	std::vector<UString::String> speciesNamesTimeOfDay;
 	UString::String regionCodeTimeOfDay;
+	UString::OFStream regionDataOutputFile;
 	std::unordered_map<UString::String, std::vector<Observation>> timeOfDayObservationMap;// Key is species common name
 	std::unordered_map<UString::String, Observation> allObservationsInRegion;// Key is checklist ID
 	bool RegionMatches(const UString::String& regionCode) const;
@@ -166,11 +167,13 @@ private:
 		}
 	};
 
-	bool DoDatasetParsing(const UString::String& fileName, ProcessFunction processFunction);
+	bool DoDatasetParsing(const UString::String& fileName, ProcessFunction processFunction,
+		const UString::String& regionDataOutputFileName);
 
 	bool ProcessLine(const UString::String& line, ProcessFunction processFunction);
 
 	std::mutex mutex;
+	std::mutex regionWriteMutex;
 
 	static std::vector<EBirdInterface::ObservationInfo> GetObservationsWithinDateRange(
 		const std::vector<Observation>& observations, const Date& beginRange, const Date& endRange);// inclusive of endpoints

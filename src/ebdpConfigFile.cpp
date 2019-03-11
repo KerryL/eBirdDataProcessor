@@ -23,6 +23,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("INCLUDE_PARTIAL_IDS"), config.includePartialIDs);
 	AddConfigItem(_T("TOD_SPECIES"), config.timeOfDataCommonNames);
 	AddConfigItem(_T("TOD_OUTPUT_FILE"), config.timeOfDayOutputFile);
+	AddConfigItem(_T("REGION_DATA_OUTPUT_FILE"), config.splitRegionDataFile);
 
 	AddConfigItem(_T("MEDIA_LIST_HTML"), config.mediaListHTML);
 	AddConfigItem(_T("MEDIA_FILE"), config.mediaFileName);

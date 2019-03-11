@@ -33,6 +33,7 @@ struct EBDPConfig
 	bool includePartialIDs;
 	UString::String timeOfDayOutputFile;
 	std::vector<UString::String> timeOfDataCommonNames;
+	UString::String splitRegionDataFile;
 
 	unsigned int yearFilter;
 	unsigned int monthFilter;
