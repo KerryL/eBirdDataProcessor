@@ -96,7 +96,7 @@ private:
 	};
 
 	static bool CreateJSONData(const std::vector<CountyInfo>& observationData, cJSON*& geoJSON);
-	static bool BuildObservationRecord(const CountyInfo& observation, cJSON* json, const unsigned int& index);
+	static bool BuildObservationRecord(const CountyInfo& observation, cJSON* json);
 	static bool BuildMonthInfo(const CountyInfo::MonthInfo& monthInfo, cJSON* json);
 
 	static UString::String ForceTrailingSlash(const UString::String& path);

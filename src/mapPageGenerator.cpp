@@ -7,6 +7,7 @@
 #include "mapPageGenerator.h"
 #include "stringUtilities.h"
 #include "utilities.h"
+#include "kmlToGeoJSONConverter.h"
 #include "utilities/mutexUtilities.h"
 
 // Standard C++ headers
@@ -191,7 +192,6 @@ bool MapPageGenerator::CreateJSONData(const std::vector<CountyInfo>& observation
 
 	cJSON_AddItemToObject(geoJSON, "features", regions);
 
-	unsigned int index(0);
 	for (const auto& o : observationData)
 	{
 		auto r(cJSON_CreateObject());
@@ -202,21 +202,16 @@ bool MapPageGenerator::CreateJSONData(const std::vector<CountyInfo>& observation
 		}
 
 		cJSON_AddItemToArray(regions, r);
-		if (!BuildObservationRecord(o, r, index))
+		if (!BuildObservationRecord(o, r))
 			return false;
-
-		++index;
 	}
 
 	return true;
 }
 
-bool MapPageGenerator::BuildObservationRecord(const CountyInfo& observation, cJSON* json, const unsigned int& index)
+bool MapPageGenerator::BuildObservationRecord(const CountyInfo& observation, cJSON* json)
 {
 	cJSON_AddStringToObject(json, "type", "Feature");
-	std::ostringstream ss;
-	ss << index;
-	cJSON_AddStringToObject(json, "id", ss.str().c_str());
 
 	auto observationData(cJSON_CreateObject());
 	if (!observationData)
@@ -226,7 +221,13 @@ bool MapPageGenerator::BuildObservationRecord(const CountyInfo& observation, cJS
 	}
 
 	cJSON_AddItemToObject(json, "properties", observationData);
-	cJSON_AddStringToObject(json, "geometry", UString::ToNarrowString(observation.geometryKML).c_str());
+
+	KMLToGeoJSONConverter kmlToGeoJson(UString::ToNarrowString(observation.geometryKML));
+	auto geometry(kmlToGeoJson.GetGeoJSON());
+	if (!geometry)
+		return false;
+
+	cJSON_AddItemToObject(json, "geometry", geometry);
 
 	cJSON_AddStringToObject(observationData, "name", UString::ToNarrowString(observation.name).c_str());
 	cJSON_AddStringToObject(observationData, "country", UString::ToNarrowString(observation.country).c_str());
