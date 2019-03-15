@@ -147,6 +147,7 @@
     <ClCompile Include="..\src\googleMapsInterface.cpp" />
     <ClCompile Include="..\src\kernelDensityEstimation.cpp" />
     <ClCompile Include="..\src\kmlLibraryManager.cpp" />
+    <ClCompile Include="..\src\kmlToGeoJSONConverter.cpp" />
     <ClCompile Include="..\src\mapPageGenerator.cpp" />
     <ClCompile Include="..\src\stringUtilities.cpp" />
     <ClCompile Include="..\src\threadPool.cpp" />
@@ -177,6 +178,7 @@
     <ClInclude Include="..\src\googleMapsInterface.h" />
     <ClInclude Include="..\src\kernelDensityEstimation.h" />
     <ClInclude Include="..\src\kmlLibraryManager.h" />
+    <ClInclude Include="..\src\kmlToGeoJSONConverter.h" />
     <ClInclude Include="..\src\logging\combinedLogger.h" />
     <ClInclude Include="..\src\mapPageGenerator.h" />
     <ClInclude Include="..\src\stringUtilities.h" />

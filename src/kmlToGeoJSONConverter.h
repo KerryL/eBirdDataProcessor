@@ -34,10 +34,11 @@ private:
 	typedef std::vector<LinearRing> Polygon;
 	std::vector<Polygon> polygons;
 
+	static std::string::size_type GetTagPosition(const std::string& kml, const std::string& tag, const std::string::size_type& start);
 	static std::string::size_type GoToNextPolygon(const std::string& kml, const std::string::size_type& start);
 	static std::string::size_type GetPolygonEndLocation(const std::string& kml, const std::string::size_type& start);
 	static std::string::size_type GoToNextLinearRing(const std::string& kml, const std::string::size_type& start);
-	static bool ExtractCoordinates(const std::string& kml, const std::string::size_type& start, Point& point);
+	static bool ExtractCoordinates(const std::string& kml, std::string::size_type& start, Point& point);
 };
 
 #endif// KML_TO_GEOJSON_CONVERTER_H_

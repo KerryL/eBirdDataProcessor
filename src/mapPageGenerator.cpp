@@ -145,7 +145,7 @@ bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 		return false;
 	}
 
-	const auto jsonString(cJSON_Print(geoJSON));
+	const auto jsonString(cJSON_Print/*Unformatted*/(geoJSON));
 	if (!jsonString)
 	{
 		Cerr << "Failed to generate JSON string\n";

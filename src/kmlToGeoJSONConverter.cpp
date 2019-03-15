@@ -8,6 +8,7 @@
 
 // Standard C++ headers
 #include <iostream>
+#include <sstream>
 
 KMLToGeoJSONConverter::KMLToGeoJSONConverter(const std::string& kml)
 {
@@ -29,8 +30,52 @@ bool KMLToGeoJSONConverter::ParseKML(const std::string& kml)
 			Point point;
 			while (ExtractCoordinates(kml, position, point))
 				polygons.back().back().push_back(point);
+			lrPosition = position;
 		}
+		polygonPosition = lrPosition;
 	}
+
+	return true;
+}
+
+std::string::size_type KMLToGeoJSONConverter::GetTagPosition(const std::string& kml,
+	const std::string& tag, const std::string::size_type& start)
+{
+	return kml.find(tag, start);
+}
+
+std::string::size_type KMLToGeoJSONConverter::GoToNextPolygon(const std::string& kml, const std::string::size_type& start)
+{
+	return GetTagPosition(kml, "<Polygon>", start);
+}
+
+std::string::size_type KMLToGeoJSONConverter::GetPolygonEndLocation(const std::string& kml, const std::string::size_type& start)
+{
+	return GetTagPosition(kml, "</Polygon>", start);
+}
+
+std::string::size_type KMLToGeoJSONConverter::GoToNextLinearRing(const std::string& kml, const std::string::size_type& start)
+{
+	return GetTagPosition(kml, "<LinearRing><coordinates>", start);
+}
+
+bool KMLToGeoJSONConverter::ExtractCoordinates(const std::string& kml, std::string::size_type& start, Point& point)
+{
+	const unsigned int chunkSize(40);
+	std::istringstream ss(kml.substr(start, chunkSize));
+	if ((ss >> point.x).fail())
+		return false;
+
+	if (ss.peek() != ',')
+		return false;
+
+	if ((ss >> point.y).fail())
+		return false;
+
+	if (ss.peek() != ' ')
+		return false;
+
+	start += ss.tellg();
 
 	return true;
 }
