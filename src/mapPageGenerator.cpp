@@ -152,7 +152,7 @@ bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 		return false;
 	}
 
-	file << "var regionData = " << jsonString << ';\n';
+	file << "var regionData = " << jsonString << ";\n";
 	cJSON_Delete(geoJSON);
 
 	return true;
