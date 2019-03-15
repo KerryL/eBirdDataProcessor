@@ -41,7 +41,10 @@ bool KMLToGeoJSONConverter::ParseKML(const std::string& kml)
 std::string::size_type KMLToGeoJSONConverter::GetTagPosition(const std::string& kml,
 	const std::string& tag, const std::string::size_type& start)
 {
-	return kml.find(tag, start);
+	const auto location(kml.find(tag, start));
+	if (location == std::string::npos)
+		return std::string::npos;
+	return location + tag.length();
 }
 
 std::string::size_type KMLToGeoJSONConverter::GoToNextPolygon(const std::string& kml, const std::string::size_type& start)
@@ -68,6 +71,7 @@ bool KMLToGeoJSONConverter::ExtractCoordinates(const std::string& kml, std::stri
 
 	if (ss.peek() != ',')
 		return false;
+	ss.ignore();
 
 	if ((ss >> point.y).fail())
 		return false;
@@ -75,6 +79,7 @@ bool KMLToGeoJSONConverter::ExtractCoordinates(const std::string& kml, std::stri
 	if (ss.peek() != ' ')
 		return false;
 
+	ss.ignore();
 	start += ss.tellg();
 
 	return true;
