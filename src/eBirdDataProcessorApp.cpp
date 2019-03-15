@@ -124,8 +124,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	{
 		if (!processor.FindBestLocationsForNeededSpecies(
 			configFile.GetConfig().frequencyFilePath, configFile.GetConfig().kmlLibraryPath,
-			configFile.GetConfig().googleMapsAPIKey, configFile.GetConfig().eBirdApiKey,
-			configFile.GetConfig().oAuthClientId, configFile.GetConfig().oAuthClientSecret,
+			configFile.GetConfig().eBirdApiKey,
 			configFile.GetConfig().highDetailCountries, configFile.GetConfig().cleanupKMLLocationNames))
 			return 1;
 	}

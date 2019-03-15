@@ -56,9 +56,6 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("KML_LIBRARY"), config.kmlLibraryPath);
 	AddConfigItem(_T("HIGH_DETAIL"), config.highDetailCountries);
 
-	AddConfigItem(_T("OAUTH_CLIENT_ID"), config.oAuthClientId);
-	AddConfigItem(_T("OAUTH_CLIENT_SECRET"), config.oAuthClientSecret);
-
 	AddConfigItem(_T("DATASET"), config.eBirdDatasetPath);
 
 	AddConfigItem(_T("COMPARE"), config.doComparison);
@@ -188,13 +185,6 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 		return true;
     
 	bool configurationOK(true);
-
-	if (config.oAuthClientId.empty() || config.oAuthClientSecret.empty())
-	{
-		Cerr << GetKey(config.findMaxNeedsLocations) << " requires "
-			<< GetKey(config.oAuthClientId) << " and " << GetKey(config.oAuthClientSecret) << '\n';
-		configurationOK = false;
-	}
 
 	if (config.kmlLibraryPath.empty())
 	{

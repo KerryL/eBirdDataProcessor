@@ -94,9 +94,6 @@ struct EBDPConfig
 	bool findMaxNeedsLocations;
 	UString::String kmlLibraryPath;
 
-	UString::String oAuthClientId;
-	UString::String oAuthClientSecret;
-
 	UString::String eBirdDatasetPath;
 	
 	UString::String commentGroupString;

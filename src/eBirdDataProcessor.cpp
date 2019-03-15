@@ -1465,8 +1465,7 @@ UString::String EBirdDataProcessor::RemoveTrailingDash(const UString::String& s)
 }
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-	const UString::String& kmlLibraryPath, const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
-	const UString::String& clientId, const UString::String& clientSecret,
+	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
 	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
@@ -1523,14 +1522,11 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	pool.WaitForAllJobsComplete();
 	newSightingProbability.erase(probEntryIt, newSightingProbability.end());// Remove extra entries (only needed if every country were done in high detail)
 
-	if (!googleMapsKey.empty())
+	const UString::String fileName(_T("."));
+	if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, eBirdAPIKey,
+		newSightingProbability, highDetailCountries, cleanUpLocationNames))
 	{
-		const UString::String fileName(_T("bestLocations.html"));
-		if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, googleMapsKey, eBirdAPIKey,
-			newSightingProbability, clientId, clientSecret, highDetailCountries, cleanUpLocationNames))
-		{
-			Cerr << "Faild to create Google Maps best locations page\n";
-		}
+		Cerr << "Faild to create best locations page\n";
 	}
 
 	return true;
@@ -1620,14 +1616,12 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 }
 
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const UString::String& htmlFileName,
-	const UString::String& kmlLibraryPath, const UString::String& googleMapsKey, const UString::String& eBirdAPIKey,
+	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
 	const std::vector<YearFrequencyInfo>& observationProbabilities,
-	const UString::String& clientId, const UString::String& clientSecret,
 	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames)
 {
-	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, googleMapsKey, highDetailCountries, cleanUpLocationNames);
-	return generator.WriteBestLocationsViewerPage(htmlFileName,
-		googleMapsKey, eBirdAPIKey, observationProbabilities, clientId, clientSecret);
+	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, highDetailCountries, cleanUpLocationNames);
+	return generator.WriteBestLocationsViewerPage(htmlFileName, eBirdAPIKey, observationProbabilities);
 }
 
 // Assume we're comparing lists based on year
