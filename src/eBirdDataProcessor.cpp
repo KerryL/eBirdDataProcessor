@@ -1465,7 +1465,7 @@ UString::String EBirdDataProcessor::RemoveTrailingDash(const UString::String& s)
 }
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
+	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const UString::String& targetRegionCode,
 	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
@@ -1487,6 +1487,11 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 		FrequencyDataYear occurrenceData;
 		DoubleYear checklistCounts;
 		const auto regionCode(Utilities::StripExtension(f));
+		if (regionCode.length() < targetRegionCode.length())
+			continue;
+		else if (regionCode.substr(0, targetRegionCode.length()).compare(targetRegionCode) != 0)
+			continue;
+
 		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts))
 			return false;
 

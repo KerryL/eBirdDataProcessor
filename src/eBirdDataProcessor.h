@@ -66,7 +66,7 @@ public:
 		const UString::String& mapApiKey, const UString::String& eBirdApiKey) const;
 
 	bool FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-		const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
+		const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const UString::String& targetRegionCode,
 		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const;
 		
 	static UString::String PrepareForComparison(const UString::String& commonName);

@@ -122,9 +122,12 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			configFile.GetConfig().countyFilter);
 	else if (configFile.GetConfig().findMaxNeedsLocations)
 	{
+		EBirdInterface ebi(configFile.GetConfig().eBirdApiKey);
+		const auto regionCode(ebi.GetRegionCode(configFile.GetConfig().countryFilter,
+			configFile.GetConfig().stateFilter, configFile.GetConfig().countyFilter));
 		if (!processor.FindBestLocationsForNeededSpecies(
 			configFile.GetConfig().frequencyFilePath, configFile.GetConfig().kmlLibraryPath,
-			configFile.GetConfig().eBirdApiKey,
+			configFile.GetConfig().eBirdApiKey, regionCode,
 			configFile.GetConfig().highDetailCountries, configFile.GetConfig().cleanupKMLLocationNames))
 			return 1;
 	}

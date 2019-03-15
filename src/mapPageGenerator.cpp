@@ -93,6 +93,21 @@ bool MapPageGenerator::WriteHTML(const UString::String& outputPath) const
 bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 	const UString::String& eBirdAPIKey, std::vector<ObservationInfo> observationProbabilities)
 {
+	log << "Retrieving county location data" << std::endl;
+	const auto countryCodes(GetCountryCodeList(observationProbabilities));
+	const auto countries(ebi.GetSubRegions(_T("world"), EBirdInterface::RegionType::Country));
+	for (const auto& c : countries)
+		countryLevelRegionInfoMap[c.code] = c;
+	for (const auto& c : countryCodes)
+	{
+		if (std::find(highDetailCountries.begin(), highDetailCountries.end(), c) == highDetailCountries.end())
+		{
+			countryRegionInfoMap[c] = std::vector<EBirdInterface::RegionInfo>(1, countryLevelRegionInfoMap[c]);
+			continue;
+		}
+		countryRegionInfoMap[c] = GetFullCountrySubRegionList(c);
+	}
+
 	std::vector<CountyInfo> countyInfo(observationProbabilities.size());
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 	auto countyIt(countyInfo.begin());
@@ -116,7 +131,7 @@ bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 
 	pool.WaitForAllJobsComplete();
 
-	cJSON* geoJSON(nullptr);
+	cJSON* geoJSON;
 	if (!CreateJSONData(countyInfo, geoJSON))
 		return false;
 
@@ -129,7 +144,15 @@ bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 		return false;
 	}
 
-	file << "var regionData = " << cJSON_Print(geoJSON) << ';\n';
+	const auto jsonString(cJSON_Print(geoJSON));
+	if (!jsonString)
+	{
+		Cerr << "Failed to generate JSON string\n";
+		cJSON_Delete(geoJSON);
+		return false;
+	}
+
+	file << "var regionData = " << jsonString << ';\n';
 	cJSON_Delete(geoJSON);
 
 	return true;
@@ -148,7 +171,7 @@ UString::String MapPageGenerator::ForceTrailingSlash(const UString::String& path
 	return path + slash;
 }
 
-bool MapPageGenerator::CreateJSONData(const std::vector<CountyInfo>& observationData, cJSON* geoJSON)
+bool MapPageGenerator::CreateJSONData(const std::vector<CountyInfo>& observationData, cJSON*& geoJSON)
 {
 	geoJSON = cJSON_CreateObject();
 	if (!geoJSON)

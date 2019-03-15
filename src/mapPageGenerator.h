@@ -95,7 +95,7 @@ private:
 		std::array<MonthInfo, 12> monthInfo;
 	};
 
-	static bool CreateJSONData(const std::vector<CountyInfo>& observationData, cJSON* geoJSON);
+	static bool CreateJSONData(const std::vector<CountyInfo>& observationData, cJSON*& geoJSON);
 	static bool BuildObservationRecord(const CountyInfo& observation, cJSON* json, const unsigned int& index);
 	static bool BuildMonthInfo(const CountyInfo::MonthInfo& monthInfo, cJSON* json);
 
