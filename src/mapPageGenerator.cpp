@@ -49,32 +49,20 @@ MapPageGenerator::MapPageGenerator(const UString::String& kmlLibraryPath, const 
 }
 
 bool MapPageGenerator::WriteBestLocationsViewerPage(const UString::String& outputPath,
-	const UString::String& eBirdAPIKey,
 	const std::vector<ObservationInfo>& observationProbabilities)
 {
 	if (!WriteHTML(outputPath))
 		return false;
 
-	if (!WriteGeoJSONData(outputPath, eBirdAPIKey, observationProbabilities))
+	if (!WriteGeoJSONData(outputPath, observationProbabilities))
 		return false;
-	/*UString::OStringStream contents;
-	WriteHeadSection(contents, keys, observationProbabilities);
-	WriteBody(contents);
-
-	UString::OFStream file(htmlFileName.c_str());
-	if (!file.is_open() || !file.good())
-	{
-		Cerr << "Failed to open '" << htmlFileName << "' for output\n";
-		return false;
-	}
-	file << contents.str();*/
 
 	return true;
 }
 
 bool MapPageGenerator::WriteHTML(const UString::String& outputPath) const
 {
-	/*const auto fileName(ForceTrailingSlash(outputPath) + htmlFileName);
+	const auto fileName(ForceTrailingSlash(outputPath) + htmlFileName);
 	UString::OFStream file(fileName);
 	if (!file.is_open() || !file.good())
 	{
@@ -82,17 +70,237 @@ bool MapPageGenerator::WriteHTML(const UString::String& outputPath) const
 		return false;
 	}
 
-	if (!WriteHeadSection(file))
-		return false;
-
-	if (!WriteBody(file))
-		return false;*/
+	file << "<!DOCTYPE html>\n<html>";
+	WriteHeadSection(file);
+	WriteBody(file);
+	file << "</html>\n";
 
 	return true;
 }
 
+void MapPageGenerator::WriteHeadSection(UString::OStream& f)
+{
+	f << "  <head>\n"
+		<< "    <title>Best Locations for New Species</title>\n"
+		<< "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n"
+		<< "    <meta charset=\"utf-8\">\n"
+		<< "    <style>\n"
+		<< "      #mapid {\n"
+		<< "        height: 95%;\n"
+		<< "      }\n"
+		<< "      html, body {\n"
+		<< "        height: 100%;\n"
+		<< "        margin: 0;\n"
+		<< "        padding: 0;\n"
+		<< "      }\n"
+		<< "	  .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }\n"
+		<< "	  .info h4 { margin: 0 0 5px; color: #777; }\n"
+		<< "      .legend { text-align: left; line-height: 18px; color: #555; }\n"
+		<< "      .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }\n"
+		<< "	  #speciesList { width:100%; }\n"
+		<< "    </style>\n"
+		<< "	<link rel=\"stylesheet\" href=\"https://unpkg.com/leaflet@1.4.0/dist/leaflet.css\" integrity=\"sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA==\" crossorigin=\"\"/>\n"
+		<< "	<script src=\"https://unpkg.com/leaflet@1.4.0/dist/leaflet.js\" integrity=\"sha512-QVftwZFqvtRNi0ZyCtsznlKSWOStnDORoefr1enyq5mVL4tmKB3S/EnC3rRJcxCPavG10IcrVGSmPh6Qw5lwrg==\" crossorigin=\"\"></script>\n"
+		<< "  </head>\n\n";
+}
+
+void MapPageGenerator::WriteBody(UString::OStream& f)
+{
+	f << "  <body>\n"
+		<< "    <div id=\"mapid\"></div>\n\n"
+		<< "	<script type=\"text/javascript\" src=\"observationData.js\"></script>\n"
+		<< "	<div style='font-family: sans-serif'>\n"
+		<< "      <label>Select Month:</label>\n"
+		<< "      <select id=\"monthSelect\" onchange=\"updateMap()\">\n"
+		<< "        <option value=\"0\">January</option>\n"
+		<< "        <option value=\"1\">February</option>\n"
+		<< "        <option value=\"2\">March</option>\n"
+		<< "        <option value=\"3\">April</option>\n"
+		<< "        <option value=\"4\">May</option>\n"
+		<< "        <option value=\"5\">June</option>\n"
+		<< "        <option value=\"6\">July</option>\n"
+		<< "        <option value=\"7\">August</option>\n"
+		<< "        <option value=\"8\">September</option>\n"
+		<< "        <option value=\"9\">October</option>\n"
+		<< "        <option value=\"10\">November</option>\n"
+		<< "        <option value=\"11\">December</option>\n"
+		<< "        <option value=\"-1\">Cycle</option>\n"
+		<< "      </select>\n"
+		<< "    </div>\n\n";
+	WriteScripts(f);
+	f << "  </body>\n";
+}
+
+void MapPageGenerator::WriteScripts(UString::OStream& f)
+{
+	f << "    <script type=\"text/javascript\">\n"
+		<< "      var map = L.map('mapid').setView([37.8, -96], 4);\n\n"
+		// TODO:  Get our own access token
+		<< "      L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {\n"
+		<< "        maxZoom: 18,\n"
+		<< "        attribution: 'Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, ' +\n"
+		<< "        '<a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, ' +\n"
+		<< "        'Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>',\n"// TODO:  Update all attributions
+		<< "        id: 'mapbox.light'\n"
+		<< "      }).addTo(map);\n\n"
+		<< "      var info = L.control();\n\n"
+		<< "      info.onAdd = function (map) {\n"
+		<< "        this._div = L.DomUtil.create('div', 'info');\n"
+		<< "        this.update();\n"
+		<< "        return this._div;\n"
+		<< "      };\n\n"
+		<< "      info.update = function (props) {\n"
+		<< "        var probability = 0;\n"
+		<< "        if (props) {\n"
+		<< "          probability = props.monthData[month].probability * 100;\n"
+		<< "        }\n"
+		<< "        this._div.innerHTML = '<h4>Probability of Needed Observation</h4>' +  (props ?\n"
+		<< "          '<b>' + props.name + '</b><br />' + probability.toFixed(2) + ' %<br />' +\n"
+		<< "          '<select name=\"Needed Species\" size=\"10\" id=\"speciesList\">' +\n"
+		<< "          '</select>'\n"
+		<< "          : 'Select a region');\n\n"
+		<< "        if (props) {\n"
+		<< "          var fragment = document.createDocumentFragment();\n"
+		<< "          props.monthData[month].birds.forEach(function(species, index) {\n"
+		<< "            var opt = document.createElement('option');\n"
+		<< "            opt.text = species;\n"
+		<< "            opt.value = species;\n"
+		<< "            fragment.appendChild(opt);\n"
+		<< "            });\n"
+		<< "          document.getElementById('speciesList').appendChild(fragment);\n"
+		<< "        }\n"
+		<< "      };\n\n"
+		<< "      info.addTo(map);\n\n"
+		<< "      var geoJson;\n"
+		<< "      function buildColorLayer() {\n"
+		<< "        geoJson = L.geoJson(regionData, {\n"
+		<< "          style: style,\n"
+		<< "          onEachFeature: onEachFeature\n"
+		<< "        }).addTo(map);\n"
+		<< "      }\n\n"
+		<< "      var unhighlightOnExit = true;\n"
+		<< "      var highlightOnEnter = true;\n"
+		<< "      var month = 0;\n"
+		<< "      var cycle = false;\n"
+		<< "      var intervalHandle;\n"
+		<< "      function updateMap() {\n"
+		<< "        var monthSelect = document.getElementById('monthSelect');\n"
+		<< "        month = monthSelect.options[monthSelect.selectedIndex].value;\n"
+		<< "        if (month == -1) {\n"
+		<< "          month = 0;\n"
+		<< "          intervalHandle = setInterval(cycleMonth, 2000);\n"
+		<< "        } else if (intervalHandle) {\n"
+		<< "		  clearInterval(intervalHandle);\n"
+		<< "		  intervalHandle = null;\n"
+		<< "		}\n\n"
+		<< "        updateMapDisplay();\n"
+		<< "      }\n\n"
+		<< "      function updateMapDisplay() {\n"
+		<< "		unhighlightOnExit = true;\n"
+		<< "        highlightOnEnter = true;\n"
+		<< "        geoJson.setStyle(style);\n"
+		<< "        info.update();\n"
+		<< "	  }\n\n"
+		<< "      function cycleMonth() {\n"
+		<< "		month++;\n"
+		<< "		if (month == 12) {\n"
+		<< "		  month = 0;\n"
+		<< "		}\n\n"
+		<< "		updateMapDisplay();\n"
+		<< "	  }\n\n"
+		<< "      function getColor(d) {\n"
+		<< "        return d > 90 ? '#800026' :\n"
+		<< "          d > 80  ? '#BD0026' :\n"
+		<< "          d > 70  ? '#E31A1C' :\n"
+		<< "          d > 60  ? '#FC4E2A' :\n"
+		<< "          d > 50   ? '#FD8D3C' :\n"
+		<< "          d > 40   ? '#FEB24C' :\n"
+		<< "          d > 30   ? '#FED976' :\n"
+		<< "          d > 15   ? '#FFEDA0' :\n"
+		<< "          d == 0   ? '#A9A9A9' :\n"
+		<< "          '#FFFFCC';\n"
+		<< "        }\n\n"
+		<< "      function style(feature) {\n"
+		<< "        return {\n"
+		<< "          weight: 2,\n"
+		<< "          opacity: 1,\n"
+		<< "          color: 'white',\n"
+		<< "          dashArray: '1',\n"
+		<< "          fillOpacity: 0.3,\n"
+		<< "          fillColor: getColor(feature.properties.monthData[month].probability * 100)\n"
+		<< "        };\n"
+		<< "      }\n\n"
+		<< "      var lastClicked;\n"
+		<< "      function onClick(e) {\n"
+		<< "		if (lastClicked) {\n"
+		<< "          resetHighlight(lastClicked);\n"
+		<< "        }\n"
+		<< "        lastClicked = e;\n\n"
+		<< "		highlightFeature(e);\n\n"
+		<< "		highlightOnEnter = false;\n"
+		<< "		unhighlightOnExit = false;\n\n"
+		<< "		if (intervalHandle) {\n"
+		<< "		  clearInterval(intervalHandle);\n"
+		<< "		}\n"
+		<< "	  }\n\n"
+		<< "      function highlightFeature(e) {\n"
+		<< "        var layer = e.target;\n\n"
+		<< "        layer.setStyle({\n"
+		<< "          weight: 5,\n"
+		<< "          color: '#666',\n"
+		<< "          dashArray: '',\n"
+		<< "          fillOpacity: 0.5\n"
+		<< "        });\n\n"
+		<< "        if (!L.Browser.ie && !L.Browser.opera && !L.Browser.edge) {\n"
+		<< "          layer.bringToFront();\n"
+		<< "        }\n\n"
+		<< "        info.update(layer.feature.properties);\n"
+		<< "      }\n\n"
+		<< "      function resetHighlight(e) {\n"
+		<< "          geoJson.resetStyle(e.target);\n"
+		<< "          info.update();\n"
+		<< "      }\n\n"
+		<< "      function onMouseOver(e) {\n"
+		<< "        if (highlightOnEnter) {\n"
+		<< "			highlightFeature(e);\n"
+		<< "		}\n"
+		<< "	  }\n\n"
+		<< "	  function onMouseExit(e) {\n"
+		<< "		  if (unhighlightOnExit) {\n"
+		<< "			resetHighlight(e);\n"
+		<< "		  }\n"
+		<< "	  }\n\n"
+		<< "      function onEachFeature(feature, layer) {\n"
+		<< "        layer.on({\n"
+		<< "          mouseover: onMouseOver,\n"
+		<< "          mouseout: onMouseExit,\n"
+		<< "          click: onClick\n"
+		<< "        });\n"
+		<< "      }\n\n"
+		<< "      buildColorLayer();\n\n"
+		<< "      var legend = L.control({position: 'bottomright'});\n\n"
+		<< "      legend.onAdd = function (map) {\n"
+		<< "        var div = L.DomUtil.create('div', 'info legend'),\n"
+		<< "          grades = [0, 15, 30, 40, 50, 60, 70, 80, 90],\n"
+		<< "          labels = [],\n"
+		<< "          from, to;\n\n"
+		<< "        for (var i = 0; i < grades.length; i++) {\n"
+		<< "          from = grades[i];\n"
+		<< "          to = grades[i + 1];\n\n"
+		<< "        labels.push(\n"
+		<< "          '<i style=\"background:' + getColor(from + 1) + '\"></i> ' +\n"
+		<< "          from + (to ? '&ndash;' + to : '+') + '%');\n"
+		<< "        }\n\n"
+		<< "        div.innerHTML = labels.join('<br>');\n"
+		<< "        return div;\n"
+		<< "      };\n\n"
+		<< "      legend.addTo(map);\n\n"
+		<< "      buildColorLayer();\n\n"
+		<< "    </script>\n";
+}
+
 bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
-	const UString::String& eBirdAPIKey, std::vector<ObservationInfo> observationProbabilities)
+	std::vector<ObservationInfo> observationProbabilities)
 {
 	log << "Retrieving county location data" << std::endl;
 	const auto countryCodes(GetCountryCodeList(observationProbabilities));
@@ -145,7 +353,7 @@ bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 		return false;
 	}
 
-	const auto jsonString(cJSON_Print/*Unformatted*/(geoJSON));
+	const auto jsonString(cJSON_PrintUnformatted(geoJSON));
 	if (!jsonString)
 	{
 		Cerr << "Failed to generate JSON string\n";
@@ -262,7 +470,7 @@ bool MapPageGenerator::BuildObservationRecord(const CountyInfo& observation, cJS
 
 bool MapPageGenerator::BuildMonthInfo(const CountyInfo::MonthInfo& monthInfo, cJSON* json)
 {
-	cJSON_AddNumberToObject(json, "probability", monthInfo.probability);
+	cJSON_AddNumberToObject(json, "probability", monthInfo.probability * 100.0);
 	auto speciesList(cJSON_CreateArray());
 	if (!speciesList)
 	{
@@ -271,9 +479,15 @@ bool MapPageGenerator::BuildMonthInfo(const CountyInfo::MonthInfo& monthInfo, cJ
 	}
 
 	cJSON_AddItemToObject(json, "birds", speciesList);
+	/*std::sort(monthInfo.frequencyInfo.begin(), monthInfo.frequencyInfo.end(),
+		[](const EBirdDataProcessor::FrequencyInfo& a, const EBirdDataProcessor::FrequencyInfo& b)
+	{
+		return a.frequency > b.frequency;
+	});*/
 	for (const auto& m : monthInfo.frequencyInfo)
 	{
 		std::ostringstream ss;
+		ss.precision(2);// TODO:  Test this!
 		ss << UString::ToNarrowString(m.species) << " (" << m.frequency << "%)";
 		auto species(cJSON_CreateString(ss.str().c_str()));
 		if (!species)
@@ -286,139 +500,6 @@ bool MapPageGenerator::BuildMonthInfo(const CountyInfo::MonthInfo& monthInfo, cJ
 	}
 
 	return true;
-}
-
-void MapPageGenerator::WriteHeadSection(UString::OStream& f)
-{
-	f << "<!DOCTYPE html>\n"
-		<< "<html>\n"
-		<< "  <head>\n"
-		<< "    <title>Observation Probability Map</title>\n"
-		<< "    <meta name=\"viewport\" content=\"width=device-width, initial-scale=1.0, user-scalable=no\">\n"
-		<< "    <meta charset=\"utf-8\">\n"
-		<< "    <style>\n"
-		<< "      #map {\n"
-		<< "        height: 95%;\n"
-		<< "      }\n"
-		<< "      html, body {\n"
-		<< "        height: 100%;\n"
-		<< "        margin: 0;\n"
-		<< "        padding: 0;\n"
-		<< "      }\n"
-		<< "    </style>\n";
-	f << "  </head>\n";
-}
-
-void MapPageGenerator::WriteBody(UString::OStream& f)
-{
-	f << "  <body>\n"
-		<< "    <div id=\"map\"></div>\n"
-		<< "    <div style='font-family: sans-serif'>\n"
-    	<< "      <label>Select Month:</label>\n"
-    	<< "      <select id=\"month\">\n";
-
-    unsigned int i(0);
-    for (const auto& m : monthNames)
-		f << "        <option value=\"" << i++ << "\">" << m.longName << "</option>\n";
-
-	f << "        <option value=\"-1\">Cycle</option>\n"
-		<< "      </select>\n"
-		<< "    </div>\n"
-		<< "  </body>\n"
-		<< "</html>";
-}
-
-void MapPageGenerator::WriteScripts(UString::OStream& f, const Keys& keys,
-	const std::vector<ObservationInfo>& observationProbabilities)
-{
-	/*double northeastLatitude, northeastLongitude;
-	double southwestLatitude, southwestLongitude;*/
-	UString::String tableId;
-	std::vector<unsigned int> styleIds;
-	std::vector<unsigned int> templateIds;
-
-	/*const double centerLatitude(0.5 * (northeastLatitude + southwestLatitude));
-	const double centerLongitude(0.5 * (northeastLongitude + southwestLongitude));*/
-
-	time_t now(std::chrono::system_clock::to_time_t(std::chrono::system_clock::now()));
-	struct tm nowTime(*localtime(&now));
-
-	f << "    <script type=\"text/javascript\">\n"
-    	<< "      var map;\n"
-    	<< "      var monthIndex = 0;\n"
-		<< "      var monthStyles = [";
-
-	bool needComma(false);
-	for (const auto& s : styleIds)
-	{
-		if (needComma)
-			f << ',';
-		needComma = true;
-		f << s;
-	}
-
-	f << "];\n"
-		<< "      var monthTemplates = [";
-
-	needComma = false;
-	for (const auto& t : templateIds)
-	{
-		if (needComma)
-			f << ',';
-		needComma = true;
-		f << t;
-	}
-
-	/*f << "];\n"
-		<< "      var countyLayer;\n"
-		<< "      var timerHandle;\n"
-		<< '\n'
-    	<< "      function initMap() {\n"
-    	<< "        map = new google.maps.Map(document.getElementById('map'), {\n"
-    	<< "          zoom: 16,\n"
-    	<< "          center: new google.maps.LatLng(" << centerLatitude
-			<< ',' << centerLongitude << "),\n"
-    	<< "          mapTypeId: 'roadmap'\n"
-    	<< "        });\n"
-		<< '\n'
-		<< "        map.fitBounds({north:" << northeastLatitude << ", east:" << northeastLongitude
-			<< ", south:" << southwestLatitude << ", west:" << southwestLongitude << "});\n"
-		<< '\n'
-		<< "        countyLayer = new google.maps.FusionTablesLayer({\n"
-        << "          query: {\n"
-        << "            select: 'geometry',\n"
-        << "            from: '" << tableId << "'\n"
-		<< "          },\n"
-		<< "          map: map,\n"
-		<< "          styleId: " << styleIds[nowTime.tm_mon] << ",\n"
-		<< "          templateId: " << templateIds[nowTime.tm_mon] << '\n'
-		<< "        });\n"
-		<< "        countyLayer.setMap(map);\n"
-		<< '\n'
-		<< "        google.maps.event.addDomListener(document.getElementById('month'),\n"
-        << "          'change', function() {\n"
-        << "            var selectedStyle = this.value;\n"
-        << "            if (selectedStyle == -1)\n"
-        << "                  timerHandle = setInterval(setNextStyle, 1500);\n"
-        << "            else\n"
-        << "            {\n"
-        << "              countyLayer.set('styleId', monthStyles[selectedStyle]);\n"
-		<< "              countyLayer.set('templateId', monthTemplates[selectedStyle]);\n"
-        << "              clearInterval(timerHandle);\n"
-		<< "            }\n"
-        << "          });\n"
-		<< "      }\n"
-		<< '\n'
-		<< "      function setNextStyle() {\n"
-		<< "        monthIndex++;\n"
-		<< "        if (monthIndex > 11)\n"
-		<< "          monthIndex = 0;\n"
-		<< "        countyLayer.set('styleId', monthStyles[monthIndex]);\n"
-		<< "        countyLayer.set('templateId', monthTemplates[monthIndex]);\n"
-		<< "      }\n"
-		<< "    </script>\n"
-		<< "    <script async defer src=\"https://maps.googleapis.com/maps/api/js?key=" << keys.googleMapsKey << "&callback=initMap\">\n"
-		<< "    </script>\n";*/
 }
 
 std::vector<UString::String> MapPageGenerator::GetCountryCodeList(const std::vector<ObservationInfo>& observationProbabilities)

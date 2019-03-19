@@ -1626,7 +1626,7 @@ bool EBirdDataProcessor::WriteBestLocationsViewerPage(const UString::String& htm
 	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames)
 {
 	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, highDetailCountries, cleanUpLocationNames);
-	return generator.WriteBestLocationsViewerPage(htmlFileName, eBirdAPIKey, observationProbabilities);
+	return generator.WriteBestLocationsViewerPage(htmlFileName, observationProbabilities);
 }
 
 // Assume we're comparing lists based on year
