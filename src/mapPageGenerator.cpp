@@ -70,7 +70,7 @@ bool MapPageGenerator::WriteHTML(const UString::String& outputPath) const
 		return false;
 	}
 
-	file << "<!DOCTYPE html>\n<html>";
+	file << "<!DOCTYPE html>\n<html>\n";
 	WriteHeadSection(file);
 	WriteBody(file);
 	file << "</html>\n";
@@ -108,7 +108,7 @@ void MapPageGenerator::WriteBody(UString::OStream& f)
 {
 	f << "  <body>\n"
 		<< "    <div id=\"mapid\"></div>\n\n"
-		<< "	<script type=\"text/javascript\" src=\"observationData.js\"></script>\n"
+		<< "	<script type=\"text/javascript\" src=\"observationData.js\"></script>\n\n"
 		<< "	<div style='font-family: sans-serif'>\n"
 		<< "      <label>Select Month:</label>\n"
 		<< "      <select id=\"monthSelect\" onchange=\"updateMap()\">\n"
