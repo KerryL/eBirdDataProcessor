@@ -27,7 +27,6 @@ public:
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
 	bool WriteBestLocationsViewerPage(const UString::String& outputPath,
-		const UString::String& eBirdAPIKey,
 		const std::vector<ObservationInfo>& observationInfo);
 
 private:
@@ -68,13 +67,11 @@ private:
 	void AddRegionCodesToMap(const UString::String& parentCode, const EBirdInterface::RegionType& regionType);
 
 	bool WriteHTML(const UString::String& outputPath) const;
-	bool WriteGeoJSONData(const UString::String& outputPath,
-		const UString::String& eBirdAPIKey, std::vector<ObservationInfo> observationProbabilities);
+	bool WriteGeoJSONData(const UString::String& outputPath, std::vector<ObservationInfo> observationProbabilities);
 
-	void WriteHeadSection(UString::OStream& f);
+	static void WriteHeadSection(UString::OStream& f);
 	static void WriteBody(UString::OStream& f);
-	void WriteScripts(UString::OStream& f, const Keys& keys,
-		const std::vector<ObservationInfo>& observationProbabilities);
+	static void WriteScripts(UString::OStream& f);
 
 	struct CountyInfo
 	{
