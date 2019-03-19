@@ -152,7 +152,7 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "      info.update = function (props) {\n"
 		<< "        var probability = 0;\n"
 		<< "        if (props) {\n"
-		<< "          probability = props.monthData[month].probability * 100;\n"
+		<< "          probability = props.monthData[month].probability;\n"
 		<< "        }\n"
 		<< "        this._div.innerHTML = '<h4>Probability of Needed Observation</h4>' +  (props ?\n"
 		<< "          '<b>' + props.name + '</b><br />' + probability.toFixed(2) + ' %<br />' +\n"
@@ -227,7 +227,7 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "          color: 'white',\n"
 		<< "          dashArray: '1',\n"
 		<< "          fillOpacity: 0.3,\n"
-		<< "          fillColor: getColor(feature.properties.monthData[month].probability * 100)\n"
+		<< "          fillColor: getColor(feature.properties.monthData[month].probability)\n"
 		<< "        };\n"
 		<< "      }\n\n"
 		<< "      var lastClicked;\n"
@@ -468,7 +468,7 @@ bool MapPageGenerator::BuildObservationRecord(const CountyInfo& observation, cJS
 	return true;
 }
 
-bool MapPageGenerator::BuildMonthInfo(const CountyInfo::MonthInfo& monthInfo, cJSON* json)
+bool MapPageGenerator::BuildMonthInfo(CountyInfo::MonthInfo monthInfo, cJSON* json)
 {
 	cJSON_AddNumberToObject(json, "probability", monthInfo.probability * 100.0);
 	auto speciesList(cJSON_CreateArray());
@@ -479,16 +479,15 @@ bool MapPageGenerator::BuildMonthInfo(const CountyInfo::MonthInfo& monthInfo, cJ
 	}
 
 	cJSON_AddItemToObject(json, "birds", speciesList);
-	/*std::sort(monthInfo.frequencyInfo.begin(), monthInfo.frequencyInfo.end(),
+	std::sort(monthInfo.frequencyInfo.begin(), monthInfo.frequencyInfo.end(),
 		[](const EBirdDataProcessor::FrequencyInfo& a, const EBirdDataProcessor::FrequencyInfo& b)
 	{
 		return a.frequency > b.frequency;
-	});*/
+	});
 	for (const auto& m : monthInfo.frequencyInfo)
 	{
 		std::ostringstream ss;
-		ss.precision(2);// TODO:  Test this!
-		ss << UString::ToNarrowString(m.species) << " (" << m.frequency << "%)";
+		ss << UString::ToNarrowString(m.species) << " (" << std::fixed << std::setprecision(2) << m.frequency << "%)";
 		auto species(cJSON_CreateString(ss.str().c_str()));
 		if (!species)
 		{
