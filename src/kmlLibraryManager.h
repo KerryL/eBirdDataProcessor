@@ -200,7 +200,7 @@ private:
 	static UString::String ExtractCountryFromLocationId(const UString::String& id);
 	static UString::String ExtractSubNational1FromLocationId(const UString::String& id);
 	bool MakeCorrectionInKMZ(const UString::String& country,
-		const UString::String& originalSubNational1, const UString::String& newSubNational1) const;
+		const UString::String& originalSubNationalMashUp, const UString::String& newSubNationalMashUp) const;
 
 	static bool StringsAreSimilar(const UString::String& a, const UString::String& b, const double& threshold);
 	static std::vector<UString::String> GenerateLetterPairs(const UString::String& s);

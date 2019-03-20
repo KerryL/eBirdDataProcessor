@@ -1111,7 +1111,7 @@ bool KMLLibraryManager::GetUserConfirmation()
 }
 
 bool KMLLibraryManager::MakeCorrectionInKMZ(const UString::String& country,
-	const UString::String& originalSubNational1, const UString::String& newSubNational1) const
+	const UString::String& originalSubNationalMashUp, const UString::String& newSubNationalMashUp) const
 {
 	//log << "Attempting to load KML data from archive for '" << country << "' for name correction" << std::endl;
 	std::lock_guard<std::mutex> lock(kmzWriteMutex);// Don't let anyone else read from the KMZ file before we're finished with our correction
@@ -1121,49 +1121,62 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const UString::String& country,
 	if (!OpenKMLArchive(archiveFileName, rawKML))
 		return false;
 
+	const auto colonOriginal(originalSubNationalMashUp.find(UString::Char(':')));
+	const auto colonNew(newSubNationalMashUp.find(UString::Char(':')));
+	assert((colonOriginal == std::string::npos && colonNew == std::string::npos) || (colonOriginal != std::string::npos && colonNew != std::string::npos));
+
+	const auto sn1Original(originalSubNationalMashUp.substr(0, colonOriginal));
+	const auto sn1New(originalSubNationalMashUp.substr(0, colonNew));
+
+	const auto sn2Original([&originalSubNationalMashUp, &colonOriginal]()
+	{
+		if (colonOriginal == std::string::npos)
+			return UString::String();
+		return originalSubNationalMashUp.substr(colonOriginal + 1);
+	}());
+
+	const auto sn2New([&newSubNationalMashUp, &colonNew]()
+	{
+		if (colonNew == std::string::npos)
+			return UString::String();
+		return newSubNationalMashUp.substr(colonNew + 1);
+	}());
+
 	const UString::String prefix(_T("SimpleData name=\"NAME_1\">"));
 	const UString::String prefix2(_T("SimpleData name=\"NAME_2\">"));
-	UString::String adjustedOriginalSN1(originalSubNational1);
-	const UString::String searchString(prefix + originalSubNational1 + _T("</"));
-	auto fixLocation(rawKML.find(searchString));
-	bool removeName1(false);
-	if (fixLocation == std::string::npos)
+	const UString::String searchString(prefix + sn1Original + _T("</"));
+	//bool removeName1(false);
+	std::string::size_type fixLocation1(0), fixLocation2(0);
+	while (fixLocation1 = rawKML.find(searchString, fixLocation1 + 1), fixLocation1 != std::string::npos && !sn2Original.empty())
 	{
-		// Possible that lack of match is due to difference in sub-region level - try NAME_2
-		const auto colon(originalSubNational1.find(UString::Char(':')));
-		if (colon != std::string::npos)
+		const UString::String searchString2(prefix2 + sn2Original + _T("</"));
+		fixLocation2 = rawKML.find(searchString2, fixLocation1);
+		const std::string::size_type limitThreshold(150);// Assumed maximum length between NAME1 and NAME2 tags - to avoid finding "Pennsylvania" and then modifying "Cumberland" beneath some other state
+		if (fixLocation2 == std::string::npos)
 		{
-			adjustedOriginalSN1 = originalSubNational1.substr(colon + 1);
-			const UString::String searchString2(prefix2 + adjustedOriginalSN1 + _T("</"));
-			fixLocation = rawKML.find(searchString2);
-			if (fixLocation == std::string::npos)
-			{
-				log << "Failed to find position for name correction" << std::endl;
-				return false;
-			}
-			removeName1 = true;
-		}
-		else
-		{
-			log << "Failed to find position for name correction" << std::endl;
+			log << "Failed to find position for name correction (NAME2)" << std::endl;
 			return false;
 		}
+		else if (fixLocation2 - fixLocation1 < limitThreshold)
+			break;
 	}
 
-	UString::String modifiedKML(rawKML.substr(0, fixLocation) + prefix + newSubNational1);
-	modifiedKML.append(rawKML.substr(fixLocation + prefix.length() + adjustedOriginalSN1.length()));
-
-	if (removeName1)
+	if (fixLocation1 == std::string::npos)
 	{
-		std::string::size_type startRemoval(0);
-		std::string::size_type newStart;
-		while (newStart = modifiedKML.find(prefix, startRemoval), newStart < fixLocation)
-			startRemoval = newStart + prefix.length();
-		auto endRemoval(modifiedKML.find(prefix, startRemoval));
-		// TODO:  Will the endRemoval position always be equal to the fixLocation?
-		assert(endRemoval != std::string::npos);
-		modifiedKML.erase(modifiedKML.begin() + startRemoval, modifiedKML.begin() + fixLocation + prefix.length());
+		log << "Failed to find position for name correction (NAME1)" << std::endl;
+		return false;
 	}
+
+	UString::String modifiedKML(rawKML.substr(0, fixLocation1) + prefix + sn1New);
+
+	auto p(fixLocation1 + prefix.length() + sn1Original.length());
+	if (!sn2Original.empty())
+	{
+		modifiedKML.append(rawKML.substr(p, fixLocation2 - p) + prefix2 + sn2New);
+		p = fixLocation2 + prefix2.length() + sn2Original.length();
+	}
+
+	modifiedKML.append(rawKML.substr(p));
 
 	const UString::String tempExtension(_T(".transaction"));
 	Zipper z;
