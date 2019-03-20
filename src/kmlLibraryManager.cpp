@@ -975,7 +975,7 @@ bool KMLLibraryManager::CheckForInexactMatch(const UString::String& locationId, 
 	if (country.length() == locationId.length())
 		return false;// Ignore the possibility of inexact matches of country names
 
-	std::vector<GoogleMapsInterface::PlaceInfo> eBirdPlaceInfo;
+	/*std::vector<GoogleMapsInterface::PlaceInfo> eBirdPlaceInfo;
 	{
 		std::lock_guard<std::mutex> lock(gMapResultMutexeBird);
 		const UString::String searchString(subNational1 + _T(", ") + country);
@@ -992,8 +992,9 @@ bool KMLLibraryManager::CheckForInexactMatch(const UString::String& locationId, 
 			return false;
 		else
 			eBirdPlaceInfo = it->second;
-	}
+	}*/
 
+	// Instead of doing both checks in one loops, we use two loops to avoid bothering the user unless we need to
 	auto it(kmlMemory.begin());
 	for (; it != kmlMemory.end(); ++it)
 	{
@@ -1009,8 +1010,30 @@ bool KMLLibraryManager::CheckForInexactMatch(const UString::String& locationId, 
 		const auto sn1KMZ(ExtractSubNational1FromLocationId(it->first));
 		const auto lowerSN1KMZ(StringUtilities::ToLower(sn1KMZ));
 
-		if (!eBirdPlaceInfo.empty()/* && UString::StringsAreSimilar(lowerSN1, lowerSN1KMZ, 0.1)*/)// Very lax but non-zero tolerance to cut down on google maps requests
+		if (RegionNamesMatch(lowerSN1, lowerSN1KMZ))
 		{
+			kml = it->second;
+			return MakeCorrectionInKMZ(country, sn1KMZ, subNational1);
+		}
+	}
+
+	it = kmlMemory.begin();
+	for (; it != kmlMemory.end(); ++it)
+	{
+		if (country.compare(ExtractCountryFromLocationId(it->first)) != 0)
+			continue;
+
+		{
+			std::lock_guard<std::mutex> lock(mappedMutex);
+			if (kmlMappedList.find(it->first) != kmlMappedList.end())
+				continue;
+		}
+
+		const auto sn1KMZ(ExtractSubNational1FromLocationId(it->first));
+		const auto lowerSN1KMZ(StringUtilities::ToLower(sn1KMZ));
+
+		///if (!eBirdPlaceInfo.empty()/* && UString::StringsAreSimilar(lowerSN1, lowerSN1KMZ, 0.1)*/)// Very lax but non-zero tolerance to cut down on google maps requests
+		/*{
 			std::vector<GoogleMapsInterface::PlaceInfo> gadmPlaceInfo;
 			{
 				std::lock_guard<std::mutex> lock(gMapResultMutexGADM);
@@ -1048,9 +1071,9 @@ bool KMLLibraryManager::CheckForInexactMatch(const UString::String& locationId, 
 					}
 				}
 			}
-		}
+		}*/
 
-		/*const double threshold(0.5);
+		const double threshold(0.5);
 		const UString::String userInputKey(lowerSN1 + _T(":") + lowerSN1KMZ);
 		std::lock_guard<std::mutex> answeredListLock(userAlreadyAnsweredMutex);
 		if (StringsAreSimilar(lowerSN1, lowerSN1KMZ, threshold) && userAnsweredList.find(userInputKey) == userAnsweredList.end())
@@ -1065,7 +1088,7 @@ bool KMLLibraryManager::CheckForInexactMatch(const UString::String& locationId, 
 				kml = it->second;
 				return MakeCorrectionInKMZ(country, sn1KMZ, subNational1);
 			}
-		}//*/// Removed because Google Maps method is more reliable, and bulk of cleanup work is done
+		}
 	}
 
 	return false;
