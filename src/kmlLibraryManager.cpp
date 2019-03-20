@@ -1114,6 +1114,7 @@ bool KMLLibraryManager::MakeCorrectionInKMZ(const UString::String& country,
 	const UString::String& originalSubNational1, const UString::String& newSubNational1) const
 {
 	//log << "Attempting to load KML data from archive for '" << country << "' for name correction" << std::endl;
+	std::lock_guard<std::mutex> lock(kmzWriteMutex);// Don't let anyone else read from the KMZ file before we're finished with our correction
 
 	UString::String rawKML;
 	UString::String archiveFileName(libraryPath + country + _T(".kmz"));

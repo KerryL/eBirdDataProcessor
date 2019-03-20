@@ -183,6 +183,7 @@ private:
 	mutable std::mutex gMapResultMutexGADM;
 	mutable std::mutex userAlreadyAnsweredMutex;
 	mutable std::mutex mappedMutex;
+	mutable std::mutex kmzWriteMutex;
 	MutexUtilities::AccessManager loadManager;
 	MutexUtilities::AccessManager downloadManager;
 	MutexUtilities::AccessManager geometryManager;
