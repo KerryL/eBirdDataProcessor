@@ -101,7 +101,7 @@ bool EBirdDataProcessor::ParseLine(const UString::String& line, Entry& entry)
 		return false;
 	if (!ParseToken(lineStream, _T("Longitude"), entry.longitude))
 		return false;
-	if (!ParseDateTimeToken(lineStream, _T("Date"), entry.dateTime, _T("%m-%d-%Y")))
+	if (!ParseDateTimeToken(lineStream, _T("Date"), entry.dateTime, _T("%Y-%m-%d")))
 		return false;
 #ifdef __GNUC__// Bug in g++ (still there in v5.4) cannot parse AM/PM - assume for now that we don't care if we're off by 12 hours?
 	if (!ParseDateTimeToken(lineStream, _T("Time"), entry.dateTime, _T("%I:%M")))
