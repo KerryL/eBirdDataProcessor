@@ -16,7 +16,7 @@ class KernelDensityEstimation
 public:
 	KernelDensityEstimation();
 
-	enum KernelType
+	enum class KernelType
 	{
 		KernelUniform,
 		KernelTriangular,

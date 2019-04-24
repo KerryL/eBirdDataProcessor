@@ -28,7 +28,7 @@
 KernelDensityEstimation::KernelDensityEstimation()
 {
 	// Assign defaults
-	SetKernelType(KernelEpanechnikov);
+	SetKernelType(KernelType::KernelEpanechnikov);
 }
 
 //==========================================================================
@@ -51,48 +51,48 @@ void KernelDensityEstimation::SetKernelType(const KernelType& type)
 {
 	switch (type)
 	{
-	case KernelUniform:
+	case KernelType::KernelUniform:
 		kernel = UniformKernel;
 		break;
 
-	case KernelTriangular:
+	case KernelType::KernelTriangular:
 		kernel = TriangularKernel;
 		break;
 
 	default:
-	case KernelEpanechnikov:
+	case KernelType::KernelEpanechnikov:
 		kernel = EpanechnikovKernel;
 		break;
 
-	case KernelQuartic:
+	case KernelType::KernelQuartic:
 		kernel = QuarticKernel;
 		break;
 
-	case KernelTriweight:
+	case KernelType::KernelTriweight:
 		kernel = TriweightKernel;
 		break;
 
-	case KernelTricube:
+	case KernelType::KernelTricube:
 		kernel = TricubeKernel;
 		break;
 
-	case KernelGaussian:
+	case KernelType::KernelGaussian:
 		kernel = GaussianKernel;
 		break;
 
-	case KernelCosine:
+	case KernelType::KernelCosine:
 		kernel = CosineKernel;
 		break;
 
-	case KernelLogistic:
+	case KernelType::KernelLogistic:
 		kernel = LogisticKernel;
 		break;
 
-	case KernelSigmoid:
+	case KernelType::KernelSigmoid:
 		kernel = SigmoidKernel;
 		break;
 
-	case KernelSilverman:
+	case KernelType::KernelSilverman:
 		kernel = SilvermanKernel;
 	}
 }
