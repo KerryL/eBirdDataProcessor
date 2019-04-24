@@ -42,7 +42,7 @@ private:
 	{
 		double time;
 
-		enum Type
+		enum class Type
 		{
 			Peak,
 			RangeStart,

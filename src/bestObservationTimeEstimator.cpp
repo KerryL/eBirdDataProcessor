@@ -230,14 +230,15 @@ std::vector<BestObservationTimeEstimator::TimeProbability> BestObservationTimeEs
 		if (nextIt != pdf.end() && *nextIt > minimumOnProbability)
 			type = TimeProbability::Type::RangeStart;
 		else if (peaks.size() > 0 && peaks.back().type == TimeProbability::Type::RangeStart)
-			type = TimeProbability::RangeEnd;
+			type = TimeProbability::Type::RangeEnd;
 		else
-			type = TimeProbability::Peak;
+			type = TimeProbability::Type::Peak;
 
-		peaks.push_back(TimeProbability(static_cast<double>(std::distance(pdf.begin(), pdfIt)), type));
+		const double step(24.0 / pdf.size());// hours; need to scale distance according to granularity of pdf
+		peaks.push_back(TimeProbability(static_cast<double>(std::distance(pdf.begin(), pdfIt)) * step, type));
 	}
 
-	assert(peaks.back().type != TimeProbability::RangeStart);
+	assert(peaks.back().type != TimeProbability::Type::RangeStart);
 
 	return peaks;
 }
