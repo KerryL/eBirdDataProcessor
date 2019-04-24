@@ -147,7 +147,7 @@ bool EBirdDatasetInterface::WriteNameIndexFile(const UString::String& frequencyD
 {
 	if (!EnsureFolderExists(frequencyDataPath))
 	{
-		Cerr << "Failed to create target direcotry\n";
+		Cerr << "Failed to create target directory\n";
 		return false;
 	}
 
@@ -292,12 +292,14 @@ bool EBirdDatasetInterface::FolderExists(const UString::String& dir)
 UString::String EBirdDatasetInterface::GetPath(const UString::String& regionCode)
 {
 	const auto firstDash(regionCode.find(UString::Char('-')));// Path based on country code only
-	assert(firstDash != std::string::npos);
 #ifdef _WIN32
 	const UString::Char slash('\\');
 #else
 	const UString::Char slash('/');
 #endif// _WIN32
+
+	if (firstDash != std::string::npos)
+		regionCode + slash;
 	return regionCode.substr(0, firstDash) + slash;
 }
 
