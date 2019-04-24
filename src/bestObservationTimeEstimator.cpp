@@ -25,7 +25,7 @@ UString::String BestObservationTimeEstimator::EstimateBestObservationTime(
 		for (const auto& o : pdfEstimate)
 		{
 			++i;
-			if (o != 1.0)
+			if (o == 0.0)
 				continue;
 
 			if (ss.str().empty())
@@ -33,7 +33,10 @@ UString::String BestObservationTimeEstimator::EstimateBestObservationTime(
 			else
 				ss << " and ";
 
-			ss << std::setw(2) << i - 1 << ":00";
+			const double increment(24.0 / pdfEstimate.size());
+			const double hours((i - 1) * increment);
+			ss << std::setw(2) << static_cast<int>(hours) % 24 << ':'
+				<< std::setw(2) << static_cast<int>((hours - static_cast<int>(hours)) * 60.0);
 		}
 
 		return ss.str();
@@ -123,7 +126,11 @@ BestObservationTimeEstimator::PDFArray BestObservationTimeEstimator::EstimateBes
 		std::for_each(exactTimes.begin(), exactTimes.end(), [](double& a) { a = 0.0; });
 		// TODO:  Modify this to make use of duration (if available) and to disregard observations that have no time data
 		for (const auto& o : obsInfoSortable)
-			exactTimes[std::max(o.observationDate.tm_hour + static_cast<int>(o.observationDate.tm_min / 60.0 + 0.5), static_cast<int>(exactTimes.size()) - 1)] = 1.0;
+		{
+			const double increment(24.0 / exactTimes.size());// hours
+			exactTimes[std::min(static_cast<int>((o.observationDate.tm_hour + o.observationDate.tm_min / 60.0) / increment + 0.5),
+				static_cast<int>(exactTimes.size()) - 1)] += 1.0 / observationInfo.size();
+		}
 		return exactTimes;
 	}
 
