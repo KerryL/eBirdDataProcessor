@@ -687,6 +687,12 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<UString::String>& cons
 	for (const auto& species : consolidatedSpeciesList)
 	{
 		const UString::String speciesCode(e.GetSpeciesCodeFromCommonName(species));
+		if (speciesCode.empty())
+		{
+			Cout << "Warning:  Species code for " << species << " is blank.  Are your frequency/name data up-to-date?" << std::endl;
+			continue;
+		}
+
 		const auto hotspots(e.GetHotspotsWithRecentObservationsOf(speciesCode, region, recentPeriod));
 		for (const auto& spot : hotspots)
 		{
