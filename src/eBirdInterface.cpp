@@ -146,18 +146,24 @@ std::vector<EBirdInterface::LocationInfo> EBirdInterface::GetHotspotsInRegion(co
 			break;
 		}
 
-		if (!ReadJSON(item, subnational1CodeTag, h.subnational1Code))
+		if (region.length() > 2)
 		{
-			Cerr << "Failed to get hotspot subnational 1 code for item " << i << '\n';
-			hotspots.clear();
-			break;
-		}
+			if (!ReadJSON(item, subnational1CodeTag, h.subnational1Code))
+			{
+				Cerr << "Failed to get hotspot subnational 1 code for item " << i << '\n';
+				hotspots.clear();
+				break;
+			}
 
-		if (!ReadJSON(item, subnational2CodeTag, h.subnational2Code))
-		{
-			Cerr << "Failed to get hotspot subnational 2 code for item " << i << '\n';
-			hotspots.clear();
-			break;
+			if (region.length() > 5)
+			{
+				if (!ReadJSON(item, subnational2CodeTag, h.subnational2Code))
+				{
+					Cerr << "Failed to get hotspot subnational 2 code for item " << i << '\n';
+					hotspots.clear();
+					break;
+				}
+			}
 		}
 
 		++i;
