@@ -9,6 +9,9 @@
 // Local headers
 #include "utilities/uString.h"
 
+// Standard C++ headers
+#include <vector>
+
 namespace Utilities
 {
 UString::String ExtractCountryFromRegionCode(const UString::String& regionCode);
@@ -17,6 +20,7 @@ UString::String StripExtension(const UString::String& fileName);
 UString::String SanitizeCommas(const UString::String& s);
 UString::String Unsanitize(const UString::String& s);
 void ReplaceAll(const UString::String& pattern, const UString::String& replaceWith, UString::String& s);
+bool ItemIsInVector(const UString::String& s, const std::vector<UString::String>& v);
 }
 
 #endif// UTILITES_H_

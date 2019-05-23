@@ -228,17 +228,45 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 	}
 
 	if (!config.countryFilter.empty() &&
-		config.countryFilter.length() != 2)
+		!config.stateFilter.empty())
 	{
-		Cerr << "Country (" << GetKey(config.countryFilter) << ") must be specified using 2-digit abbreviation\n";
-		configurationOK = false;
+		if (config.stateFilter.size() != config.countryFilter.size())
+		{
+			Cerr << "Must specify the same number of " << GetKey(config.countryFilter) << " and " << GetKey(config.stateFilter) << " parameters\n";
+			configurationOK = false;
+		}
+
+		if (!config.countyFilter.empty() &&
+			config.countyFilter.size() != config.stateFilter.size())
+		{
+			Cerr << "Must specify the same number of " << GetKey(config.stateFilter) << " and " << GetKey(config.countyFilter) << " parameters\n";
+			configurationOK = false;
+		}
 	}
 
-	if (!config.stateFilter.empty() &&
-		(config.stateFilter.length() < 2 || config.stateFilter.length() > 3))
+	for (const auto& p : config.countryFilter)
 	{
-		Cerr << "State/providence (" << GetKey(config.stateFilter) << ") must be specified using 2- or 3-digit abbreviation\n";
-		configurationOK = false;
+		if (p.empty())
+		{
+			Cerr << "Country (" << GetKey(config.countryFilter) << ") must not be blank\n";
+			configurationOK = false;
+		}
+
+		if (p.length() != 2)
+		{
+			Cerr << "Country (" << GetKey(config.countryFilter) << ") must be specified using 2-digit abbreviation\n";
+			configurationOK = false;
+		}
+	}
+
+	for (const auto& p : config.stateFilter)
+	{
+		if (!p.empty() &&
+			(p.length() < 2 || p.length() > 3))
+		{
+			Cerr << "State/providence (" << GetKey(config.stateFilter) << ") must be specified using 2- or 3-digit abbreviation\n";
+			configurationOK = false;
+		}
 	}
 
 	if (config.dayFilter > 31)

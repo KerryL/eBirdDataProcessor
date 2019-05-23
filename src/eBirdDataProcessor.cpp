@@ -177,46 +177,51 @@ bool EBirdDataProcessor::InterpretToken(UString::IStringStream& tokenStream,
 	return true;
 }
 
-void EBirdDataProcessor::FilterLocation(const UString::String& location, const UString::String& county,
-	const UString::String& state, const UString::String& country)
+void EBirdDataProcessor::FilterLocation(const std::vector<UString::String>& locations, const std::vector<UString::String>& counties,
+	const std::vector<UString::String>& states, const std::vector<UString::String>& countries)
 {
-	if (!county.empty() || !state.empty() || !country.empty())
-		FilterCounty(county, state, country);
+	if (!counties.empty() || !states.empty() || !countries.empty())
+		FilterCounty(counties, states, countries);
 
-	data.erase(std::remove_if(data.begin(), data.end(), [location](const Entry& entry)
+	data.erase(std::remove_if(data.begin(), data.end(), [&locations](const Entry& entry)
 	{
-		return !std::regex_search(entry.location, UString::RegEx(location));
+		for (const auto& location : locations)
+		{
+			if (std::regex_search(entry.location, UString::RegEx(location)))
+				return false;
+		}
+		return true;
 	}), data.end());
 }
 
-void EBirdDataProcessor::FilterCounty(const UString::String& county,
-	const UString::String& state, const UString::String& country)
+void EBirdDataProcessor::FilterCounty(const std::vector<UString::String>& counties,
+	const std::vector<UString::String>& states, const std::vector<UString::String>& countries)
 {
-	if (!state.empty() || !country.empty())
-		FilterState(state, country);
+	if (!states.empty() || !countries.empty())
+		FilterState(states, countries);
 
-	data.erase(std::remove_if(data.begin(), data.end(), [county](const Entry& entry)
+	data.erase(std::remove_if(data.begin(), data.end(), [&counties](const Entry& entry)
 	{
-		return entry.county.compare(county) != 0;
+		return !Utilities::ItemIsInVector(entry.county, counties);
 	}), data.end());
 }
 
-void EBirdDataProcessor::FilterState(const UString::String& state, const UString::String& country)
+void EBirdDataProcessor::FilterState(const std::vector<UString::String>& states, const std::vector<UString::String>& countries)
 {
-	if (!country.empty())
-		FilterCountry(country);
+	if (!countries.empty())
+		FilterCountry(countries);
 
-	data.erase(std::remove_if(data.begin(), data.end(), [state](const Entry& entry)
+	data.erase(std::remove_if(data.begin(), data.end(), [&states](const Entry& entry)
 	{
-		return entry.stateProvidence.substr(3).compare(state) != 0;
+		return !Utilities::ItemIsInVector(entry.stateProvidence.substr(3), states);
 	}), data.end());
 }
 
-void EBirdDataProcessor::FilterCountry(const UString::String& country)
+void EBirdDataProcessor::FilterCountry(const std::vector<UString::String>& countries)
 {
-	data.erase(std::remove_if(data.begin(), data.end(), [country](const Entry& entry)
+	data.erase(std::remove_if(data.begin(), data.end(), [&countries](const Entry& entry)
 	{
-		return entry.stateProvidence.substr(0, 2).compare(country) != 0;
+		return !Utilities::ItemIsInVector(entry.stateProvidence.substr(0, 2), countries);
 	}), data.end());
 }
 
@@ -1471,7 +1476,7 @@ UString::String EBirdDataProcessor::RemoveTrailingDash(const UString::String& s)
 }
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const UString::String& targetRegionCode,
+	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes,
 	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
@@ -1493,9 +1498,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 		FrequencyDataYear occurrenceData;
 		DoubleYear checklistCounts;
 		const auto regionCode(Utilities::StripExtension(f));
-		if (regionCode.length() < targetRegionCode.length())
-			continue;
-		else if (regionCode.substr(0, targetRegionCode.length()).compare(targetRegionCode) != 0)
+		if (!Utilities::ItemIsInVector(regionCode, targetRegionCodes))
 			continue;
 
 		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts))
