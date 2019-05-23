@@ -264,6 +264,8 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "      map.on('click', function(e) {\n"
 		<< "        if (lastClicked) {\n"
 		<< "          resetHighlight(lastClicked);\n"
+		<< "          highlightOnEnter = true;\n"
+		<< "          unhighlightOnExit = true;\n"
 		<< "        }\n"
 		<< "      });\n\n"
 		<< "      function onMouseOver(e) {\n"
