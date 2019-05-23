@@ -456,6 +456,16 @@ UString::String EBirdInterface::GetRegionCode(const UString::String& country,
 	return countryCode;
 }
 
+std::vector<UString::String> EBirdInterface::GetRegionCodes(const std::vector<UString::String>& countries,
+	const std::vector<UString::String>& states, const std::vector<UString::String>& counties)
+{
+	assert(countries.size() == states.size() && states.size() == counties.size());
+	std::vector<UString::String> codes;
+	for (unsigned int i = 0; i < countries.size(); ++i)
+		codes.push_back(GetRegionCode(countries[i], states[i], counties[i]));
+	return codes;
+}
+
 UString::String EBirdInterface::GetUserInputOnResponse(const UString::String& s, const UString::String& field)
 {
 	Cout << "Multiple matches.  Please specify desired " << field << ":\n\n";

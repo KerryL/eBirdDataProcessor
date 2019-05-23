@@ -65,4 +65,9 @@ void ReplaceAll(const UString::String& pattern, const UString::String& replaceWi
 	}
 }
 
+bool ItemIsInVector(const UString::String& s, const std::vector<UString::String>& v)
+{
+	return std::find(v.begin(), v.end(), s) != v.end();
+}
+
 }// namespace Utilities

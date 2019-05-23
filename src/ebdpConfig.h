@@ -11,10 +11,10 @@ struct EBDPConfig
 	UString::String dataFileName;
 	UString::String outputFileName;
 
-	UString::String countryFilter;
-	UString::String stateFilter;
-	UString::String countyFilter;
-	UString::String locationFilter;
+	std::vector<UString::String> countryFilter;
+	std::vector<UString::String> stateFilter;
+	std::vector<UString::String> countyFilter;
+	std::vector<UString::String> locationFilter;
 
 	enum class ListType : int
 	{

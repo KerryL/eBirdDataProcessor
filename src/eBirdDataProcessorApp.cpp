@@ -48,9 +48,16 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		EBirdDatasetInterface dataset;
 		if (!config.timeOfDayOutputFile.empty())
 		{
+			if (config.countryFilter.size() > 1)
+			{
+				Cerr << "Time-of-day analysis for multiple regions is not supported\n";
+				return 1;
+			}
+
 			EBirdInterface ebi(config.eBirdApiKey);
-			const auto regionCode(ebi.GetRegionCode(config.countryFilter,
-				config.stateFilter, config.countyFilter));
+			const auto regionCode(ebi.GetRegionCode(config.countryFilter.front(),
+				config.stateFilter.empty() ? UString::String() : config.stateFilter.front(),
+				config.countyFilter.empty() ? UString::String() : config.countyFilter.front()));
 			if (!dataset.ExtractTimeOfDayInfo(config.eBirdDatasetPath,
 				config.timeOfDataCommonNames, regionCode, config.splitRegionDataFile))
 				return 1;
@@ -118,26 +125,41 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	// TODO:  species count only?
 
 	if (config.generateRarityScores)
+	{
+		if (config.countryFilter.size() > 1)
+		{
+			Cerr << "Rarity analysis for multiple regions is not supported\n";
+			return 1;
+		}
+
 		processor.GenerateRarityScores(config.frequencyFilePath,
 			config.listType, config.eBirdApiKey,
-			config.countryFilter, config.stateFilter,
-			config.countyFilter);
+			config.countryFilter.front(), config.stateFilter.empty() ? UString::String() : config.stateFilter.front(),
+			config.countyFilter.empty() ? UString::String() : config.countyFilter.front());
+	}
 	else if (config.findMaxNeedsLocations)
 	{
 		EBirdInterface ebi(config.eBirdApiKey);
-		const auto regionCode(ebi.GetRegionCode(config.countryFilter,
+		const auto regionCodes(ebi.GetRegionCodes(config.countryFilter,
 			config.stateFilter, config.countyFilter));
 		if (!processor.FindBestLocationsForNeededSpecies(
 			config.frequencyFilePath, config.kmlLibraryPath,
-			config.eBirdApiKey, regionCode,
+			config.eBirdApiKey, regionCodes,
 			config.highDetailCountries, config.cleanupKMLLocationNames))
 			return 1;
 	}
     else if (config.generateTargetCalendar)
 	{
+		if (config.countryFilter.size() > 1)
+		{
+			Cerr << "Calendar generation for multiple regions is not supported\n";
+			return 1;
+		}
+
 		processor.GenerateTargetCalendar(config.topBirdCount,
 			config.outputFileName, config.frequencyFilePath,
-			config.countryFilter, config.stateFilter, config.countyFilter,
+			config.countryFilter.front(), config.stateFilter.empty() ? UString::String() : config.stateFilter.front(),
+			config.countyFilter.empty() ? UString::String() : config.countyFilter.front(),
 			config.recentObservationPeriod,
 			config.targetInfoFileName, config.homeLocation,
 			config.googleMapsAPIKey, config.eBirdApiKey);

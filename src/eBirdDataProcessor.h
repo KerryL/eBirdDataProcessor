@@ -34,12 +34,12 @@ public:
 	bool ReadMediaList(const UString::String& mediaFileName);
 	bool GenerateMediaList(const UString::String& mediaListHTML, const UString::String& mediaFileName);
 
-	void FilterLocation(const UString::String& location, const UString::String& county,
-		const UString::String& state, const UString::String& country);
-	void FilterCounty(const UString::String& county, const UString::String& state,
-		const UString::String& country);
-	void FilterState(const UString::String& state, const UString::String& country);
-	void FilterCountry(const UString::String& country);
+	void FilterLocation(const std::vector<UString::String>& locations, const std::vector<UString::String>& counties,
+		const std::vector<UString::String>& states, const std::vector<UString::String>& countries);
+	void FilterCounty(const std::vector<UString::String>& counties, const std::vector<UString::String>& states,
+		const std::vector<UString::String>& countries);
+	void FilterState(const std::vector<UString::String>& states, const std::vector<UString::String>& countries);
+	void FilterCountry(const std::vector<UString::String>& countries);
 
 	void FilterYear(const unsigned int& year);
 	void FilterMonth(const unsigned int& month);
@@ -66,7 +66,7 @@ public:
 		const UString::String& mapApiKey, const UString::String& eBirdApiKey) const;
 
 	bool FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-		const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const UString::String& targetRegionCode,
+		const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes,
 		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const;
 		
 	static UString::String PrepareForComparison(const UString::String& commonName);

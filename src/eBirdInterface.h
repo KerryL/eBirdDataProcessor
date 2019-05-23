@@ -107,6 +107,8 @@ public:
 	std::vector<RegionInfo> GetSubRegions(const UString::String& regionCode, const RegionType& type);
 
 	UString::String GetRegionCode(const UString::String& country, const UString::String& state = UString::String(), const UString::String& county = UString::String());
+	std::vector<UString::String> GetRegionCodes(const std::vector<UString::String>& countries,
+		const std::vector<UString::String>& states, const std::vector<UString::String>& counties);
 
 	// Returned codes are fully descriptive, i.e. state codes include country info, etc.
 	UString::String GetCountryCode(const UString::String& country);
