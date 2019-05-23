@@ -1475,6 +1475,19 @@ UString::String EBirdDataProcessor::RemoveTrailingDash(const UString::String& s)
 	return s.substr(0, s.length() - 1);
 }
 
+bool EBirdDataProcessor::RegionCodeMatches(const UString::String& regionCode, const std::vector<UString::String>& codeList)
+{
+	for (const auto& c : codeList)
+	{
+		if (regionCode.length() < c.length())
+			continue;
+		else if (regionCode.substr(0, c.length()) == c)
+			return true;
+	}
+
+	return false;
+}
+
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
 	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes,
 	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const
@@ -1498,7 +1511,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 		FrequencyDataYear occurrenceData;
 		DoubleYear checklistCounts;
 		const auto regionCode(Utilities::StripExtension(f));
-		if (!Utilities::ItemIsInVector(regionCode, targetRegionCodes))
+		if (!RegionCodeMatches(regionCode, targetRegionCodes))
 			continue;
 
 		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts))
