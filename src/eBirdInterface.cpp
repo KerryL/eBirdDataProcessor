@@ -459,10 +459,19 @@ UString::String EBirdInterface::GetRegionCode(const UString::String& country,
 std::vector<UString::String> EBirdInterface::GetRegionCodes(const std::vector<UString::String>& countries,
 	const std::vector<UString::String>& states, const std::vector<UString::String>& counties)
 {
-	assert(countries.size() == states.size() && states.size() == counties.size());
+	assert(countries.size() == states.size() || states.empty());
+	assert(states.size() == counties.size() || counties.empty());
+
 	std::vector<UString::String> codes;
 	for (unsigned int i = 0; i < countries.size(); ++i)
-		codes.push_back(GetRegionCode(countries[i], states[i], counties[i]));
+	{
+		if (states.empty())
+			codes.push_back(GetRegionCode(countries[i]));
+		else if (counties.empty())
+			codes.push_back(GetRegionCode(countries[i], states[i]));
+		else
+			codes.push_back(GetRegionCode(countries[i], states[i], counties[i]));
+	}
 	return codes;
 }
 

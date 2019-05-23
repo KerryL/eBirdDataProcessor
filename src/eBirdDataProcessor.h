@@ -173,6 +173,7 @@ private:
 	void EliminateObservedSpecies(FrequencyDataYear& frequencyData) const;
 	std::vector<FrequencyInfo> GenerateYearlyFrequencyData(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
+	static bool RegionCodeMatches(const UString::String& regionCode, const std::vector<UString::String>& codeList);
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
 	void RecommendHotspots(const std::set<UString::String>& consolidatedSpeciesList,
