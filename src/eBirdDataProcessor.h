@@ -67,7 +67,7 @@ public:
 
 	bool FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
 		const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes,
-		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const;
+		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames, const int& geoJSONPrecision) const;
 		
 	static UString::String PrepareForComparison(const UString::String& commonName);
 
@@ -196,7 +196,8 @@ private:
 	static bool WriteBestLocationsViewerPage(const UString::String& htmlFileName,
 		const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
 		const std::vector<YearFrequencyInfo>& observationProbabilities,
-		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames);
+		const std::vector<UString::String>& highDetailCountries,
+		const bool& cleanUpLocationNames, const int& geoJSONPrecision);
 
 	class CalculateProbabilityJob : public ThreadPool::JobInfoBase
 	{

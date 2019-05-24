@@ -21,9 +21,10 @@ const ThrottledSection::Clock::duration KMLLibraryManager::mapsAccessDelta(std::
 
 KMLLibraryManager::KMLLibraryManager(const UString::String& libraryPath,
 	const UString::String& eBirdAPIKey, const UString::String& mapsAPIKey,
-	std::basic_ostream<UString::String::value_type>& log, const bool& cleanUpLocationNames) : libraryPath(libraryPath),
+	std::basic_ostream<UString::String::value_type>& log, const bool& cleanUpLocationNames,
+	const int& geoJSONPrecision) : libraryPath(libraryPath),
 	log(log), cleanUpLocationNames(cleanUpLocationNames), mapsAPIRateLimiter(mapsAccessDelta),
-	mapsInterface(_T("eBirdDataProcessor"), mapsAPIKey), ebi(eBirdAPIKey)
+	mapsInterface(_T("eBirdDataProcessor"), mapsAPIKey), ebi(eBirdAPIKey), geoJSONPrecision(geoJSONPrecision)
 {
 }
 
@@ -170,7 +171,7 @@ bool KMLLibraryManager::NonLockingLoadKMLFromLibrary(const UString::String& coun
 		return false;
 
 	std::unordered_map<UString::String, UString::String> tempMap;
-	GeometryExtractionArguments args(country, tempMap);
+	GeometryExtractionArguments args(country, tempMap, geoJSONPrecision);
 	if (!ForEachPlacemarkTag(rawKML, ExtractRegionGeometry, args))
 		return false;
 
@@ -419,8 +420,63 @@ bool KMLLibraryManager::ExtractRegionGeometry(const UString::String& kmlData,
 			return geometryArgs.countryName;
 		return geometryArgs.countryName + _T(":") + name;
 	}());
-	geometryArgs.tempMap[key] = kmlData.substr(geometryStart, geometryEnd - geometryStart + geometryEndTag.length());
+	geometryArgs.tempMap[key] = AdjustPrecision(kmlData.substr(geometryStart, geometryEnd - geometryStart + geometryEndTag.length()), geometryArgs.geoJSONPrecision);
 	return true;
+}
+
+UString::String KMLLibraryManager::AdjustPrecision(const UString::String& kml, const int& precision)
+{
+	if (precision < 0)
+		return kml;
+
+	UString::String adjustedKML;
+	const UString::String coordStartTag(_T("<coordinates>"));
+	std::string::size_type lastPosition(0), position;
+	while (position = kml.find(coordStartTag, lastPosition), position != std::string::npos)
+	{
+		position += coordStartTag.length();
+		adjustedKML.append(kml.substr(lastPosition, position - lastPosition));
+
+		const UString::String coordEndTag(_T("</coordinates>"));
+		const auto segmentEnd(kml.find(coordEndTag, position));
+		assert(segmentEnd != std::string::npos);
+
+		UString::IStringStream ss(kml.substr(position, segmentEnd - position));
+		// Coordinates are in lat/long pairs, with lat and long separated by a comma, and each pair separated from the next with a space
+		UString::String latLongPair;
+		bool firstCoord(true);
+		while (std::getline(ss, latLongPair, UString::Char(' ')))
+		{
+			if (firstCoord)
+				firstCoord = false;
+			else
+				adjustedKML.append(_T(" "));
+
+			UString::IStringStream latLongSS(latLongPair);
+			double latitude, longitude;
+			if ((latLongSS >> latitude).fail())
+			{
+				adjustedKML.append(latLongPair);
+				continue;
+			}
+
+			latLongSS.ignore();// Ignore the comma
+			if ((latLongSS >> longitude).fail())
+			{
+				adjustedKML.append(latLongPair);
+				continue;
+			}
+
+			UString::OStringStream adjPrecisionSS;
+			adjPrecisionSS.precision(precision);
+			adjPrecisionSS << std::fixed << latitude << ',' << longitude;
+			adjustedKML.append(adjPrecisionSS.str());
+		}
+		lastPosition = segmentEnd;
+	}
+
+	adjustedKML.append(kml.substr(lastPosition));
+	return adjustedKML;
 }
 
 bool KMLLibraryManager::FixPlacemarkNames(const UString::String& kmlData,

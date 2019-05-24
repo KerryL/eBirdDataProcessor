@@ -1490,7 +1490,7 @@ bool EBirdDataProcessor::RegionCodeMatches(const UString::String& regionCode, co
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
 	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes,
-	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames) const
+	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames, const int& geoJSONPrecision) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
@@ -1551,7 +1551,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 
 	const UString::String fileName(_T("."));
 	if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, eBirdAPIKey,
-		newSightingProbability, highDetailCountries, cleanUpLocationNames))
+		newSightingProbability, highDetailCountries, cleanUpLocationNames, geoJSONPrecision))
 	{
 		Cerr << "Faild to create best locations page\n";
 	}
@@ -1645,9 +1645,10 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const UString::String& htmlFileName,
 	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
 	const std::vector<YearFrequencyInfo>& observationProbabilities,
-	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames)
+	const std::vector<UString::String>& highDetailCountries,
+	const bool& cleanUpLocationNames, const int& geoJSONPrecision)
 {
-	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, highDetailCountries, cleanUpLocationNames);
+	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, highDetailCountries, cleanUpLocationNames, geoJSONPrecision);
 	return generator.WriteBestLocationsViewerPage(htmlFileName, observationProbabilities);
 }
 
