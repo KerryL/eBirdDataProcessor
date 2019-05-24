@@ -23,7 +23,8 @@ class KMLLibraryManager
 {
 public:
 	KMLLibraryManager(const UString::String& libraryPath, const UString::String& eBirdAPIKey,
-		const UString::String& mapsAPIKey, std::basic_ostream<UString::String::value_type>& log, const bool& cleanUpLocationNames);
+		const UString::String& mapsAPIKey, std::basic_ostream<UString::String::value_type>& log,
+		const bool& cleanUpLocationNames, const int& geoJSONPrecision);
 
 	UString::String GetKML(const UString::String& country, const UString::String& subNational1, const UString::String& subNational2);
 
@@ -31,6 +32,7 @@ private:
 	const UString::String libraryPath;
 	std::basic_ostream<UString::String::value_type>& log;
 	const bool cleanUpLocationNames;
+	const int geoJSONPrecision;
 
 	static const ThrottledSection::Clock::duration mapsAccessDelta;
 	mutable ThrottledSection mapsAPIRateLimiter;
@@ -62,9 +64,11 @@ private:
 	struct GeometryExtractionArguments : public AdditionalArguments
 	{
 		GeometryExtractionArguments(const UString::String& countryName,
-			KMLMapType& tempMap) : countryName(countryName), tempMap(tempMap) {}
+			KMLMapType& tempMap, const int& geoJSONPrecision) : countryName(countryName),
+			tempMap(tempMap), geoJSONPrecision(geoJSONPrecision) {}
 		const UString::String& countryName;
 		KMLMapType& tempMap;
+		const int& geoJSONPrecision;
 	};
 
 	struct ParentRegionFinderArguments : public AdditionalArguments
@@ -205,6 +209,8 @@ private:
 	static bool StringsAreSimilar(const UString::String& a, const UString::String& b, const double& threshold);
 	static std::vector<UString::String> GenerateLetterPairs(const UString::String& s);
 	static std::vector<UString::String> GenerateWordLetterPairs(const UString::String& s);
+
+	static UString::String AdjustPrecision(const UString::String& kml, const int& precision);
 
 	bool OpenKMLArchive(const UString::String& fileName, UString::String& kml) const;
 };

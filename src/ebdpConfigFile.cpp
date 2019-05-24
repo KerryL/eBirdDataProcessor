@@ -55,6 +55,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("FIND_MAX_NEEDS"), config.findMaxNeedsLocations);
 	AddConfigItem(_T("KML_LIBRARY"), config.kmlLibraryPath);
 	AddConfigItem(_T("HIGH_DETAIL"), config.highDetailCountries);
+	AddConfigItem(_T("GEO_JSON_PRECISION"), config.geoJSONPrecision);
 
 	AddConfigItem(_T("DATASET"), config.eBirdDatasetPath);
 
@@ -89,6 +90,7 @@ void EBDPConfigFile::AssignDefaults()
 	config.showOnlyAudioNeeds = -1;
 	config.findMaxNeedsLocations = false;
 	config.cleanupKMLLocationNames = false;
+	config.geoJSONPrecision = -1;
 
 	config.doComparison = false;
 }
