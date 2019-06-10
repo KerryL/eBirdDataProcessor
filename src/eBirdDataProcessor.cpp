@@ -1070,7 +1070,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	else
 		entry.rating = 0;
 
-	const UString::String calendarLine(_T("<svg class=\"Icon Icon-calendar\" role=\"img\"><use xlink:href=\"#Icon--calendar\"></use></svg>"));
+	const UString::String calendarLine(_T("<svg class=\"Icon Icon-calendar\" role=\"img\"><use xlink:href=\"#Icon--date\"></use></svg>"));
 	const auto calendarLinePosition(html.find(calendarLine, endOfCommonNamePosition));
 	if (calendarLinePosition == std::string::npos)
 		return false;
@@ -1078,7 +1078,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	if (!std::getline(ss, entry.date))
 		return false;
 
-	const UString::String locationLine(_T("<svg class=\"Icon Icon-location\" role=\"img\"><use xlink:href=\"#Icon--location\"></use></svg>"));
+	const UString::String locationLine(_T("<svg class=\"Icon Icon-location\" role=\"img\"><use xlink:href=\"#Icon--locationGeneric\"></use></svg>"));
 	const auto locationLinePosition(html.find(locationLine, calendarLinePosition));
 	if (locationLinePosition == std::string::npos)
 		return false;
