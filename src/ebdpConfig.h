@@ -6,15 +6,55 @@
 #ifndef EBDP_CONFIG_H_
 #define EBDP_CONFIG_H_
 
+struct LocationFilters
+{
+	std::vector<UString::String> country;
+	std::vector<UString::String> state;
+	std::vector<UString::String> county;
+	std::vector<UString::String> location;
+};
+
+struct TimeFilters
+{
+	unsigned int year;
+	unsigned int month;
+	unsigned int week;
+	unsigned int day;
+};
+
+struct TimeOfDayParameters
+{
+	UString::String outputFile;
+	std::vector<UString::String> commonNames;
+	UString::String splitRegionDataFile;
+};
+
+struct LocationFindingParameters
+{
+	bool cleanupKMLLocationNames;
+	std::vector<UString::String> highDetailCountries;
+
+	UString::String kmlLibraryPath;
+	double kmlReductionLimit;
+	int geoJSONPrecision;
+};
+
+struct CalendarParameters
+{
+	unsigned int topBirdCount;
+	unsigned int recentObservationPeriod;// [days]
+	UString::String targetInfoFileName;
+
+	UString::String googleMapsAPIKey;
+	UString::String homeLocation;
+};
+
 struct EBDPConfig
 {
 	UString::String dataFileName;
 	UString::String outputFileName;
 
-	std::vector<UString::String> countryFilter;
-	std::vector<UString::String> stateFilter;
-	std::vector<UString::String> countyFilter;
-	std::vector<UString::String> locationFilter;
+	LocationFilters locationFilters;
 
 	enum class ListType : int
 	{
@@ -28,17 +68,24 @@ struct EBDPConfig
 
 	ListType listType;
 
+	enum class TargetNeedArea : int
+	{
+		None = 0,
+		Region,
+		Subnational1,
+		Country,
+		World
+	};
+
+	TargetNeedArea targetNeedArea;
+
 	bool generateRarityScores;
 	bool speciesCountOnly;// Primarily for plotting
 	bool includePartialIDs;
-	UString::String timeOfDayOutputFile;
-	std::vector<UString::String> timeOfDataCommonNames;
-	UString::String splitRegionDataFile;
 
-	unsigned int yearFilter;
-	unsigned int monthFilter;
-	unsigned int weekFilter;
-	unsigned int dayFilter;
+	TimeOfDayParameters timeOfDayParameters;
+
+	TimeFilters timeFilters;
 
 	enum class SortBy : int
 	{
@@ -62,39 +109,22 @@ struct EBDPConfig
 
 	UniquenessType uniqueObservations;
 
-	enum class TargetNeedArea : int
-	{
-		None = 0,
-		Region,
-		Subnational1,
-		Country,
-		World
-	};
-
 	bool doComparison;
 
 	bool generateTargetCalendar;
-	TargetNeedArea targetNeedArea;
-	unsigned int topBirdCount;
-	unsigned int recentObservationPeriod;// [days]
+	CalendarParameters calendarParameters;
+
 	UString::String frequencyFilePath;
-	UString::String targetInfoFileName;
-	bool cleanupKMLLocationNames;
-	std::vector<UString::String> highDetailCountries;
 
 	int showOnlyPhotoNeeds;
 	int showOnlyAudioNeeds;
 	UString::String mediaFileName;
 	UString::String mediaListHTML;
 
-	UString::String googleMapsAPIKey;
-	UString::String homeLocation;
 	UString::String eBirdApiKey;
 
 	bool findMaxNeedsLocations;
-	double kmlReductionLimit;
-	UString::String kmlLibraryPath;
-	int geoJSONPrecision;
+	LocationFindingParameters locationFindingParameters;
 
 	UString::String eBirdDatasetPath;
 	

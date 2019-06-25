@@ -46,27 +46,27 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!config.eBirdDatasetPath.empty())
 	{
 		EBirdDatasetInterface dataset;
-		if (!config.timeOfDayOutputFile.empty())
+		if (!config.timeOfDayParameters.outputFile.empty())
 		{
-			if (config.countryFilter.size() > 1)
+			if (config.locationFilters.country.size() > 1)
 			{
 				Cerr << "Time-of-day analysis for multiple regions is not supported\n";
 				return 1;
 			}
 
 			EBirdInterface ebi(config.eBirdApiKey);
-			const auto regionCode(ebi.GetRegionCode(config.countryFilter.front(),
-				config.stateFilter.empty() ? UString::String() : config.stateFilter.front(),
-				config.countyFilter.empty() ? UString::String() : config.countyFilter.front()));
+			const auto regionCode(ebi.GetRegionCode(config.locationFilters.country.front(),
+				config.locationFilters.state.empty() ? UString::String() : config.locationFilters.state.front(),
+				config.locationFilters.county.empty() ? UString::String() : config.locationFilters.county.front()));
 			if (!dataset.ExtractTimeOfDayInfo(config.eBirdDatasetPath,
-				config.timeOfDataCommonNames, regionCode, config.splitRegionDataFile))
+				config.timeOfDayParameters.commonNames, regionCode, config.timeOfDayParameters.splitRegionDataFile))
 				return 1;
-			if (!dataset.WriteTimeOfDayFiles(config.timeOfDayOutputFile, EBirdDatasetInterface::TimeOfDayPeriod::Week))
+			if (!dataset.WriteTimeOfDayFiles(config.timeOfDayParameters.outputFile, EBirdDatasetInterface::TimeOfDayPeriod::Week))
 				return 1;
 		}
 		else// Ignore all other options and generate global frequency data
 		{
-			if (!dataset.ExtractGlobalFrequencyData(config.eBirdDatasetPath, config.splitRegionDataFile))
+			if (!dataset.ExtractGlobalFrequencyData(config.eBirdDatasetPath, config.timeOfDayParameters.splitRegionDataFile))
 				return 1;
 			if (dataset.WriteFrequencyFiles(config.frequencyFilePath))
 				return 1;
@@ -82,29 +82,29 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		processor.GenerateUniqueObservationsReport(config.uniqueObservations);
 
 	// Remove entires that don't fall withing the specified locations
-	if (!config.locationFilter.empty() && config.targetNeedArea == EBDPConfig::TargetNeedArea::None)
-		processor.FilterLocation(config.locationFilter, config.countyFilter,
-			config.stateFilter, config.countryFilter);
-	else if (!config.countyFilter.empty() && config.targetNeedArea <= EBDPConfig::TargetNeedArea::Region)
-		processor.FilterCounty(config.countyFilter, config.stateFilter,
-			config.countryFilter);
-	else if (!config.stateFilter.empty() && config.targetNeedArea <= EBDPConfig::TargetNeedArea::Subnational1)
-		processor.FilterState(config.stateFilter, config.countryFilter);
-	else if (!config.countryFilter.empty() && config.targetNeedArea <= EBDPConfig::TargetNeedArea::Country)
-		processor.FilterCountry(config.countryFilter);
+	if (!config.locationFilters.location.empty() && config.targetNeedArea == EBDPConfig::TargetNeedArea::None)
+		processor.FilterLocation(config.locationFilters.location, config.locationFilters.county,
+			config.locationFilters.state, config.locationFilters.country);
+	else if (!config.locationFilters.county.empty() && config.targetNeedArea <= EBDPConfig::TargetNeedArea::Region)
+		processor.FilterCounty(config.locationFilters.county, config.locationFilters.state,
+			config.locationFilters.country);
+	else if (!config.locationFilters.state.empty() && config.targetNeedArea <= EBDPConfig::TargetNeedArea::Subnational1)
+		processor.FilterState(config.locationFilters.state, config.locationFilters.country);
+	else if (!config.locationFilters.country.empty() && config.targetNeedArea <= EBDPConfig::TargetNeedArea::Country)
+		processor.FilterCountry(config.locationFilters.country);
 
 	// Remove entries that don't fall within the specified dates
-	if (config.yearFilter > 0)
-		processor.FilterYear(config.yearFilter);
+	if (config.timeFilters.year > 0)
+		processor.FilterYear(config.timeFilters.year);
 
-	if (config.monthFilter > 0)
-		processor.FilterMonth(config.monthFilter);
+	if (config.timeFilters.month > 0)
+		processor.FilterMonth(config.timeFilters.month);
 
-	if (config.weekFilter > 0)
-		processor.FilterWeek(config.weekFilter);
+	if (config.timeFilters.week > 0)
+		processor.FilterWeek(config.timeFilters.week);
 
-	if (config.dayFilter > 0)
-		processor.FilterDay(config.dayFilter);
+	if (config.timeFilters.day > 0)
+		processor.FilterDay(config.timeFilters.day);
 		
 	// Remove entries that don't contain the specified comment string
 	if (!config.commentGroupString.empty())
@@ -126,7 +126,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	if (config.generateRarityScores)
 	{
-		if (config.countryFilter.size() > 1)
+		if (config.locationFilters.country.size() > 1)
 		{
 			Cerr << "Rarity analysis for multiple regions is not supported\n";
 			return 1;
@@ -134,34 +134,30 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 		processor.GenerateRarityScores(config.frequencyFilePath,
 			config.listType, config.eBirdApiKey,
-			config.countryFilter.front(), config.stateFilter.empty() ? UString::String() : config.stateFilter.front(),
-			config.countyFilter.empty() ? UString::String() : config.countyFilter.front());
+			config.locationFilters.country.front(), config.locationFilters.state.empty() ? UString::String() : config.locationFilters.state.front(),
+			config.locationFilters.county.empty() ? UString::String() : config.locationFilters.county.front());
 	}
 	else if (config.findMaxNeedsLocations)
 	{
 		EBirdInterface ebi(config.eBirdApiKey);
-		const auto regionCodes(ebi.GetRegionCodes(config.countryFilter,
-			config.stateFilter, config.countyFilter));
+		const auto regionCodes(ebi.GetRegionCodes(config.locationFilters.country,
+			config.locationFilters.state, config.locationFilters.county));
 		if (!processor.FindBestLocationsForNeededSpecies(
-			config.frequencyFilePath, config.kmlLibraryPath, config.eBirdApiKey, regionCodes,
-			config.highDetailCountries, config.cleanupKMLLocationNames, config.geoJSONPrecision, config.kmlReductionLimit))
+			config.frequencyFilePath, config.locationFindingParameters, config.eBirdApiKey, regionCodes))
 			return 1;
 	}
     else if (config.generateTargetCalendar)
 	{
-		if (config.countryFilter.size() > 1)
+		if (config.locationFilters.country.size() > 1)
 		{
 			Cerr << "Calendar generation for multiple regions is not supported\n";
 			return 1;
 		}
 
-		processor.GenerateTargetCalendar(config.topBirdCount,
+		processor.GenerateTargetCalendar(config.calendarParameters,
 			config.outputFileName, config.frequencyFilePath,
-			config.countryFilter.front(), config.stateFilter.empty() ? UString::String() : config.stateFilter.front(),
-			config.countyFilter.empty() ? UString::String() : config.countyFilter.front(),
-			config.recentObservationPeriod,
-			config.targetInfoFileName, config.homeLocation,
-			config.googleMapsAPIKey, config.eBirdApiKey);
+			config.locationFilters.country.front(), config.locationFilters.state.empty() ? UString::String() : config.locationFilters.state.front(),
+			config.locationFilters.county.empty() ? UString::String() : config.locationFilters.county.front(), config.eBirdApiKey);
 	}
 	else if (config.doComparison)
 		processor.DoListComparison();

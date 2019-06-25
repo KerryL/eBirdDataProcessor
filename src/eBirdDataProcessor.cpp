@@ -499,12 +499,10 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay(cons
 	return consolidatedList;
 }
 
-bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount,
+bool EBirdDataProcessor::GenerateTargetCalendar(const CalendarParameters& calendarParameters,
 	const UString::String& outputFileName, const UString::String& frequencyFilePath,
 	const UString::String& country, const UString::String& state, const UString::String& county,
-	const unsigned int& recentPeriod,
-	const UString::String& hotspotInfoFileName, const UString::String& homeLocation,
-	const UString::String& mapApiKey, const UString::String& eBirdApiKey) const
+	const UString::String& eBirdApiKey) const
 {
 	FrequencyFileReader frequencyFileReader(frequencyFilePath);
 	EBirdInterface ebi(eBirdApiKey);
@@ -551,7 +549,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	outFile << std::endl;
 
 	unsigned int i;
-	for (i = 0; i < topBirdCount; ++i)
+	for (i = 0; i < calendarParameters.topBirdCount; ++i)
 	{
 		for (const auto& month : frequencyData)
 		{
@@ -565,7 +563,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 
 	std::set<UString::String> consolidatedSpeciesList;
 	std::map<UString::String, double> speciesFrequencyMap;
-	for (i = 0; i < topBirdCount; ++i)
+	for (i = 0; i < calendarParameters.topBirdCount; ++i)
 	{
 		for (const auto& month : frequencyData)
 		{
@@ -580,7 +578,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 		}
 	}
 
-	Cout << topBirdCount << " most common species needed for each month of the year includes "
+	Cout << calendarParameters.topBirdCount << " most common species needed for each month of the year includes "
 		<< consolidatedSpeciesList.size() << " species" << std::endl;
 
 	std::array<std::pair<double, unsigned int>, 6> bracketCounts;
@@ -610,8 +608,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const unsigned int& topBirdCount
 	}
 	Cout << std::endl;
 
-	RecommendHotspots(consolidatedSpeciesList, country, state, county, recentPeriod,
-		hotspotInfoFileName, homeLocation, mapApiKey, eBirdApiKey);
+	RecommendHotspots(consolidatedSpeciesList, country, state, county, calendarParameters, eBirdApiKey);
 
 	return true;
 }
@@ -677,9 +674,8 @@ void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyDa
 }
 
 void EBirdDataProcessor::RecommendHotspots(const std::set<UString::String>& consolidatedSpeciesList,
-	const UString::String& country, const UString::String& state, const UString::String& county, const unsigned int& recentPeriod,
-	const UString::String& hotspotInfoFileName, const UString::String& homeLocation,
-	const UString::String& mapApiKey, const UString::String& eBirdApiKey) const
+	const UString::String& country, const UString::String& state, const UString::String& county,
+	const CalendarParameters& calendarParameters, const UString::String& eBirdApiKey) const
 {
 	Cout << "Checking eBird for recent sightings..." << std::endl;
 
@@ -698,7 +694,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<UString::String>& cons
 			continue;
 		}
 
-		const auto hotspots(e.GetHotspotsWithRecentObservationsOf(speciesCode, region, recentPeriod));
+		const auto hotspots(e.GetHotspotsWithRecentObservationsOf(speciesCode, region, calendarParameters.recentObservationPeriod));
 		for (const auto& spot : hotspots)
 		{
 			hotspotInfo[spot].push_back(species);
@@ -706,7 +702,7 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<UString::String>& cons
 		}
 	}
 
-	Cout << recentSpecies.size() << " needed species have been observed within the last " << recentPeriod << " days" << std::endl;
+	Cout << recentSpecies.size() << " needed species have been observed within the last " << calendarParameters.recentObservationPeriod << " days" << std::endl;
 
 	typedef std::pair<SpeciesList, EBirdInterface::LocationInfo> SpeciesHotspotPair;
 	std::vector<SpeciesHotspotPair> sortedHotspots;
@@ -734,38 +730,38 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<UString::String>& cons
 	}
 	Cout << std::endl;
 
-	if (!hotspotInfoFileName.empty())
-		GenerateHotspotInfoFile(sortedHotspots, hotspotInfoFileName, homeLocation, mapApiKey, region, eBirdApiKey);
+	if (!calendarParameters.targetInfoFileName.empty())
+		GenerateHotspotInfoFile(sortedHotspots, calendarParameters, region, eBirdApiKey);
 }
 
-void EBirdDataProcessor::GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<UString::String>,
-	EBirdInterface::LocationInfo>>& hotspots, const UString::String& hotspotInfoFileName,
-	const UString::String& homeLocation, const UString::String& mapApiKey,
+void EBirdDataProcessor::GenerateHotspotInfoFile(
+	const std::vector<std::pair<std::vector<UString::String>, EBirdInterface::LocationInfo>>& hotspots,
+	const CalendarParameters& calendarParameters,
 	const UString::String& regionCode, const UString::String& eBirdApiKey) const
 {
 	Cout << "Writing hotspot information to file..." << std::endl;
 
-	UString::OFStream infoFile(hotspotInfoFileName.c_str());
+	UString::OFStream infoFile(calendarParameters.targetInfoFileName.c_str());
 	if (!infoFile.good() || !infoFile.is_open())
 	{
-		Cerr << "Failed to open '" << hotspotInfoFileName << "' for output\n";
+		Cerr << "Failed to open '" << calendarParameters.targetInfoFileName << "' for output\n";
 		return;
 	}
 
-	if (!homeLocation.empty())
-		infoFile << "Travel time and distance given from " << homeLocation << '\n';
+	if (!calendarParameters.homeLocation.empty())
+		infoFile << "Travel time and distance given from " << calendarParameters.homeLocation << '\n';
 
 	std::map<UString::String, UString::String> speciesToObservationTimeMap;
 
 	for (const auto& h : hotspots)
 	{
 		infoFile << '\n' << h.second.name;
-		if (!homeLocation.empty())
+		if (!calendarParameters.homeLocation.empty())
 		{
-			GoogleMapsInterface gMaps(_T("eBirdDataProcessor"), mapApiKey);
+			GoogleMapsInterface gMaps(_T("eBirdDataProcessor"), calendarParameters.googleMapsAPIKey);
 			UString::OStringStream ss;
 			ss << h.second.latitude << ',' << h.second.longitude;
-			GoogleMapsInterface::Directions travelInfo(gMaps.GetDirections(homeLocation, ss.str()));
+			GoogleMapsInterface::Directions travelInfo(gMaps.GetDirections(calendarParameters.homeLocation, ss.str()));
 
 			if (travelInfo.legs.size() == 0)
 				infoFile << " (failed to get directions)";
@@ -1489,8 +1485,8 @@ bool EBirdDataProcessor::RegionCodeMatches(const UString::String& regionCode, co
 }
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes,
-	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames, const int& geoJSONPrecision, const double& kmlReductionLimit) const
+	const LocationFindingParameters& locationFindingParameters, const UString::String& eBirdAPIKey,
+	const std::vector<UString::String>& targetRegionCodes) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
@@ -1518,7 +1514,8 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 			return false;
 
 		const auto countryCode(Utilities::ExtractCountryFromRegionCode(regionCode));
-		const bool useHighDetail(std::find(highDetailCountries.begin(), highDetailCountries.end(), countryCode) != highDetailCountries.end());
+		const bool useHighDetail(std::find(locationFindingParameters.highDetailCountries.begin(),
+			locationFindingParameters.highDetailCountries.end(), countryCode) != locationFindingParameters.highDetailCountries.end());
 
 		if (useHighDetail)
 		{
@@ -1549,9 +1546,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	pool.WaitForAllJobsComplete();
 	newSightingProbability.erase(probEntryIt, newSightingProbability.end());// Remove extra entries (only needed if every country were done in high detail)
 
-	const UString::String fileName(_T("."));
-	if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, eBirdAPIKey,
-		newSightingProbability, highDetailCountries, cleanUpLocationNames, geoJSONPrecision, kmlReductionLimit))
+	if (!WriteBestLocationsViewerPage(locationFindingParameters, eBirdAPIKey, newSightingProbability))
 	{
 		Cerr << "Faild to create best locations page\n";
 	}
@@ -1642,14 +1637,12 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 	return true;
 }
 
-bool EBirdDataProcessor::WriteBestLocationsViewerPage(const UString::String& htmlFileName,
-	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
-	const std::vector<YearFrequencyInfo>& observationProbabilities,
-	const std::vector<UString::String>& highDetailCountries,
-	const bool& cleanUpLocationNames, const int& geoJSONPrecision, const double& kmlReductionLimit)
+bool EBirdDataProcessor::WriteBestLocationsViewerPage(const LocationFindingParameters& locationFindingParameters,
+	const UString::String& eBirdAPIKey, const std::vector<YearFrequencyInfo>& observationProbabilities)
 {
-	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, highDetailCountries, cleanUpLocationNames, geoJSONPrecision, kmlReductionLimit);
-	return generator.WriteBestLocationsViewerPage(htmlFileName, observationProbabilities);
+	MapPageGenerator generator(locationFindingParameters, eBirdAPIKey);
+	const UString::String htmlOutputPath(_T("."));
+	return generator.WriteBestLocationsViewerPage(htmlOutputPath, observationProbabilities);
 }
 
 // Assume we're comparing lists based on year
