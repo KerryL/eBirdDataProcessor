@@ -20,6 +20,7 @@ public:
 	void Reduce(std::vector<Point>& polygon) const;
 
 private:
+	static const std::vector<Point>::size_type sizeThreshold;
 	const double epsilon;
 
 	struct Vector3D
