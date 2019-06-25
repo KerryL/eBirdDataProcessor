@@ -6,6 +6,9 @@
 // Local headers
 #include "geometryReducer.h"
 
+// Standard C++ headers
+#include <stack>
+
 void GeometryReducer::Reduce(std::vector<Point>& polygon) const
 {
 	// Some special handling because we're often working with polygons which start and end with the same point
@@ -18,33 +21,43 @@ void GeometryReducer::Reduce(std::vector<Point>& polygon) const
 
 std::vector<Point> GeometryReducer::DoReduction(std::vector<Point> polygon) const
 {
-	Vector3D point;
-	Vector3D direction;
-	ComputeLine(polygon.front(), polygon.back(), point, direction);
-	double maxDistance(0.0);
-	unsigned int splitIndex(0);
-	for (unsigned int i = 1; i < polygon.size(); ++i)
+	std::vector<Point> reduced;
+	std::stack<std::vector<Point>> portions;
+	portions.push(polygon);
+
+	while (!portions.empty())
 	{
-		const double d(GetPerpendicularDistance(point, direction, polygon[i]));
-		if (d > maxDistance)
+		auto top(portions.top());
+		portions.pop();
+
+		Vector3D point;
+		Vector3D direction;
+		ComputeLine(top.front(), top.back(), point, direction);
+		double maxDistance(0.0);
+		unsigned int splitIndex(0);
+		for (unsigned int i = 1; i < top.size(); ++i)
 		{
-			splitIndex = i;
-			maxDistance = d;
+			const double d(GetPerpendicularDistance(point, direction, top[i]));
+			if (d > maxDistance)
+			{
+				splitIndex = i;
+				maxDistance = d;
+			}
+		}
+
+		if (maxDistance > epsilon)
+		{
+			portions.push(std::vector<Point>(top.begin() + splitIndex, top.end()));
+			portions.push(std::vector<Point>(top.begin(), top.begin() + splitIndex));
+		}
+		else
+		{
+			reduced.push_back(top.front());
+			reduced.push_back(top.back());
 		}
 	}
-    
-	if (maxDistance > epsilon)
-	{
-        auto reduced1(DoReduction(std::vector<Point>(polygon.begin(), polygon.begin() + splitIndex)));
-		const auto reduced2(DoReduction(std::vector<Point>(polygon.begin() + splitIndex, polygon.end())));
-		reduced1.insert(reduced1.end(), reduced2.begin(), reduced2.end());
-		return reduced1;
-	}
 
-	std::vector<Point> lineOnly(2);
-	lineOnly.front() = polygon.front();
-	lineOnly.back() = polygon.back();
-	return lineOnly;
+	return reduced;
 }
 
 void GeometryReducer::ComputeLine(const Point& startPoint, const Point& endPoint, Vector3D& point, Vector3D& direction) const
