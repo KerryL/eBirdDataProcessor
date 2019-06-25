@@ -22,9 +22,7 @@
 class MapPageGenerator
 {
 public:
-	MapPageGenerator(const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
-		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames,
-		const int& geoJSONPrecision, const double& kmlReductionLimit);
+	MapPageGenerator(const LocationFindingParameters& locationFindingParameters, const UString::String& eBirdAPIKey);
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
 	bool WriteBestLocationsViewerPage(const UString::String& outputPath,

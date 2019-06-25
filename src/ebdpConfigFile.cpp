@@ -11,53 +11,56 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("OBS_DATA_FILE"), config.dataFileName);
 	AddConfigItem(_T("OUTPUT_FILE"), config.outputFileName);
 
-	AddConfigItem(_T("COUNTRY"), config.countryFilter);
-	AddConfigItem(_T("STATE"), config.stateFilter);
-	AddConfigItem(_T("COUNTY"), config.countyFilter);
-	AddConfigItem(_T("LOCATION"), config.locationFilter);
+	AddConfigItem(_T("COUNTRY"), config.locationFilters.country);
+	AddConfigItem(_T("STATE"), config.locationFilters.state);
+	AddConfigItem(_T("COUNTY"), config.locationFilters.county);
+	AddConfigItem(_T("LOCATION"), config.locationFilters.location);
 
 	AddConfigItem(_T("LIST_TYPE"), config.listType);
 
 	AddConfigItem(_T("SCORE_RARITIES"), config.generateRarityScores);
 	AddConfigItem(_T("SPECIES_COUNT_ONLY"), config.speciesCountOnly);
 	AddConfigItem(_T("INCLUDE_PARTIAL_IDS"), config.includePartialIDs);
-	AddConfigItem(_T("TOD_SPECIES"), config.timeOfDataCommonNames);
-	AddConfigItem(_T("TOD_OUTPUT_FILE"), config.timeOfDayOutputFile);
-	AddConfigItem(_T("REGION_DATA_OUTPUT_FILE"), config.splitRegionDataFile);
+
+	AddConfigItem(_T("TOD_SPECIES"), config.timeOfDayParameters.commonNames);
+	AddConfigItem(_T("TOD_OUTPUT_FILE"), config.timeOfDayParameters.outputFile);
+	AddConfigItem(_T("REGION_DATA_OUTPUT_FILE"), config.timeOfDayParameters.splitRegionDataFile);
 
 	AddConfigItem(_T("MEDIA_LIST_HTML"), config.mediaListHTML);
 	AddConfigItem(_T("MEDIA_FILE"), config.mediaFileName);
 	AddConfigItem(_T("SHOW_PHOTO_NEEDS"), config.showOnlyPhotoNeeds);
 	AddConfigItem(_T("SHOW_AUDIO_NEEDS"), config.showOnlyAudioNeeds);
 
-	AddConfigItem(_T("YEAR"), config.yearFilter);
-	AddConfigItem(_T("MONTH"), config.monthFilter);
-	AddConfigItem(_T("WEEK"), config.weekFilter);
-	AddConfigItem(_T("DAY"), config.dayFilter);
+	AddConfigItem(_T("YEAR"), config.timeFilters.year);
+	AddConfigItem(_T("MONTH"), config.timeFilters.month);
+	AddConfigItem(_T("WEEK"), config.timeFilters.week);
+	AddConfigItem(_T("DAY"), config.timeFilters.day);
 
 	AddConfigItem(_T("SORT_FIRST"), config.primarySort);
 	AddConfigItem(_T("SORT_SECOND"), config.secondarySort);
 
 	AddConfigItem(_T("SHOW_UNIQUE_OBS"), config.uniqueObservations);
 
-	AddConfigItem(_T("CALENDAR"), config.generateTargetCalendar);
 	AddConfigItem(_T("TARGET_AREA"), config.targetNeedArea);
-	AddConfigItem(_T("TOP_COUNT"), config.topBirdCount);
-	AddConfigItem(_T("FREQUENCY_FILES"), config.frequencyFilePath);
-	AddConfigItem(_T("TARGET_INFO_FILE_NAME"), config.targetInfoFileName);
-	AddConfigItem(_T("RECENT_PERIOD"), config.recentObservationPeriod);
-	AddConfigItem(_T("CLEANUP_KML_NAMES"), config.cleanupKMLLocationNames);
 
-	AddConfigItem(_T("GOOGLE_MAPS_KEY"), config.googleMapsAPIKey);
-	AddConfigItem(_T("HOME_LOCATION"), config.homeLocation);
-	AddConfigItem(_T("EBIRD_API_KEY"), config.eBirdApiKey);
+	AddConfigItem(_T("CALENDAR"), config.generateTargetCalendar);
+	AddConfigItem(_T("TOP_COUNT"), config.calendarParameters.topBirdCount);
+	AddConfigItem(_T("TARGET_INFO_FILE_NAME"), config.calendarParameters.targetInfoFileName);
+	AddConfigItem(_T("RECENT_PERIOD"), config.calendarParameters.recentObservationPeriod);
+	AddConfigItem(_T("GOOGLE_MAPS_KEY"), config.calendarParameters.googleMapsAPIKey);
+	AddConfigItem(_T("HOME_LOCATION"), config.calendarParameters.homeLocation);
+
+	AddConfigItem(_T("FREQUENCY_FILES"), config.frequencyFilePath);
 
 	AddConfigItem(_T("FIND_MAX_NEEDS"), config.findMaxNeedsLocations);
-	AddConfigItem(_T("KML_LIBRARY"), config.kmlLibraryPath);
-	AddConfigItem(_T("KML_REDUCTION_LIMIT"), config.kmlReductionLimit);
-	AddConfigItem(_T("HIGH_DETAIL"), config.highDetailCountries);
-	AddConfigItem(_T("GEO_JSON_PRECISION"), config.geoJSONPrecision);
+	AddConfigItem(_T("CLEANUP_KML_NAMES"), config.locationFindingParameters.cleanupKMLLocationNames);
+	AddConfigItem(_T("KML_REDUCTION_LIMIT"), config.locationFindingParameters.kmlReductionLimit);
+	AddConfigItem(_T("HIGH_DETAIL"), config.locationFindingParameters.highDetailCountries);
+	AddConfigItem(_T("GEO_JSON_PRECISION"), config.locationFindingParameters.geoJSONPrecision);
+	AddConfigItem(_T("KML_LIBRARY"), config.locationFindingParameters.kmlLibraryPath);
 
+	AddConfigItem(_T("EBIRD_API_KEY"), config.eBirdApiKey);
+	
 	AddConfigItem(_T("DATASET"), config.eBirdDatasetPath);
 
 	AddConfigItem(_T("COMPARE"), config.doComparison);
@@ -71,10 +74,10 @@ void EBDPConfigFile::AssignDefaults()
 	config.speciesCountOnly = false;
 	config.includePartialIDs = false;
 
-	config.yearFilter = 0;
-	config.monthFilter = 0;
-	config.weekFilter = 0;
-	config.dayFilter = 0;
+	config.timeFilters.year = 0;
+	config.timeFilters.month = 0;
+	config.timeFilters.week = 0;
+	config.timeFilters.day = 0;
 
 	config.primarySort = EBDPConfig::SortBy::None;
 	config.secondarySort = EBDPConfig::SortBy::None;
@@ -82,17 +85,20 @@ void EBDPConfigFile::AssignDefaults()
 	config.uniqueObservations = EBDPConfig::UniquenessType::None;
 
 	config.targetNeedArea = EBDPConfig::TargetNeedArea::None;
+
 	config.generateTargetCalendar = false;
+	config.calendarParameters.topBirdCount = 20;
+	config.calendarParameters.recentObservationPeriod = 15;
+
 	config.generateRarityScores = false;
-	config.topBirdCount = 20;
-	config.recentObservationPeriod = 15;
 
 	config.showOnlyPhotoNeeds = -1;
 	config.showOnlyAudioNeeds = -1;
-	config.kmlReductionLimit = 0.0;
+
 	config.findMaxNeedsLocations = false;
-	config.cleanupKMLLocationNames = false;
-	config.geoJSONPrecision = -1;
+	config.locationFindingParameters.kmlReductionLimit = 0.0;
+	config.locationFindingParameters.cleanupKMLLocationNames = false;
+	config.locationFindingParameters.geoJSONPrecision = -1;
 
 	config.doComparison = false;
 }
@@ -124,9 +130,9 @@ bool EBDPConfigFile::TimeOfDayConfigIsOK()
 	bool configurationOK(true);
 
 	if (!config.eBirdDatasetPath.empty() &&
-		(config.timeOfDataCommonNames.empty() || config.timeOfDayOutputFile.empty()))
+		(config.timeOfDayParameters.commonNames.empty() || config.timeOfDayParameters.outputFile.empty()))
 	{
-		Cerr << "Time-of-day analysis requires " << GetKey(config.timeOfDayOutputFile) << " and at least one " << GetKey(config.timeOfDataCommonNames) << '\n';
+		Cerr << "Time-of-day analysis requires " << GetKey(config.timeOfDayParameters.outputFile) << " and at least one " << GetKey(config.timeOfDayParameters.commonNames) << '\n';
 		configurationOK = false;
 	}
 
@@ -137,7 +143,7 @@ bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 {
 	bool configurationOK(true);
 
-	if (!config.timeOfDataCommonNames.empty() || !config.timeOfDayOutputFile.empty())
+	if (!config.timeOfDayParameters.commonNames.empty() || !config.timeOfDayParameters.outputFile.empty())
 		return true;
 
 	if (!config.eBirdDatasetPath.empty() && config.frequencyFilePath.empty())
@@ -174,9 +180,15 @@ bool EBDPConfigFile::TargetCalendarConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (config.topBirdCount == 0)
+	if (config.calendarParameters.topBirdCount == 0)
 	{
-		Cerr << GetKey(config.topBirdCount) << " must be greater than zero\n";
+		Cerr << GetKey(config.calendarParameters.topBirdCount) << " must be greater than zero\n";
+		configurationOK = false;
+	}
+
+	if (config.calendarParameters.recentObservationPeriod < 1 || config.calendarParameters.recentObservationPeriod > 30)
+	{
+		Cerr << GetKey(config.calendarParameters.recentObservationPeriod) << " must be between 1 and 30\n";
 		configurationOK = false;
 	}
 
@@ -190,9 +202,9 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
     
 	bool configurationOK(true);
 
-	if (config.kmlLibraryPath.empty())
+	if (config.locationFindingParameters.kmlLibraryPath.empty())
 	{
-		Cerr << GetKey(config.findMaxNeedsLocations) << " requires " << GetKey(config.kmlLibraryPath) << '\n';
+		Cerr << GetKey(config.findMaxNeedsLocations) << " requires " << GetKey(config.locationFindingParameters.kmlLibraryPath) << '\n';
 		configurationOK = false;
 	}
 
@@ -208,11 +220,11 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 		configurationOK = false;
 	}
 
-	for (const auto& c : config.highDetailCountries)
+	for (const auto& c : config.locationFindingParameters.highDetailCountries)
 	{
 		if (c.length() != 2)
 		{
-			Cerr << GetKey(config.highDetailCountries) << " must use 2-letter country codes\n";
+			Cerr << GetKey(config.locationFindingParameters.highDetailCountries) << " must use 2-letter country codes\n";
 			configurationOK = false;
 			break;
 		}
@@ -231,69 +243,63 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (!config.countryFilter.empty() &&
-		!config.stateFilter.empty())
+	if (!config.locationFilters.country.empty() &&
+		!config.locationFilters.state.empty())
 	{
-		if (config.stateFilter.size() != config.countryFilter.size())
+		if (config.locationFilters.state.size() != config.locationFilters.country.size())
 		{
-			Cerr << "Must specify the same number of " << GetKey(config.countryFilter) << " and " << GetKey(config.stateFilter) << " parameters\n";
+			Cerr << "Must specify the same number of " << GetKey(config.locationFilters.country) << " and " << GetKey(config.locationFilters.state) << " parameters\n";
 			configurationOK = false;
 		}
 
-		if (!config.countyFilter.empty() &&
-			config.countyFilter.size() != config.stateFilter.size())
+		if (!config.locationFilters.county.empty() &&
+			config.locationFilters.county.size() != config.locationFilters.state.size())
 		{
-			Cerr << "Must specify the same number of " << GetKey(config.stateFilter) << " and " << GetKey(config.countyFilter) << " parameters\n";
+			Cerr << "Must specify the same number of " << GetKey(config.locationFilters.state) << " and " << GetKey(config.locationFilters.county) << " parameters\n";
 			configurationOK = false;
 		}
 	}
 
-	for (const auto& p : config.countryFilter)
+	for (const auto& p : config.locationFilters.country)
 	{
 		if (p.empty())
 		{
-			Cerr << "Country (" << GetKey(config.countryFilter) << ") must not be blank\n";
+			Cerr << "Country (" << GetKey(config.locationFilters.country) << ") must not be blank\n";
 			configurationOK = false;
 		}
 
 		if (p.length() != 2)
 		{
-			Cerr << "Country (" << GetKey(config.countryFilter) << ") must be specified using 2-digit abbreviation\n";
+			Cerr << "Country (" << GetKey(config.locationFilters.country) << ") must be specified using 2-digit abbreviation\n";
 			configurationOK = false;
 		}
 	}
 
-	for (const auto& p : config.stateFilter)
+	for (const auto& p : config.locationFilters.state)
 	{
 		if (!p.empty() &&
 			(p.length() < 2 || p.length() > 3))
 		{
-			Cerr << "State/providence (" << GetKey(config.stateFilter) << ") must be specified using 2- or 3-digit abbreviation\n";
+			Cerr << "State/providence (" << GetKey(config.locationFilters.state) << ") must be specified using 2- or 3-digit abbreviation\n";
 			configurationOK = false;
 		}
 	}
 
-	if (config.dayFilter > 31)
+	if (config.timeFilters.day > 31)
 	{
-		Cerr << "Day (" << GetKey(config.dayFilter) << ") must be in the range 0 - 31\n";
+		Cerr << "Day (" << GetKey(config.timeFilters.day) << ") must be in the range 0 - 31\n";
 		configurationOK = false;
 	}
 
-	if (config.monthFilter > 12)
+	if (config.timeFilters.month > 12)
 	{
-		Cerr << "Month (" << GetKey(config.monthFilter) << ") must be in the range 0 - 12\n";
+		Cerr << "Month (" << GetKey(config.timeFilters.month) << ") must be in the range 0 - 12\n";
 		configurationOK = false;
 	}
 
-	if (config.weekFilter > 53)
+	if (config.timeFilters.week > 53)
 	{
-		Cerr << "Week (" << GetKey(config.weekFilter) << ") must be in the range 0 - 53\n";
-		configurationOK = false;
-	}
-
-	if (config.recentObservationPeriod < 1 || config.recentObservationPeriod > 30)
-	{
-		Cerr << GetKey(config.recentObservationPeriod) << " must be between 1 and 30\n";
+		Cerr << "Week (" << GetKey(config.timeFilters.week) << ") must be in the range 0 - 53\n";
 		configurationOK = false;
 	}
 
@@ -303,9 +309,9 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 		configurationOK = false;
 	}*/
 
-	if (config.uniqueObservations != EBDPConfig::UniquenessType::None && !config.countryFilter.empty())
+	if (config.uniqueObservations != EBDPConfig::UniquenessType::None && !config.locationFilters.country.empty())
 	{
-		Cerr << "Cannot specify both " << GetKey(config.countryFilter) << " and " << GetKey(config.uniqueObservations) << '\n';
+		Cerr << "Cannot specify both " << GetKey(config.locationFilters.country) << " and " << GetKey(config.uniqueObservations) << '\n';
 		configurationOK = false;
 	}
 

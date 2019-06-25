@@ -38,11 +38,11 @@ const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = 
 	NamePair(_T("Nov"), _T("November")),
 	NamePair(_T("Dec"), _T("December"))};
 
-MapPageGenerator::MapPageGenerator(const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
-	const std::vector<UString::String>& highDetailCountries,
-	const bool& cleanUpLocationNames, const int& geoJSONPrecision, const double& kmlReductionLimit) : highDetailCountries(highDetailCountries),
-	ebi(eBirdAPIKey), kmlLibrary(kmlLibraryPath, eBirdAPIKey, UString::String()/*Google maps key?*/,
-		log, cleanUpLocationNames, geoJSONPrecision), kmlReductionLimit(kmlReductionLimit)
+MapPageGenerator::MapPageGenerator(const LocationFindingParameters& locationFindingParameters,
+	const UString::String& eBirdAPIKey) : highDetailCountries(highDetailCountries),
+	ebi(eBirdAPIKey), kmlLibrary(locationFindingParameters.kmlLibraryPath, eBirdAPIKey, UString::String()/*Google maps key?*/,
+		log, locationFindingParameters.cleanupKMLLocationNames, locationFindingParameters.geoJSONPrecision),
+	kmlReductionLimit(locationFindingParameters.kmlReductionLimit)
 {
 	log.Add(Cout);
 	/*std::unique_ptr<UString::OFStream> f(std::make_unique<UString::OFStream>("temp.log"));// TODO:  Remove

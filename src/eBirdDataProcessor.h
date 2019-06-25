@@ -58,16 +58,14 @@ public:
 		const UString::String& country, const UString::String& state, const UString::String& county);
 	UString::String GenerateList(const EBDPConfig::ListType& type, const int& minPhotoScore, const int& minAudioScore) const;
 
-	bool GenerateTargetCalendar(const unsigned int& topBirdCount,
+	bool GenerateTargetCalendar(const CalendarParameters& calendarParameters,
 		const UString::String& outputFileName, const UString::String& frequencyFilePath,
 		const UString::String& country, const UString::String& state, const UString::String& county,
-		const unsigned int& recentPeriod,
-		const UString::String& hotspotInfoFileName, const UString::String& homeLocation,
-		const UString::String& mapApiKey, const UString::String& eBirdApiKey) const;
+		const UString::String& eBirdApiKey) const;
 
 	bool FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-		const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes,
-		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames, const int& geoJSONPrecision, const double& kmlReductionLimit) const;
+		const LocationFindingParameters& locationFindingParameters, const UString::String& eBirdAPIKey,
+		const std::vector<UString::String>& targetRegionCodes) const;
 		
 	static UString::String PrepareForComparison(const UString::String& commonName);
 
@@ -177,12 +175,10 @@ private:
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
 
 	void RecommendHotspots(const std::set<UString::String>& consolidatedSpeciesList,
-		const UString::String& country, const UString::String& state, const UString::String& county, const unsigned int& recentPeriod,
-		const UString::String& hotspotInfoFileName, const UString::String& homeLocation,
-		const UString::String& mapApiKey, const UString::String& eBirdApiKey) const;
+		const UString::String& country, const UString::String& state, const UString::String& county,
+		const CalendarParameters& calendarParameters, const UString::String& eBirdApiKey) const;
 	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<UString::String>, EBirdInterface::LocationInfo>>& hotspots,
-		const UString::String& hotspotInfoFileName, const UString::String& homeLocation, const UString::String& mapApiKey,
-		const UString::String& regionCode, const UString::String& eBirdApiKey) const;
+		const CalendarParameters& calendarParameters, const UString::String& regionCode, const UString::String& eBirdApiKey) const;
 
 	struct HotspotInfoComparer
 	{
@@ -193,11 +189,8 @@ private:
 		DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
 		std::array<std::vector<FrequencyInfo>, 12>& species) const;
 
-	static bool WriteBestLocationsViewerPage(const UString::String& htmlFileName,
-		const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
-		const std::vector<YearFrequencyInfo>& observationProbabilities,
-		const std::vector<UString::String>& highDetailCountries,
-		const bool& cleanUpLocationNames, const int& geoJSONPrecision, const double& kmlReductionLimit);
+	static bool WriteBestLocationsViewerPage(const LocationFindingParameters& locationFindingParameters,
+		const UString::String& eBirdAPIKey, const std::vector<YearFrequencyInfo>& observationProbabilities);
 
 	class CalculateProbabilityJob : public ThreadPool::JobInfoBase
 	{
