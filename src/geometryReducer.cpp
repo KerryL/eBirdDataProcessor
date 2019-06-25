@@ -9,8 +9,13 @@
 // Standard C++ headers
 #include <stack>
 
+const std::vector<Point>::size_type GeometryReducer::sizeThreshold(20);
+
 void GeometryReducer::Reduce(std::vector<Point>& polygon) const
 {
+	if (polygon.size() < sizeThreshold)// Not only required for efficiency/preserving small geometries, but we'll crash below if size < 2.
+		return;
+
 	// Some special handling because we're often working with polygons which start and end with the same point
 	const auto halfSize(polygon.size() / 2);
 	const auto reducedHalf1(DoReduction(std::vector<Point>(polygon.begin(), polygon.begin() + halfSize)));
