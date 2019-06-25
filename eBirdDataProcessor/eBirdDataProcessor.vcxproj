@@ -143,6 +143,7 @@
     <ClCompile Include="..\src\email\jsonInterface.cpp" />
     <ClCompile Include="..\src\email\oAuth2Interface.cpp" />
     <ClCompile Include="..\src\frequencyFileReader.cpp" />
+    <ClCompile Include="..\src\geometryReducer.cpp" />
     <ClCompile Include="..\src\globalKMLFetcher.cpp" />
     <ClCompile Include="..\src\googleMapsInterface.cpp" />
     <ClCompile Include="..\src\kernelDensityEstimation.cpp" />
@@ -174,6 +175,7 @@
     <ClInclude Include="..\src\email\jsonInterface.h" />
     <ClInclude Include="..\src\email\oAuth2Interface.h" />
     <ClInclude Include="..\src\frequencyFileReader.h" />
+    <ClInclude Include="..\src\geometryReducer.h" />
     <ClInclude Include="..\src\globalKMLFetcher.h" />
     <ClInclude Include="..\src\googleMapsInterface.h" />
     <ClInclude Include="..\src\kernelDensityEstimation.h" />
@@ -181,6 +183,7 @@
     <ClInclude Include="..\src\kmlToGeoJSONConverter.h" />
     <ClInclude Include="..\src\logging\combinedLogger.h" />
     <ClInclude Include="..\src\mapPageGenerator.h" />
+    <ClInclude Include="..\src\point.h" />
     <ClInclude Include="..\src\stringUtilities.h" />
     <ClInclude Include="..\src\threadPool.h" />
     <ClInclude Include="..\src\throttledSection.h" />

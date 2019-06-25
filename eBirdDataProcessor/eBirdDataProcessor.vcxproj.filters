@@ -120,6 +120,9 @@
     <ClCompile Include="..\src\kmlToGeoJSONConverter.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="..\src\geometryReducer.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="..\src\eBirdDataProcessor.h">
@@ -210,6 +213,12 @@
       <Filter>Header Files\utilities</Filter>
     </ClInclude>
     <ClInclude Include="..\src\kmlToGeoJSONConverter.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\geometryReducer.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="..\src\point.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

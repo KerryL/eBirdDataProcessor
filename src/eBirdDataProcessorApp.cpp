@@ -144,7 +144,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			config.stateFilter, config.countyFilter));
 		if (!processor.FindBestLocationsForNeededSpecies(
 			config.frequencyFilePath, config.kmlLibraryPath, config.eBirdApiKey, regionCodes,
-			config.highDetailCountries, config.cleanupKMLLocationNames, config.geoJSONPrecision))
+			config.highDetailCountries, config.cleanupKMLLocationNames, config.geoJSONPrecision, config.kmlReductionLimit))
 			return 1;
 	}
     else if (config.generateTargetCalendar)

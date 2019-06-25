@@ -1,16 +1,17 @@
 // File:  kmlToGeoJSONConverter.cpp
-// Date:  3/9/2018
+// Date:  3/9/2019
 // Auth:  K. Loux
 // Desc:  Converts KML to GeoJSON coordinate arrays.
 
 // Local headers
 #include "kmlToGeoJSONConverter.h"
+#include "geometryReducer.h"
 
 // Standard C++ headers
 #include <iostream>
 #include <sstream>
 
-KMLToGeoJSONConverter::KMLToGeoJSONConverter(const std::string& kml)
+KMLToGeoJSONConverter::KMLToGeoJSONConverter(const std::string& kml, const double& reductionLimit) : reductionLimit(reductionLimit)
 {
 	kmlParsedOK = ParseKML(kml);
 }
@@ -31,6 +32,12 @@ bool KMLToGeoJSONConverter::ParseKML(const std::string& kml)
 			while (ExtractCoordinates(kml, position, point))
 				polygons.back().back().push_back(point);
 			lrPosition = position;
+
+			if (reductionLimit > 0.0)
+			{
+				GeometryReducer reducer(reductionLimit);
+				reducer.Reduce(polygons.back().back());
+			}
 		}
 		polygonPosition = lrPosition;
 	}
@@ -148,4 +155,24 @@ cJSON* KMLToGeoJSONConverter::GetGeoJSON() const
 	}
 
 	return geometry;
+}
+
+std::string KMLToGeoJSONConverter::GetKML() const
+{
+	std::ostringstream ss;
+	ss << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>\n<kml xmlns=\"http://www.opengis.net/kml/2.2\">\n  <Placemark>\n    <MultiGeometry>";
+
+	for (const auto& p : polygons)
+	{
+		for (const auto& lr : p)
+		{
+			ss << "<Polygon><outerBoundaryIs><LinearRing><coordinates>";
+			for (const auto& point : lr)
+				ss << point.x << ',' << point.y << ' ';
+			ss << "</coordinates></LinearRing></outerBoundaryIs></Polygon>";
+		}
+	}
+
+	ss << "\n    </MultiGeometry>\n  </Placemark>\n</kml>";
+	return ss.str();
 }

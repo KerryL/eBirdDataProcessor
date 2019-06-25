@@ -40,9 +40,9 @@ const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = 
 
 MapPageGenerator::MapPageGenerator(const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
 	const std::vector<UString::String>& highDetailCountries,
-	const bool& cleanUpLocationNames, const int& geoJSONPrecision) : highDetailCountries(highDetailCountries),
+	const bool& cleanUpLocationNames, const int& geoJSONPrecision, const double& kmlReductionLimit) : highDetailCountries(highDetailCountries),
 	ebi(eBirdAPIKey), kmlLibrary(kmlLibraryPath, eBirdAPIKey, UString::String()/*Google maps key?*/,
-		log, cleanUpLocationNames, geoJSONPrecision)
+		log, cleanUpLocationNames, geoJSONPrecision), kmlReductionLimit(kmlReductionLimit)
 {
 	log.Add(Cout);
 	/*std::unique_ptr<UString::OFStream> f(std::make_unique<UString::OFStream>("temp.log"));// TODO:  Remove
@@ -350,7 +350,7 @@ bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 	pool.WaitForAllJobsComplete();
 
 	cJSON* geoJSON;
-	if (!CreateJSONData(countyInfo, geoJSON))
+	if (!CreateJSONData(countyInfo, kmlReductionLimit, geoJSON))
 		return false;
 
 	const auto fileName(UString::ToNarrowString(ForceTrailingSlash(outputPath) + dataFileName));
@@ -389,7 +389,7 @@ UString::String MapPageGenerator::ForceTrailingSlash(const UString::String& path
 	return path + slash;
 }
 
-bool MapPageGenerator::CreateJSONData(const std::vector<CountyInfo>& observationData, cJSON*& geoJSON)
+bool MapPageGenerator::CreateJSONData(const std::vector<CountyInfo>& observationData, const double& kmlReductionLimit, cJSON*& geoJSON)
 {
 	geoJSON = cJSON_CreateObject();
 	if (!geoJSON)
@@ -419,14 +419,14 @@ bool MapPageGenerator::CreateJSONData(const std::vector<CountyInfo>& observation
 		}
 
 		cJSON_AddItemToArray(regions, r);
-		if (!BuildObservationRecord(o, r))
+		if (!BuildObservationRecord(o, kmlReductionLimit, r))
 			return false;
 	}
 
 	return true;
 }
 
-bool MapPageGenerator::BuildObservationRecord(const CountyInfo& observation, cJSON* json)
+bool MapPageGenerator::BuildObservationRecord(const CountyInfo& observation, const double& kmlReductionLimit, cJSON* json)
 {
 	cJSON_AddStringToObject(json, "type", "Feature");
 
@@ -439,7 +439,7 @@ bool MapPageGenerator::BuildObservationRecord(const CountyInfo& observation, cJS
 
 	cJSON_AddItemToObject(json, "properties", observationData);
 
-	KMLToGeoJSONConverter kmlToGeoJson(UString::ToNarrowString(observation.geometryKML));
+	KMLToGeoJSONConverter kmlToGeoJson(UString::ToNarrowString(observation.geometryKML), kmlReductionLimit);
 	auto geometry(kmlToGeoJson.GetGeoJSON());
 	if (!geometry)
 		return false;
