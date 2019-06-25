@@ -1,5 +1,5 @@
 // File:  kmlToGeoJSONConverter.h
-// Date:  3/9/2018
+// Date:  3/9/2019
 // Auth:  K. Loux
 // Desc:  Converts KML to GeoJSON coordinate arrays.
 
@@ -8,6 +8,7 @@
 
 // Local headers
 #include "email/cJSON/cJSON.h"
+#include "point.h"
 
 // Standard C++ headers
 #include <string>
@@ -16,19 +17,15 @@
 class KMLToGeoJSONConverter
 {
 public:
-	KMLToGeoJSONConverter(const std::string& kml);
+	KMLToGeoJSONConverter(const std::string& kml, const double& reductionLimit);
 
 	cJSON* GetGeoJSON() const;
+	std::string GetKML() const;// For testing purposes
 
 private:
+	const double reductionLimit;
 	bool kmlParsedOK;
 	bool ParseKML(const std::string& kml);
-
-	struct Point
-	{
-		double x;
-		double y;
-	};
 
 	typedef std::vector<Point> LinearRing;
 	typedef std::vector<LinearRing> Polygon;

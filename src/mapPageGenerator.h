@@ -24,7 +24,7 @@ class MapPageGenerator
 public:
 	MapPageGenerator(const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
 		const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames,
-		const int& geoJSONPrecision);
+		const int& geoJSONPrecision, const double& kmlReductionLimit);
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
 	bool WriteBestLocationsViewerPage(const UString::String& outputPath,
@@ -93,8 +93,8 @@ private:
 		std::array<MonthInfo, 12> monthInfo;
 	};
 
-	static bool CreateJSONData(const std::vector<CountyInfo>& observationData, cJSON*& geoJSON);
-	static bool BuildObservationRecord(const CountyInfo& observation, cJSON* json);
+	static bool CreateJSONData(const std::vector<CountyInfo>& observationData, const double& kmlReductionLimit, cJSON*& geoJSON);
+	static bool BuildObservationRecord(const CountyInfo& observation, const double& kmlReductionLimit, cJSON* json);
 	static bool BuildMonthInfo(CountyInfo::MonthInfo monthInfo, cJSON* json);
 
 	static UString::String ForceTrailingSlash(const UString::String& path);
@@ -106,6 +106,7 @@ private:
 	};
 
 	KMLLibraryManager kmlLibrary;
+	const double kmlReductionLimit;
 
 	void LookupAndAssignKML(CountyInfo& data);
 

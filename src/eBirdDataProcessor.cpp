@@ -1490,7 +1490,7 @@ bool EBirdDataProcessor::RegionCodeMatches(const UString::String& regionCode, co
 
 bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
 	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes,
-	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames, const int& geoJSONPrecision) const
+	const std::vector<UString::String>& highDetailCountries, const bool& cleanUpLocationNames, const int& geoJSONPrecision, const double& kmlReductionLimit) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
@@ -1551,7 +1551,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 
 	const UString::String fileName(_T("."));
 	if (!WriteBestLocationsViewerPage(fileName, kmlLibraryPath, eBirdAPIKey,
-		newSightingProbability, highDetailCountries, cleanUpLocationNames, geoJSONPrecision))
+		newSightingProbability, highDetailCountries, cleanUpLocationNames, geoJSONPrecision, kmlReductionLimit))
 	{
 		Cerr << "Faild to create best locations page\n";
 	}
@@ -1625,7 +1625,7 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 			continue;
 		}
 
-		const double thresholdFrequency(2.0);// This could be tuned, which means maybe it shouldn't be hard-coded
+		const double thresholdFrequency(1.0);// This could be tuned, which means maybe it shouldn't be hard-coded
 		double product(1.0);
 		for (const auto& entry : frequencyData[i])
 		{
@@ -1646,9 +1646,9 @@ bool EBirdDataProcessor::WriteBestLocationsViewerPage(const UString::String& htm
 	const UString::String& kmlLibraryPath, const UString::String& eBirdAPIKey,
 	const std::vector<YearFrequencyInfo>& observationProbabilities,
 	const std::vector<UString::String>& highDetailCountries,
-	const bool& cleanUpLocationNames, const int& geoJSONPrecision)
+	const bool& cleanUpLocationNames, const int& geoJSONPrecision, const double& kmlReductionLimit)
 {
-	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, highDetailCountries, cleanUpLocationNames, geoJSONPrecision);
+	MapPageGenerator generator(kmlLibraryPath, eBirdAPIKey, highDetailCountries, cleanUpLocationNames, geoJSONPrecision, kmlReductionLimit);
 	return generator.WriteBestLocationsViewerPage(htmlFileName, observationProbabilities);
 }
 

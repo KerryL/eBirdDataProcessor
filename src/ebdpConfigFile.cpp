@@ -54,6 +54,7 @@ void EBDPConfigFile::BuildConfigItems()
 
 	AddConfigItem(_T("FIND_MAX_NEEDS"), config.findMaxNeedsLocations);
 	AddConfigItem(_T("KML_LIBRARY"), config.kmlLibraryPath);
+	AddConfigItem(_T("KML_REDUCTION_LIMIT"), config.kmlReductionLimit);
 	AddConfigItem(_T("HIGH_DETAIL"), config.highDetailCountries);
 	AddConfigItem(_T("GEO_JSON_PRECISION"), config.geoJSONPrecision);
 
@@ -88,6 +89,7 @@ void EBDPConfigFile::AssignDefaults()
 
 	config.showOnlyPhotoNeeds = -1;
 	config.showOnlyAudioNeeds = -1;
+	config.kmlReductionLimit = 0.0;
 	config.findMaxNeedsLocations = false;
 	config.cleanupKMLLocationNames = false;
 	config.geoJSONPrecision = -1;

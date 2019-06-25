@@ -92,6 +92,7 @@ struct EBDPConfig
 	UString::String eBirdApiKey;
 
 	bool findMaxNeedsLocations;
+	double kmlReductionLimit;
 	UString::String kmlLibraryPath;
 	int geoJSONPrecision;
 
