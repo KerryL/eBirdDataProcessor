@@ -55,9 +55,15 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("FIND_MAX_NEEDS"), config.findMaxNeedsLocations);
 	AddConfigItem(_T("CLEANUP_KML_NAMES"), config.locationFindingParameters.cleanupKMLLocationNames);
 	AddConfigItem(_T("KML_REDUCTION_LIMIT"), config.locationFindingParameters.kmlReductionLimit);
-	AddConfigItem(_T("HIGH_DETAIL"), config.locationFindingParameters.highDetailCountries);
 	AddConfigItem(_T("GEO_JSON_PRECISION"), config.locationFindingParameters.geoJSONPrecision);
 	AddConfigItem(_T("KML_LIBRARY"), config.locationFindingParameters.kmlLibraryPath);
+
+	AddConfigItem(_T("HIGH_DETAIL"), config.highDetailCountries);
+
+	AddConfigItem(_T("FIND_BEST_TRIPS"), config.findBestTripLocations);
+	AddConfigItem(_T("TOP_LOCATION_COUNT"), config.bestTripParameters.topLocationCount);
+	AddConfigItem(_T("MIN_OBS_COUNT"), config.bestTripParameters.minimumObservationCount);
+	AddConfigItem(_T("MIN_LIKLIHOOD"), config.bestTripParameters.minimumLiklihood);
 
 	AddConfigItem(_T("EBIRD_API_KEY"), config.eBirdApiKey);
 	
@@ -100,6 +106,11 @@ void EBDPConfigFile::AssignDefaults()
 	config.locationFindingParameters.cleanupKMLLocationNames = false;
 	config.locationFindingParameters.geoJSONPrecision = -1;
 
+	config.findBestTripLocations = false;
+	config.bestTripParameters.minimumLiklihood = 5.0;
+	config.bestTripParameters.minimumObservationCount = 2000;
+	config.bestTripParameters.topLocationCount = 10;
+
 	config.doComparison = false;
 }
 
@@ -120,6 +131,9 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 
 	if (!RaritiesConfigIsOK())
+		configurationOK = false;
+
+	if (!BestTripConfigIsOK())
 		configurationOK = false;
 
 	return configurationOK;
@@ -220,11 +234,11 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 		configurationOK = false;
 	}
 
-	for (const auto& c : config.locationFindingParameters.highDetailCountries)
+	for (const auto& c : config.highDetailCountries)
 	{
 		if (c.length() != 2)
 		{
-			Cerr << GetKey(config.locationFindingParameters.highDetailCountries) << " must use 2-letter country codes\n";
+			Cerr << GetKey(config.highDetailCountries) << " must use 2-letter country codes\n";
 			configurationOK = false;
 			break;
 		}
@@ -364,6 +378,34 @@ bool EBDPConfigFile::RaritiesConfigIsOK()
 	if (config.uniqueObservations != EBDPConfig::UniquenessType::None)
 	{
 		Cerr << "Cannot specify both " << GetKey(config.generateRarityScores) << " and " << GetKey(config.uniqueObservations) << '\n';
+		configurationOK = false;
+	}
+
+	return configurationOK;
+}
+
+bool EBDPConfigFile::BestTripConfigIsOK()
+{
+	if (!config.findBestTripLocations)
+		return true;
+
+	bool configurationOK(true);
+
+	if (config.frequencyFilePath.empty())
+	{
+		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.findBestTripLocations) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.outputFileName.empty())
+	{
+		Cerr << "Must specify " << GetKey(config.outputFileName) << " when using " << GetKey(config.findBestTripLocations) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.eBirdApiKey.empty())
+	{
+		Cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.findBestTripLocations) << '\n';
 		configurationOK = false;
 	}
 

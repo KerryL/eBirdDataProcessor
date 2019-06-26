@@ -32,6 +32,7 @@ private:
 	bool FindMaxNeedsConfigIsOK();
 	bool GeneralConfigIsOK();
 	bool RaritiesConfigIsOK();
+	bool BestTripConfigIsOK();
 };
 
 #endif// EBDP_CONFIG_FILE_H_

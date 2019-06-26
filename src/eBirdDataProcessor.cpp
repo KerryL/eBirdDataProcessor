@@ -1484,9 +1484,9 @@ bool EBirdDataProcessor::RegionCodeMatches(const UString::String& regionCode, co
 	return false;
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-	const LocationFindingParameters& locationFindingParameters, const UString::String& eBirdAPIKey,
-	const std::vector<UString::String>& targetRegionCodes) const
+bool EBirdDataProcessor::GatherFrequencyData(const UString::String& frequencyFilePath,
+	const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
+	const double& minLikilihood, const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const
 {
 	auto fileNames(ListFilesInDirectory(frequencyFilePath));
 	if (fileNames.size() == 0)
@@ -1495,13 +1495,13 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	fileNames.erase(std::remove_if(fileNames.begin(), fileNames.end(), IsNotBinFile), fileNames.end());
 	RemoveHighLevelFiles(fileNames);
 
-	std::vector<YearFrequencyInfo> newSightingProbability(fileNames.size());// frequency is probability of seeing new species and species is file name of frequency data file
+	frequencyInfo.resize(fileNames.size());
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 	FrequencyFileReader reader(frequencyFilePath);
 
 	std::unordered_map<UString::String, ConsolidationData> consolidatationData;
 
-	auto probEntryIt(newSightingProbability.begin());
+	auto probEntryIt(frequencyInfo.begin());
 	for (const auto& f : fileNames)
 	{
 		FrequencyDataYear occurrenceData;
@@ -1514,13 +1514,14 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 			return false;
 
 		const auto countryCode(Utilities::ExtractCountryFromRegionCode(regionCode));
-		const bool useHighDetail(std::find(locationFindingParameters.highDetailCountries.begin(),
-			locationFindingParameters.highDetailCountries.end(), countryCode) != locationFindingParameters.highDetailCountries.end());
+		const bool useHighDetail(std::find(highDetailCountries.begin(),
+			highDetailCountries.end(), countryCode) != highDetailCountries.end());
 
 		if (useHighDetail)
 		{
 			probEntryIt->locationCode = RemoveTrailingDash(regionCode);
-			pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData), std::move(checklistCounts), *this));
+			pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData),
+				std::move(checklistCounts), minLikilihood, minObservationCount, *this));
 			++probEntryIt;
 		}
 		else
@@ -1539,16 +1540,29 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	for (auto& f : consolidatationData)
 	{
 		probEntryIt->locationCode = f.first;
-		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(f.second.occurrenceData), std::move(f.second.checklistCounts), *this));
+		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(f.second.occurrenceData),
+			std::move(f.second.checklistCounts), minLikilihood, minObservationCount, *this));
 		++probEntryIt;
 	}
 
 	pool.WaitForAllJobsComplete();
-	newSightingProbability.erase(probEntryIt, newSightingProbability.end());// Remove extra entries (only needed if every country were done in high detail)
+	frequencyInfo.erase(probEntryIt, frequencyInfo.end());// Remove extra entries (only needed if every country were done in high detail)
 
-	if (!WriteBestLocationsViewerPage(locationFindingParameters, eBirdAPIKey, newSightingProbability))
+	return true;
+}
+
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
+	const LocationFindingParameters& locationFindingParameters, const std::vector<UString::String>& highDetailCountries,
+	const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes) const
+{
+	std::vector<YearFrequencyInfo> newSightingProbability;
+	if (!GatherFrequencyData(frequencyFilePath, targetRegionCodes, highDetailCountries, 1.0, 30, newSightingProbability))// TODO:  Don't hardcode
+		return false;
+
+	if (!WriteBestLocationsViewerPage(locationFindingParameters, highDetailCountries, eBirdAPIKey, newSightingProbability))
 	{
 		Cerr << "Faild to create best locations page\n";
+		return false;
 	}
 
 	return true;
@@ -1605,22 +1619,19 @@ void EBirdDataProcessor::AddConsolidationData(ConsolidationData& existingData,
 }
 
 bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
-	DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
-	std::array<std::vector<FrequencyInfo>, 12>& species) const
+	DoubleYear&& checklistCounts, const double& thresholdFrequency, const unsigned int& thresholdObservationCount,
+	std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const
 {
 	EliminateObservedSpecies(frequencyData);
 
-	unsigned int i(0);
-	for (auto& p : probabilities)
+	for (unsigned int i = 0; i < probabilities.size(); ++i)
 	{
-		const unsigned int thresholdObservationCount(30);
-		if (checklistCounts[i] < thresholdObservationCount)// Ignore counties which have very few observations (due to insufficient data)
+		if (checklistCounts[i] < thresholdObservationCount)// Ignore counties which have very few observations (due to insufficient data) (TODO)
 		{
-			p = 0.0;
+			probabilities[i] = 0.0;
 			continue;
 		}
 
-		const double thresholdFrequency(1.0);// This could be tuned, which means maybe it shouldn't be hard-coded
 		double product(1.0);
 		for (const auto& entry : frequencyData[i])
 		{
@@ -1630,17 +1641,17 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 			species[i].push_back(FrequencyInfo(entry.species, entry.frequency));
 		}
 
-		p = 1.0 - product;
-		++i;
+		probabilities[i] = 1.0 - product;
 	}
 
 	return true;
 }
 
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const LocationFindingParameters& locationFindingParameters,
-	const UString::String& eBirdAPIKey, const std::vector<YearFrequencyInfo>& observationProbabilities)
+	const std::vector<UString::String>& highDetailCountries, const UString::String& eBirdAPIKey,
+	const std::vector<YearFrequencyInfo>& observationProbabilities)
 {
-	MapPageGenerator generator(locationFindingParameters, eBirdAPIKey);
+	MapPageGenerator generator(locationFindingParameters, highDetailCountries, eBirdAPIKey);
 	const UString::String htmlOutputPath(_T("."));
 	return generator.WriteBestLocationsViewerPage(htmlOutputPath, observationProbabilities);
 }
@@ -1773,4 +1784,57 @@ void EBirdDataProcessor::FilterYear(const unsigned int& year, std::vector<Entry>
 	{
 		return static_cast<unsigned int>(entry.dateTime.tm_year) + 1900U != year;
 	}), dataToFilter.end());
+}
+
+bool EBirdDataProcessor::FindBestTripLocations(const UString::String& frequencyFilePath,
+	const BestTripParameters& bestTripParameters, const std::vector<UString::String>& highDetailCountries,
+	const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName) const
+{
+	std::vector<YearFrequencyInfo> newSightingProbability;
+	if (!GatherFrequencyData(frequencyFilePath, targetRegionCodes, highDetailCountries,
+		bestTripParameters.minimumLiklihood, bestTripParameters.minimumObservationCount, newSightingProbability))
+		return false;
+
+	// Generate an index list for each month and sort it based on # of species for each location
+	std::array<std::vector<unsigned int>, 12> indexList;
+	for (unsigned int i = 0; i < 12; ++i)
+	{
+		indexList[i].resize(newSightingProbability.size());
+		std::iota(indexList[i].begin(), indexList[i].end(), 0);
+
+		std::sort(indexList[i].begin(), indexList[i].end(), [&newSightingProbability, i](const unsigned int& a, const unsigned int& b)
+		{
+			return newSightingProbability[a].frequencyInfo[i].size() > newSightingProbability[b].frequencyInfo[i].size();
+		});
+	}
+
+	UString::OFStream outFile(UString::ToNarrowString(outputFileName));
+	if (!outFile.good() || !outFile.is_open())
+	{
+		Cerr << "Failed to open '" << outputFileName << "' for output\n";
+		return false;
+	}
+
+	outFile << "January,"
+		<< "February,"
+		<< "March,"
+		<< "April,"
+		<< "May,"
+		<< "June,"
+		<< "July,"
+		<< "August,"
+		<< "September,"
+		<< "October,"
+		<< "November,"
+		<< "December,";
+	outFile << std::endl;
+
+	for (unsigned int i = 0; i < bestTripParameters.topLocationCount; ++i)
+	{
+		for (unsigned int j = 0; j < 12; ++j)
+			outFile << newSightingProbability[indexList[j][i]].locationCode << " (" << newSightingProbability[indexList[j][i]].frequencyInfo[j].size() << "),";
+		outFile << '\n';
+	}
+
+	return true;
 }

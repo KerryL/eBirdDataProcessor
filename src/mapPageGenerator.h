@@ -22,7 +22,8 @@
 class MapPageGenerator
 {
 public:
-	MapPageGenerator(const LocationFindingParameters& locationFindingParameters, const UString::String& eBirdAPIKey);
+	MapPageGenerator(const LocationFindingParameters& locationFindingParameters,
+		const std::vector<UString::String>& highDetailCountries, const UString::String& eBirdAPIKey);
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
 	bool WriteBestLocationsViewerPage(const UString::String& outputPath,
