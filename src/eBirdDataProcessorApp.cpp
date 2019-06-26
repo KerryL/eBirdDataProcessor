@@ -164,7 +164,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		EBirdInterface ebi(config.eBirdApiKey);
 		const auto regionCodes(ebi.GetRegionCodes(config.locationFilters.country,
 			config.locationFilters.state, config.locationFilters.county));
-		if (!processor.FindBestTripLocations(config.frequencyFilePath, config.bestTripParameters, config.highDetailCountries, regionCodes, config.outputFileName))
+		if (!processor.FindBestTripLocations(config.frequencyFilePath, config.bestTripParameters,
+			config.highDetailCountries, regionCodes, config.outputFileName, config.eBirdApiKey))
 			return 1;
 	}
 	else if (config.doComparison)

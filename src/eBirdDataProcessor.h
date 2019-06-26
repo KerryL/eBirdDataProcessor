@@ -69,7 +69,7 @@ public:
 
 	bool FindBestTripLocations(const UString::String& frequencyFilePath,
 		const BestTripParameters& bestTripParameters, const std::vector<UString::String>& highDetailCountries,
-		const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName) const;
+		const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName, const UString::String& eBirdApiKey) const;
 		
 	static UString::String PrepareForComparison(const UString::String& commonName);
 
