@@ -64,8 +64,12 @@ public:
 		const UString::String& eBirdApiKey) const;
 
 	bool FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-		const LocationFindingParameters& locationFindingParameters, const UString::String& eBirdAPIKey,
-		const std::vector<UString::String>& targetRegionCodes) const;
+		const LocationFindingParameters& locationFindingParameters, const std::vector<UString::String>& highDetailCountries,
+		const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes) const;
+
+	bool FindBestTripLocations(const UString::String& frequencyFilePath,
+		const BestTripParameters& bestTripParameters, const std::vector<UString::String>& highDetailCountries,
+		const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName) const;
 		
 	static UString::String PrepareForComparison(const UString::String& commonName);
 
@@ -185,28 +189,36 @@ private:
 		bool operator()(const EBirdInterface::LocationInfo& a, const EBirdInterface::LocationInfo& b) const;
 	};
 
-	bool ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
-		DoubleYear&& checklistCounts, std::array<double, 12>& probabilities,
-		std::array<std::vector<FrequencyInfo>, 12>& species) const;
+	bool ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData, DoubleYear&& checklistCounts,
+		const double& thresholdFrequency, const unsigned int& thresholdObservationCount,
+		std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const;
 
 	static bool WriteBestLocationsViewerPage(const LocationFindingParameters& locationFindingParameters,
+		const std::vector<UString::String>& highDetailCountries,
 		const UString::String& eBirdAPIKey, const std::vector<YearFrequencyInfo>& observationProbabilities);
 
 	class CalculateProbabilityJob : public ThreadPool::JobInfoBase
 	{
 	public:
 		CalculateProbabilityJob(YearFrequencyInfo& frequencyInfo, FrequencyDataYear&& occurrenceData,
-			DoubleYear&& checklistCounts, const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo),
-			occurrenceData(occurrenceData), checklistCounts(checklistCounts), ebdp(ebdp) {}
+			DoubleYear&& checklistCounts, const double& thresholdFrequency,
+			const unsigned int& thresholdObservationCount,const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo),
+			occurrenceData(occurrenceData), checklistCounts(checklistCounts),
+			thresholdFrequency(thresholdFrequency), thresholdObservationCount(thresholdObservationCount), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
 		FrequencyDataYear occurrenceData;
 		DoubleYear checklistCounts;
+
+		const double thresholdFrequency;
+		const unsigned int thresholdObservationCount;
+
 		const EBirdDataProcessor& ebdp;
 
 		void DoJob() override
 		{
 			ebdp.ComputeNewSpeciesProbability(std::move(occurrenceData), std::move(checklistCounts),
+				thresholdFrequency, thresholdObservationCount,
 				frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
 		}
 	};
@@ -285,6 +297,10 @@ private:
 	static void AddConsolidationData(ConsolidationData& existingData, FrequencyDataYear&& newData, std::array<double, 12>&& newCounts);
 	static void ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 12>& counts);
 	static void ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 12>& counts);
+
+	bool GatherFrequencyData(const UString::String& frequencyFilePath,
+		const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
+		const double& minLikilihood, const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const;
 };
 
 template<typename T>

@@ -143,7 +143,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		const auto regionCodes(ebi.GetRegionCodes(config.locationFilters.country,
 			config.locationFilters.state, config.locationFilters.county));
 		if (!processor.FindBestLocationsForNeededSpecies(
-			config.frequencyFilePath, config.locationFindingParameters, config.eBirdApiKey, regionCodes))
+			config.frequencyFilePath, config.locationFindingParameters, config.highDetailCountries, config.eBirdApiKey, regionCodes))
 			return 1;
 	}
     else if (config.generateTargetCalendar)
@@ -158,6 +158,14 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			config.outputFileName, config.frequencyFilePath,
 			config.locationFilters.country.front(), config.locationFilters.state.empty() ? UString::String() : config.locationFilters.state.front(),
 			config.locationFilters.county.empty() ? UString::String() : config.locationFilters.county.front(), config.eBirdApiKey);
+	}
+	else if (config.findBestTripLocations)
+	{
+		EBirdInterface ebi(config.eBirdApiKey);
+		const auto regionCodes(ebi.GetRegionCodes(config.locationFilters.country,
+			config.locationFilters.state, config.locationFilters.county));
+		if (!processor.FindBestTripLocations(config.frequencyFilePath, config.bestTripParameters, config.highDetailCountries, regionCodes, config.outputFileName))
+			return 1;
 	}
 	else if (config.doComparison)
 		processor.DoListComparison();

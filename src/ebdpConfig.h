@@ -32,8 +32,6 @@ struct TimeOfDayParameters
 struct LocationFindingParameters
 {
 	bool cleanupKMLLocationNames;
-	std::vector<UString::String> highDetailCountries;
-
 	UString::String kmlLibraryPath;
 	double kmlReductionLimit;
 	int geoJSONPrecision;
@@ -47,6 +45,13 @@ struct CalendarParameters
 
 	UString::String googleMapsAPIKey;
 	UString::String homeLocation;
+};
+
+struct BestTripParameters
+{
+	unsigned int topLocationCount;
+	double minimumLiklihood;
+	unsigned int minimumObservationCount;
 };
 
 struct EBDPConfig
@@ -125,6 +130,10 @@ struct EBDPConfig
 
 	bool findMaxNeedsLocations;
 	LocationFindingParameters locationFindingParameters;
+	std::vector<UString::String> highDetailCountries;
+
+	bool findBestTripLocations;
+	BestTripParameters bestTripParameters;
 
 	UString::String eBirdDatasetPath;
 	
