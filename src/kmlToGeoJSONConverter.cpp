@@ -39,7 +39,7 @@ bool KMLToGeoJSONConverter::ParseKML(const std::string& kml)
 				reducer.Reduce(polygons.back().back());
 			}
 		}
-		polygonPosition = lrPosition;
+		//polygonPosition = lrPosition;// This was a bug - it sometimes advances too far, resulting in skipped polygons
 	}
 
 	return true;
