@@ -23,6 +23,7 @@ const UString::String EBirdInterface::recentPath(_T("recent/"));
 const UString::String EBirdInterface::taxonomyLookupEndpoint(_T("ref/taxonomy/ebird"));
 const UString::String EBirdInterface::regionReferenceEndpoint(_T("ref/region/list/"));
 const UString::String EBirdInterface::hotspotReferenceEndpoint(_T("ref/hotspot/"));
+const UString::String EBirdInterface::regionInfoEndpoint(_T("ref/region/info/"));
 
 const UString::String EBirdInterface::speciesCodeTag(_T("speciesCode"));
 const UString::String EBirdInterface::commonNameTag(_T("comName"));
@@ -46,6 +47,7 @@ const UString::String EBirdInterface::subNational2TypeName(_T("subnational2"));
 
 const UString::String EBirdInterface::nameTag(_T("name"));
 const UString::String EBirdInterface::codeTag(_T("code"));
+const UString::String EBirdInterface::resultTag(_T("result"));
 
 const UString::String EBirdInterface::errorTag(_T("errors"));
 const UString::String EBirdInterface::titleTag(_T("title"));
@@ -848,4 +850,31 @@ EBirdInterface::Protocol EBirdInterface::MapProtocolCodeToProtocol(const std::st
 		return Protocol::TricoloredBlackbirdWinterSurvey;
 
 	return Protocol::Other;
+}
+
+UString::String EBirdInterface::GetRegionName(const UString::String& code) const
+{
+	UString::OStringStream request;
+	request << apiRoot << regionInfoEndpoint << code;
+
+	std::string response;
+	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
+		return code;
+
+	cJSON *root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		Cerr << "Failed to parse returned string (GetRegionName())\n";
+		Cerr << response.c_str() << '\n';
+		return code;
+	}
+
+	UString::String name;
+	if (!ReadJSON(root, resultTag, name))
+	{
+		Cerr << "Failed to get result of GetRegionName()\n";
+		return code;
+	}
+
+	return name;
 }

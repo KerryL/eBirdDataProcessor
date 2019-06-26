@@ -115,6 +115,8 @@ public:
 	UString::String GetStateCode(const UString::String& countryCode, const UString::String& state);
 	UString::String GetCountyCode(const UString::String& stateCode, const UString::String& county);
 
+	UString::String GetRegionName(const UString::String& code) const;
+
 private:
 	static const UString::String apiRoot;
 	static const UString::String observationDataPath;
@@ -122,6 +124,7 @@ private:
 	static const UString::String taxonomyLookupEndpoint;
 	static const UString::String regionReferenceEndpoint;
 	static const UString::String hotspotReferenceEndpoint;
+	static const UString::String regionInfoEndpoint;
 
 	static const UString::String speciesCodeTag;
 	static const UString::String commonNameTag;
@@ -145,6 +148,7 @@ private:
 
 	static const UString::String nameTag;
 	static const UString::String codeTag;
+	static const UString::String resultTag;
 
 	static const UString::String errorTag;
 	static const UString::String titleTag;

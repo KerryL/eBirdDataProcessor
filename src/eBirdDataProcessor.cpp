@@ -1788,7 +1788,7 @@ void EBirdDataProcessor::FilterYear(const unsigned int& year, std::vector<Entry>
 
 bool EBirdDataProcessor::FindBestTripLocations(const UString::String& frequencyFilePath,
 	const BestTripParameters& bestTripParameters, const std::vector<UString::String>& highDetailCountries,
-	const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName) const
+	const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName, const UString::String& eBirdApiKey) const
 {
 	std::vector<YearFrequencyInfo> newSightingProbability;
 	if (!GatherFrequencyData(frequencyFilePath, targetRegionCodes, highDetailCountries,
@@ -1829,10 +1829,12 @@ bool EBirdDataProcessor::FindBestTripLocations(const UString::String& frequencyF
 		<< "December,";
 	outFile << std::endl;
 
+	EBirdInterface ebi(eBirdApiKey);
+
 	for (unsigned int i = 0; i < bestTripParameters.topLocationCount; ++i)
 	{
 		for (unsigned int j = 0; j < 12; ++j)
-			outFile << newSightingProbability[indexList[j][i]].locationCode << " (" << newSightingProbability[indexList[j][i]].frequencyInfo[j].size() << "),";
+			outFile << ebi.GetRegionName(newSightingProbability[indexList[j][i]].locationCode) << " (" << newSightingProbability[indexList[j][i]].frequencyInfo[j].size() << "),";
 		outFile << '\n';
 	}
 
