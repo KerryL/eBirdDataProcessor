@@ -1834,7 +1834,7 @@ bool EBirdDataProcessor::FindBestTripLocations(const UString::String& frequencyF
 	for (unsigned int i = 0; i < bestTripParameters.topLocationCount; ++i)
 	{
 		for (unsigned int j = 0; j < 12; ++j)
-			outFile << ebi.GetRegionName(newSightingProbability[indexList[j][i]].locationCode) << " (" << newSightingProbability[indexList[j][i]].frequencyInfo[j].size() << "),";
+			outFile << '"' << ebi.GetRegionName(newSightingProbability[indexList[j][i]].locationCode) << "\" (" << newSightingProbability[indexList[j][i]].frequencyInfo[j].size() << "),";
 		outFile << '\n';
 	}
 
