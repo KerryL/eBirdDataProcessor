@@ -8,6 +8,7 @@
 
 // Standard C++ headers
 #include <stack>
+#include <cmath>
 
 const std::vector<Point>::size_type GeometryReducer::sizeThreshold(20);
 
