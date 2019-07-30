@@ -76,8 +76,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	}
 
 	EBirdDataProcessor processor;
-	/*if (!processor.Parse(config.dataFileName))
-		return 1;*/// TODO:  Uncomment!
+	if (!processor.Parse(config.dataFileName))
+		return 1;
 
 	if (config.uniqueObservations != EBDPConfig::UniquenessType::None)
 		processor.GenerateUniqueObservationsReport(config.uniqueObservations);

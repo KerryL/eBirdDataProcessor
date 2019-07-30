@@ -26,6 +26,7 @@
 // Standard C++ headers
 #include <cassert>
 #include <iostream>
+#include <chrono>
 
 WebSocketWrapper::~WebSocketWrapper()
 {
@@ -100,4 +101,32 @@ int WebSocketWrapper::GetID(const std::string& json)
 		return -1;
 
 	return idItem->valueint;
+}
+
+bool WebSocketWrapper::ListenFor(const unsigned int& timeoutMS, ContinueMethod checkMethod)
+{
+	const auto startTime(std::chrono::steady_clock::now());
+
+	std::queue<std::string> responses;
+	auto callback([&responses](const std::string& message)
+	{
+		responses.push(message);
+	});
+
+	while (std::chrono::steady_clock::now() < startTime + std::chrono::milliseconds(timeoutMS))
+	{
+		ws->dispatch(callback);
+		ws->poll();
+
+		while (!responses.empty())
+		{
+			if (checkMethod(responses.front()))
+				return true;
+			responses.pop();
+		}
+
+		Sleep(100);// prevent busy wait
+	}
+
+	return false;
 }

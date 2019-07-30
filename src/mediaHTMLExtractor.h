@@ -54,7 +54,7 @@ private:
 	bool FocusOnElement(WebSocketWrapper& ws, cJSON* nodesArray, const std::string& nodeName, const AttributeVector& attributes);
 	bool GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID, int& x, int& y);
 	bool SimulateClick(WebSocketWrapper& ws, const int& x, const int& y);
-	bool WaitForPageLoaded();
+	bool WaitForPageLoaded(WebSocketWrapper& ws);
 
 	bool GetElementNodeID(cJSON* nodesArray, const std::string& nodeName, const AttributeVector& attributes, int& nodeID);
 

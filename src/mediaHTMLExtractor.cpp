@@ -193,7 +193,7 @@ std::string MediaHTMLExtractor::BuildScrollIntoViewCommand(const std::string& cr
 
 bool MediaHTMLExtractor::GetCurrentHTML(WebSocketWrapper& ws, std::string& html)
 {
-	if (!WaitForPageLoaded())
+	if (!WaitForPageLoaded(ws))
 		return false;
 
 	html.clear();
@@ -302,6 +302,7 @@ bool MediaHTMLExtractor::ShowAllMediaEntries(WebSocketWrapper& ws)
 				cJSON_Delete(root);
 				continue;
 			}
+			cJSON_Delete(root);
 		}
 
 		if (!ScrollIntoView(ws, "[id=show_more]"))
@@ -309,12 +310,17 @@ bool MediaHTMLExtractor::ShowAllMediaEntries(WebSocketWrapper& ws)
 
 		int x, y;
 		if (!GetCenterOfBox(ws, nodeID, x, y))
-			return false;
+		{
+			nodeID = -1;// Not 100% sure, but sometimes this fails, so let's get a "fresh" node ID just to be sure that's not the issue
+			continue;
+			//return false;
+		}
 
 		if (!SimulateClick(ws, x, y))
 			return false;
 
-		// TODO:  May need to wait for additional components to load here?
+		if (!WaitForPageLoaded(ws))
+			return false;
 	}
 
 	return true;
@@ -760,10 +766,25 @@ bool MediaHTMLExtractor::SimulateClick(WebSocketWrapper& ws, const int& x, const
 	return true;
 }
 
-bool MediaHTMLExtractor::WaitForPageLoaded()
+bool MediaHTMLExtractor::WaitForPageLoaded(WebSocketWrapper& ws)
 {
-	// Can't do anything better here... if it's possible we're waiting on a page to load, we should loop and check for presence of a particular element
-	Sleep(1000);
+	const int timeout(10000);// [ms]
+	ws.ListenFor(timeout, [](const std::string& s)
+	{
+		cJSON* root(cJSON_Parse(s.c_str()));
+		if (!root)
+			return false;
+
+		UString::String method;
+		if (!ReadJSON(root, _T("method"), method))
+			return false;
+
+		//Cout << method << std::endl;
+		return method == _T("DOM.documentUpdate") ||
+			method == _T("DOM.pseudoElementAdded");
+	});// Never return false?
+
+	Sleep(1000);// Even though the above condition says we're loaded, add a bit of extra time here
 	return true;
 }
 
