@@ -43,6 +43,7 @@ private:
 	std::string BuildKeyInputCommand(const char& c, const std::string& type, const std::string& payloadFieldName);
 	std::string BuildSetFocusCommand(const int& nodeID);
 	std::string BuildGetBoxCommand(const int& nodeID);
+	std::string BuildScrollIntoViewCommand(const std::string& criteria);
 	std::string BuildMouseCommand(const int& x, const int& y, const std::string& action);
 
 	bool GetCurrentHTML(WebSocketWrapper& ws, std::string& html);
@@ -63,6 +64,7 @@ private:
 	bool DoEBirdLogin(WebSocketWrapper& ws);
 	bool ClickViewMediaAsList(WebSocketWrapper& ws);
 	bool ShowAllMediaEntries(WebSocketWrapper& ws);
+	bool ScrollIntoView(WebSocketWrapper& ws, const std::string& criteria);
 
 	static bool EBirdLoginSuccessful(const std::string& htmlData);
 	static void GetUserNameAndPassword(std::string& userName, std::string& password);

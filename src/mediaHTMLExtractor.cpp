@@ -184,6 +184,13 @@ std::string MediaHTMLExtractor::BuildMouseCommand(const int& x, const int& y, co
 	return ss.str();
 }
 
+std::string MediaHTMLExtractor::BuildScrollIntoViewCommand(const std::string& criteria)
+{
+	std::ostringstream ss;
+	ss << "{\"method\":\"Runtime.evaluate\",\"id\":" << commandId++ << ",\"params\":{\"expression\":\"document.querySelector('" << criteria << "').scrollIntoView()\"}}";
+	return ss.str();
+}
+
 bool MediaHTMLExtractor::GetCurrentHTML(WebSocketWrapper& ws, std::string& html)
 {
 	if (!WaitForPageLoaded())
@@ -278,9 +285,8 @@ bool MediaHTMLExtractor::ShowAllMediaEntries(WebSocketWrapper& ws)
 	// Assume we have more media items than will be display on first render
 	// This lets us wait for the page to load by looking for the "Show More" button,
 	// then continue clicking the button until it disappears (so we know all media items are shown)
-	bool stillMoreToShow(true);
 	int nodeID(-1);
-	while (nodeID < 0 || stillMoreToShow)
+	while (true)
 	{
 		Sleep(100);
 
@@ -298,8 +304,8 @@ bool MediaHTMLExtractor::ShowAllMediaEntries(WebSocketWrapper& ws)
 			}
 		}
 
-		// TODO:  Scroll so box is visible
-		// If we cannot find box, set stillMoreToShow = false;
+		if (!ScrollIntoView(ws, "[id=show_more]"))
+			break;
 
 		int x, y;
 		if (!GetCenterOfBox(ws, nodeID, x, y))
@@ -307,7 +313,21 @@ bool MediaHTMLExtractor::ShowAllMediaEntries(WebSocketWrapper& ws)
 
 		if (!SimulateClick(ws, x, y))
 			return false;
+
+		// TODO:  May need to wait for additional components to load here?
 	}
+
+	return true;
+}
+
+bool MediaHTMLExtractor::ScrollIntoView(WebSocketWrapper& ws, const std::string& criteria)
+{
+	std::string jsonResponse;
+	if (!ws.Send(BuildScrollIntoViewCommand(criteria), jsonResponse))
+		return false;
+
+	if (ResponseHasError(jsonResponse))
+		return false;
 
 	return true;
 }
@@ -323,8 +343,6 @@ bool MediaHTMLExtractor::ClickViewMediaAsList(WebSocketWrapper& ws)
 			return false;
 
 		int nodeID;
-		//if (!GetElementNodeID(nodesArray, "INPUT", AttributeVector(1, std::make_pair("id", "RadioGroup-list")), nodeID))
-		//if (!GetElementNodeID(nodesArray, "svg", AttributeVector(1, std::make_pair("class", "Icon Icon--list")), nodeID))
 		if (!GetElementNodeID(nodesArray, "use", AttributeVector(1, std::make_pair("xlink:href", "#Icon--list")), nodeID))
 		{
 			cJSON_Delete(root);
