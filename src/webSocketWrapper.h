@@ -35,6 +35,9 @@ public:
 	bool Send(const std::string& message);
 	bool Send(const std::string& message, std::string& response);
 
+	typedef bool (*ContinueMethod)(const std::string& response);
+	bool ListenFor(const unsigned int& timeoutMS, ContinueMethod checkMethod);
+
 private:
 	std::unique_ptr<easywsclient::WebSocket> ws;
 
