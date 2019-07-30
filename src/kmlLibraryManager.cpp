@@ -23,8 +23,8 @@ KMLLibraryManager::KMLLibraryManager(const UString::String& libraryPath,
 	const UString::String& eBirdAPIKey, const UString::String& mapsAPIKey,
 	std::basic_ostream<UString::String::value_type>& log, const bool& cleanUpLocationNames,
 	const int& geoJSONPrecision) : libraryPath(libraryPath),
-	log(log), cleanUpLocationNames(cleanUpLocationNames), mapsAPIRateLimiter(mapsAccessDelta),
-	mapsInterface(_T("eBirdDataProcessor"), mapsAPIKey), ebi(eBirdAPIKey), geoJSONPrecision(geoJSONPrecision)
+	log(log), cleanUpLocationNames(cleanUpLocationNames), geoJSONPrecision(geoJSONPrecision), mapsAPIRateLimiter(mapsAccessDelta),
+	mapsInterface(_T("eBirdDataProcessor"), mapsAPIKey), ebi(eBirdAPIKey)
 {
 }
 
