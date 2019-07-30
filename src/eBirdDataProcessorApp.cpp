@@ -10,6 +10,7 @@
 #include "utilities/uString.h"
 #include "eBirdDatasetInterface.h"
 #include "utilities.h"
+#include "mediaHTMLExtractor.h"
 
 // Standard C++ headers
 #include <cassert>
@@ -75,8 +76,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	}
 
 	EBirdDataProcessor processor;
-	if (!processor.Parse(config.dataFileName))
-		return 1;
+	/*if (!processor.Parse(config.dataFileName))
+		return 1;*/// TODO:  Uncomment!
 
 	if (config.uniqueObservations != EBDPConfig::UniquenessType::None)
 		processor.GenerateUniqueObservationsReport(config.uniqueObservations);
@@ -116,6 +117,9 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 
 	if (!config.mediaListHTML.empty())
 	{
+		MediaHTMLExtractor htmlExtractor;
+		if (!htmlExtractor.ExtractMediaHTML(config.mediaListHTML))
+			Cout << "Failed to download current media list HTML; continuing with existing HTML file" << std::endl;
 		processor.GenerateMediaList(config.mediaListHTML, config.mediaFileName);
 		return 0;
 	}
