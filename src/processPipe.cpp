@@ -16,6 +16,7 @@
 #else
 #include <unistd.h>
 #endif// _WIN32
+#include <fcntl.h>
 
 // Standard C++ headers
 #include <cassert>
@@ -56,7 +57,11 @@ void ProcessPipe::PipeThread(const std::string& command)
 
 	while (!stop)
 	{
-		while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()))
+#ifdef _WIN32
+		if (WaitForSingleObject(pipe.get(), 1000) == WAIT_OBJECT_0)
+#else
+		while (fgets(buffer.data(), static_cast<int>(buffer.size()), pipe.get()))// TODO:  Doesn't work properly (it blocks, so application never exits)
+#endif// _WIN32
 		{
 			std::lock_guard<std::mutex> lock(stdOutMutex);
 			stdOutBuffer += buffer.data();

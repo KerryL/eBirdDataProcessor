@@ -264,51 +264,81 @@ bool MediaHTMLExtractor::GetMediaListHTML(std::string& mediaListHTML)
 	if (!ClickViewMediaAsList(ws))
 		return false;
 
-	std::string mediaPage;
-	if (!GetCurrentHTML(ws, mediaPage))
+	if (!ShowAllMediaEntries(ws))
 		return false;
 
-	// TODO:  Keep "showing more" until all are shown
-	/*mediaListHTML = html;// TODO:  Not correct until we re-do after required clicking simulation
+	if (!GetCurrentHTML(ws, mediaListHTML))
+		return false;
 
-	std::ofstream f("mediaTest.html");// TODO:  Remove
-	f << html << std::endl;// TODO:  Remove*/
+	return true;
+}
+
+bool MediaHTMLExtractor::ShowAllMediaEntries(WebSocketWrapper& ws)
+{
+	// Assume we have more media items than will be display on first render
+	// This lets us wait for the page to load by looking for the "Show More" button,
+	// then continue clicking the button until it disappears (so we know all media items are shown)
+	bool stillMoreToShow(true);
+	int nodeID(-1);
+	while (nodeID < 0 || stillMoreToShow)
+	{
+		Sleep(100);
+
+		if (nodeID < 0)
+		{
+			cJSON* root(nullptr);
+			cJSON* nodesArray(GetDOMNodesArray(ws, root));
+			if (!nodesArray)
+				return false;
+
+			if (!GetElementNodeID(nodesArray, "BUTTON", AttributeVector(1, std::make_pair("id", "show_more")), nodeID))
+			{
+				cJSON_Delete(root);
+				continue;
+			}
+		}
+
+		// TODO:  Scroll so box is visible
+		// If we cannot find box, set stillMoreToShow = false;
+
+		int x, y;
+		if (!GetCenterOfBox(ws, nodeID, x, y))
+			return false;
+
+		if (!SimulateClick(ws, x, y))
+			return false;
+	}
 
 	return true;
 }
 
 bool MediaHTMLExtractor::ClickViewMediaAsList(WebSocketWrapper& ws)
 {
-	std::string mediaPage;
-	if (!GetCurrentHTML(ws, mediaPage))
-		return false;
-
-	cJSON* root(nullptr);
-	cJSON* nodesArray(GetDOMNodesArray(ws, root));
-	if (!nodesArray)
-		return false;
-
-	int nodeID;
-	if (!GetElementNodeID(nodesArray, "INPUT", AttributeVector(1, std::make_pair("id", "RadioGroup-list")), nodeID))
-	{
-		cJSON_Delete(root);
-		return false;
-	}
-
 	int x, y;
-	if (!GetCenterOfBox(ws, nodeID, x, y))
+	while (true)// Loop because apparently sometimes we fail to find the object after one pass?
 	{
+		cJSON* root(nullptr);
+		cJSON* nodesArray(GetDOMNodesArray(ws, root));
+		if (!nodesArray)
+			return false;
+
+		int nodeID;
+		//if (!GetElementNodeID(nodesArray, "INPUT", AttributeVector(1, std::make_pair("id", "RadioGroup-list")), nodeID))
+		//if (!GetElementNodeID(nodesArray, "svg", AttributeVector(1, std::make_pair("class", "Icon Icon--list")), nodeID))
+		if (!GetElementNodeID(nodesArray, "use", AttributeVector(1, std::make_pair("xlink:href", "#Icon--list")), nodeID))
+		{
+			cJSON_Delete(root);
+			return false;
+		}
 		cJSON_Delete(root);
-		return false;
+
+		if (GetCenterOfBox(ws, nodeID, x, y))
+			break;
 	}
 
 	if (!SimulateClick(ws, x, y))
-	{
-		cJSON_Delete(root);
 		return false;
-	}
-		
-	cJSON_Delete(root);
+	
 	return true;
 }
 
@@ -610,6 +640,7 @@ bool MediaHTMLExtractor::GetElementNodeID(cJSON* nodesArray, const std::string& 
 				continue;
 
 			const int attributeCount(cJSON_GetArraySize(attributeArray));
+			unsigned int matchCount(0);
 			for (int j = 0; j < attributeCount; j += 2)
 			{
 				cJSON* attrNameNode(cJSON_GetArrayItem(attributeArray, j));
@@ -617,7 +648,6 @@ bool MediaHTMLExtractor::GetElementNodeID(cJSON* nodesArray, const std::string& 
 				if (!attrNameNode || !attrValueNode)
 					continue;
 
-				unsigned int matchCount(0);
 				for (const auto& attr : attributes)
 				{
 					if (attr.first == std::string(attrNameNode->valuestring) &&
@@ -684,7 +714,10 @@ bool MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID,
 		cJSON* xNode(cJSON_GetArrayItem(contentQuad, i * 2));
 		cJSON* yNode(cJSON_GetArrayItem(contentQuad, i * 2 + 1));
 		if (!xNode || !yNode)
+		{
+			cJSON_Delete(root);
 			return false;
+		}
 
 		xValues[i] = xNode->valueint;
 		yValues[i] = yNode->valueint;
@@ -764,21 +797,15 @@ bool MediaHTMLExtractor::DoEBirdLogin(WebSocketWrapper& ws)
 			cJSON_Delete(root);
 			return false;
 		}
+		cJSON_Delete(root);
 
 		int x, y;
 		if (!GetCenterOfBox(ws, nodeID, x, y))
-		{
-			cJSON_Delete(root);
 			return false;
-		}
 
 		if (!SimulateClick(ws, x, y))
-		{
-			cJSON_Delete(root);
 			return false;
-		}
 		
-		cJSON_Delete(root);
 		if (!GetCurrentHTML(ws, loginPage))
 			return false;
 	}
