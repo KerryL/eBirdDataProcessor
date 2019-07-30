@@ -24,6 +24,7 @@
 
 // Standard C++ headers
 #include <memory>
+#include <queue>
 
 class WebSocketWrapper
 {
@@ -38,6 +39,7 @@ private:
 	std::unique_ptr<easywsclient::WebSocket> ws;
 
 	static int GetID(const std::string& json);
+	static bool GotResponse(std::queue<std::string>& responses, const int& targetID);
 };
 
 #endif// WEB_SOCKET_WRAPPER_H_
