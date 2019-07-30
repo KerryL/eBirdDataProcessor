@@ -88,7 +88,7 @@
       <Optimization>Disabled</Optimization>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(CURL)/include;../src;$(LIBZIP)/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
     <Link>
       <AdditionalLibraryDirectories>$(CURL)/lib;$(OPENSSL)/lib64;$(LIBZIP)/lib</AdditionalLibraryDirectories>
@@ -121,7 +121,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <SDLCheck>true</SDLCheck>
       <AdditionalIncludeDirectories>$(CURL)/include;../src;$(LIBZIP)/include</AdditionalIncludeDirectories>
-      <PreprocessorDefinitions>_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
+      <PreprocessorDefinitions>_SCL_SECURE_NO_WARNINGS;_UNICODE;UNICODE;CURL_STATICLIB;_USE_MATH_DEFINES;_CRT_SECURE_NO_WARNINGS;_WINSOCK_DEPRECATED_NO_WARNINGS;NOMINMAX;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <ShowIncludes>false</ShowIncludes>
     </ClCompile>
     <Link>
@@ -150,6 +150,9 @@
     <ClCompile Include="..\src\kmlLibraryManager.cpp" />
     <ClCompile Include="..\src\kmlToGeoJSONConverter.cpp" />
     <ClCompile Include="..\src\mapPageGenerator.cpp" />
+    <ClCompile Include="..\src\mediaHTMLExtractor.cpp" />
+    <ClCompile Include="..\src\processPipe.cpp" />
+    <ClCompile Include="..\src\robotsParser.cpp" />
     <ClCompile Include="..\src\stringUtilities.cpp" />
     <ClCompile Include="..\src\threadPool.cpp" />
     <ClCompile Include="..\src\throttledSection.cpp" />
@@ -160,6 +163,7 @@
     <ClCompile Include="..\src\utilities\mutexUtilities.cpp" />
     <ClCompile Include="..\src\utilities\profiler.cpp" />
     <ClCompile Include="..\src\utilities\uString.cpp" />
+    <ClCompile Include="..\src\webSocketWrapper.cpp" />
     <ClCompile Include="..\src\zipper.cpp" />
   </ItemGroup>
   <ItemGroup>
@@ -183,7 +187,10 @@
     <ClInclude Include="..\src\kmlToGeoJSONConverter.h" />
     <ClInclude Include="..\src\logging\combinedLogger.h" />
     <ClInclude Include="..\src\mapPageGenerator.h" />
+    <ClInclude Include="..\src\mediaHTMLExtractor.h" />
     <ClInclude Include="..\src\point.h" />
+    <ClInclude Include="..\src\processPipe.h" />
+    <ClInclude Include="..\src\robotsParser.h" />
     <ClInclude Include="..\src\stringUtilities.h" />
     <ClInclude Include="..\src\threadPool.h" />
     <ClInclude Include="..\src\throttledSection.h" />
@@ -194,6 +201,7 @@
     <ClInclude Include="..\src\utilities\mutexUtilities.h" />
     <ClInclude Include="..\src\utilities\profiler.h" />
     <ClInclude Include="..\src\utilities\uString.h" />
+    <ClInclude Include="..\src\webSocketWrapper.h" />
     <ClInclude Include="..\src\zipper.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />

@@ -7,3 +7,6 @@
 [submodule "src/logging"]
 	path = src/logging
 	url = https://github.com/KerryL/logging.git
+[submodule "easywsclient"]
+	path = easywsclient
+	url = https://github.com/dhbaird/easywsclient.git
