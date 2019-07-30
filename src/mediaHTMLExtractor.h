@@ -62,6 +62,7 @@ private:
 	bool LaunchBrowser();
 	bool DoEBirdLogin(WebSocketWrapper& ws);
 	bool ClickViewMediaAsList(WebSocketWrapper& ws);
+	bool ShowAllMediaEntries(WebSocketWrapper& ws);
 
 	static bool EBirdLoginSuccessful(const std::string& htmlData);
 	static void GetUserNameAndPassword(std::string& userName, std::string& password);
