@@ -55,30 +55,37 @@ bool WebSocketWrapper::Send(const std::string& message)
 	return true;
 }
 
+bool WebSocketWrapper::GotResponse(std::queue<std::string>& responses, const int& targetID)
+{
+	while (!responses.empty())
+	{
+		if (GetID(responses.front()) == targetID)
+			return true;
+		responses.pop();
+	}
+
+	return false;
+}
+
 bool WebSocketWrapper::Send(const std::string& message, std::string& response)
 {
-	response.clear();
-	auto callback([&response](const std::string& message)
+	std::queue<std::string> responses;
+	auto callback([&responses](const std::string& message)
 	{
-		response = message;
+		responses.push(message);
 	});
 
 	ws->poll();
 	ws->send(message);
 
-	while (response.empty() || GetID(message) != GetID(response))// TODO:  Is this OK?  No risk of infinite loop?  Calling poll with a timeout of -1 doesn't seem to be a candidate - need to call poll several times to apparently flush some buffer?
+	while (!GotResponse(responses, GetID(message)))// TODO:  Is this OK?  No risk of infinite loop?  Calling poll with a timeout of -1 doesn't seem to be a candidate - need to call poll several times to apparently flush some buffer?
 	{
 		ws->dispatch(callback);
 		ws->poll();
 		Sleep(100);// prevent busy wait
 	}
 
-	if (response.empty())
-	{
-		std::cerr << "Did not receive response from server\n";
-		return false;
-	}
-
+	response = responses.front();
 	return true;
 }
 
