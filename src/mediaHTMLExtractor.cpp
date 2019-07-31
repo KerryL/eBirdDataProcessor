@@ -8,6 +8,7 @@
 #include "mediaHTMLExtractor.h"
 #include "robotsParser.h"
 #include "webSocketWrapper.h"
+#include "stringUtilities.h"
 
 // OS headers
 #ifdef _WIN32
@@ -21,7 +22,6 @@
 // Standard C++ headers
 #include <iostream>
 #include <cassert>
-#include <stack>
 #include <numeric>
 
 const bool MediaHTMLExtractor::verbose(false);
@@ -57,12 +57,12 @@ bool MediaHTMLExtractor::ExtractMediaHTML(const UString::String& htmlFileName)
 	f.seekg(0, std::ios::beg);
 	mediaListHTML.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());//*/// For testing only
 
-	const std::string resultsListTag("<div class=\"ResultsList js-ResultsContainer\">");
-	std::string resultsList;
-	if (!ExtractTextContainedInTag(mediaListHTML, resultsListTag, resultsList))
+	const UString::String resultsListTag(_T("<div class=\"ResultsList js-ResultsContainer\">"));
+	UString::String resultsList;
+	if (!StringUtilities::ExtractTextContainedInTag(UString::ToStringType(mediaListHTML), resultsListTag, resultsList))
 		return false;
 
-	std::ofstream htmlFile(htmlFileName);
+	UString::OFStream htmlFile(htmlFileName);
 	if (!htmlFile.is_open() || !htmlFile.good())
 	{
 		Cerr << "Failed to open '" << htmlFileName << "' for output\n";
@@ -70,66 +70,6 @@ bool MediaHTMLExtractor::ExtractMediaHTML(const UString::String& htmlFileName)
 	}
 
 	htmlFile << resultsList;
-
-	return true;
-}
-
-bool MediaHTMLExtractor::ExtractTextContainedInTag(const std::string& htmlData,
-	const std::string& startTag, std::string& text)
-{
-	text.clear();
-	const auto startLocation(htmlData.find(startTag));
-	if (startLocation == std::string::npos)
-	{
-		std::cerr << "Failed to find tag '" << startTag << "' in page\n";
-		return false;
-	}
-
-	const auto endOfPureTag(htmlData.find(" ", startLocation));
-	if (endOfPureTag == std::string::npos)
-	{
-		std::cerr << "Failed to determine tag string\n";
-		return false;
-	}
-
-	const std::string trimmedStartTag(htmlData.substr(startLocation, endOfPureTag - startLocation));
-	const std::string endTag(std::string(1, trimmedStartTag.front()) + std::string("/") + trimmedStartTag.substr(1));
-	std::stack<std::string::size_type> tagStartLocations;
-	std::string::size_type position(startLocation + 1);
-	while (position < htmlData.length())
-	{
-		const auto nextStartPosition(htmlData.find(trimmedStartTag, position));
-		const auto nextEndPosition(htmlData.find(endTag, position));
-
-		if (nextStartPosition == std::string::npos ||
-			nextEndPosition == std::string::npos)
-		{
-			std::cerr << "Failed to find next tag set\n";
-			return false;
-		}
-
-		if (nextStartPosition < nextEndPosition)
-		{
-			tagStartLocations.push(nextStartPosition);
-			position = nextStartPosition + 1;
-		}
-		else if (tagStartLocations.empty())
-		{
-			text = htmlData.substr(startLocation, nextEndPosition + endTag.length() - startLocation);
-			break;
-		}
-		else
-		{
-			tagStartLocations.pop();
-			position = nextEndPosition + 1;
-		}
-	}
-
-	if (text.empty())
-	{
-		std::cerr << "Failed to find matching tag\n";
-		return false;
-	}
 
 	return true;
 }

@@ -1014,52 +1014,33 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	if (resultStartPosition == std::string::npos)
 		return false;
 
-	const UString::String playButtonStart(_T("<div class=\"Button--play\">"));
-	const auto playButtonStartPosition(html.find(playButtonStart, resultStartPosition));
-
-	const UString::String commonNameHeader(_T("<h3 class=\"SpecimenHeader-commonName\">"));
-	const auto commonNameHeaderPosition(html.find(commonNameHeader, resultStartPosition));
-	if (commonNameHeaderPosition == std::string::npos)
+	UString::String mediaEntryString;
+	if (!StringUtilities::ExtractTextContainedInTag(html.substr(position), resultStart, mediaEntryString))
 		return false;
 
-	if (playButtonStartPosition < commonNameHeaderPosition)
+	position = resultStartPosition + mediaEntryString.length();
+
+	const UString::String playButtonStart(_T("<div class=\"Button--play\">"));
+	const auto playButtonStartPosition(mediaEntryString.find(playButtonStart));
+
+	if (playButtonStartPosition != std::string::npos)
 		entry.type = MediaEntry::Type::Audio;
 	else
 		entry.type = MediaEntry::Type::Photo;
 
-	const UString::String endOfLinkStartTag(_T("\">"));
-	const auto endOfLinkPosition(html.find(endOfLinkStartTag, commonNameHeaderPosition + commonNameHeader.length()));
-
-	const UString::String endOfCommonNameBlock(_T("</h3>"));
-	const auto endOfCommonNamePosition(html.find(endOfCommonNameBlock, commonNameHeaderPosition + commonNameHeader.length()));
-	if (endOfCommonNamePosition == std::string::npos)
-		return false;
-
-	if (endOfCommonNamePosition < endOfLinkPosition)// Can happen when there is no link around the common name (like for sputs)
+	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<a href=\"https://ebird.org/species/"), entry.commonName))
 	{
-		const UString::String endOfLineTag(_T("\n"));
-		const auto commonNameEndPosition(html.find(endOfLineTag, commonNameHeaderPosition + commonNameHeader.length() + 1));
-		if (commonNameEndPosition == std::string::npos)
+		// Can happen when there is no link around the common name (like for sputs)
+		if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<h3 class=\"SpecimenHeader-commonName"), entry.commonName))
 			return false;
-
-		entry.commonName = StringUtilities::Trim(html.substr(commonNameHeaderPosition + commonNameHeader.length() + 1,
-			commonNameEndPosition - commonNameHeaderPosition - commonNameHeader.length() - 1));
-	}
-	else
-	{
-		const UString::String endOfLinkTag(_T("</a>"));
-		const auto commonNameEndPosition(html.find(endOfLinkTag, endOfLinkPosition));
-		if (commonNameEndPosition == std::string::npos)
-			return false;
-
-		entry.commonName = html.substr(endOfLinkPosition + endOfLinkStartTag.length(), commonNameEndPosition - endOfLinkPosition - endOfLinkStartTag.length());
+		entry.commonName = StringUtilities::Trim(entry.commonName);
 	}
 
 	const UString::String ratingStart(_T("<div class=\"RatingStars RatingStars-"));
-	const auto ratingStartPosition(html.find(ratingStart, endOfCommonNamePosition));
+	const auto ratingStartPosition(mediaEntryString.find(ratingStart));
 	if (ratingStartPosition != std::string::npos)
 	{
-		UString::IStringStream ss(html.substr(ratingStartPosition + ratingStart.length(), 1));
+		UString::IStringStream ss(mediaEntryString.substr(ratingStartPosition + ratingStart.length(), 1));
 		if ((ss >> entry.rating).fail())
 			return false;
 	}
@@ -1067,121 +1048,95 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 		entry.rating = 0;
 
 	const UString::String calendarLine(_T("<svg class=\"Icon Icon-calendar\" role=\"img\"><use xlink:href=\"#Icon--date\"></use></svg>"));
-	const auto calendarLinePosition(html.find(calendarLine, endOfCommonNamePosition));
-	if (calendarLinePosition == std::string::npos)
+	if (!GetValueFromLITag(mediaEntryString, calendarLine, entry.date))
 		return false;
-	UString::IStringStream ss(StringUtilities::Trim(html.substr(calendarLinePosition + calendarLine.length() + 5)));
-	if (!std::getline(ss, entry.date))
-		return false;
-	entry.date = StringUtilities::Trim(entry.date);
 
 	const UString::String locationLine(_T("<svg class=\"Icon Icon-location\" role=\"img\"><use xlink:href=\"#Icon--locationGeneric\"></use></svg>"));
-	const auto locationLinePosition(html.find(locationLine, calendarLinePosition));
-	if (locationLinePosition == std::string::npos)
-		return false;
-	ss.clear();
-	ss.str(StringUtilities::Trim(html.substr(locationLinePosition + locationLine.length() + 2)));
-	if (!std::getline(ss, entry.location))
-		return false;
-	entry.location = Utilities::Unsanitize(StringUtilities::Trim(entry.location));
-
-	const UString::String soundStart(_T("<dt>Sounds</dt>"));
-	const auto soundStartPosition(html.find(soundStart, locationLinePosition));
-
-	const UString::String ageStart(_T("<dt>Age</dt>"));
-	const auto ageStartPosition(html.find(ageStart, locationLinePosition));
-
-	const UString::String sexStart(_T("<dt>Sex</dt>"));
-	const auto sexStartPosition(html.find(sexStart, locationLinePosition));
-
-	const UString::String checklistIdStart(_T("\">eBird Checklist "));
-	const auto checklistIdPosition(html.find(checklistIdStart, locationLinePosition));
-	if (checklistIdPosition == std::string::npos)
+	if (!GetValueFromLITag(mediaEntryString, locationLine, entry.location))
 		return false;
 
-	const UString::String beginTag(_T("<dd>"));
-	const UString::String endTag(_T("</dd>"));
-	if (soundStartPosition < checklistIdPosition)
+	UString::String specimenExtra;
+	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<dl class=\"SpecimenExtra\""), specimenExtra))
+		return false;
+
+	UString::String temp;
+	if (GetDTDDValue(specimenExtra, _T("Sounds"), temp))
 	{
-		const auto startPosition(html.find(beginTag, soundStartPosition));
-		if (startPosition != std::string::npos)
-		{
-			const auto endPosition(html.find(endTag, startPosition));
-			if (endPosition != std::string::npos)
-			{
-				const UString::String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
-				if (s.compare(_T("Song")) == 0)
-					entry.sound = MediaEntry::Sound::Song;
-				else if (s.compare(_T("Call")) == 0)
-					entry.sound = MediaEntry::Sound::Call;
-				else if (s.compare(_T("Unknown")) == 0)
-					entry.sound = MediaEntry::Sound::Unknown;
-				else
-					entry.sound = MediaEntry::Sound::Other;
-			}
-		}
+		if (temp.compare(_T("Song")) == 0)
+			entry.sound = MediaEntry::Sound::Song;
+		else if (temp.compare(_T("Call")) == 0)
+			entry.sound = MediaEntry::Sound::Call;
+		else if (temp.compare(_T("Unknown")) == 0)
+			entry.sound = MediaEntry::Sound::Unknown;
+		else
+			entry.sound = MediaEntry::Sound::Other;
 	}
 
-	if (ageStartPosition < checklistIdPosition)
+	if (GetDTDDValue(specimenExtra, _T("Age"), temp))
 	{
-		const auto startPosition(html.find(beginTag, ageStartPosition));
-		if (startPosition != std::string::npos)
-		{
-			const auto endPosition(html.find(endTag, startPosition));
-			if (endPosition != std::string::npos)
-			{
-				const UString::String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
-				if (s.compare(_T("Adult")) == 0)
-					entry.age = MediaEntry::Age::Adult;
-				else if (s.compare(_T("Juvenile")) == 0)
-					entry.age = MediaEntry::Age::Juvenile;
-				else if (s.compare(_T("Immature")) == 0)
-					entry.age = MediaEntry::Age::Immature;
-				else
-					entry.age = MediaEntry::Age::Unknown;
-			}
-		}
+		if (temp.compare(_T("Adult")) == 0)
+			entry.age = MediaEntry::Age::Adult;
+		else if (temp.compare(_T("Juvenile")) == 0)
+			entry.age = MediaEntry::Age::Juvenile;
+		else if (temp.compare(_T("Immature")) == 0)
+			entry.age = MediaEntry::Age::Immature;
+		else
+			entry.age = MediaEntry::Age::Unknown;
 	}
 
-	if (sexStartPosition < checklistIdPosition)
+	if (GetDTDDValue(specimenExtra, _T("Sex"), temp))
 	{
-		const auto startPosition(html.find(beginTag, sexStartPosition));
-		if (startPosition != std::string::npos)
-		{
-			const auto endPosition(html.find(endTag, startPosition));
-			if (endPosition != std::string::npos)
-			{
-				const UString::String s(StringUtilities::Trim(html.substr(startPosition + beginTag.length(), endPosition - startPosition - beginTag.length())));
-				if (s.compare(_T("Male")) == 0)
-					entry.sex = MediaEntry::Sex::Male;
-				else if (s.compare(_T("Female")) == 0)
-					entry.sex = MediaEntry::Sex::Female;
-				else
-					entry.sex = MediaEntry::Sex::Unknown;
-			}
-		}
+		if (temp.compare(_T("Male")) == 0)
+			entry.sex = MediaEntry::Sex::Male;
+		else if (temp.compare(_T("Female")) == 0)
+			entry.sex = MediaEntry::Sex::Female;
+		else
+			entry.sex = MediaEntry::Sex::Unknown;
 	}
-
-	const UString::String endOfLinkTag(_T("</a>"));
-	const auto checklistIdEndPosition(html.find(endOfLinkTag, checklistIdPosition));
-	if (checklistIdEndPosition == std::string::npos)
+	
+	UString::String specimenLinks;
+	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<ul class=\"SpecimenLinks\""), specimenLinks))
 		return false;
 
-	entry.checklistId = html.substr(checklistIdPosition + checklistIdStart.length(), checklistIdEndPosition - checklistIdPosition - checklistIdStart.length());
-
-	const UString::String macaulayIdStart(_T("\">Macaulay Library "));
-	const auto macaulayIdPosition(html.find(macaulayIdStart, checklistIdEndPosition));
-	if (macaulayIdPosition == std::string::npos)
+	if (!StringUtilities::ExtractTextContainedInTag(specimenLinks, _T("<a href=\"https://ebird.org/view/checklist/"), temp))
 		return false;
+	entry.checklistId = GetLastWord(temp);
 
-	const auto macaulayIdEndPosition(html.find(endOfLinkTag, macaulayIdPosition));
-	if (macaulayIdEndPosition == std::string::npos)
+	if (!StringUtilities::ExtractTextContainedInTag(specimenLinks, _T("<a href=\"https://macaulaylibrary.org/asset/"), temp))
 		return false;
+	entry.macaulayId = GetLastWord(temp);
 
-	entry.macaulayId = html.substr(macaulayIdPosition + macaulayIdStart.length(), macaulayIdEndPosition - macaulayIdPosition - macaulayIdStart.length());
-
-	position = macaulayIdEndPosition;
 	return true;
+}
+
+UString::String EBirdDataProcessor::GetLastWord(const UString::String& s)
+{
+	const auto lastSpace(s.find_last_of(UString::Char(' ')));
+	if (lastSpace == std::string::npos)
+		return s;
+	return s.substr(lastSpace + 1);
+}
+
+bool EBirdDataProcessor::GetValueFromLITag(const UString::String& html, const UString::String& svgString, UString::String& value)
+{
+	const auto svgStartLocation(html.find(svgString));
+	if (svgStartLocation == std::string::npos)
+		return false;
+
+	const auto liEndLocation(html.find(_T("</li>"), svgStartLocation + svgString.length()));
+	value = StringUtilities::Trim(html.substr(svgStartLocation + svgString.length(), liEndLocation - svgStartLocation - svgString.length()));
+
+	return true;
+}
+
+bool EBirdDataProcessor::GetDTDDValue(const UString::String& html, const UString::String& label, UString::String& value)
+{
+	const auto searchString(_T("<dt>") + label + _T("</dt>"));
+	const auto labelLocation(html.find(searchString));
+	if (labelLocation == std::string::npos)
+		return false;
+
+	return StringUtilities::ExtractTextContainedInTag(html.substr(labelLocation), _T("<dd"), value);
 }
 
 UString::String EBirdDataProcessor::GetMediaTypeString(const MediaEntry::Type& type)

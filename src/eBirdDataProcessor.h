@@ -283,6 +283,9 @@ private:
 
 	static bool ExtractNextMediaEntry(const UString::String& html, std::string::size_type& position, MediaEntry& entry);
 	static void WriteNextMediaEntry(UString::OFStream& file, const MediaEntry& entry);
+	static bool GetValueFromLITag(const UString::String& html, const UString::String& svgString, UString::String& value);
+	static UString::String GetLastWord(const UString::String& s);
+	static bool GetDTDDValue(const UString::String& html, const UString::String& label, UString::String& value);
 	static UString::String GetMediaTypeString(const MediaEntry::Type& type);
 	static UString::String GetMediaAgeString(const MediaEntry::Age& age);
 	static UString::String GetMediaSexString(const MediaEntry::Sex& sex);
