@@ -50,6 +50,12 @@ bool MediaHTMLExtractor::ExtractMediaHTML(const UString::String& htmlFileName)
 	std::string mediaListHTML;
 	if (!GetMediaListHTML(mediaListHTML))
 		return false;
+	/*std::ifstream f("page.html");
+	f.seekg(0, std::ios::end);
+	std::string mediaListHTML;
+	mediaListHTML.reserve(f.tellg());
+	f.seekg(0, std::ios::beg);
+	mediaListHTML.assign(std::istreambuf_iterator<char>(f), std::istreambuf_iterator<char>());//*/// For testing only
 
 	const std::string resultsListTag("<div class=\"ResultsList js-ResultsContainer\">");
 	std::string resultsList;
@@ -87,13 +93,13 @@ bool MediaHTMLExtractor::ExtractTextContainedInTag(const std::string& htmlData,
 	}
 
 	const std::string trimmedStartTag(htmlData.substr(startLocation, endOfPureTag - startLocation));
-	const std::string endTag(trimmedStartTag.front() + "/" + trimmedStartTag.substr(1));
+	const std::string endTag(std::string(1, trimmedStartTag.front()) + std::string("/") + trimmedStartTag.substr(1));
 	std::stack<std::string::size_type> tagStartLocations;
 	std::string::size_type position(startLocation + 1);
 	while (position < htmlData.length())
 	{
 		const auto nextStartPosition(htmlData.find(trimmedStartTag, position));
-		const auto nextEndPosition(htmlData.find(trimmedStartTag, position));
+		const auto nextEndPosition(htmlData.find(endTag, position));
 
 		if (nextStartPosition == std::string::npos ||
 			nextEndPosition == std::string::npos)
@@ -103,14 +109,20 @@ bool MediaHTMLExtractor::ExtractTextContainedInTag(const std::string& htmlData,
 		}
 
 		if (nextStartPosition < nextEndPosition)
+		{
 			tagStartLocations.push(nextStartPosition);
+			position = nextStartPosition + 1;
+		}
 		else if (tagStartLocations.empty())
 		{
 			text = htmlData.substr(startLocation, nextEndPosition + endTag.length() - startLocation);
 			break;
 		}
 		else
+		{
 			tagStartLocations.pop();
+			position = nextEndPosition + 1;
+		}
 	}
 
 	if (text.empty())
