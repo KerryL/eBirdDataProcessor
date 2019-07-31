@@ -85,6 +85,7 @@ private:
 	static bool ExtractWebSocketURL(const std::string& json, UString::String& webSocketURL);
 	static bool ExtractNodeID(const std::string& json, int& nodeID);
 	static bool ExtractResult(const std::string& json, std::string& result);
+	static unsigned int CountMediaEntries(const std::string& html);
 
 	static std::chrono::steady_clock::duration GetCrawlDelay();
 

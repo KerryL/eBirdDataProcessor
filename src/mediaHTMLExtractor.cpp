@@ -113,7 +113,13 @@ bool MediaHTMLExtractor::ExtractTextContainedInTag(const std::string& htmlData,
 			tagStartLocations.pop();
 	}
 
-	return !text.empty();
+	if (text.empty())
+	{
+		std::cerr << "Failed to find matching tag\n";
+		return false;
+	}
+
+	return true;
 }
 
 std::string MediaHTMLExtractor::BuildNavigateCommand(const std::string& url)
@@ -213,21 +219,28 @@ bool MediaHTMLExtractor::GetCurrentHTML(WebSocketWrapper& ws, std::string& html)
 	
 	cJSON* resultNode(cJSON_Parse(temp.c_str()));
 	if (!resultNode)
+	{
+		std::cerr << "Failed to parse result node while getting current HTML\n";
 		return false;
+	}
+
 	cJSON* valueNode(cJSON_GetObjectItem(resultNode, "value"));
 	if (!valueNode)
 	{
+		std::cerr << "Failed to get value while getting current HTML\n";
 		cJSON_Delete(resultNode);
 		return false;
 	}
+
 	html = valueNode->valuestring;
 	cJSON_Delete(resultNode);
-
 	return true;
 }
 
 bool MediaHTMLExtractor::GetMediaListHTML(std::string& mediaListHTML)
 {
+	std::cout << "Beginning automatic retrieval of media list" << std::endl;
+
 	std::string jsonResponse;
 	UString::OStringStream ss;
 	ss << remoteDebuggingPort;
@@ -238,13 +251,19 @@ bool MediaHTMLExtractor::GetMediaListHTML(std::string& mediaListHTML)
 	if (!ExtractWebSocketURL(jsonResponse, webSocketDebuggerURL))
 		return false;
 
+	Cout << "Connecting web socket to " << webSocketDebuggerURL << std::endl;
 	WebSocketWrapper ws;
 	if (!ws.Connect(UString::ToNarrowString(webSocketDebuggerURL)))
+	{
+		std::cerr << "WebSocket failed to connect\n";
 		return false;
+	}
 
+	Cout << "Logging in to eBird" << std::endl;
 	if (!DoEBirdLogin(ws))
 		return false;
 
+	Cout << "Navigating to user profile" << std::endl;
 	if (!ws.Send(BuildNavigateCommand(eBirdProfileURL), jsonResponse))
 		return false;
 
@@ -262,6 +281,7 @@ bool MediaHTMLExtractor::GetMediaListHTML(std::string& mediaListHTML)
 		Sleep(100);
 	}
 
+	Cout << "Navigating to user media content" << std::endl;
 	if (!ws.Send(BuildNavigateCommand(ModifyMediaListLink(mediaListURL)), jsonResponse))
 		return false;
 
@@ -269,11 +289,18 @@ bool MediaHTMLExtractor::GetMediaListHTML(std::string& mediaListHTML)
 		return false;
 
 	if (!ClickViewMediaAsList(ws))
+	{
+		std::cerr << "Failed to view media items as list\n";
 		return false;
+	}
 
 	if (!ShowAllMediaEntries(ws))
+	{
+		std::cerr << "Failed to show all media entires\n";
 		return false;
+	}
 
+	Cout << "Retrieving full media page HTML" << std::endl;
 	if (!GetCurrentHTML(ws, mediaListHTML))
 		return false;
 
@@ -310,17 +337,17 @@ bool MediaHTMLExtractor::ShowAllMediaEntries(WebSocketWrapper& ws)
 
 		int x, y;
 		if (!GetCenterOfBox(ws, nodeID, x, y))
-		{
-			nodeID = -1;// Not 100% sure, but sometimes this fails, so let's get a "fresh" node ID just to be sure that's not the issue
-			continue;
-			//return false;
-		}
+			break;
 
 		if (!SimulateClick(ws, x, y))
 			return false;
 
 		if (!WaitForPageLoaded(ws))
 			return false;
+
+		std::string html;
+		if (GetCurrentHTML(ws, html))
+			Cout << "Current media count = " << CountMediaEntries(html) << std::endl;
 	}
 
 	return true;
@@ -352,7 +379,7 @@ bool MediaHTMLExtractor::ClickViewMediaAsList(WebSocketWrapper& ws)
 		if (!GetElementNodeID(nodesArray, "use", AttributeVector(1, std::make_pair("xlink:href", "#Icon--list")), nodeID))
 		{
 			cJSON_Delete(root);
-			return false;
+			continue;// This can happen if we execute too fast and the page isn't loaded yet
 		}
 		cJSON_Delete(root);
 
@@ -379,7 +406,7 @@ bool MediaHTMLExtractor::ResponseHasError(const std::string& response)
 	if (!errorNode)
 	{
 		cJSON_Delete(root);
-		return false;// If there's no error node, then there's no error
+		return false;// If there's no error node, then there's no error (so no message)
 	}
 
 	int errorNumber;
@@ -424,7 +451,10 @@ bool MediaHTMLExtractor::ExtractWebSocketURL(const std::string& json, UString::S
 	}
 
 	if (!ReadJSON(item, _T("webSocketDebuggerUrl"), webSocketURL))
+	{
+		Cerr << "Faield to read webSocketDebuggerUrl from JSON message\n";
 		return false;
+	}
 
 	cJSON_Delete(root);
 	return true;
@@ -613,6 +643,7 @@ cJSON* MediaHTMLExtractor::GetDOMNodesArray(WebSocketWrapper& ws, cJSON*& root)
 	if (!nodesArray)
 	{
 		std::cerr << "Failed to get nodes array\n";
+		cJSON_Delete(root);
 		return nullptr;
 	}
 
@@ -696,7 +727,13 @@ bool MediaHTMLExtractor::GetElementNodeID(cJSON* nodesArray, const std::string& 
 		}
 	}
 
-	return nodeID >= 0;
+	if (nodeID < 0)
+	{
+		std::cerr << "No matching node while getting node ID\n";
+		return false;
+	}
+
+	return true;
 }
 
 bool MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID, int& x, int& y)
@@ -719,6 +756,7 @@ bool MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID,
 	cJSON* model(cJSON_GetObjectItem(root, "model"));
 	if (!model)
 	{
+		std::cerr << "Failed to get model object\n";
 		cJSON_Delete(root);
 		return false;
 	}
@@ -726,6 +764,7 @@ bool MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID,
 	cJSON* contentQuad(cJSON_GetObjectItem(model, "content"));
 	if (!contentQuad)
 	{
+		std::cerr << "Failed to get content object\n";
 		cJSON_Delete(root);
 		return false;
 	}
@@ -739,6 +778,7 @@ bool MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID,
 		cJSON* yNode(cJSON_GetArrayItem(contentQuad, i * 2 + 1));
 		if (!xNode || !yNode)
 		{
+			std::cerr << "Failed to get x and y values\n";
 			cJSON_Delete(root);
 			return false;
 		}
@@ -932,4 +972,14 @@ std::chrono::steady_clock::duration MediaHTMLExtractor::GetCrawlDelay()
 	if (!parser.RetrieveRobotsTxt())
 		return std::chrono::steady_clock::duration();
 	return parser.GetCrawlDelay();
+}
+
+unsigned int MediaHTMLExtractor::CountMediaEntries(const std::string& html)
+{
+	unsigned int count(0);
+	const std::string searchKey("<div class=\"ResultsList-cell\">");
+	std::string::size_type position(0);
+	while (position = html.find(searchKey, position + 1), position != std::string::npos)
+		++count;
+	return count;
 }
