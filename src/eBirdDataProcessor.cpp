@@ -1035,7 +1035,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	if (endOfCommonNamePosition == std::string::npos)
 		return false;
 
-	if (endOfCommonNamePosition < endOfLinkPosition)// Can happend when there is no link around the common name (like for sputs)
+	if (endOfCommonNamePosition < endOfLinkPosition)// Can happen when there is no link around the common name (like for sputs)
 	{
 		const UString::String endOfLineTag(_T("\n"));
 		const auto commonNameEndPosition(html.find(endOfLineTag, commonNameHeaderPosition + commonNameHeader.length() + 1));
@@ -1073,6 +1073,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	UString::IStringStream ss(StringUtilities::Trim(html.substr(calendarLinePosition + calendarLine.length() + 5)));
 	if (!std::getline(ss, entry.date))
 		return false;
+	entry.date = StringUtilities::Trim(entry.date);
 
 	const UString::String locationLine(_T("<svg class=\"Icon Icon-location\" role=\"img\"><use xlink:href=\"#Icon--locationGeneric\"></use></svg>"));
 	const auto locationLinePosition(html.find(locationLine, calendarLinePosition));
@@ -1082,7 +1083,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	ss.str(StringUtilities::Trim(html.substr(locationLinePosition + locationLine.length() + 2)));
 	if (!std::getline(ss, entry.location))
 		return false;
-	entry.location = Utilities::Unsanitize(entry.location);
+	entry.location = Utilities::Unsanitize(StringUtilities::Trim(entry.location));
 
 	const UString::String soundStart(_T("<dt>Sounds</dt>"));
 	const auto soundStartPosition(html.find(soundStart, locationLinePosition));
