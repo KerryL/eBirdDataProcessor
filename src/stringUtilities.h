@@ -13,6 +13,9 @@ namespace StringUtilities
 {
 UString::String Trim(UString::String s);
 UString::String ToLower(const UString::String& s);
+
+bool ExtractTextContainedInTag(const UString::String& htmlData,
+	const UString::String& startTag, UString::String& text);
 }// namespace UString::Utilities
 
 #endif// UString::_UTILITIES_H_

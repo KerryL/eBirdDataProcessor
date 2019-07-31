@@ -76,8 +76,6 @@ private:
 	static std::string CleanUpAmpersands(const std::string& link);
 	static std::string ModifyMediaListLink(const std::string& link);
 	static std::string RemoveParameter(const std::string& link, const std::string& parameter);
-	static bool ExtractTextContainedInTag(const std::string& htmlData,
-		const std::string& startTag, std::string& text);
 
 	bool GetMediaListHTML(std::string& mediaListHTML);
 	static std::string FindMediaListURL(const std::string& profileHTML);
