@@ -17,7 +17,7 @@
 #endif// _WIN32
 
 // easywsclient source
-#include "../easywsclient/easywsclient.cpp"
+#include "../../easywsclient/easywsclient.cpp"
 
 #ifdef _WIN32
 #pragma warning(pop)
@@ -83,7 +83,11 @@ bool WebSocketWrapper::Send(const std::string& message, std::string& response)
 	{
 		ws->dispatch(callback);
 		ws->poll();
+#ifdef _WIN32
 		Sleep(100);// prevent busy wait
+#else
+		usleep(100000);
+#endif
 	}
 
 	response = responses.front();
@@ -125,7 +129,11 @@ bool WebSocketWrapper::ListenFor(const unsigned int& timeoutMS, ContinueMethod c
 			responses.pop();
 		}
 
+#ifdef _WIN32
 		Sleep(100);// prevent busy wait
+#else
+		usleep(100000);
+#endif
 	}
 
 	return false;
