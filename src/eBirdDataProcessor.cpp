@@ -1796,3 +1796,145 @@ bool EBirdDataProcessor::FindBestTripLocations(const UString::String& frequencyF
 
 	return true;
 }
+
+bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt, const UString::String& eBirdApiKey) const
+{
+	Cout << "Checking for observations of " << speciesHunt.commonName << " within "
+		<< speciesHunt.radius << " km of " << speciesHunt.latitude << ',' << speciesHunt.longitude << '.' << std::endl;
+
+	/*unsigned int recentPeriod(30);// [days]
+	EBirdInterface ebi(eBirdApiKey);
+	const auto checklists(ebi.GetRecentObservationsNear(speciesHunt.latitude, speciesHunt.longitude, speciesHunt.radius, recentPeriod, true, false));
+	if (observations.empty())
+	{
+		Cout << "No records found." << std::endl;
+		return false;
+	}
+	else
+		Cout << "Found " << observations.size() << " records from last " << recentPeriod << " days." << std::endl;
+
+	// TODO:  Currently, it seems the recent observations api returns only one entry for each recently observed species.
+	// What we want is recent checklists.  This data is available (GetChecklistFeed()),
+	// but it looks like we would have to get the list of checklists, then download each checklist and check the observations
+	// with products/checklist/view/{{subId}}, but there is a warning to not download a large amount of data this way or risk being banned.
+	// No indication of how many lists constitutes a large amount of data.  If we get all checklists in a region (state/county?), this
+	// includes lat/lon data, so we could then determine fraction km distance to limit the number of lists in which we're actually interested.
+	time_t now;
+	time(&now);
+	struct tm firstSuccessfulObservationDate(*std::localtime(&now));
+	struct tm latestSuccessfulObservationDate;
+	latestSuccessfulObservationDate.tm_hour = 0;
+	latestSuccessfulObservationDate.tm_min = 0;
+	latestSuccessfulObservationDate.tm_sec = 0;
+	latestSuccessfulObservationDate.tm_year = 0;
+	latestSuccessfulObservationDate.tm_mday = 1;
+	latestSuccessfulObservationDate.tm_mon = 0;
+	struct tm latestAnyObservationDate(latestSuccessfulObservationDate);
+	std::vector<EBirdInterface::ObservationInfo> observationsWithTarget;
+	std::vector<EBirdInterface::ObservationInfo> onePerChecklist;
+	for (const auto& o : observations)
+	{
+		struct tm copyTime(o.observationDate);
+		if (o.commonName == speciesHunt.commonName)// TODO:  Need to allow for species/subspecies matches, too; best to do this by matching first two scientific names
+		{
+			observationsWithTarget.push_back(o);
+			if (difftime(std::mktime(&copyTime), std::mktime(&firstSuccessfulObservationDate)) < 0)
+				firstSuccessfulObservationDate = copyTime;
+			if (difftime(std::mktime(&copyTime), std::mktime(&latestSuccessfulObservationDate)) > 0)
+				latestSuccessfulObservationDate = copyTime;
+		}
+		
+		if (difftime(std::mktime(&copyTime), std::mktime(&latestAnyObservationDate)) > 0)
+				latestAnyObservationDate = copyTime;
+
+		// No checklist ID in this data, so we'll have to guess.  We'll assume that if 
+		// location ID and date/time are an exact match, it's the same checklist.
+		// This seems like a pretty crumby way to do this, but if we're targeting a rarity
+		// there's a good chance two checklists at the same place and time would either
+		// both be successes or failures, so maybe not so bad.
+		bool needToAdd(true);
+		for (const auto& o2 : onePerChecklist)
+		{
+			if (o.locationID == o2.locationID && TimesMatch(o, o2))
+			{
+				needToAdd = false;
+				break;
+			}
+		}
+
+		if (needToAdd)
+			onePerChecklist.push_back(o);
+	}
+
+	Cout << "\nDeduced that observation records come from " << onePerChecklist.size() << " unique checklists." << std::endl;
+	Cout << observationsWithTarget.size() << " checklists include " << speciesHunt.commonName << " ("
+		<< static_cast<double>(observationsWithTarget.size()) / onePerChecklist.size() * 100.0 << "%)." << std::endl;
+	Cout << "\nBird first reported " << StringifyDateTime(firstSuccessfulObservationDate) << '.' << std::endl;
+	Cout << "Bird last reported " << StringifyDateTime(latestSuccessfulObservationDate) << '.' << std::endl;
+
+	unsigned int missCountSinceSeen(0);
+	for (const auto& o : onePerChecklist)
+	{
+		bool isMiss(true);
+		for (const auto& o2 : observationsWithTarget)
+		{
+			if (o.locationID == o2.locationID && TimesMatch(o, o2))
+			{
+				isMiss = false;
+				break;
+			}
+		}
+
+		if (!isMiss)
+			continue;
+
+		struct tm copyTime(o.observationDate);
+		if (difftime(std::mktime(&copyTime), std::mktime(&latestSuccessfulObservationDate)) > 0)
+			++missCountSinceSeen;
+	}
+
+	if (missCountSinceSeen > 0)
+		Cout << missCountSinceSeen << " checklists submitted since last successful observation." << std::endl;
+	else
+		Cout << "No misses reported since last successful observation." << std::endl;*/
+
+	// TODO:  ASCII time-of-day histogram
+
+	return true;
+}
+
+ bool EBirdDataProcessor::TimesMatch(const EBirdInterface::ObservationInfo& o1, const EBirdInterface::ObservationInfo& o2)
+{
+	if (o1.observationDate.tm_year != o2.observationDate.tm_year ||
+		o1.observationDate.tm_mon != o2.observationDate.tm_mon ||
+		o1.observationDate.tm_mday != o2.observationDate.tm_mday)
+		return false;
+
+	if (o1.dateIncludesTimeInfo != o2.dateIncludesTimeInfo)
+		return false;
+	else if (!o1.dateIncludesTimeInfo)
+		return true;
+
+	return o1.observationDate.tm_hour == o2.observationDate.tm_hour &&
+		o1.observationDate.tm_min == o2.observationDate.tm_min;
+}
+
+ UString::String EBirdDataProcessor::StringifyDateTime(struct tm& dateTime)
+ {
+	 UString::OStringStream ss;
+	 ss << dateTime.tm_mon + 1 << '/' << dateTime.tm_mday << '/' << dateTime.tm_year + 1900 << ' '
+		 << dateTime.tm_hour << ':' << std::setw(2) << std::setfill(UString::Char('0')) << dateTime.tm_min;
+	 return ss.str();
+ }
+
+ unsigned int EBirdDataProcessor::CountConsecutiveLeadingQuotes(UString::IStringStream& ss)
+ {
+	 unsigned int count(0);
+	 while (ss.peek() == UString::Char('"'))
+	 {
+		 ss.ignore();
+		 ++count;
+	 }
+
+	 return count;
+ }

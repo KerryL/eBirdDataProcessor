@@ -17,8 +17,9 @@
 #include <cassert>
 #include <iomanip>
 
-const UString::String EBirdInterface::apiRoot(_T("https://ebird.org/ws2.0/"));
+const UString::String EBirdInterface::apiRoot(_T("https://api.ebird.org/v2/"));
 const UString::String EBirdInterface::observationDataPath(_T("data/obs/"));
+const UString::String EBirdInterface::productListsPath(_T("product/lists/"));
 const UString::String EBirdInterface::recentPath(_T("recent/"));
 const UString::String EBirdInterface::taxonomyLookupEndpoint(_T("ref/taxonomy/ebird"));
 const UString::String EBirdInterface::regionReferenceEndpoint(_T("ref/region/list/"));
@@ -29,13 +30,19 @@ const UString::String EBirdInterface::speciesCodeTag(_T("speciesCode"));
 const UString::String EBirdInterface::commonNameTag(_T("comName"));
 const UString::String EBirdInterface::scientificNameTag(_T("sciName"));
 const UString::String EBirdInterface::locationNameTag(_T("locName"));
+const UString::String EBirdInterface::userDisplayNameTag(_T("userDisplayName"));
 const UString::String EBirdInterface::locationIDTag(_T("locID"));
+const UString::String EBirdInterface::submissionIDTag(_T("subID"));
 const UString::String EBirdInterface::latitudeTag(_T("lat"));
 const UString::String EBirdInterface::longitudeTag(_T("lng"));
+const UString::String EBirdInterface::locationObjectTag(_T("loc"));
+const UString::String EBirdInterface::howManyTag(_T("howMany"));
+const UString::String EBirdInterface::speciesCountTag(_T("numSpecies"));
 const UString::String EBirdInterface::countryCodeTag(_T("countryCode"));
 const UString::String EBirdInterface::subnational1CodeTag(_T("subnational1Code"));
 const UString::String EBirdInterface::subnational2CodeTag(_T("subnational2Code"));
 const UString::String EBirdInterface::observationDateTag(_T("obsDt"));
+const UString::String EBirdInterface::observationTimeTag(_T("obsTime"));
 const UString::String EBirdInterface::isNotHotspotTag(_T("locationPrivate"));
 const UString::String EBirdInterface::isReviewedTag(_T("obsReviewed"));
 const UString::String EBirdInterface::isValidTag(_T("obsValid"));
@@ -98,6 +105,13 @@ std::vector<EBirdInterface::LocationInfo> EBirdInterface::GetHotspotsInRegion(co
 	{
 		Cerr << "Failed to parse returned string (GetHotspotsInRegion())\n";
 		Cerr << response.c_str() << '\n';
+		return std::vector<LocationInfo>();
+	}
+
+	std::vector<ErrorInfo> errorInfo;
+	if (ResponseHasErrors(root, errorInfo))
+	{
+		PrintErrorInfo(errorInfo);
 		return std::vector<LocationInfo>();
 	}
 
@@ -175,6 +189,12 @@ std::vector<EBirdInterface::LocationInfo> EBirdInterface::GetHotspotsInRegion(co
 	return hotspots;
 }
 
+void EBirdInterface::PrintErrorInfo(const std::vector<ErrorInfo>& errors)
+{
+	for (const auto& e : errors)
+		Cout << "Error " << e.code << " : " << e.title << " : " << e.status << std::endl;
+}
+
 bool EBirdInterface::ReadJSONObservationData(cJSON* item, ObservationInfo& info)
 {
 	if (!ReadJSON(item, speciesCodeTag, info.speciesCode))
@@ -215,9 +235,9 @@ bool EBirdInterface::ReadJSONObservationData(cJSON* item, ObservationInfo& info)
 		info.dateIncludesTimeInfo = false;
 	}
 
-	if (!ReadJSON(item, locationNameTag, info.count))
+	if (!ReadJSON(item, howManyTag, info.count))
 	{
-		Cerr << "Failed to get location name for item\n";
+		Cerr << "Failed to get observation count\n";
 		return false;
 	}
 
@@ -230,12 +250,6 @@ bool EBirdInterface::ReadJSONObservationData(cJSON* item, ObservationInfo& info)
 	if (!ReadJSON(item, locationIDTag, info.locationID))
 	{
 		Cerr << "Failed to get location id for item\n";
-		return false;
-	}
-
-	if (!ReadJSON(item, isNotHotspotTag, info.isNotHotspot))
-	{
-		Cerr << "Failed to get hotspot status for item\n";
 		return false;
 	}
 
@@ -272,6 +286,101 @@ bool EBirdInterface::ReadJSONObservationData(cJSON* item, ObservationInfo& info)
 	return true;
 }
 
+bool EBirdInterface::ReadJSONChecklistData(cJSON* item, ChecklistInfo& info)
+{
+	if (!ReadJSON(item, submissionIDTag, info.submissionId))
+	{
+		Cerr << "Failed to get submission ID\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, userDisplayNameTag, info.userDisplayName))
+	{
+		Cerr << "Failed to get user display name\n";
+		return false;
+	}
+
+	if (!ReadJSON(item, speciesCountTag, info.speciesCount))
+	{
+		Cerr << "Failed to get number of species\n";
+		return false;
+	}
+
+	UString::String s;
+	if (!ReadJSON(item, observationDateTag, s))
+	{
+		Cerr << "Failed to get observation date\n";
+		return false;
+	}
+	// TODO:  Populate time structure
+
+	if (ReadJSON(item, observationTimeTag, s))
+	{
+		// TODO:  Populate time structure
+	}
+	else
+		info.dateIncludesTimeInfo = false;
+
+	if (!ReadJSONLocationData(item, info.locationInfo))
+		return false;
+
+	return true;
+}
+
+bool EBirdInterface::ReadJSONLocationData(cJSON* item, LocationInfo& info)
+{
+	cJSON* locationObject(cJSON_GetObjectItem(item, UString::ToNarrowString(locationObjectTag).c_str()));
+	if (!locationObject)
+	{
+		Cerr << "Failed to get location object\n";
+		return false;
+	}
+
+	if (!ReadJSON(locationObject, locationIDTag, info.id))
+	{
+		Cerr << "Failed to read location ID\n";
+		return false;
+	}
+
+	if (!ReadJSON(locationObject, nameTag, info.name))
+	{
+		Cerr << "Failed to read location name\n";
+		return false;
+	}
+
+	if (!ReadJSON(locationObject, latitudeTag, info.latitude))
+	{
+		Cerr << "Failed to read latitude\n";
+		return false;
+	}
+
+	if (!ReadJSON(locationObject, longitudeTag, info.longitude))
+	{
+		Cerr << "Failed to read longitude\n";
+		return false;
+	}
+
+	if (!ReadJSON(locationObject, countryCodeTag, info.countryCode))
+	{
+		Cerr << "Failed to read country code\n";
+		return false;
+	}
+
+	if (!ReadJSON(locationObject, subnational1CodeTag, info.subnational1Code))
+	{
+		Cerr << "Failed to read subnational 1 code\n";
+		return false;
+	}
+
+	if (!ReadJSON(locationObject, subnational2CodeTag, info.subnational2Code))
+	{
+		Cerr << "Failed to read subnational 2 code\n";
+		return false;
+	}
+
+	return true;
+}
+
 std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservationsOfSpeciesInRegion(
 	const UString::String& speciesCode, const UString::String& region, const unsigned int& recentPeriod,
 	const bool& includeProvisional, const bool& hotspotsOnly)
@@ -301,6 +410,133 @@ std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservatio
 	{
 		Cerr << "Failed to parse returned string (GetRecentObservationsOfSpeciesInRegion())\n";
 		Cerr << response.c_str() << '\n';
+		return std::vector<ObservationInfo>();
+	}
+
+	std::vector<ErrorInfo> errorInfo;
+	if (ResponseHasErrors(root, errorInfo))
+	{
+		PrintErrorInfo(errorInfo);
+		return std::vector<ObservationInfo>();
+	}
+
+	std::vector<ObservationInfo> observations;
+	const unsigned int arraySize(cJSON_GetArraySize(root));
+	unsigned int i;
+	for (i = 0; i < arraySize; ++i)
+	{
+		cJSON* item(cJSON_GetArrayItem(root, i));
+		if (!item)
+		{
+			Cerr << "Failed to get observation array item\n";
+			observations.clear();
+			break;
+		}
+
+		ObservationInfo info;
+		if (!ReadJSONObservationData(item, info))
+		{
+			observations.clear();
+			break;
+		}
+
+		observations.push_back(info);
+	}
+
+	cJSON_Delete(root);
+	return observations;
+}
+
+std::vector<EBirdInterface::ChecklistInfo> EBirdInterface::GetChecklistFeed(const UString::String& region,
+	const unsigned short& year, const unsigned short& month, const unsigned short& day)
+{
+	UString::OStringStream request;
+	request << apiRoot << productListsPath << region << '/' << year << '/' << month << '/' << day << "?maxResults=200";
+
+	std::string response;
+	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
+		return std::vector<ChecklistInfo>();
+
+	cJSON *root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		Cerr << "Failed to parse returned string (GetChecklistFeed())\n";
+		Cerr << response.c_str() << '\n';
+		return std::vector<ChecklistInfo>();
+	}
+
+	std::vector<ErrorInfo> errorInfo;
+	if (ResponseHasErrors(root, errorInfo))
+	{
+		PrintErrorInfo(errorInfo);
+		return std::vector<ChecklistInfo>();
+	}
+
+	std::vector<ChecklistInfo> checklists;
+	const unsigned int arraySize(cJSON_GetArraySize(root));
+	unsigned int i;
+	for (i = 0; i < arraySize; ++i)
+	{
+		cJSON* item(cJSON_GetArrayItem(root, i));
+		if (!item)
+		{
+			Cerr << "Failed to get checklist array item\n";
+			checklists.clear();
+			break;
+		}
+
+		ChecklistInfo info;
+		if (!ReadJSONChecklistData(item, info))
+		{
+			checklists.clear();
+			break;
+		}
+
+		checklists.push_back(info);
+	}
+
+	cJSON_Delete(root);
+	return checklists;
+}
+
+std::vector<EBirdInterface::ObservationInfo> EBirdInterface::GetRecentObservationsNear(
+	const double& latitude, const double& longitude, const unsigned int& radius,
+	const unsigned int& recentPeriod, const bool& includeProvisional, const bool& hotspotsOnly)
+{
+	UString::OStringStream request;
+	request << apiRoot << observationDataPath << "geo/recent?back=" << recentPeriod
+		<< "&includeProvisional=";
+
+	if (includeProvisional)
+		request << "true";
+	else
+		request << "false";
+
+	request << "&hotspot=";
+	if (hotspotsOnly)
+		request << "true";
+	else
+		request << "false";
+
+	request.precision(2);
+	request << "&lat=" << std::fixed << latitude << "&lng=" << std::fixed << longitude << "&dist=" << radius;
+
+	std::string response;
+	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
+		return std::vector<ObservationInfo>();
+
+	cJSON *root(cJSON_Parse(response.c_str()));
+	if (!root)
+	{
+		Cerr << "Failed to parse returned string (GetRecentObservationsNear())\n";
+		Cerr << response.c_str() << '\n';
+		return std::vector<ObservationInfo>();
+	}
+
+	std::vector<ErrorInfo> errorInfo;
+	if (ResponseHasErrors(root, errorInfo))
+	{
+		PrintErrorInfo(errorInfo);
 		return std::vector<ObservationInfo>();
 	}
 
@@ -383,6 +619,13 @@ bool EBirdInterface::FetchEBirdNameData()
 	{
 		Cerr << "Failed to parse returned string (GetScientificNameFromCommonName())\n";
 		Cerr << response.c_str() << '\n';
+		return false;
+	}
+
+	std::vector<ErrorInfo> errorInfo;
+	if (ResponseHasErrors(root, errorInfo))
+	{
+		PrintErrorInfo(errorInfo);
 		return false;
 	}
 
@@ -866,6 +1109,13 @@ UString::String EBirdInterface::GetRegionName(const UString::String& code) const
 	{
 		Cerr << "Failed to parse returned string (GetRegionName())\n";
 		Cerr << response.c_str() << '\n';
+		return code;
+	}
+
+	std::vector<ErrorInfo> errorInfo;
+	if (ResponseHasErrors(root, errorInfo))
+	{
+		PrintErrorInfo(errorInfo);
 		return code;
 	}
 

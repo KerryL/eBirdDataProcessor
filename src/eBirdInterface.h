@@ -84,8 +84,22 @@ public:
 		bool dateIncludesTimeInfo = true;
 	};
 
+	struct ChecklistInfo
+	{
+		UString::String submissionId;
+		UString::String userDisplayName;
+
+		std::tm observationDate;
+		bool dateIncludesTimeInfo = true;
+		unsigned int speciesCount;
+		LocationInfo locationInfo;
+	};
+
 	std::vector<ObservationInfo> GetRecentObservationsOfSpeciesInRegion(const UString::String& speciesCode,
 		const UString::String& region, const unsigned int& recentPeriod, const bool& includeProvisional, const bool& hotspotsOnly);
+	std::vector<ObservationInfo> GetRecentObservationsNear(const double& latitude, const double& longitude, const unsigned int& radius,
+		const unsigned int& recentPeriod, const bool& includeProvisional, const bool& hotspotsOnly);
+	std::vector<ChecklistInfo> GetChecklistFeed(const UString::String& region, const unsigned short& year, const unsigned short& month, const unsigned short& day);
 
 	UString::String GetScientificNameFromCommonName(const UString::String& commonName);
 	UString::String GetSpeciesCodeFromCommonName(const UString::String& commonName);
@@ -120,6 +134,7 @@ public:
 private:
 	static const UString::String apiRoot;
 	static const UString::String observationDataPath;
+	static const UString::String productListsPath;
 	static const UString::String recentPath;
 	static const UString::String taxonomyLookupEndpoint;
 	static const UString::String regionReferenceEndpoint;
@@ -131,8 +146,10 @@ private:
 	static const UString::String scientificNameTag;
 	static const UString::String locationNameTag;
 	static const UString::String locationIDTag;
+	static const UString::String howManyTag;
 	static const UString::String latitudeTag;
 	static const UString::String longitudeTag;
+	static const UString::String locationObjectTag;
 	static const UString::String countryCodeTag;
 	static const UString::String subnational1CodeTag;
 	static const UString::String subnational2CodeTag;
@@ -141,6 +158,10 @@ private:
 	static const UString::String isReviewedTag;
 	static const UString::String isValidTag;
 	static const UString::String locationPrivateTag;
+	static const UString::String userDisplayNameTag;
+	static const UString::String submissionIDTag;
+	static const UString::String speciesCountTag;
+	static const UString::String observationTimeTag;
 
 	static const UString::String countryTypeName;
 	static const UString::String subNational1TypeName;
@@ -170,6 +191,8 @@ private:
 	static std::unordered_map<UString::String, UString::String> scientificToCommonMap;
 
 	static bool ReadJSONObservationData(cJSON* item, ObservationInfo& info);
+	static bool ReadJSONChecklistData(cJSON* item, ChecklistInfo& info);
+	static bool ReadJSONLocationData(cJSON* item, LocationInfo& info);
 
 	static UString::String GetUserInputOnResponse(const UString::String& s, const UString::String& field);
 
@@ -207,6 +230,7 @@ private:
 	};
 
 	static bool ResponseHasErrors(cJSON *root, std::vector<ErrorInfo>& errors);
+	static void PrintErrorInfo(const std::vector<ErrorInfo>& errors);
 };
 
 #endif// EBIRD_INTERFACE_H_
