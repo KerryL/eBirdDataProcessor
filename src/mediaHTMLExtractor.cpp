@@ -230,7 +230,11 @@ bool MediaHTMLExtractor::GetMediaListHTML(std::string& mediaListHTML)
 			return false;
 
 		mediaListURL = FindMediaListURL(profileHTML);
+#ifdef _WIN32
 		Sleep(100);
+#else
+		usleep(100000);
+#endif
 	}
 
 	Cout << "Navigating to user media content" << std::endl;
@@ -267,7 +271,11 @@ bool MediaHTMLExtractor::ShowAllMediaEntries(WebSocketWrapper& ws)
 	int nodeID(-1);
 	while (true)
 	{
+#ifdef _WIN32
 		Sleep(100);
+#else
+		usleep(100000);
+#endif
 
 		if (nodeID < 0)
 		{
@@ -776,7 +784,11 @@ bool MediaHTMLExtractor::WaitForPageLoaded(WebSocketWrapper& ws)
 			method == _T("DOM.pseudoElementAdded");
 	});// Never return false?
 
+#ifdef _WIN32
 	Sleep(1000);// Even though the above condition says we're loaded, add a bit of extra time here
+#else
+	usleep(1000000);
+#endif
 	return true;
 }
 
