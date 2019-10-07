@@ -67,7 +67,11 @@ void ProcessPipe::PipeThread(const std::string& command)
 			stdOutBuffer += buffer.data();
 		}
 
+#ifdef _WIN32
 		Sleep(100);// To avoid busy waiting
+#else
+		usleep(100000);
+#endif
 	}
 }
 
