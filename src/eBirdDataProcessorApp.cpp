@@ -172,6 +172,11 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			config.highDetailCountries, regionCodes, config.outputFileName, config.eBirdApiKey))
 			return 1;
 	}
+	else if (!config.speciesHunt.commonName.empty())
+	{
+		if (!processor.HuntSpecies(config.speciesHunt, config.eBirdApiKey))
+			return 1;
+	}
 	else if (config.doComparison)
 		processor.DoListComparison();
 	else

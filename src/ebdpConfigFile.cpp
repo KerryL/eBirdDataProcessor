@@ -72,6 +72,11 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("COMPARE"), config.doComparison);
 	
 	AddConfigItem(_T("COMMENT_GROUP"), config.commentGroupString);
+
+	AddConfigItem(_T("HUNT_SPECIES"), config.speciesHunt.commonName);
+	AddConfigItem(_T("HUNT_LATITUDE"), config.speciesHunt.latitude);
+	AddConfigItem(_T("HUNT_LONGITUDE"), config.speciesHunt.longitude);
+	AddConfigItem(_T("HUNT_RADIUS"), config.speciesHunt.radius);
 }
 
 void EBDPConfigFile::AssignDefaults()
@@ -112,6 +117,10 @@ void EBDPConfigFile::AssignDefaults()
 	config.bestTripParameters.topLocationCount = 10;
 
 	config.doComparison = false;
+
+	config.speciesHunt.latitude = 0.0;
+	config.speciesHunt.longitude = 0.0;
+	config.speciesHunt.radius = 0.0;
 }
 
 bool EBDPConfigFile::ConfigIsOK()
@@ -134,6 +143,9 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 
 	if (!BestTripConfigIsOK())
+		configurationOK = false;
+
+	if (!SpeciesHuntConfigIsOK())
 		configurationOK = false;
 
 	return configurationOK;
@@ -406,6 +418,28 @@ bool EBDPConfigFile::BestTripConfigIsOK()
 	if (config.eBirdApiKey.empty())
 	{
 		Cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.findBestTripLocations) << '\n';
+		configurationOK = false;
+	}
+
+	return configurationOK;
+}
+
+bool EBDPConfigFile::SpeciesHuntConfigIsOK()
+{
+	if (config.speciesHunt.commonName.empty())
+		return true;
+
+	bool configurationOK(true);
+
+	if (config.eBirdApiKey.empty())
+	{
+		Cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.speciesHunt.commonName) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.speciesHunt.radius <= 0.0)
+	{
+		Cerr << GetKey(config.speciesHunt.radius) << "must be strictly positive\n";
 		configurationOK = false;
 	}
 

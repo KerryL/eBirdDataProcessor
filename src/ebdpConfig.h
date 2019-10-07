@@ -54,6 +54,14 @@ struct BestTripParameters
 	unsigned int minimumObservationCount;
 };
 
+struct SpeciesHunt
+{
+	UString::String commonName;
+	double latitude;// [deg]
+	double longitude;// [deg]
+	double radius;// [km]
+};
+
 struct EBDPConfig
 {
 	UString::String dataFileName;
@@ -138,6 +146,8 @@ struct EBDPConfig
 	UString::String eBirdDatasetPath;
 	
 	UString::String commentGroupString;
+
+	SpeciesHunt speciesHunt;
 };
 
 #endif// EBDP_CONFIG_H_

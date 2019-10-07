@@ -70,6 +70,8 @@ public:
 	bool FindBestTripLocations(const UString::String& frequencyFilePath,
 		const BestTripParameters& bestTripParameters, const std::vector<UString::String>& highDetailCountries,
 		const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName, const UString::String& eBirdApiKey) const;
+
+	bool HuntSpecies(const SpeciesHunt& speciesHunt, const UString::String& eBirdApiKey) const;
 		
 	static UString::String PrepareForComparison(const UString::String& commonName);
 
@@ -304,6 +306,11 @@ private:
 	bool GatherFrequencyData(const UString::String& frequencyFilePath,
 		const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
 		const double& minLikilihood, const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const;
+
+	static bool TimesMatch(const EBirdInterface::ObservationInfo& o1, const EBirdInterface::ObservationInfo& o2);
+	static UString::String StringifyDateTime(struct tm& dateTime);
+
+	static unsigned int CountConsecutiveLeadingQuotes(UString::IStringStream& ss);
 };
 
 template<typename T>
@@ -312,23 +319,24 @@ bool EBirdDataProcessor::ParseToken(UString::IStringStream& lineStream, const US
 	UString::String token;
 	UString::IStringStream tokenStream;
 
-	if (lineStream.peek() == static_cast<int>('"'))// target UString::String may contain commas
+	auto leadingQuoteCount(CountConsecutiveLeadingQuotes(lineStream));
+	if (leadingQuoteCount > 0)// target UString::String may contain commas or escaped double-quotes
 	{
-		lineStream.ignore();// Skip the first quote
+		if (leadingQuoteCount % 2 == 0)// Impossible scenario - if the string starts with a double-quote, then the string must be enclosed in quotes - always expect odd number of quotes
+			return false;
+		token.append(leadingQuoteCount / 2, UString::Char('"'));
 
-		do// In a loop, so we can properly handle escaped double quotes.
+		do// In a loop, so we can properly handle escaped double-quotes
 		{
 			UString::String tempToken;
 			const UString::Char quote('"');
-			if (!std::getline(lineStream, tempToken, quote))
+			if (!std::getline(lineStream, tempToken, quote))// Get everything up to the next quote
 				return false;
 			token.append(tempToken);
-			if (lineStream.peek() == static_cast<int>(quote))
-			{
-				token.append(_T("\""));
-				lineStream.ignore();
-			}
-		} while (lineStream.peek() == -1 && lineStream.peek() == static_cast<int>(','));
+			leadingQuoteCount = CountConsecutiveLeadingQuotes(lineStream);
+			if (leadingQuoteCount > 0)// If the next character is also a quote, then we have an escaped double-quote
+				token.append((leadingQuoteCount + 1) / 2, UString::Char('"'));
+		} while (!lineStream.eof() && lineStream.peek() != static_cast<int>(','));
 
 		lineStream.ignore();// Skip the next comma
 	}

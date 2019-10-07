@@ -33,6 +33,7 @@ private:
 	bool GeneralConfigIsOK();
 	bool RaritiesConfigIsOK();
 	bool BestTripConfigIsOK();
+	bool SpeciesHuntConfigIsOK();
 };
 
 #endif// EBDP_CONFIG_FILE_H_
