@@ -19,7 +19,7 @@ class MediaHTMLExtractor : JSONInterface
 {
 public:
 	MediaHTMLExtractor();
-	~MediaHTMLExtractor() = default;
+	~MediaHTMLExtractor();
 
 	bool ExtractMediaHTML(const UString::String& htmlFileName);
 
@@ -45,6 +45,7 @@ private:
 	std::string BuildGetBoxCommand(const int& nodeID);
 	std::string BuildScrollIntoViewCommand(const std::string& criteria);
 	std::string BuildMouseCommand(const int& x, const int& y, const std::string& action);
+	std::string BuildCloseBrowserCommand();
 
 	bool GetCurrentHTML(WebSocketWrapper& ws, std::string& html);
 	bool SimulateTextEntry(WebSocketWrapper& ws, const std::string& s);
@@ -61,6 +62,7 @@ private:
 	cJSON* GetDOMNodesArray(WebSocketWrapper& ws, cJSON*& root);
 
 	bool LaunchBrowser();
+	void CloseBrowser();
 	bool DoEBirdLogin(WebSocketWrapper& ws);
 	bool ClickViewMediaAsList(WebSocketWrapper& ws);
 	bool ShowAllMediaEntries(WebSocketWrapper& ws);

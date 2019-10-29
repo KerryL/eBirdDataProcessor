@@ -36,6 +36,11 @@ MediaHTMLExtractor::MediaHTMLExtractor() : JSONInterface(userAgent), rateLimiter
 	LaunchBrowser();
 }
 
+MediaHTMLExtractor::~MediaHTMLExtractor()
+{
+	CloseBrowser();
+}
+
 bool MediaHTMLExtractor::LaunchBrowser()
 {
 	// TODO:  Do something better with this (don't hardcode path)
@@ -43,6 +48,30 @@ bool MediaHTMLExtractor::LaunchBrowser()
 	ss << remoteDebuggingPort;
 	const std::string command("\"\"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe\"\" --headless --disable-gpu --remote-debugging-port=" + ss.str());
 	return browserPipe.Launch(command);
+}
+
+void MediaHTMLExtractor::CloseBrowser()
+{
+	std::string jsonResponse;
+	UString::OStringStream ss;
+	ss << remoteDebuggingPort;
+	if (!DoCURLGet(_T("127.0.0.1:") + ss.str() + _T("/json/version"), jsonResponse))
+		return;
+
+	UString::String webSocketDebuggerURL;
+	if (!ExtractWebSocketURL(jsonResponse, webSocketDebuggerURL))
+		return;
+
+	Cout << "Connecting web socket to " << webSocketDebuggerURL << std::endl;
+	WebSocketWrapper ws;
+	if (!ws.Connect(UString::ToNarrowString(webSocketDebuggerURL)))
+	{
+		std::cerr << "WebSocket failed to connect\n";
+		return;
+	}
+
+	std::string response;
+	ws.Send(BuildCloseBrowserCommand(), response);
 }
 
 bool MediaHTMLExtractor::ExtractMediaHTML(const UString::String& htmlFileName)
@@ -78,6 +107,13 @@ std::string MediaHTMLExtractor::BuildNavigateCommand(const std::string& url)
 {
 	std::ostringstream ss;
 	ss << "{\"method\":\"Page.navigate\",\"id\":" << commandId++ << ",\"params\":{\"url\":\"" << url << "\"}}";
+	return ss.str();
+}
+
+std::string MediaHTMLExtractor::BuildCloseBrowserCommand()
+{
+	std::ostringstream ss;
+	ss << "{\"method\":\"Browser.close\",\"id\":" << commandId++ << "}";
 	return ss.str();
 }
 
@@ -400,6 +436,11 @@ bool MediaHTMLExtractor::ExtractWebSocketURL(const std::string& json, UString::S
 		Cerr << json.c_str() << '\n';
 		return false;
 	}
+
+	// This method is used to retreive both page and browser URLs.  Page URLs are packed in an array, while browser URLs are not.
+	// So first try the browser case and fall back to the page case if it fails.
+	if (ReadJSON(root, _T("webSocketDebuggerUrl"), webSocketURL))
+		return true;
 
 	cJSON* item(cJSON_GetArrayItem(root, 0));
 	if (!item)
