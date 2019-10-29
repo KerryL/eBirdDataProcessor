@@ -33,9 +33,9 @@
 #include <set>
 
 const UString::String EBirdDataProcessor::headerLine(_T("Submission ID,Common Name,Scientific Name,"
-	"Taxonomic Order,Count,State/Province,County,Location,Latitude,Longitude,Date,Time,"
+	"Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,"
 	"Protocol,Duration (Min),All Obs Reported,Distance Traveled (km),Area Covered (ha),"
-	"Number of Observers,Breeding Code,Species Comments,Checklist Comments"));
+	"Number of Observers,Breeding Code,Observation Details,Checklist Comments,ML Catalog Numbers"));
 
 bool EBirdDataProcessor::Parse(const UString::String& dataFile)
 {
@@ -95,6 +95,8 @@ bool EBirdDataProcessor::ParseLine(const UString::String& line, Entry& entry)
 		return false;
 	if (!ParseToken(lineStream, _T("County"), entry.county))
 		return false;
+	if (!ParseToken(lineStream, _T("Location ID"), entry.locationID))
+		return false;
 	if (!ParseToken(lineStream, _T("Location"), entry.location))
 		return false;
 	if (!ParseToken(lineStream, _T("Latitude"), entry.latitude))
@@ -123,9 +125,11 @@ bool EBirdDataProcessor::ParseLine(const UString::String& line, Entry& entry)
 		return false;
 	if (!ParseToken(lineStream, _T("Breeding Code"), entry.breedingCode))
 		return false;
-	if (!ParseToken(lineStream, _T("Species Comments"), entry.speciesComments))
+	if (!ParseToken(lineStream, _T("Observation Details"), entry.speciesComments))
 		return false;
 	if (!ParseToken(lineStream, _T("Checklist Comments"), entry.checklistComments))
+		return false;
+	if (!ParseToken(lineStream, _T("ML Catalog Numbers"), entry.mlCatalogNumbers))
 		return false;
 
 	// Make sure the data stored in the tm structure is consistent

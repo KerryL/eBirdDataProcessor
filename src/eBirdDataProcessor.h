@@ -116,6 +116,7 @@ private:
 		int count;
 		UString::String stateProvidence;
 		UString::String county;
+		UString::String locationID;
 		UString::String location;
 		double latitude;// [deg]
 		double longitude;// [deg]
@@ -129,6 +130,7 @@ private:
 		UString::String breedingCode;
 		UString::String speciesComments;
 		UString::String checklistComments;
+		UString::String mlCatalogNumbers;
 
 		int photoRating = -1;
 		int audioRating = -1;

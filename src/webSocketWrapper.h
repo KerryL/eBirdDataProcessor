@@ -16,7 +16,7 @@
 #endif// _WIN32
 
 // easywsclient headers
-#include "../../easywsclient/easywsclient.hpp"
+#include "../easywsclient/easywsclient.hpp"
 
 #ifdef _WIN32
 #pragma warning(pop)
