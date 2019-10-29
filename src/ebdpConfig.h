@@ -133,6 +133,7 @@ struct EBDPConfig
 	int showOnlyAudioNeeds;
 	UString::String mediaFileName;
 	UString::String mediaListHTML;
+	bool mediaHTMLAutomatic;
 
 	UString::String eBirdApiKey;
 

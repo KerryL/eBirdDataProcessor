@@ -17,7 +17,7 @@
 #endif// _WIN32
 
 // easywsclient source
-#include "../../easywsclient/easywsclient.cpp"
+#include "../easywsclient/easywsclient.cpp"
 
 #ifdef _WIN32
 #pragma warning(pop)

@@ -118,8 +118,11 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!config.mediaListHTML.empty())
 	{
 		MediaHTMLExtractor htmlExtractor;
-		if (!htmlExtractor.ExtractMediaHTML(config.mediaListHTML))
-			Cout << "Failed to download current media list HTML; continuing with existing HTML file" << std::endl;
+		if (config.mediaHTMLAutomatic)
+		{
+			if (!htmlExtractor.ExtractMediaHTML(config.mediaListHTML))
+				Cout << "Failed to download current media list HTML; continuing with existing HTML file" << std::endl;
+		}
 		processor.GenerateMediaList(config.mediaListHTML, config.mediaFileName);
 		return 0;
 	}
