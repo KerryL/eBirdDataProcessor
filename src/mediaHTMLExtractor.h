@@ -96,7 +96,7 @@ private:
 
 	static std::chrono::steady_clock::duration GetCrawlDelay();
 
-	static bool ResponseHasError(const std::string& response);
+	static bool ResponseHasError(const std::string& response, std::string* message = nullptr);
 };
 
 #endif// MEDIA_HTML_EXTRACTOR_H_
