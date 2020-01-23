@@ -394,7 +394,7 @@ bool MediaHTMLExtractor::ClickViewMediaAsList(WebSocketWrapper& ws)
 	return true;
 }
 
-bool MediaHTMLExtractor::ResponseHasError(const std::string& response)
+bool MediaHTMLExtractor::ResponseHasError(const std::string& response, std::string* message)
 {
 	cJSON* root(cJSON_Parse(response.c_str()));
 	if (!root)
@@ -428,6 +428,9 @@ bool MediaHTMLExtractor::ResponseHasError(const std::string& response)
 
 	cJSON_Delete(root);
 	Cout << "WS Response:  Error " << errorNumber << "; " << errorMessage << std::endl;
+
+	if (message)
+		*message = UString::ToNarrowString(errorMessage);
 
 	return true;
 }
@@ -748,8 +751,14 @@ MediaHTMLExtractor::InteractionResult MediaHTMLExtractor::GetCenterOfBox(WebSock
 	if (!ws.Send(BuildGetBoxCommand(nodeID), jsonResponse))
 		return InteractionResult::Failure;
 
-	if (ResponseHasError(jsonResponse))
-		return InteractionResult::PageNotReady;
+	std::string errorMessage;
+	if (ResponseHasError(jsonResponse, &errorMessage))
+	{
+		const std::string cannotFindNodeReason("Could not find node with given id");
+		if (errorMessage.find(cannotFindNodeReason) != std::string::npos)
+			return InteractionResult::PageNotReady;
+		return InteractionResult::Failure;
+	}
 
 	std::string result;
 	if (!ExtractResult(jsonResponse, result))
