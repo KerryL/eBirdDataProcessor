@@ -46,7 +46,7 @@ bool MediaHTMLExtractor::LaunchBrowser()
 	// TODO:  Do something better with this (don't hardcode path)
 	std::ostringstream ss;
 	ss << remoteDebuggingPort;
-	const std::string command("\"\"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe\"\" --headless --disable-gpu --remote-debugging-port=" + ss.str());
+	const std::string command("\"\"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe\"\" --proxy-server='direct://' --proxy-bypass-list=* --headless --disable-gpu --remote-debugging-port=" + ss.str());
 	return browserPipe.Launch(command);
 }
 
@@ -331,8 +331,13 @@ bool MediaHTMLExtractor::ShowAllMediaEntries(WebSocketWrapper& ws)
 		if (!ScrollIntoView(ws, "[id=show_more]"))
 			break;
 
+		InteractionResult result;
 		int x, y;
-		if (!GetCenterOfBox(ws, nodeID, x, y))
+		do
+		{
+			result = GetCenterOfBox(ws, nodeID, x, y);
+		} while (result == InteractionResult::PageNotReady);
+		if (result == InteractionResult::Failure)
 			break;
 
 		if (!SimulateClick(ws, x, y))
@@ -379,7 +384,7 @@ bool MediaHTMLExtractor::ClickViewMediaAsList(WebSocketWrapper& ws)
 		}
 		cJSON_Delete(root);
 
-		if (GetCenterOfBox(ws, nodeID, x, y))
+		if (GetCenterOfBox(ws, nodeID, x, y) != InteractionResult::Success)
 			break;
 	}
 
@@ -737,29 +742,29 @@ bool MediaHTMLExtractor::GetElementNodeID(cJSON* nodesArray, const std::string& 
 	return true;
 }
 
-bool MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID, int& x, int& y)
+MediaHTMLExtractor::InteractionResult MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID, int& x, int& y)
 {
 	std::string jsonResponse;
 	if (!ws.Send(BuildGetBoxCommand(nodeID), jsonResponse))
-		return false;
+		return InteractionResult::Failure;
 
 	if (ResponseHasError(jsonResponse))
-		return false;
+		return InteractionResult::PageNotReady;
 
 	std::string result;
 	if (!ExtractResult(jsonResponse, result))
-		return false;
+		return InteractionResult::Failure;
 
 	cJSON* root(cJSON_Parse(result.c_str()));
 	if (!root)
-		return false;
+		return InteractionResult::Failure;
 
 	cJSON* model(cJSON_GetObjectItem(root, "model"));
 	if (!model)
 	{
 		std::cerr << "Failed to get model object\n";
 		cJSON_Delete(root);
-		return false;
+		return InteractionResult::Failure;
 	}
 
 	cJSON* contentQuad(cJSON_GetObjectItem(model, "content"));
@@ -767,7 +772,7 @@ bool MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID,
 	{
 		std::cerr << "Failed to get content object\n";
 		cJSON_Delete(root);
-		return false;
+		return InteractionResult::Failure;
 	}
 
 	int arraySize(cJSON_GetArraySize(contentQuad));
@@ -781,7 +786,7 @@ bool MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID,
 		{
 			std::cerr << "Failed to get x and y values\n";
 			cJSON_Delete(root);
-			return false;
+			return InteractionResult::Failure;
 		}
 
 		xValues[i] = xNode->valueint;
@@ -793,7 +798,7 @@ bool MediaHTMLExtractor::GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID,
 	x = std::accumulate(xValues.begin(), xValues.end(), 0) / static_cast<int>(xValues.size());
 	y = std::accumulate(yValues.begin(), yValues.end(), 0) / static_cast<int>(yValues.size());
 
-	return true;
+	return InteractionResult::Success;
 }
 
 bool MediaHTMLExtractor::SimulateClick(WebSocketWrapper& ws, const int& x, const int& y)
@@ -884,7 +889,7 @@ bool MediaHTMLExtractor::DoEBirdLogin(WebSocketWrapper& ws)
 		cJSON_Delete(root);
 
 		int x, y;
-		if (!GetCenterOfBox(ws, nodeID, x, y))
+		if (GetCenterOfBox(ws, nodeID, x, y) != InteractionResult::Success)
 			return false;
 
 		if (!SimulateClick(ws, x, y))

@@ -47,13 +47,20 @@ private:
 	std::string BuildMouseCommand(const int& x, const int& y, const std::string& action);
 	std::string BuildCloseBrowserCommand();
 
+	enum class InteractionResult
+	{
+		Success,
+		Failure,
+		PageNotReady
+	};
+
 	bool GetCurrentHTML(WebSocketWrapper& ws, std::string& html);
 	bool SimulateTextEntry(WebSocketWrapper& ws, const std::string& s);
 	bool SimulateRawKey(WebSocketWrapper& ws, const std::string& s);
 	bool SendKeyEvents(WebSocketWrapper& ws, const std::string& s, const std::string& type, const std::string& payloadFieldName);
 	typedef std::vector<std::pair<std::string, std::string>> AttributeVector;
 	bool FocusOnElement(WebSocketWrapper& ws, cJSON* nodesArray, const std::string& nodeName, const AttributeVector& attributes);
-	bool GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID, int& x, int& y);
+	InteractionResult GetCenterOfBox(WebSocketWrapper& ws, const int& nodeID, int& x, int& y);
 	bool SimulateClick(WebSocketWrapper& ws, const int& x, const int& y);
 	bool WaitForPageLoaded(WebSocketWrapper& ws);
 
