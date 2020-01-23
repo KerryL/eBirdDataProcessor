@@ -27,7 +27,6 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("REGION_DATA_OUTPUT_FILE"), config.timeOfDayParameters.splitRegionDataFile);
 
 	AddConfigItem(_T("MEDIA_LIST_HTML"), config.mediaListHTML);
-	AddConfigItem(_T("MEDIA_LIST_AUTO"), config.mediaHTMLAutomatic);
 	AddConfigItem(_T("MEDIA_FILE"), config.mediaFileName);
 	AddConfigItem(_T("SHOW_PHOTO_NEEDS"), config.showOnlyPhotoNeeds);
 	AddConfigItem(_T("SHOW_AUDIO_NEEDS"), config.showOnlyAudioNeeds);
@@ -106,7 +105,6 @@ void EBDPConfigFile::AssignDefaults()
 
 	config.showOnlyPhotoNeeds = -1;
 	config.showOnlyAudioNeeds = -1;
-	config.mediaHTMLAutomatic = true;
 
 	config.findMaxNeedsLocations = false;
 	config.locationFindingParameters.kmlReductionLimit = 0.0;
