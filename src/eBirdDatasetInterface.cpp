@@ -74,7 +74,10 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 
 		if (!HeaderMatchesExpectedFormat(UString::ToStringType(line)))
 		{
-			Cerr << "Header line has unexpected format\n";
+			const std::string headerFileName("header.txt");
+			std::ofstream headerFile(headerFileName);
+			headerFile << line << std::endl;
+			Cerr << "Header line has unexpected format; wrote header to '" << UString::ToStringType(headerFileName) << "'\n";
 			return false;
 		}
 
@@ -536,6 +539,14 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(
 			}
 		}
 
+		for (auto& o : observations)
+		{
+			o.erase(std::remove_if(o.begin(), o.end(), [](const EBirdInterface::ObservationInfo& o)
+			{
+				return !o.dateIncludesTimeInfo;
+			}), o.end());
+		}
+
 		unsigned int j(0);
 		for (const auto& o : observations)
 		{
@@ -640,7 +651,7 @@ UString::String EBirdDatasetInterface::GenerateWeekHeaderRow(const UString::Stri
 
 bool EBirdDatasetInterface::HeaderMatchesExpectedFormat(const UString::String& line)
 {
-	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING BIRD ATLAS CODE	BREEDING BIRD ATLAS CATEGORY	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	 LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS"));
+	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING BIRD ATLAS CODE	BREEDING BIRD ATLAS CATEGORY	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS"));
 	return StringUtilities::Trim(line).compare(expectedHeader) == 0;
 }
 
