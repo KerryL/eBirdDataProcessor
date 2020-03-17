@@ -37,6 +37,12 @@ ThreadPool::~ThreadPool()
 	}
 }
 
+void ThreadPool::SetQueueSizeControl(const unsigned int& maxSize, const unsigned int& minSize)
+{
+	maxQueueSize = maxSize;
+	minQueueSize = minSize;
+}
+
 void ThreadPool::AddJob(std::unique_ptr<JobInfoBase> job)
 {
 	{
@@ -45,6 +51,18 @@ void ThreadPool::AddJob(std::unique_ptr<JobInfoBase> job)
 	}
 
 	jobReadyCondition.notify_one();
+
+	// If necessary, block here to prevent the queue from growing too large
+	if (maxQueueSize > 0 && jobQueue.size() > maxQueueSize)
+	{
+		std::unique_lock<std::mutex> lock(queueMutex);
+		jobCompleteCondition.wait(lock, [this]()
+		{
+			if (minQueueSize > 0)
+				return jobQueue.size() < minQueueSize;
+			return jobQueue.size() < maxQueueSize;
+		});
+	}
 }
 
 void ThreadPool::WaitForAllJobsComplete() const
@@ -105,7 +123,7 @@ void ThreadPool::ThreadEntry()
 			--pendingJobCount;
 		}
 
-		jobCompleteCondition.notify_one();
+		jobCompleteCondition.notify_all();
 	}
 
 	std::lock_guard<std::mutex> lock(queueMutex);

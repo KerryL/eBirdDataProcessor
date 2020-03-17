@@ -22,6 +22,8 @@ public:
 	ThreadPool(const unsigned int& threadCount, const unsigned int& rateLimit);
 	virtual ~ThreadPool();
 
+	void SetQueueSizeControl(const unsigned int& maxSize, const unsigned int& minSize);
+
 	struct JobInfoBase
 	{
 		virtual ~JobInfoBase() = default;
@@ -37,6 +39,9 @@ private:
 	mutable std::mutex queueMutex;
 	std::condition_variable jobReadyCondition;
 	mutable std::condition_variable jobCompleteCondition;
+
+	unsigned int maxQueueSize = 0;
+	unsigned int minQueueSize = 0;
 
 	std::vector<std::thread> threads;
 	const std::chrono::milliseconds minRequestDelta;
