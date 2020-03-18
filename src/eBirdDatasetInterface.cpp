@@ -35,6 +35,7 @@
 #include <numeric>
 #include <locale>
 #include <chrono>// For benchmarking
+#include <filesystem>
 
 const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
 
@@ -53,6 +54,8 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 	ProcessFunction processFunction, const UString::String& regionDataOutputFileName)
 {
 	assert(frequencyMap.empty());
+
+	const double fileSize(static_cast<double>(std::experimental::filesystem::file_size(fileName)));
 
 	try
 	{
@@ -93,7 +96,7 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 		while (dataset.ReadNextLine(line))
 		{
 			if (lineCount % 1000000 == 0)
-				Cout << "  " << lineCount << " records read" << std::endl;
+				Cout << "  " << lineCount << " records read (" << static_cast<double>(dataset.GetCurrentOffset()) / fileSize * 100.0 << "%)" << std::endl;
 
 			pool.AddJob(std::make_unique<LineProcessJobInfo>(UString::ToStringType(line), *this, processFunction));
 			++lineCount;

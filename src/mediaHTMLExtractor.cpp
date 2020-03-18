@@ -76,6 +76,14 @@ void MediaHTMLExtractor::CloseBrowser()
 
 bool MediaHTMLExtractor::ExtractMediaHTML(const UString::String& htmlFileName)
 {
+	Cout << "Choose:\n1 - Automatic retireval\n2 - Use file at '" << htmlFileName << "'\n" << std::endl;
+	int selection(-1);
+	while (selection < 1 || selection > 2)
+		Cin >> selection;
+
+	if (selection == 2)
+		return true;
+
 	std::string mediaListHTML;
 	if (!GetMediaListHTML(mediaListHTML))
 		return false;
