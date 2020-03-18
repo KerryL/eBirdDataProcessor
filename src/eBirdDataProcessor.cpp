@@ -1103,7 +1103,8 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 		return false;
 
 	if (!StringUtilities::ExtractTextContainedInTag(specimenLinks, _T("<a href=\"https://ebird.org/view/checklist/"), temp))
-		return false;
+		//return false;
+		temp.clear();// This can happen for hidden checklists!  Don't fail!
 	entry.checklistId = GetLastWord(temp);
 
 	if (!StringUtilities::ExtractTextContainedInTag(specimenLinks, _T("<a href=\"https://macaulaylibrary.org/asset/"), temp))
