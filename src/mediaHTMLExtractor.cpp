@@ -392,7 +392,8 @@ bool MediaHTMLExtractor::ClickViewMediaAsList(WebSocketWrapper& ws)
 		}
 		cJSON_Delete(root);
 
-		if (GetCenterOfBox(ws, nodeID, x, y) != InteractionResult::Success)
+		//std::cout << "NodeID = " << nodeID << std::endl;
+		if (GetCenterOfBox(ws, nodeID, x, y) == InteractionResult::Success)
 			break;
 	}
 
