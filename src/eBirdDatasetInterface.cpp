@@ -55,6 +55,12 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 {
 	assert(frequencyMap.empty());
 
+	if (!std::experimental::filesystem::exists(fileName))
+	{
+		Cerr << "File '" << fileName << "' does not exist\n";
+		return false;
+	}
+
 	const double fileSize(static_cast<double>(std::experimental::filesystem::file_size(fileName)));
 
 	try
