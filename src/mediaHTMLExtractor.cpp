@@ -796,7 +796,7 @@ MediaHTMLExtractor::InteractionResult MediaHTMLExtractor::GetCenterOfBox(WebSock
 	int arraySize(cJSON_GetArraySize(contentQuad));
 	std::vector<int> xValues(arraySize / 2);
 	std::vector<int> yValues(arraySize / 2);
-	for (int i = 0; i < xValues.size(); ++i)
+	for (unsigned int i = 0; i < xValues.size(); ++i)
 	{
 		cJSON* xNode(cJSON_GetArrayItem(contentQuad, i * 2));
 		cJSON* yNode(cJSON_GetArrayItem(contentQuad, i * 2 + 1));
