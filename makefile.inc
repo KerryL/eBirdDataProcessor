@@ -47,7 +47,7 @@ CFLAGS_RELEASE = $(CFLAGS) -O2
 CFLAGS_DEBUG = $(CFLAGS) -g
 
 # Linker flags
-LDFLAGS = $(LIBDIRS) $(LIBS) -lpthread `pkg-config --libs libzip`
+LDFLAGS = $(LIBDIRS) $(LIBS) -lstdc++fs -lpthread `pkg-config --libs libzip`
 LDFLAGS_DEBUG = $(LDFLAGS)
 LDFLAGS_RELEASE = $(LDFLAGS)
 
