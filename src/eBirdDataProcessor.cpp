@@ -1802,7 +1802,7 @@ bool EBirdDataProcessor::FindBestTripLocations(const UString::String& frequencyF
 	return true;
 }
 
-bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt, const UString::String& eBirdApiKey) const
+bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt, const UString::String& /*eBirdApiKey*/) const
 {
 	Cout << "Checking for observations of " << speciesHunt.commonName << " within "
 		<< speciesHunt.radius << " km of " << speciesHunt.latitude << ',' << speciesHunt.longitude << '.' << std::endl;

@@ -35,7 +35,11 @@
 #include <numeric>
 #include <locale>
 #include <chrono>// For benchmarking
+#if __GNUC_MINOR__ >= 8 || defined (WIN32)
 #include <filesystem>
+#else
+#include <experimental/filesystem>
+#endif
 
 const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
 
