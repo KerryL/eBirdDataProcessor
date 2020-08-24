@@ -32,7 +32,7 @@ private:
 	std::map<uint16_t, UString::String> indexToNameMap;
 	bool ReadNameIndexData();
 	
-	bool DeserializeMonthData(std::ifstream& file, std::vector<EBirdDataProcessor::FrequencyInfo>& monthData, double& checklistCount) const;
+	bool DeserializeWeekData(std::ifstream& file, std::vector<EBirdDataProcessor::FrequencyInfo>& weekData, double& checklistCount) const;
 	template<typename T>
 	static bool Read(std::ifstream& file, T& data);
 };

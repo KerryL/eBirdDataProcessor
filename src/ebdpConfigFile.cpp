@@ -323,9 +323,9 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (config.timeFilters.week > 53)
+	if (config.timeFilters.week > 52)
 	{
-		Cerr << "Week (" << GetKey(config.timeFilters.week) << ") must be in the range 0 - 53\n";
+		Cerr << "Week (" << GetKey(config.timeFilters.week) << ") must be in the range 0 - 52\n";
 		configurationOK = false;
 	}
 

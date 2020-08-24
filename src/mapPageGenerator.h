@@ -47,7 +47,7 @@ private:
 		UString::String longName;
 	};
 
-	static const std::array<NamePair, 12> monthNames;
+	static const std::array<NamePair, 48> weekNames;
 
 	struct Keys
 	{
@@ -83,18 +83,18 @@ private:
 
 		UString::String geometryKML;
 
-		struct MonthInfo
+		struct WeekInfo
 		{
 			double probability;
 			std::vector<EBirdDataProcessor::FrequencyInfo> frequencyInfo;
 		};
 
-		std::array<MonthInfo, 12> monthInfo;
+		std::array<WeekInfo, 48> weekInfo;
 	};
 
 	static bool CreateJSONData(const std::vector<CountyInfo>& observationData, const double& kmlReductionLimit, cJSON*& geoJSON);
 	static bool BuildObservationRecord(const CountyInfo& observation, const double& kmlReductionLimit, cJSON* json);
-	static bool BuildMonthInfo(CountyInfo::MonthInfo monthInfo, cJSON* json);
+	static bool BuildWeekInfo(CountyInfo::WeekInfo weekInfo, cJSON* json);
 
 	static UString::String ForceTrailingSlash(const UString::String& path);
 

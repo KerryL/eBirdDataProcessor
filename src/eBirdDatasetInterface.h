@@ -89,7 +89,7 @@ private:
 
 	std::unordered_map<UString::String, uint16_t> nameIndexMap;
 
-	typedef std::array<FrequencyData, 12> YearFrequencyData;
+	typedef std::array<FrequencyData, 48> YearFrequencyData;
 	std::unordered_map<UString::String, YearFrequencyData> frequencyMap;// Key is fully qualified eBird region name
 
 	struct Observation
@@ -132,14 +132,14 @@ private:
 	void RemoveRarities();
 
 	static bool ParseLine(const UString::String& line, Observation& observation);
-	static unsigned int GetMonthIndex(const Date& date);
+	static unsigned int GetWeekIndex(const Date& date);
 	static bool HeaderMatchesExpectedFormat(const UString::String& line);
 	static Date ConvertStringToDate(const UString::String& s);
 	static bool IncludeInLikelihoodCalculation(const UString::String& commonName);
 
 	bool WriteNameIndexFile(const UString::String& frequencyDataPath) const;
 
-	static bool SerializeMonthData(std::ofstream& file, const FrequencyData& data);
+	static bool SerializeWeekData(std::ofstream& file, const FrequencyData& data);
 	template<typename T>
 	static bool Write(std::ofstream& file, const T& data);
 

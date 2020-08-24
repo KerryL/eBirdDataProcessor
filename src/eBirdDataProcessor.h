@@ -91,18 +91,18 @@ public:
 	{
 		YearFrequencyInfo() = default;
 		YearFrequencyInfo(const UString::String& locationCode,
-			const std::array<double, 12>& probabilities) : locationCode(locationCode), probabilities(probabilities) {}
+			const std::array<double, 48>& probabilities) : locationCode(locationCode), probabilities(probabilities) {}
 
 		UString::String locationCode;
-		std::array<double, 12> probabilities;
-		std::array<std::vector<FrequencyInfo>, 12> frequencyInfo;
+		std::array<double, 48> probabilities;
+		std::array<std::vector<FrequencyInfo>, 48> frequencyInfo;
 	};
 
 	template<typename T>
 	static bool ParseToken(UString::IStringStream& lineStream, const UString::String& fieldName, T& target);
 	
-	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
-	typedef std::array<double, 12> DoubleYear;
+	typedef std::array<std::vector<FrequencyInfo>, 48> FrequencyDataYear;
+	typedef std::array<double, 48> DoubleYear;
 
 private:
 	static const UString::String headerLine;
@@ -195,7 +195,7 @@ private:
 
 	bool ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData, DoubleYear&& checklistCounts,
 		const double& thresholdFrequency, const unsigned int& thresholdObservationCount,
-		std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const;
+		std::array<double, 48>& probabilities, std::array<std::vector<FrequencyInfo>, 48>& species) const;
 
 	static bool WriteBestLocationsViewerPage(const LocationFindingParameters& locationFindingParameters,
 		const std::vector<UString::String>& highDetailCountries,
@@ -299,11 +299,11 @@ private:
 	struct ConsolidationData
 	{
 		FrequencyDataYear occurrenceData;
-		std::array<double, 12> checklistCounts;
+		std::array<double, 48> checklistCounts;
 	};
-	static void AddConsolidationData(ConsolidationData& existingData, FrequencyDataYear&& newData, std::array<double, 12>&& newCounts);
-	static void ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 12>& counts);
-	static void ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 12>& counts);
+	static void AddConsolidationData(ConsolidationData& existingData, FrequencyDataYear&& newData, std::array<double, 48>&& newCounts);
+	static void ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 48>& counts);
+	static void ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 48>& counts);
 
 	bool GatherFrequencyData(const UString::String& frequencyFilePath,
 		const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
