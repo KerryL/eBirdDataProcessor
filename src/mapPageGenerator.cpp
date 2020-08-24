@@ -244,7 +244,7 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "		if (intervalHandle) {\n"
 		<< "		  clearInterval(intervalHandle);\n"
 		<< "		}\n\n"
-		<< "        e.originalEvent.stopPropegation();\n"
+		<< "        e.originalEvent.cancelBubble = true;\n"
 		<< "	  }\n\n"
 		<< "      function highlightFeature(e) {\n"
 		<< "        var layer = e.target;\n\n"
@@ -264,6 +264,8 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "          info.update();\n"
 		<< "      }\n\n"
 		<< "      map.on('click', function(e) {\n"
+		<< "        if (e.originalEvent.cancelBubble)\n"
+		<< "          return;\n\n"
 		<< "        if (lastClicked) {\n"
 		<< "          resetHighlight(lastClicked);\n"
 		<< "          highlightOnEnter = true;\n"
@@ -372,6 +374,7 @@ bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 	}
 
 	file << "var regionData = " << jsonString << ";\n";
+	free(jsonString);
 	cJSON_Delete(geoJSON);
 
 	return true;
