@@ -42,7 +42,7 @@ bool FrequencyFileReader::ReadRegionData(const UString::String& regionCode,
 	unsigned int i;
 	for (i = 0; i < frequencyData.size(); ++i)
 	{
-		if (!DeserializeMonthData(file, frequencyData[i], checklistCounts[i]))
+		if (!DeserializeWeekData(file, frequencyData[i], checklistCounts[i]))
 			return false;
 	}
 	
@@ -89,8 +89,8 @@ bool FrequencyFileReader::ReadNameIndexData()
 	return true;
 }
 
-bool FrequencyFileReader::DeserializeMonthData(std::ifstream& file,
-	std::vector<EBirdDataProcessor::FrequencyInfo>& monthData, double& checklistCount) const
+bool FrequencyFileReader::DeserializeWeekData(std::ifstream& file,
+	std::vector<EBirdDataProcessor::FrequencyInfo>& weekData, double& checklistCount) const
 {
 	uint16_t temp;
 	if (!Read(file, temp))
@@ -99,9 +99,9 @@ bool FrequencyFileReader::DeserializeMonthData(std::ifstream& file,
 
 	if (!Read(file, temp))
 		return false;
-	monthData.resize(temp);
+	weekData.resize(temp);
 	
-	for (auto& species : monthData)
+	for (auto& species : weekData)
 	{
 		if (!Read(file, temp))
 			return false;

@@ -24,7 +24,7 @@
 const UString::String MapPageGenerator::htmlFileName(_T("observationMap.html"));
 const UString::String MapPageGenerator::dataFileName(_T("observationData.js"));
 
-const std::array<MapPageGenerator::NamePair, 12> MapPageGenerator::monthNames = {
+const std::array<MapPageGenerator::NamePair, 48> MapPageGenerator::weekNames = {
 	NamePair(_T("Jan"), _T("January")),
 	NamePair(_T("Feb"), _T("February")),
 	NamePair(_T("Mar"), _T("March")),
@@ -112,20 +112,56 @@ void MapPageGenerator::WriteBody(UString::OStream& f)
 		<< "    <div id=\"mapid\"></div>\n\n"
 		<< "	<script type=\"text/javascript\" src=\"observationData.js\"></script>\n\n"
 		<< "	<div style='font-family: sans-serif'>\n"
-		<< "      <label>Select Month:</label>\n"
-		<< "      <select id=\"monthSelect\" onchange=\"updateMap()\">\n"
-		<< "        <option value=\"0\">January</option>\n"
-		<< "        <option value=\"1\">February</option>\n"
-		<< "        <option value=\"2\">March</option>\n"
-		<< "        <option value=\"3\">April</option>\n"
-		<< "        <option value=\"4\">May</option>\n"
-		<< "        <option value=\"5\">June</option>\n"
-		<< "        <option value=\"6\">July</option>\n"
-		<< "        <option value=\"7\">August</option>\n"
-		<< "        <option value=\"8\">September</option>\n"
-		<< "        <option value=\"9\">October</option>\n"
-		<< "        <option value=\"10\">November</option>\n"
-		<< "        <option value=\"11\">December</option>\n"
+		<< "      <label>Select Week:</label>\n"
+		<< "      <select id=\"weekSelect\" onchange=\"updateMap()\">\n"
+		<< "        <option value=\"0\">January 1</option>\n"
+		<< "        <option value=\"1\">January 8</option>\n"
+		<< "        <option value=\"2\">January 15</option>\n"
+		<< "        <option value=\"3\">January 22</option>\n"
+		<< "        <option value=\"4\">February 1</option>\n"
+		<< "        <option value=\"5\">February 8</option>\n"
+		<< "        <option value=\"6\">February 15</option>\n"
+		<< "        <option value=\"7\">February 22</option>\n"
+		<< "        <option value=\"8\">March 1</option>\n"
+		<< "        <option value=\"9\">March 8</option>\n"
+		<< "        <option value=\"10\">March 15</option>\n"
+		<< "        <option value=\"11\">March 22</option>\n"
+		<< "        <option value=\"12\">April 1</option>\n"
+		<< "        <option value=\"13\">April 8</option>\n"
+		<< "        <option value=\"14\">April 15</option>\n"
+		<< "        <option value=\"15\">April 22</option>\n"
+		<< "        <option value=\"16\">May 1</option>\n"
+		<< "        <option value=\"17\">May 8</option>\n"
+		<< "        <option value=\"18\">May 15</option>\n"
+		<< "        <option value=\"19\">May 22</option>\n"
+		<< "        <option value=\"20\">June 1</option>\n"
+		<< "        <option value=\"21\">June 8</option>\n"
+		<< "        <option value=\"22\">June 15</option>\n"
+		<< "        <option value=\"23\">June 22</option>\n"
+		<< "        <option value=\"24\">July 1</option>\n"
+		<< "        <option value=\"25\">July 8</option>\n"
+		<< "        <option value=\"26\">July 15</option>\n"
+		<< "        <option value=\"27\">July 22</option>\n"
+		<< "        <option value=\"28\">August 1</option>\n"
+		<< "        <option value=\"29\">August 8</option>\n"
+		<< "        <option value=\"30\">August 15</option>\n"
+		<< "        <option value=\"31\">August 22</option>\n"
+		<< "        <option value=\"32\">September 1</option>\n"
+		<< "        <option value=\"33\">September 8</option>\n"
+		<< "        <option value=\"34\">September 15</option>\n"
+		<< "        <option value=\"35\">September 22</option>\n"
+		<< "        <option value=\"36\">October 1</option>\n"
+		<< "        <option value=\"37\">October 8</option>\n"
+		<< "        <option value=\"38\">October 15</option>\n"
+		<< "        <option value=\"39\">October 22</option>\n"
+		<< "        <option value=\"40\">November 1</option>\n"
+		<< "        <option value=\"41\">November 8</option>\n"
+		<< "        <option value=\"42\">November 15</option>\n"
+		<< "        <option value=\"43\">November 22</option>\n"
+		<< "        <option value=\"44\">December 1</option>\n"
+		<< "        <option value=\"45\">December 8</option>\n"
+		<< "        <option value=\"46\">December 15</option>\n"
+		<< "        <option value=\"47\">December 22</option>\n"
 		<< "        <option value=\"-1\">Cycle</option>\n"
 		<< "      </select>\n"
 		<< "    </div>\n\n";
@@ -154,7 +190,7 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "      info.update = function (props) {\n"
 		<< "        var probability = 0;\n"
 		<< "        if (props) {\n"
-		<< "          probability = props.monthData[month].probability;\n"
+		<< "          probability = props.weekData[week].probability;\n"
 		<< "        }\n"
 		<< "        this._div.innerHTML = '<h4>Probability of Needed Observation</h4>' +  (props ?\n"
 		<< "          '<b>' + props.name + '</b><br />' + probability.toFixed(2) + ' %<br />' +\n"
@@ -163,7 +199,7 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "          : 'Select a region');\n\n"
 		<< "        if (props) {\n"
 		<< "          var fragment = document.createDocumentFragment();\n"
-		<< "          props.monthData[month].birds.forEach(function(species, index) {\n"
+		<< "          props.weekData[week].birds.forEach(function(species, index) {\n"
 		<< "            var opt = document.createElement('option');\n"
 		<< "            opt.text = species;\n"
 		<< "            opt.value = species;\n"
@@ -182,15 +218,15 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "      }\n\n"
 		<< "      var unhighlightOnExit = true;\n"
 		<< "      var highlightOnEnter = true;\n"
-		<< "      var month = 0;\n"
+		<< "      var week = 0;\n"
 		<< "      var cycle = false;\n"
 		<< "      var intervalHandle;\n"
 		<< "      function updateMap() {\n"
-		<< "        var monthSelect = document.getElementById('monthSelect');\n"
-		<< "        month = monthSelect.options[monthSelect.selectedIndex].value;\n"
-		<< "        if (month == -1) {\n"
-		<< "          month = 0;\n"
-		<< "          intervalHandle = setInterval(cycleMonth, 2000);\n"
+		<< "        var weekSelect = document.getElementById('weekSelect');\n"
+		<< "        week = weekSelect.options[weekSelect.selectedIndex].value;\n"
+		<< "        if (week == -1) {\n"
+		<< "          week = 0;\n"
+		<< "          intervalHandle = setInterval(cycleWeek, 2000);\n"
 		<< "        } else if (intervalHandle) {\n"
 		<< "		  clearInterval(intervalHandle);\n"
 		<< "		  intervalHandle = null;\n"
@@ -203,10 +239,10 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "        geoJson.setStyle(style);\n"
 		<< "        info.update();\n"
 		<< "	  }\n\n"
-		<< "      function cycleMonth() {\n"
-		<< "		month++;\n"
-		<< "		if (month == 12) {\n"
-		<< "		  month = 0;\n"
+		<< "      function cycleWeek() {\n"
+		<< "		week++;\n"
+		<< "		if (week == 48) {\n"
+		<< "		  week = 0;\n"
 		<< "		}\n\n"
 		<< "		updateMapDisplay();\n"
 		<< "	  }\n\n"
@@ -229,7 +265,7 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "          color: 'white',\n"
 		<< "          dashArray: '1',\n"
 		<< "          fillOpacity: 0.3,\n"
-		<< "          fillColor: getColor(feature.properties.monthData[month].probability)\n"
+		<< "          fillColor: getColor(feature.properties.weekData[week].probability)\n"
 		<< "        };\n"
 		<< "      }\n\n"
 		<< "      var lastClicked;\n"
@@ -337,8 +373,8 @@ bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 		assert(entry.locationCode.length() >= 2);
 		for (unsigned int i = 0; i < entry.frequencyInfo.size(); ++i)
 		{
-			countyIt->monthInfo[i].frequencyInfo = entry.frequencyInfo[i];
-			countyIt->monthInfo[i].probability = entry.probabilities[i];
+			countyIt->weekInfo[i].frequencyInfo = entry.frequencyInfo[i];
+			countyIt->weekInfo[i].probability = entry.probabilities[i];
 		}
 		countyIt->code = entry.locationCode;
 
@@ -455,35 +491,35 @@ bool MapPageGenerator::BuildObservationRecord(const CountyInfo& observation, con
 	cJSON_AddStringToObject(observationData, "state", UString::ToNarrowString(observation.state).c_str());
 	cJSON_AddStringToObject(observationData, "county", UString::ToNarrowString(observation.county).c_str());
 
-	auto monthData(cJSON_CreateArray());
-	if (!monthData)
+	auto weekData(cJSON_CreateArray());
+	if (!weekData)
 	{
-		Cerr << "Failed to create month data JSON object\n";
+		Cerr << "Failed to create week data JSON object\n";
 		return false;
 	}
 
-	cJSON_AddItemToObject(observationData, "monthData", monthData);
+	cJSON_AddItemToObject(observationData, "weekData", weekData);
 
-	for (const auto& m : observation.monthInfo)
+	for (const auto& m : observation.weekInfo)
 	{
-		cJSON* month(cJSON_CreateObject());
-		if (!month)
+		cJSON* week(cJSON_CreateObject());
+		if (!week)
 		{
-			Cerr << "Failed to create month JSON object\n";
+			Cerr << "Failed to create week JSON object\n";
 			return false;
 		}
 
-		cJSON_AddItemToArray(monthData, month);
-		if (!BuildMonthInfo(m, month))
+		cJSON_AddItemToArray(weekData, week);
+		if (!BuildWeekInfo(m, week))
 			return false;
 	}
 
 	return true;
 }
 
-bool MapPageGenerator::BuildMonthInfo(CountyInfo::MonthInfo monthInfo, cJSON* json)
+bool MapPageGenerator::BuildWeekInfo(CountyInfo::WeekInfo weekInfo, cJSON* json)
 {
-	cJSON_AddNumberToObject(json, "probability", monthInfo.probability * 100.0);
+	cJSON_AddNumberToObject(json, "probability", weekInfo.probability * 100.0);
 	auto speciesList(cJSON_CreateArray());
 	if (!speciesList)
 	{
@@ -492,12 +528,12 @@ bool MapPageGenerator::BuildMonthInfo(CountyInfo::MonthInfo monthInfo, cJSON* js
 	}
 
 	cJSON_AddItemToObject(json, "birds", speciesList);
-	std::sort(monthInfo.frequencyInfo.begin(), monthInfo.frequencyInfo.end(),
+	std::sort(weekInfo.frequencyInfo.begin(), weekInfo.frequencyInfo.end(),
 		[](const EBirdDataProcessor::FrequencyInfo& a, const EBirdDataProcessor::FrequencyInfo& b)
 	{
 		return a.frequency > b.frequency;
 	});
-	for (const auto& m : monthInfo.frequencyInfo)
+	for (const auto& m : weekInfo.frequencyInfo)
 	{
 		std::ostringstream ss;
 		ss << UString::ToNarrowString(m.species) << " (" << std::fixed << std::setprecision(2) << m.frequency << "%)";

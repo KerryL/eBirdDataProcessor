@@ -149,12 +149,12 @@ void EBirdDatasetInterface::RemoveRarities()
 {
 	for (auto& entry : frequencyMap)
 	{
-		for (auto& month : entry.second)
+		for (auto& week : entry.second)
 		{
-			for (auto it = month.speciesList.begin(); it != month.speciesList.end(); )
+			for (auto it = week.speciesList.begin(); it != week.speciesList.end(); )
 			{
 				if (it->second.rarityGuess.mightBeRarity)
-					it = month.speciesList.erase(it);
+					it = week.speciesList.erase(it);
 				else
 					++it;
 			}
@@ -178,7 +178,7 @@ bool EBirdDatasetInterface::WriteNameIndexFile(const UString::String& frequencyD
 	return true;
 }
 
-bool EBirdDatasetInterface::SerializeMonthData(std::ofstream& file, const FrequencyData& data)
+bool EBirdDatasetInterface::SerializeWeekData(std::ofstream& file, const FrequencyData& data)
 {
 	if (!Write(file, static_cast<uint16_t>(data.checklistIDs.size())))
 		return false;
@@ -229,9 +229,9 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const UString::String& frequency
 			continue;
 		}
 
-		for (const auto& month : entry.second)
+		for (const auto& week : entry.second)
 		{
-			if (!SerializeMonthData(file, month))
+			if (!SerializeWeekData(file, week))
 			{
 				Cerr << "Failed to serialize data to '" << fullFileName << "'\n";
 				success = false;
@@ -738,18 +738,18 @@ void EBirdDatasetInterface::ProcessObservationDataFrequency(const Observation& o
 	else if (!IncludeInLikelihoodCalculation(observation.commonName))
 		return;
 
-	const auto monthIndex(GetMonthIndex(observation.date));
+	const auto weekIndex(GetWeekIndex(observation.date));
 
 	std::lock_guard<std::mutex> lock(mutex);// TODO:  If there were a way to eliminate this lock, there could potentially be a big speed improvement (would need to verify by profiling to ensure read isn't bottleneck)
 
 	auto& entry(frequencyMap[observation.regionCode]);
 	nameIndexMap.insert(std::make_pair(observation.commonName, static_cast<uint16_t>(nameIndexMap.size())));
-	auto& speciesInfo(entry[monthIndex].speciesList[nameIndexMap[observation.commonName]]);
+	auto& speciesInfo(entry[weekIndex].speciesList[nameIndexMap[observation.commonName]]);
 	speciesInfo.rarityGuess.Update(observation.date);
 
 	if (observation.completeChecklist)
 	{
-		entry[monthIndex].checklistIDs.insert(observation.checklistID);
+		entry[weekIndex].checklistIDs.insert(observation.checklistID);
 		++speciesInfo.occurrenceCount;
 	}
 }
@@ -783,9 +783,11 @@ bool EBirdDatasetInterface::RegionMatches(const UString::String& regionCode) con
 	return regionCode.substr(0, regionCodeTimeOfDay.length()).compare(regionCodeTimeOfDay) == 0;
 }
 
-unsigned int EBirdDatasetInterface::GetMonthIndex(const Date& date)
+unsigned int EBirdDatasetInterface::GetWeekIndex(const Date& date)
 {
-	return date.month - 1;
+	const unsigned int monthIndex(date.month - 1);
+	const unsigned int monthWeekIndex((date.day - 1) / 7);
+	return 4 * monthIndex + std::min(monthWeekIndex, 3U);
 }
 
 void EBirdDatasetInterface::SpeciesData::Rarity::Update(const Date& date)
