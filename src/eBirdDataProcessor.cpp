@@ -2152,6 +2152,8 @@ bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyP
 			return t;
 		});
 
+		// TODO:  Rotate values so the longest-duration 0-frequency portion gets split to become beginning/end of time frame, then rotate back after fitting PDF
+
 		// TODO:  Need to work on KDE for smoothing - input is possibly one entry for each observation instead of # of observations in a week?
 		/*std::vector<std::pair<double, double>> kdeInput(values.size());
 		for (unsigned int j = 0; j < values.size(); ++j)
@@ -2177,9 +2179,10 @@ bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyP
 		outFile << sp << ',';
 	outFile << '\n';
 
+	const double multiplier(frequencyData.size() / 12.0);
 	for (unsigned int i = 0; i < frequencyData.size(); ++i)
 	{
-		outFile << i / 4.0 << ',';
+		outFile << (i + multiplier) / multiplier << ',';// Shift to start at month 1.0
 		for (const auto& p : pdfs)
 			outFile << p[i] << ',';
 		outFile << '\n';
