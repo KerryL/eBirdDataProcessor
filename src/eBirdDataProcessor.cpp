@@ -2137,34 +2137,120 @@ bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyP
 	else// Only check specific species
 		speciesList = toyParameters.commonNames;
 
-	std::vector<std::vector<double>> pdfs(speciesList.size(), std::vector<double>(frequencyData.size()));
+	const auto pdfSize(frequencyData.size());
+	std::vector<std::vector<double>> pdfs(speciesList.size(), std::vector<double>(pdfSize));
 	for (unsigned int i = 0; i < speciesList.size(); ++i)
 	{
-		KernelDensityEstimation kde;
 		std::vector<double> values(frequencyData.size());
 		std::copy(speciesObservationsByWeek[speciesList[i]].begin(), speciesObservationsByWeek[speciesList[i]].end(), values.begin());
-		std::vector<double> range(frequencyData.size());
+		std::vector<double> range(pdfSize);
 		double temp(1.0);
-		std::generate(range.begin(), range.end(), [&temp]()
+		const double step(12.0 / range.size());
+		std::generate(range.begin(), range.end(), [&temp, &step]()
 		{
 			double t(temp);
-			temp += 0.25;
+			temp += step;
 			return t;
 		});
 
-		// TODO:  Rotate values so the longest-duration 0-frequency portion gets split to become beginning/end of time frame, then rotate back after fitting PDF
+		auto FindStartIndex([](const std::vector<double>& values)
+		{
+			struct Segment
+			{
+				size_t start;
+				size_t end;
+				size_t length;
+			};
 
-		// TODO:  Need to work on KDE for smoothing - input is possibly one entry for each observation instead of # of observations in a week?
-		/*std::vector<std::pair<double, double>> kdeInput(values.size());
+			std::vector<Segment> zeroSegments;
+			size_t next;
+			if (values.front() == 0.0)
+			{
+				Segment s;
+				for (s.start = values.size() - 1; s.start > 0; --s.start)
+				{
+					if (values[s.start - 1] > 0.0)
+						break;
+				}
+
+				for (s.end = 0; s.end < values.size() - 1; ++s.end)
+				{
+					if (values[s.end + 1] > 0.0)
+						break;
+				}
+				s.length = s.end + values.size() - s.start;
+				zeroSegments.push_back(s);
+				next = s.end + 1;
+			}
+			else
+				next = 1;
+
+			for (; next < values.size() - 2; ++next)
+			{
+				if (values[next + 1] == 0.0)
+				{
+					Segment s;
+					s.start = next + 1;
+
+					for (s.end = s.start + 1; s.end < values.size() - 2; ++s.end)
+					{
+						if (values[s.end] > 0.0)
+							break;
+					}
+
+					if (zeroSegments.size() > 0 && s.start == zeroSegments.front().start)
+						break;
+
+					s.length = s.end - s.start;
+					zeroSegments.push_back(s);
+					next = s.end + 1;
+				}
+			}
+
+			if (zeroSegments.empty())
+				return 0ULL;
+
+			Segment longest(zeroSegments.front());
+			for (const auto& s : zeroSegments)
+			{
+				if (s.length > longest.length)
+					longest = s;
+			}
+
+			return (longest.start + longest.length / 2) % values.size();
+		});
+
+		// Rotate input so the longest-duration 0-frequency portion gets split to become beginning/end of time frame, then rotate back after fitting PDF
+		// This avoids odd-shaped PDFs for birds that are here only in the winter, for example
+		const auto startIndex(FindStartIndex(values));
+		std::rotate(values.begin(), values.begin() + startIndex, values.end());
+		std::rotate(checklistCounts.begin(), checklistCounts.begin() + startIndex, checklistCounts.end());
+
+		std::vector<std::pair<double, double>> kdeInput(values.size());
+		double inputIntegral(0.0);
+		const auto indexToMonthFactor(frequencyData.size() / 12.0);
 		for (unsigned int j = 0; j < values.size(); ++j)
 		{
-			kdeInput[j].first = range[j];
+			kdeInput[j].first = (j + indexToMonthFactor) / indexToMonthFactor;// convert index to floating point 1-based month value
 			kdeInput[j].second = values[j] / checklistCounts[j] * 100.0;
+			inputIntegral += kdeInput[j].second;
+			pdfs[i][j] = kdeInput[j].second;
 		}
 
-		pdfs[i] = kde.ComputePDF(values, range, KernelDensityEstimation::EstimateOptimalBandwidth(values));*/
-		for (unsigned int j = 0; j < values.size(); ++j)// TODO:  Remove this
-			pdfs[i][j] = values[j] / checklistCounts[j] * 100.0;
+		KernelDensityEstimation kde;
+		pdfs[i] = kde.ComputePDF(kdeInput, range, 0.3);
+
+		// Restore correct order
+		std::rotate(pdfs[i].begin(), pdfs[i].begin() + pdfs[i].size() - startIndex, pdfs[i].end());
+		assert(pdfs[i].size() == values.size());
+
+		double outputIntegral(0.0);
+		for (const auto& p : pdfs[i])
+			outputIntegral += p;
+
+		const auto scaleFactor(inputIntegral / kdeInput.size() / outputIntegral * pdfs[i].size());
+		for (auto& p : pdfs[i])
+			p *= scaleFactor;
 	}
 
 	UString::OFStream outFile(UString::ToNarrowString(toyParameters.outputFile));
