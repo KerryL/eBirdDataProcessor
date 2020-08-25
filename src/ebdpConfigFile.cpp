@@ -26,6 +26,10 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("TOD_OUTPUT_FILE"), config.timeOfDayParameters.outputFile);
 	AddConfigItem(_T("REGION_DATA_OUTPUT_FILE"), config.timeOfDayParameters.splitRegionDataFile);
 
+	AddConfigItem(_T("PROB_VS_TIME_OUTPUT_FILE"), config.timeOfYearParameters.outputFile);
+	AddConfigItem(_T("PROB_VS_TIME_MAX_PROB"), config.timeOfYearParameters.maxProbability);
+	AddConfigItem(_T("PROB_VS_TIME_SPECIES"), config.timeOfYearParameters.commonNames);
+
 	AddConfigItem(_T("MEDIA_LIST_HTML"), config.mediaListHTML);
 	AddConfigItem(_T("MEDIA_FILE"), config.mediaFileName);
 	AddConfigItem(_T("SHOW_PHOTO_NEEDS"), config.showOnlyPhotoNeeds);
@@ -121,6 +125,8 @@ void EBDPConfigFile::AssignDefaults()
 	config.speciesHunt.latitude = 0.0;
 	config.speciesHunt.longitude = 0.0;
 	config.speciesHunt.radius = 0.0;
+
+	config.timeOfYearParameters.maxProbability = 0.0;
 }
 
 bool EBDPConfigFile::ConfigIsOK()
@@ -131,6 +137,9 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 
 	if (!FrequencyHarvestConfigIsOK() && !TimeOfDayConfigIsOK())
+		configurationOK = false;
+
+	if (!TimeOfYearConfigIsOK())
 		configurationOK = false;
 
 	if (!TargetCalendarConfigIsOK())
@@ -159,6 +168,31 @@ bool EBDPConfigFile::TimeOfDayConfigIsOK()
 		(config.timeOfDayParameters.commonNames.empty() || config.timeOfDayParameters.outputFile.empty()))
 	{
 		Cerr << "Time-of-day analysis requires " << GetKey(config.timeOfDayParameters.outputFile) << " and at least one " << GetKey(config.timeOfDayParameters.commonNames) << '\n';
+		configurationOK = false;
+	}
+
+	return configurationOK;
+}
+
+bool EBDPConfigFile::TimeOfYearConfigIsOK()
+{
+	bool configurationOK(true);
+
+	if (!config.timeOfYearParameters.commonNames.empty() && config.timeOfYearParameters.maxProbability > 0.0)
+	{
+		Cerr << "Cannot specify both " << GetKey(config.timeOfYearParameters.commonNames) << " and " << GetKey(config.timeOfYearParameters.maxProbability) << '\n';
+		configurationOK = false;
+	}
+
+	if (!config.timeOfYearParameters.outputFile.empty() && config.timeOfYearParameters.commonNames.empty() && config.timeOfYearParameters.maxProbability <= 0.0)
+	{
+		Cerr << "Time-of-year analysis requires that either " << GetKey(config.timeOfYearParameters.maxProbability) << " or at least one " << GetKey(config.timeOfYearParameters.commonNames) << " be specified\n";
+		configurationOK = false;
+	}
+
+	if (!config.timeOfYearParameters.outputFile.empty() && config.frequencyFilePath.empty())
+	{
+		Cerr << "Time-of-year analysis requires that " << GetKey(config.frequencyFilePath) << " be specified\n";
 		configurationOK = false;
 	}
 

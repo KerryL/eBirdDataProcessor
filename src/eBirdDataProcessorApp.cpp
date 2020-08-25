@@ -177,6 +177,14 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		if (!processor.HuntSpecies(config.speciesHunt, config.eBirdApiKey))
 			return 1;
 	}
+	else if (!config.timeOfYearParameters.outputFile.empty())
+	{
+		EBirdInterface ebi(config.eBirdApiKey);
+		const auto regionCodes(ebi.GetRegionCodes(config.locationFilters.country,
+			config.locationFilters.state, config.locationFilters.county));
+		if (!processor.GenerateTimeOfYearData(config.timeOfYearParameters, config.frequencyFilePath, regionCodes))
+			return 1;
+	}
 	else if (config.doComparison)
 		processor.DoListComparison();
 	else
