@@ -192,7 +192,7 @@ std::vector<double> KernelDensityEstimation::ComputePDF(
 
 //==========================================================================
 // Class:			KernelDensityEstimation
-// Function:		GetUniqueValues
+// Function:		ComputePDF
 //
 // Description:		Uses Kernel Density Estimation to find the significantly
 //					unique values in the specified vector.

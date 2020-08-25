@@ -63,6 +63,8 @@ public:
 		const UString::String& country, const UString::String& state, const UString::String& county,
 		const UString::String& eBirdApiKey) const;
 
+	bool GenerateTimeOfYearData(const TimeOfYearParameters& toyParameters, const UString::String& frequencyFilePath, const std::vector<UString::String>& regionCodes) const;
+
 	bool FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
 		const LocationFindingParameters& locationFindingParameters, const std::vector<UString::String>& highDetailCountries,
 		const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes) const;

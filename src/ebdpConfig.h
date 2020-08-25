@@ -29,6 +29,13 @@ struct TimeOfDayParameters
 	UString::String splitRegionDataFile;
 };
 
+struct TimeOfYearParameters
+{
+	UString::String outputFile;
+	std::vector<UString::String> commonNames;
+	double maxProbability;
+};
+
 struct LocationFindingParameters
 {
 	bool cleanupKMLLocationNames;
@@ -97,6 +104,7 @@ struct EBDPConfig
 	bool includePartialIDs;
 
 	TimeOfDayParameters timeOfDayParameters;
+	TimeOfYearParameters timeOfYearParameters;
 
 	TimeFilters timeFilters;
 

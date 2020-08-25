@@ -27,6 +27,7 @@ private:
 	bool ConfigIsOK() override;
 
 	bool TimeOfDayConfigIsOK();
+	bool TimeOfYearConfigIsOK();
 	bool FrequencyHarvestConfigIsOK();
 	bool TargetCalendarConfigIsOK();
 	bool FindMaxNeedsConfigIsOK();

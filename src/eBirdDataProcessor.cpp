@@ -11,6 +11,7 @@
 #include "frequencyFileReader.h"
 #include "utilities.h"
 #include "stringUtilities.h"
+#include "kernelDensityEstimation.h"
 
 // System headers (added from https://github.com/tronkko/dirent/ for Windows)
 #ifdef _WIN32
@@ -2017,7 +2018,7 @@ bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt, const UStri
 	return true;
 }
 
- bool EBirdDataProcessor::TimesMatch(const EBirdInterface::ObservationInfo& o1, const EBirdInterface::ObservationInfo& o2)
+bool EBirdDataProcessor::TimesMatch(const EBirdInterface::ObservationInfo& o1, const EBirdInterface::ObservationInfo& o2)
 {
 	if (o1.observationDate.tm_year != o2.observationDate.tm_year ||
 		o1.observationDate.tm_mon != o2.observationDate.tm_mon ||
@@ -2033,22 +2034,156 @@ bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt, const UStri
 		o1.observationDate.tm_min == o2.observationDate.tm_min;
 }
 
- UString::String EBirdDataProcessor::StringifyDateTime(struct tm& dateTime)
- {
-	 UString::OStringStream ss;
-	 ss << dateTime.tm_mon + 1 << '/' << dateTime.tm_mday << '/' << dateTime.tm_year + 1900 << ' '
-		 << dateTime.tm_hour << ':' << std::setw(2) << std::setfill(UString::Char('0')) << dateTime.tm_min;
-	 return ss.str();
- }
+UString::String EBirdDataProcessor::StringifyDateTime(struct tm& dateTime)
+{
+	UString::OStringStream ss;
+	ss << dateTime.tm_mon + 1 << '/' << dateTime.tm_mday << '/' << dateTime.tm_year + 1900 << ' '
+		<< dateTime.tm_hour << ':' << std::setw(2) << std::setfill(UString::Char('0')) << dateTime.tm_min;
+	return ss.str();
+}
 
- unsigned int EBirdDataProcessor::CountConsecutiveLeadingQuotes(UString::IStringStream& ss)
- {
-	 unsigned int count(0);
-	 while (ss.peek() == UString::Char('"'))
-	 {
-		 ss.ignore();
-		 ++count;
-	 }
+unsigned int EBirdDataProcessor::CountConsecutiveLeadingQuotes(UString::IStringStream& ss)
+{
+	unsigned int count(0);
+	while (ss.peek() == UString::Char('"'))
+	{
+		ss.ignore();
+		++count;
+	}
 
-	 return count;
+	return count;
+}
+
+bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyParameters, const UString::String& frequencyFilePath, const std::vector<UString::String>& regionCodes) const
+{
+	FrequencyFileReader ffReader(frequencyFilePath);
+	FrequencyDataYear frequencyData;
+	DoubleYear checklistCounts;
+	for (auto& c : checklistCounts)
+		c = 0.0;
+
+	for (const auto& rc : regionCodes)
+	{
+		FrequencyDataYear tempFrequencyData;
+		DoubleYear tempChecklistCounts;
+		if (!ffReader.ReadRegionData(rc, tempFrequencyData, tempChecklistCounts))
+			return false;
+
+		for (unsigned int i = 0; i < frequencyData.size(); ++i)
+		{
+			for (const auto& tfd : tempFrequencyData[i])
+			{
+				bool found(false);
+				for (auto& fd : frequencyData[i])
+				{
+					if (tfd.compareString == fd.compareString)
+					{
+						fd.frequency = floor(fd.frequency * checklistCounts[i] + tfd.frequency * 0.01 * tempChecklistCounts[i] + 0.5) / (checklistCounts[i] + tempChecklistCounts[i]);
+						found = true;
+					}
+				}
+
+				if (!found)
+				{
+					frequencyData[i].push_back(tfd);
+					frequencyData[i].back().frequency = floor(frequencyData[i].back().frequency * 0.01 * tempChecklistCounts[i] + 0.5) / (checklistCounts[i] + tempChecklistCounts[i]);
+				}
+			}
+			checklistCounts[i] += tempChecklistCounts[i];
+		}
+	}
+
+	const unsigned int totalObservations(static_cast<unsigned int>(std::accumulate(checklistCounts.begin(), checklistCounts.end(), 0.0)));
+
+	// Convert frequency data from list of species within each week to list of weeks within each species
+	std::map<UString::String, DoubleYear> speciesObservationsByWeek;
+	DoubleYear zeroYear;
+	std::fill(zeroYear.begin(), zeroYear.end(), 0.0);
+	for (unsigned int wk = 0; wk < frequencyData.size(); ++wk)
+	{
+		for (const auto& sp : frequencyData[wk])
+		{
+			if (speciesObservationsByWeek.find(sp.species) == speciesObservationsByWeek.end())
+				speciesObservationsByWeek[sp.species] = zeroYear;
+
+			speciesObservationsByWeek[sp.species][wk] += floor(checklistCounts[wk] * sp.frequency + 0.5);
+		}
+	}
+
+	std::vector<UString::String> speciesList;
+	if (toyParameters.maxProbability > 0.0)// Find all regularly occuring birds with total probability not to exceed maxProbability
+	{
+		const unsigned int minWeeksPerYear(3);// Used to define what constitutes a "rarity"
+		for (const auto& sp : speciesObservationsByWeek)
+		{
+			unsigned int weekCount(0);
+			unsigned int observationCount(0);
+
+			for (const auto& o : sp.second)
+			{
+				if (o > 0.0)
+				{
+					++weekCount;
+					observationCount += static_cast<unsigned int>(floor(o + 0.5));
+				}
+			}
+
+			if (weekCount > minWeeksPerYear && 100.0 * observationCount / totalObservations < toyParameters.maxProbability)
+				speciesList.push_back(sp.first);
+		}
+
+		Cout << "Found " << speciesList.size() << " species with overall probability < " << toyParameters.maxProbability << std::endl;
+	}
+	else// Only check specific species
+		speciesList = toyParameters.commonNames;
+
+	std::vector<std::vector<double>> pdfs(speciesList.size(), std::vector<double>(frequencyData.size()));
+	for (unsigned int i = 0; i < speciesList.size(); ++i)
+	{
+		KernelDensityEstimation kde;
+		std::vector<double> values(frequencyData.size());
+		std::copy(speciesObservationsByWeek[speciesList[i]].begin(), speciesObservationsByWeek[speciesList[i]].end(), values.begin());
+		std::vector<double> range(frequencyData.size());
+		double temp(1.0);
+		std::generate(range.begin(), range.end(), [&temp]()
+		{
+			double t(temp);
+			temp += 0.25;
+			return t;
+		});
+
+		// TODO:  Need to work on KDE for smoothing - input is possibly one entry for each observation instead of # of observations in a week?
+		/*std::vector<std::pair<double, double>> kdeInput(values.size());
+		for (unsigned int j = 0; j < values.size(); ++j)
+		{
+			kdeInput[j].first = range[j];
+			kdeInput[j].second = values[j] / checklistCounts[j] * 100.0;
+		}
+
+		pdfs[i] = kde.ComputePDF(values, range, KernelDensityEstimation::EstimateOptimalBandwidth(values));*/
+		for (unsigned int j = 0; j < values.size(); ++j)// TODO:  Remove this
+			pdfs[i][j] = values[j] / checklistCounts[j] * 100.0;
+	}
+
+	UString::OFStream outFile(UString::ToNarrowString(toyParameters.outputFile));
+	if (!outFile.good() || !outFile.is_open())
+	{
+		Cerr << "Failed to open '" << toyParameters.outputFile << "' for output\n";
+		return false;
+	}
+
+	outFile << "Month,";
+	for (const auto& sp : speciesList)
+		outFile << sp << ',';
+	outFile << '\n';
+
+	for (unsigned int i = 0; i < frequencyData.size(); ++i)
+	{
+		outFile << i / 4.0 << ',';
+		for (const auto& p : pdfs)
+			outFile << p[i] << ',';
+		outFile << '\n';
+	}
+
+	return true;
  }
