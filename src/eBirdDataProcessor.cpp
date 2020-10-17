@@ -1943,3 +1943,15 @@ bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt, const UStri
 
 	 return count;
  }
+ 
+ void EBirdDataProcessor::BuildChecklistLinks() const
+ {
+	std::set<std::string> checklistIds;
+	for (const auto& o : data)
+		checklistIds.insert(o.submissionID);
+		
+	std::cout << "Generating URLs for " << checklistIds.size() << " checklists:\n";
+	for (const auto& c : checklistIds)
+		std::cout << "https://ebird.org/checklist/" << c << "\n";
+	std::cout << std::endl;
+ }
