@@ -103,6 +103,8 @@ public:
 	
 	typedef std::array<std::vector<FrequencyInfo>, 12> FrequencyDataYear;
 	typedef std::array<double, 12> DoubleYear;
+	
+	void BuildChecklistLinks() const;
 
 private:
 	static const UString::String headerLine;

@@ -114,6 +114,9 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	// Other filter criteria
 	if (!config.includePartialIDs)
 		processor.FilterPartialIDs();
+		
+	if (config.buildChecklistLinks)
+		processor.BuildChecklistLinks();
 
 	if (!config.mediaListHTML.empty())
 	{

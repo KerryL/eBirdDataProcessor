@@ -77,6 +77,8 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("HUNT_LATITUDE"), config.speciesHunt.latitude);
 	AddConfigItem(_T("HUNT_LONGITUDE"), config.speciesHunt.longitude);
 	AddConfigItem(_T("HUNT_RADIUS"), config.speciesHunt.radius);
+	
+	AddConfigItem(_T("BUILD_CHECKLIST_LINKS"), config.buildChecklistLinks);
 }
 
 void EBDPConfigFile::AssignDefaults()
@@ -121,6 +123,8 @@ void EBDPConfigFile::AssignDefaults()
 	config.speciesHunt.latitude = 0.0;
 	config.speciesHunt.longitude = 0.0;
 	config.speciesHunt.radius = 0.0;
+	
+	config.buildChecklistLinks = false;
 }
 
 bool EBDPConfigFile::ConfigIsOK()

@@ -148,6 +148,8 @@ struct EBDPConfig
 	UString::String commentGroupString;
 
 	SpeciesHunt speciesHunt;
+	
+	bool buildChecklistLinks;
 };
 
 #endif// EBDP_CONFIG_H_
