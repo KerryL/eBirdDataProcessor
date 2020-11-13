@@ -1687,8 +1687,7 @@ bool EBirdDataProcessor::WriteBestLocationsViewerPage(const LocationFindingParam
 	const std::vector<YearFrequencyInfo>& observationProbabilities)
 {
 	MapPageGenerator generator(locationFindingParameters, highDetailCountries, eBirdAPIKey);
-	const UString::String htmlOutputPath(_T("."));
-	return generator.WriteBestLocationsViewerPage(htmlOutputPath, observationProbabilities);
+	return generator.WriteBestLocationsViewerPage(locationFindingParameters.baseOutputFileName, observationProbabilities);
 }
 
 // Assume we're comparing lists based on year
@@ -2217,7 +2216,7 @@ bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyP
 					longest = s;
 			}
 
-			return (longest.start + longest.length / 2) % values.size();
+			return static_cast<unsigned long long>((longest.start + longest.length / 2) % values.size());
 		});
 
 		// Rotate input so the longest-duration 0-frequency portion gets split to become beginning/end of time frame, then rotate back after fitting PDF

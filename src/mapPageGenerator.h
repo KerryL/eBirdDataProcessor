@@ -26,12 +26,12 @@ public:
 		const std::vector<UString::String>& highDetailCountries, const UString::String& eBirdAPIKey);
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
-	bool WriteBestLocationsViewerPage(const UString::String& outputPath,
+	bool WriteBestLocationsViewerPage(const UString::String& baseOutputFileName,
 		const std::vector<ObservationInfo>& observationInfo);
 
 private:
-	static const UString::String htmlFileName;
-	static const UString::String dataFileName;
+	static const UString::String htmlExtension;
+	static const UString::String dataExtension;
 
 	CombinedLogger<typename std::basic_ostream<UString::String::value_type>> log;
 
@@ -66,8 +66,8 @@ private:
 	std::unordered_map<UString::String, UString::String> eBirdRegionCodeToNameMap;
 	void AddRegionCodesToMap(const UString::String& parentCode, const EBirdInterface::RegionType& regionType);
 
-	bool WriteHTML(const UString::String& outputPath) const;
-	bool WriteGeoJSONData(const UString::String& outputPath, std::vector<ObservationInfo> observationProbabilities);
+	bool WriteHTML(const UString::String& fileName) const;
+	bool WriteGeoJSONData(const UString::String& fileName, std::vector<ObservationInfo> observationProbabilities);
 
 	static void WriteHeadSection(UString::OStream& f);
 	static void WriteBody(UString::OStream& f);
