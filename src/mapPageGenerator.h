@@ -66,11 +66,11 @@ private:
 	std::unordered_map<UString::String, UString::String> eBirdRegionCodeToNameMap;
 	void AddRegionCodesToMap(const UString::String& parentCode, const EBirdInterface::RegionType& regionType);
 
-	bool WriteHTML(const UString::String& fileName) const;
+	bool WriteHTML(const UString::String& fileName, const UString::String& dataFileName) const;
 	bool WriteGeoJSONData(const UString::String& fileName, std::vector<ObservationInfo> observationProbabilities);
 
 	static void WriteHeadSection(UString::OStream& f);
-	static void WriteBody(UString::OStream& f);
+	static void WriteBody(UString::OStream& f, const UString::String& dataFileName);
 	static void WriteScripts(UString::OStream& f);
 
 	struct CountyInfo

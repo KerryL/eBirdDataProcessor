@@ -53,7 +53,7 @@ MapPageGenerator::MapPageGenerator(const LocationFindingParameters& locationFind
 bool MapPageGenerator::WriteBestLocationsViewerPage(const UString::String& baseOutputFileName,
 	const std::vector<ObservationInfo>& observationProbabilities)
 {
-	if (!WriteHTML(baseOutputFileName + htmlExtension))
+	if (!WriteHTML(baseOutputFileName + htmlExtension, baseOutputFileName + dataExtension))
 		return false;
 
 	if (!WriteGeoJSONData(baseOutputFileName + dataExtension, observationProbabilities))
@@ -62,7 +62,7 @@ bool MapPageGenerator::WriteBestLocationsViewerPage(const UString::String& baseO
 	return true;
 }
 
-bool MapPageGenerator::WriteHTML(const UString::String& fileName) const
+bool MapPageGenerator::WriteHTML(const UString::String& fileName, const UString::String& dataFileName) const
 {
 	UString::OFStream file(fileName);
 	if (!file.is_open() || !file.good())
@@ -73,7 +73,7 @@ bool MapPageGenerator::WriteHTML(const UString::String& fileName) const
 
 	file << "<!DOCTYPE html>\n<html>\n";
 	WriteHeadSection(file);
-	WriteBody(file);
+	WriteBody(file, dataFileName);
 	file << "</html>\n";
 
 	return true;
@@ -105,11 +105,11 @@ void MapPageGenerator::WriteHeadSection(UString::OStream& f)
 		<< "  </head>\n\n";
 }
 
-void MapPageGenerator::WriteBody(UString::OStream& f)
+void MapPageGenerator::WriteBody(UString::OStream& f, const UString::String& dataFileName)
 {
 	f << "  <body>\n"
 		<< "    <div id=\"mapid\"></div>\n\n"
-		<< "	<script type=\"text/javascript\" src=\"observationData.js\"></script>\n\n"
+		<< "	<script type=\"text/javascript\" src=\"" << dataFileName << "\"></script>\n\n"
 		<< "	<div style='font-family: sans-serif'>\n"
 		<< "      <label>Select Week:</label>\n"
 		<< "      <select id=\"weekSelect\" onchange=\"updateMap()\">\n"
