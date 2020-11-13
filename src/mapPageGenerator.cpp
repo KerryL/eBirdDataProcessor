@@ -21,8 +21,8 @@
 #include <mutex>
 #include <cmath>
 
-const UString::String MapPageGenerator::htmlFileName(_T("observationMap.html"));
-const UString::String MapPageGenerator::dataFileName(_T("observationData.js"));
+const UString::String MapPageGenerator::htmlExtension(_T(".html"));
+const UString::String MapPageGenerator::dataExtension(_T(".js"));
 
 const std::array<MapPageGenerator::NamePair, 48> MapPageGenerator::weekNames = {
 	NamePair(_T("Jan"), _T("January")),
@@ -50,21 +50,20 @@ MapPageGenerator::MapPageGenerator(const LocationFindingParameters& locationFind
 	log.Add(std::move(f));//*/
 }
 
-bool MapPageGenerator::WriteBestLocationsViewerPage(const UString::String& outputPath,
+bool MapPageGenerator::WriteBestLocationsViewerPage(const UString::String& baseOutputFileName,
 	const std::vector<ObservationInfo>& observationProbabilities)
 {
-	if (!WriteHTML(outputPath))
+	if (!WriteHTML(baseOutputFileName + htmlExtension))
 		return false;
 
-	if (!WriteGeoJSONData(outputPath, observationProbabilities))
+	if (!WriteGeoJSONData(baseOutputFileName + dataExtension, observationProbabilities))
 		return false;
 
 	return true;
 }
 
-bool MapPageGenerator::WriteHTML(const UString::String& outputPath) const
+bool MapPageGenerator::WriteHTML(const UString::String& fileName) const
 {
-	const auto fileName(ForceTrailingSlash(outputPath) + htmlFileName);
 	UString::OFStream file(fileName);
 	if (!file.is_open() || !file.good())
 	{
@@ -448,7 +447,7 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "    </script>\n";
 }
 
-bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
+bool MapPageGenerator::WriteGeoJSONData(const UString::String& fileName,
 	std::vector<ObservationInfo> observationProbabilities)
 {
 	log << "Retrieving county location data" << std::endl;
@@ -493,7 +492,6 @@ bool MapPageGenerator::WriteGeoJSONData(const UString::String& outputPath,
 	if (!CreateJSONData(countyInfo, kmlReductionLimit, geoJSON))
 		return false;
 
-	const auto fileName(UString::ToNarrowString(ForceTrailingSlash(outputPath) + dataFileName));
 	std::ofstream file(fileName);
 	if (!file.is_open() || !file.good())
 	{

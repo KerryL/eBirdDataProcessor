@@ -61,6 +61,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("KML_REDUCTION_LIMIT"), config.locationFindingParameters.kmlReductionLimit);
 	AddConfigItem(_T("GEO_JSON_PRECISION"), config.locationFindingParameters.geoJSONPrecision);
 	AddConfigItem(_T("KML_LIBRARY"), config.locationFindingParameters.kmlLibraryPath);
+	AddConfigItem(_T("OUTPUT_BASE_FILE_NAME"), config.locationFindingParameters.baseOutputFileName);
 
 	AddConfigItem(_T("HIGH_DETAIL"), config.highDetailCountries);
 
@@ -114,6 +115,7 @@ void EBDPConfigFile::AssignDefaults()
 	config.locationFindingParameters.kmlReductionLimit = 0.0;
 	config.locationFindingParameters.cleanupKMLLocationNames = false;
 	config.locationFindingParameters.geoJSONPrecision = -1;
+	config.locationFindingParameters.baseOutputFileName = _T("bestLocations");
 
 	config.findBestTripLocations = false;
 	config.bestTripParameters.minimumLiklihood = 5.0;
@@ -277,6 +279,12 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
     if (config.frequencyFilePath.empty())
 	{
 		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.findMaxNeedsLocations) << '\n';
+		configurationOK = false;
+	}
+	
+	if (config.locationFindingParameters.baseOutputFileName.empty())
+	{
+		Cerr << GetKey(config.locationFindingParameters.baseOutputFileName) << " must not be empty\n";
 		configurationOK = false;
 	}
 

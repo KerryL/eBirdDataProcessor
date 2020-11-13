@@ -42,6 +42,7 @@ struct LocationFindingParameters
 	UString::String kmlLibraryPath;
 	double kmlReductionLimit;
 	int geoJSONPrecision;
+	UString::String baseOutputFileName;
 };
 
 struct CalendarParameters

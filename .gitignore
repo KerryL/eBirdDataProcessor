@@ -5,6 +5,8 @@ ipch/
 *.opendb
 *.db
 
+*.js
+
 *.log
 *.csv
 *.xlsx
