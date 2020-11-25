@@ -16,6 +16,7 @@
 #include <cassert>
 #include <locale>
 
+#include "sunCalculator.h"///////////////////////////////////////////////////////////////////////////////
 int main(int argc, char *argv[])
 {
 	// Configure global locale for UTF-8
@@ -24,6 +25,19 @@ int main(int argc, char *argv[])
 	Cout.imbue(std::locale());
 	Cerr.imbue(std::locale());
 	Cin.imbue(std::locale());
+	
+	SunCalculator s;///////////////////////////////////////////////////////////////////////////////
+	SunCalculator::Date date;
+	date.month = 11;
+	date.year = 2020;
+	date.dayOfMonth = 25;
+	// TODO:  Timezone
+	double rise, set;
+	if (!s.GetSunriseSunset(40.2028, -74.9387, date, SunCalculator::Timezone::a, rise, set))
+		std::cout << "Failed" << std::endl;
+	else
+		std::cout << "Rise = " << rise / 60.0 << "; set = " << set / 60.0 << std::endl;
+	return 0;///////////////////////////////////////////////////////////////////////////////
 
 	EBirdDataProcessorApp app;
 	return app.Run(argc, argv);
