@@ -24,17 +24,10 @@ public:
 	bool ExtractGlobalFrequencyData(const UString::String& fileName, const UString::String& regionDataOutputFileName);
 	bool WriteFrequencyFiles(const UString::String& frequencyDataPath) const;
 
-	enum class TimeOfDayPeriod
-	{
-		Year,
-		Month,
-		Week
-	};
-
 	bool ExtractTimeOfDayInfo(const UString::String& fileName,
 		const std::vector<UString::String>& commonNames,
 		const UString::String& regionCode, const UString::String& regionDataOutputFileName);
-	bool WriteTimeOfDayFiles(const UString::String& dataFileName, const TimeOfDayPeriod& period) const;
+	bool WriteTimeOfDayFiles(const UString::String& dataFileName) const;
 
 private:
 	static const UString::String nameIndexFileName;
