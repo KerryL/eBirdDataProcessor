@@ -8,6 +8,7 @@
 #include "bestObservationTimeEstimator.h"
 #include "utilities/memoryMappedFile.h"
 #include "stringUtilities.h"
+#include "sunCalculator.h"
 
 // POSIX headers
 #include <sys/types.h>
@@ -430,8 +431,7 @@ bool EBirdDatasetInterface::ExtractTimeOfDayInfo(const UString::String& fileName
 	return true;
 }
 
-bool EBirdDatasetInterface::WriteTimeOfDayFiles(
-	const UString::String& dataFileName, const TimeOfDayPeriod& period) const
+bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileName) const
 {
 	UString::OFStream dataFile(dataFileName);
 	if (!dataFile.is_open() || !dataFile.good())
@@ -439,9 +439,14 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(
 		Cerr << "Failed to open '" << dataFileName << "' for output\n";
 		return false;
 	}
+	
+	// TODO:  Update
+	// Find sunrise/sunset times for each week of the year
+	// For each observation, scale the time such that 0 = midnight, 0.25 = sunrise, 0.75 = sunset and 1 = midnight (again)
+	// Find PDF for scaled observation times (so each species gets a single PDF)
 
 	// Each row corresponds to a time of day
-	// Each column corresponds to a species-time of year (PDFs are columns)
+	// Each column corresponds to a species (each column is a PDF)
 
 	BestObservationTimeEstimator::PDFArray dummy;
 	UString::OStringStream headerRow;
