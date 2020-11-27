@@ -62,7 +62,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			if (!dataset.ExtractTimeOfDayInfo(config.eBirdDatasetPath,
 				config.timeOfDayParameters.commonNames, regionCode, config.timeOfDayParameters.splitRegionDataFile))
 				return 1;
-			if (!dataset.WriteTimeOfDayFiles(config.timeOfDayParameters.outputFile, EBirdDatasetInterface::TimeOfDayPeriod::Week))
+			if (!dataset.WriteTimeOfDayFiles(config.timeOfDayParameters.outputFile))
 				return 1;
 		}
 		else// Ignore all other options and generate global frequency data

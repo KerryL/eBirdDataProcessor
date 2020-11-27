@@ -10,6 +10,7 @@
 #include "utilities/uString.h"
 #include "threadPool.h"
 #include "eBirdInterface.h"
+#include "eBirdDataProcessor.h"
 
 // Standard C++ headers
 #include <unordered_map>
@@ -46,6 +47,11 @@ private:
 		bool operator>(const Date& d) const;
 		int operator-(const Date& d) const;// Returns delta in approx. # of days
 		Date operator+(const int& days) const;
+		
+		unsigned int GetDayNumber() const { return GetDayNumberFromDate(*this); }
+		
+		static unsigned int GetDayNumberFromDate(const Date& date);
+		static Date GetDateFromDayNumber(const unsigned int& dayNumber);
 	};
 
 	struct Time
@@ -107,6 +113,9 @@ private:
 
 		bool completeChecklist;
 		bool approved;
+		
+		double latitude;// [deg]
+		double longitude;// [deg]
 	};
 
 	std::vector<UString::String> speciesNamesTimeOfDay;
@@ -115,9 +124,6 @@ private:
 	std::unordered_map<UString::String, std::vector<Observation>> timeOfDayObservationMap;// Key is species common name
 	std::unordered_map<UString::String, Observation> allObservationsInRegion;// Key is checklist ID
 	bool RegionMatches(const UString::String& regionCode) const;
-
-	static UString::String GenerateMonthHeaderRow(const UString::String& species);
-	static UString::String GenerateWeekHeaderRow(const UString::String& species);
 
 	void ProcessObservationDataFrequency(const Observation& observation);
 	void ProcessObservationDataTimeOfDay(const Observation& observation);
@@ -164,12 +170,16 @@ private:
 		const UString::String& regionDataOutputFileName);
 
 	bool ProcessLine(const UString::String& line, ProcessFunction processFunction);
+	
+	typedef std::array<double, 24> SunTimeArray;
+	void GetAverageLocation(double& averageLatitude, double& averageLongitude) const;
+	static void ScaleTime(const SunTimeArray& sunriseTimes, const SunTimeArray& sunsetTimes, Observation& o);
 
 	std::mutex mutex;
 	std::mutex regionWriteMutex;
 
-	static std::vector<EBirdInterface::ObservationInfo> GetObservationsWithinDateRange(
-		const std::vector<Observation>& observations, const Date& beginRange, const Date& endRange);// inclusive of endpoints
+	static std::vector<EBirdInterface::ObservationInfo> GetObservationsOfSpecies(const UString::String& speciesName, std::vector<EBirdInterface::ObservationInfo>& obsSet);
+	static EBirdInterface::ObservationInfo ConvertToObservationInfo(const Observation& o);
 };
 
 template<typename T>
