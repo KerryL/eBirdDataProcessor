@@ -100,7 +100,7 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 		if (regionDataOutputFile.is_open() && regionDataOutputFile.good())
 			regionDataOutputFile << UString::ToStringType(line) << '\n';
 
-		ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
+		ThreadPool pool(1,0);//std::thread::hardware_concurrency() * 2, 0);
 		constexpr unsigned int maxQueueSize(1000000);
 		constexpr unsigned int minQueueSize(5000);
 		pool.SetQueueSizeControl(maxQueueSize, minQueueSize);
@@ -715,7 +715,7 @@ std::vector<EBirdInterface::ObservationInfo> EBirdDatasetInterface::GetObservati
 bool EBirdDatasetInterface::HeaderMatchesExpectedFormat(const UString::String& line)
 {
 	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING BIRD ATLAS CODE	BREEDING BIRD ATLAS CATEGORY	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS"));
-	return StringUtilities::Trim(line).compare(expectedHeader) == 0;
+	return StringUtilities::Trim(line) == expectedHeader;
 }
 
 EBirdDatasetInterface::Date EBirdDatasetInterface::ConvertStringToDate(const UString::String& s)
