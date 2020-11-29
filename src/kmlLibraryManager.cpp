@@ -28,6 +28,24 @@ KMLLibraryManager::KMLLibraryManager(const UString::String& libraryPath,
 {
 }
 
+std::unique_ptr<KMLLibraryManager::GeometryInfo> KMLLibraryManager::ReadKML(const UString::String& kmlFileName)
+{
+	// TODO:  Make this work with kmz files, too
+	UString::IFStream file(kmlFileName);
+	UString::OStringStream buffer;
+	buffer << file.rdbuf();
+	
+	std::unordered_map<UString::String, GeometryInfo> tempGeometryInfo;
+	ParentGeometryExtractionArguments args(UString::String(), tempGeometryInfo);
+	if (!ForEachPlacemarkTag(UString::ToStringType(buffer.str()), ExtractParentRegionGeometry, args))
+		return std::unique_ptr<GeometryInfo>();
+
+	if (tempGeometryInfo.size() != 1)
+		return std::unique_ptr<GeometryInfo>();
+
+	return std::make_unique<GeometryInfo>(tempGeometryInfo.begin()->second);
+}
+
 UString::String KMLLibraryManager::GetKML(const UString::String& country, const UString::String& subNational1, const UString::String& subNational2)
 {
 	assert(!country.empty());
@@ -281,7 +299,7 @@ UString::String KMLLibraryManager::ExtractName(const UString::String& kmlData, c
 }
 
 bool KMLLibraryManager::ForEachPlacemarkTag(const UString::String& kmlData,
-	PlacemarkFunction func, AdditionalArguments& args) const
+	PlacemarkFunction func, AdditionalArguments& args)
 {
 	const UString::String placemarkStartTag(_T("<Placemark>"));
 	std::string::size_type next(0);
@@ -291,7 +309,7 @@ bool KMLLibraryManager::ForEachPlacemarkTag(const UString::String& kmlData,
 		const std::string::size_type placemarkEnd(kmlData.find(placemarkEndTag, next));
 		if (placemarkEnd == std::string::npos)
 		{
-			log << "Failed to find expected placemark end tag" << std::endl;
+			//log << "Failed to find expected placemark end tag" << std::endl;// Removed to make this function static
 			return false;
 		}
 

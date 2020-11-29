@@ -11,6 +11,7 @@
 #include "eBirdDatasetInterface.h"
 #include "utilities.h"
 #include "mediaHTMLExtractor.h"
+#include "observationMapBuilder.h"
 
 // Standard C++ headers
 #include <cassert>
@@ -47,7 +48,18 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!config.eBirdDatasetPath.empty())
 	{
 		EBirdDatasetInterface dataset;
-		if (!config.timeOfDayParameters.outputFile.empty())
+		if (!config.kmlFilterFileName.empty())
+		{
+			dataset.ExtractObservationsWithinGeometry(config.eBirdDatasetPath, config.kmlFilterFileName, config.kmlFilteredOutputFileName);
+			
+			if (!config.observationMapFileName.empty())
+			{
+				ObservationMapBuilder mapBuilder;
+				if (!mapBuilder.Build(config.observationMapFileName, config.kmlFilterFileName, dataset.GetMapInfo()))
+					return 1;
+			}
+		}
+		else if (!config.timeOfDayParameters.outputFile.empty())
 		{
 			if (config.locationFilters.country.size() > 1)
 			{
@@ -72,6 +84,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			if (dataset.WriteFrequencyFiles(config.frequencyFilePath))
 				return 1;
 		}
+		
 		return 0;
 	}
 

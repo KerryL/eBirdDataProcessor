@@ -11,6 +11,7 @@
 #include "threadPool.h"
 #include "eBirdInterface.h"
 #include "eBirdDataProcessor.h"
+#include "kmlLibraryManager.h"
 
 // Standard C++ headers
 #include <unordered_map>
@@ -18,6 +19,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <memory>
 
 class EBirdDatasetInterface
 {
@@ -29,6 +31,26 @@ public:
 		const std::vector<UString::String>& commonNames,
 		const UString::String& regionCode, const UString::String& regionDataOutputFileName);
 	bool WriteTimeOfDayFiles(const UString::String& dataFileName) const;
+	
+	bool ExtractObservationsWithinGeometry(const UString::String& globalFileName, const UString::String& kmlFileName, const UString::String& outputFileName);
+	
+	struct MapInfo
+	{
+		double latitude;// [deg]
+		double longitude;// [deg]
+		UString::String locationName;
+		
+		struct ChecklistInfo
+		{
+			UString::String id;
+			UString::String dateString;
+			unsigned int speciesCount;
+		};
+		
+		std::vector<ChecklistInfo> checklists;
+	};
+	
+	std::vector<MapInfo> GetMapInfo() const;
 
 private:
 	static const UString::String nameIndexFileName;
@@ -116,6 +138,7 @@ private:
 		
 		double latitude;// [deg]
 		double longitude;// [deg]
+		UString::String locationName;
 	};
 
 	std::vector<UString::String> speciesNamesTimeOfDay;
@@ -125,8 +148,11 @@ private:
 	std::unordered_map<UString::String, Observation> allObservationsInRegion;// Key is checklist ID
 	bool RegionMatches(const UString::String& regionCode) const;
 
+	std::unique_ptr<KMLLibraryManager::GeometryInfo> kmlFilterGeometry;
+	
 	void ProcessObservationDataFrequency(const Observation& observation);
 	void ProcessObservationDataTimeOfDay(const Observation& observation);
+	void ProcessObservationKMLFilter(const Observation& observation);
 	typedef void (EBirdDatasetInterface::*ProcessFunction)(const Observation& observation);
 	void RemoveRarities();
 
@@ -180,6 +206,8 @@ private:
 
 	static std::vector<EBirdInterface::ObservationInfo> GetObservationsOfSpecies(const UString::String& speciesName, std::vector<EBirdInterface::ObservationInfo>& obsSet);
 	static EBirdInterface::ObservationInfo ConvertToObservationInfo(const Observation& o);
+	
+	static void AddObservationToMapInfo(const Observation& o, MapInfo& m);
 };
 
 template<typename T>

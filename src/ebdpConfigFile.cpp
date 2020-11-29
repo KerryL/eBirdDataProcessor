@@ -73,6 +73,9 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("EBIRD_API_KEY"), config.eBirdApiKey);
 	
 	AddConfigItem(_T("DATASET"), config.eBirdDatasetPath);
+	AddConfigItem(_T("DATASET_KML_FILTER"), config.kmlFilterFileName);
+	AddConfigItem(_T("DATASET_KML_FILTER_OUTPUT"), config.kmlFilteredOutputFileName);
+	AddConfigItem(_T("OBSERVATION_MAP"), config.observationMapFileName);
 
 	AddConfigItem(_T("COMPARE"), config.doComparison);
 	
@@ -398,6 +401,18 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 	if (!config.mediaListHTML.empty() && config.mediaFileName.empty())
 	{
 		Cerr << "Must specify " << GetKey(config.mediaFileName) << " when " << GetKey(config.mediaListHTML) << " is specified\n";
+		configurationOK = false;
+	}
+	
+	if (config.eBirdDatasetPath.empty() && !config.kmlFilterFileName.empty())
+	{
+		Cerr << "Must specify " << GetKey(config.eBirdDatasetPath) << " when " << GetKey(config.kmlFilterFileName) << " is specified\n";
+		configurationOK = false;
+	}
+	
+	if (config.kmlFilteredOutputFileName.empty() && !config.kmlFilterFileName.empty())
+	{
+		Cerr << "Must specify " << GetKey(config.kmlFilteredOutputFileName) << " when " << GetKey(config.kmlFilterFileName) << " is specified\n";
 		configurationOK = false;
 	}
 
