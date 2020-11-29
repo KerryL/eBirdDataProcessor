@@ -169,7 +169,7 @@ bool EBDPConfigFile::TimeOfDayConfigIsOK()
 {
 	bool configurationOK(true);
 
-	if (!config.eBirdDatasetPath.empty() &&
+	if (!config.eBirdDatasetPath.empty() && config.kmlFilterFileName.empty() &&
 		(config.timeOfDayParameters.commonNames.empty() || config.timeOfDayParameters.outputFile.empty()))
 	{
 		Cerr << "Time-of-day analysis requires " << GetKey(config.timeOfDayParameters.outputFile) << " and at least one " << GetKey(config.timeOfDayParameters.commonNames) << '\n';
@@ -211,7 +211,7 @@ bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 	if (!config.timeOfDayParameters.commonNames.empty() || !config.timeOfDayParameters.outputFile.empty())
 		return true;
 
-	if (!config.eBirdDatasetPath.empty() && config.frequencyFilePath.empty())
+	if (!config.eBirdDatasetPath.empty() && config.frequencyFilePath.empty() && config.kmlFilterFileName.empty())
 	{
 		Cerr << GetKey(config.eBirdDatasetPath) << " requires " << GetKey(config.frequencyFilePath) << '\n';
 		configurationOK = false;

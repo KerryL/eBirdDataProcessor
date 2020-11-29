@@ -972,21 +972,29 @@ KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::Ex
 				continue;
 
 			UString::IStringStream lineSS(line);
-			Point p;
-			if ((lineSS >> p.longitude).fail())
+			UString::String token;
+			while (std::getline(lineSS, token, ' '))
 			{
-				Cerr << "Failed to parse longitude value\n";
-				return PolygonList();
-			}
+				if (ContainsOnlyWhitespace(token))
+					continue;
 
-			lineSS.ignore();
-			if ((lineSS >> p.latitude).fail())
-			{
-				Cerr << "Failed to parse latitude value\n";
-				return PolygonList();
+				UString::IStringStream tokenSS(token);
+				Point p;
+				if ((tokenSS >> p.longitude).fail())
+				{
+					Cerr << "Failed to parse longitude value\n";
+					return PolygonList();
+				}
+	
+				tokenSS.ignore();
+				if ((tokenSS >> p.latitude).fail())
+				{
+					Cerr << "Failed to parse latitude value\n";
+					return PolygonList();
+				}
+	
+				polygon.push_back(p);
 			}
-
-			polygon.push_back(p);
 		}
 
 		polygons.push_back(polygon);
