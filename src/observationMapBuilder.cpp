@@ -184,12 +184,53 @@ bool ObservationMapBuilder::BuildLocationJSON(const EBirdDatasetInterface::MapIn
 	}
 
 	cJSON_AddItemToObject(json, "checklists", checklistList);
-	/*std::sort(weekInfo.frequencyInfo.begin(), weekInfo.frequencyInfo.end(),
-		[](const EBirdDataProcessor::FrequencyInfo& a, const EBirdDataProcessor::FrequencyInfo& b)
+	auto checklistCopy(mapInfo.checklists);
+	std::sort(checklistCopy.begin(), checklistCopy.end(),
+		[](const EBirdDatasetInterface::MapInfo::ChecklistInfo& a, const EBirdDatasetInterface::MapInfo::ChecklistInfo& b)
 	{
-		return a.frequency > b.frequency;
-	});*/// TODO:  Implement sorting
-	for (const auto& c : mapInfo.checklists)
+		const auto dash1a(a.dateString.find('-'));
+		const auto dash1b(b.dateString.find('-'));
+		const auto dash2a(a.dateString.find_last_of('-'));
+		const auto dash2b(b.dateString.find_last_of('-'));
+		assert(dash1a != std::string::npos && dash2a != std::string::npos && dash1b != std::string::npos && dash2b != std::string::npos);
+		assert(dash1a != dash2a && dash1b != dash2b);
+		
+		UString::IStringStream ss;
+		unsigned int aValue, bValue;
+		
+		// Year
+		ss.str(a.dateString.substr(dash2a));
+		ss >> aValue;
+		ss.clear();
+		ss.str(b.dateString.substr(dash2b));
+		ss >> bValue;
+		if (bValue < aValue)
+			return false;
+		else if (bValue > aValue)
+			return true;
+			
+		// Month
+		ss.clear();
+		ss.str(a.dateString.substr(0, dash1a));
+		ss >> aValue;
+		ss.clear();
+		ss.str(b.dateString.substr(0, dash1b));
+		ss >> bValue;
+		if (bValue < aValue)
+			return false;
+		else if (bValue > aValue)
+			return true;
+			
+		// Day
+		ss.clear();
+		ss.str(a.dateString.substr(dash1a, dash2a - dash1a));
+		ss >> aValue;
+		ss.clear();
+		ss.str(b.dateString.substr(dash1b, dash2b - dash1b));
+		ss >> bValue;
+		return aValue > bValue;
+	});
+	for (const auto& c : checklistCopy)
 	{
 		auto checklistJSON(cJSON_CreateObject());
 		if (!checklistJSON)
