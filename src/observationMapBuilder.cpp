@@ -199,15 +199,15 @@ bool ObservationMapBuilder::BuildLocationJSON(const EBirdDatasetInterface::MapIn
 		unsigned int aValue, bValue;
 		
 		// Year
-		ss.str(a.dateString.substr(dash2a));
+		ss.str(a.dateString.substr(dash2a + 1));
 		ss >> aValue;
 		ss.clear();
-		ss.str(b.dateString.substr(dash2b));
+		ss.str(b.dateString.substr(dash2b + 1));
 		ss >> bValue;
-		if (bValue < aValue)
-			return false;
-		else if (bValue > aValue)
+		if (aValue > bValue)
 			return true;
+		else if (aValue < bValue)
+			return false;
 			
 		// Month
 		ss.clear();
@@ -216,17 +216,17 @@ bool ObservationMapBuilder::BuildLocationJSON(const EBirdDatasetInterface::MapIn
 		ss.clear();
 		ss.str(b.dateString.substr(0, dash1b));
 		ss >> bValue;
-		if (bValue < aValue)
-			return false;
-		else if (bValue > aValue)
+		if (aValue > bValue)
 			return true;
+		else if (aValue < bValue)
+			return false;
 			
 		// Day
 		ss.clear();
-		ss.str(a.dateString.substr(dash1a, dash2a - dash1a));
+		ss.str(a.dateString.substr(dash1a + 1, dash2a - dash1a - 1));
 		ss >> aValue;
 		ss.clear();
-		ss.str(b.dateString.substr(dash1b, dash2b - dash1b));
+		ss.str(b.dateString.substr(dash1b + 1, dash2b - dash1b - 1));
 		ss >> bValue;
 		return aValue > bValue;
 	});
