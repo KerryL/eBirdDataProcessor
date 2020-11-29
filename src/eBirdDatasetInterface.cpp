@@ -100,7 +100,7 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 		if (regionDataOutputFile.is_open() && regionDataOutputFile.good())
 			regionDataOutputFile << UString::ToStringType(line) << '\n';
 
-		ThreadPool pool(1,0);//std::thread::hardware_concurrency() * 2, 0);
+		ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 		constexpr unsigned int maxQueueSize(1000000);
 		constexpr unsigned int minQueueSize(5000);
 		pool.SetQueueSizeControl(maxQueueSize, minQueueSize);

@@ -751,12 +751,12 @@ KMLLibraryManager::GeometryInfo::Point KMLLibraryManager::ChooseRobustPoint(cons
 bool KMLLibraryManager::PointIsWithinPolygons(const GeometryInfo::Point& p, const GeometryInfo& geometry)
 {
 	GeometryInfo::Point outsidePoint(geometry.bbox.northEast);
+	outsidePoint.latitude += 1.0;// 1 deg is a fairly large step
 	outsidePoint.longitude += 1.0;// 1 deg is a fairly large step
 	unsigned int intersectionCount(0);
 	for (const auto& polygon : geometry.polygons)
 	{
-		unsigned int i;
-		for (i = 1; i < polygon.size(); ++i)
+		for (unsigned int i = 1; i < polygon.size(); ++i)
 		{
 			if (SegmentsIntersect(p, outsidePoint, polygon[i], polygon[i - 1]))
 				++intersectionCount;
