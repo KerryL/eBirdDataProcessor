@@ -153,6 +153,9 @@ struct EBDPConfig
 	BestTripParameters bestTripParameters;
 
 	UString::String eBirdDatasetPath;
+	UString::String kmlFilterFileName;
+	UString::String kmlFilteredOutputFileName;
+	UString::String observationMapFileName;
 	
 	UString::String commentGroupString;
 

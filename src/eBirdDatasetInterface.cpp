@@ -367,6 +367,8 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 			stateCode = token;
 		else if (column == 17)
 			observation.regionCode = token;
+		else if (column == 22)
+			observation.locationName = token;
 		else if (column == 25)
 		{
 			if (!ParseInto(token, observation.latitude))
@@ -883,4 +885,77 @@ EBirdDatasetInterface::Date EBirdDatasetInterface::Date::operator+(const int& da
 	newDate.year = thisTime.tm_year + 1900;
 	newDate.month = thisTime.tm_mon + 1;
 	return newDate;
+}
+
+bool EBirdDatasetInterface::ExtractObservationsWithinGeometry(
+	const UString::String& globalFileName, const UString::String& kmlFileName, const UString::String& outputFileName)
+{
+	kmlFilterGeometry = KMLLibraryManager::ReadKML(kmlFileName); 
+	if (!kmlFilterGeometry)
+		return false;
+	return DoDatasetParsing(globalFileName, &EBirdDatasetInterface::ProcessObservationKMLFilter, outputFileName);
+}
+
+std::vector<EBirdDatasetInterface::MapInfo> EBirdDatasetInterface::GetMapInfo() const
+{
+	std::vector<EBirdDatasetInterface::MapInfo> mapInfo;// Each entry is a location, and includes a list of checklists at that location
+	for (const auto& o : allObservationsInRegion)
+	{
+		bool found(false);
+		for (auto& m : mapInfo)
+		{
+			if (m.latitude == o.second.latitude && m.longitude == o.second.longitude)
+			{
+				AddObservationToMapInfo(o.second, m);
+				found = true;
+				break;
+			}
+		}
+		
+		if (!found)
+		{
+			mapInfo.push_back(MapInfo());
+			mapInfo.back().latitude = o.second.latitude;
+			mapInfo.back().longitude = o.second.longitude;
+			mapInfo.back().locationName = o.second.locationName;
+			AddObservationToMapInfo(o.second, mapInfo.back());
+		}
+	}
+	
+	return mapInfo;
+}
+
+void EBirdDatasetInterface::AddObservationToMapInfo(const Observation& o, MapInfo& m)
+{
+	bool found(false);
+	for (auto& c : m.checklists)
+	{
+		if (o.checklistID == c.id)
+		{
+			++c.speciesCount;
+			found = true;
+			break;
+		}
+	}
+	
+	if (!found)
+	{
+		m.checklists.push_back(MapInfo::ChecklistInfo());
+		m.checklists.back().id = o.checklistID;
+		m.checklists.back().speciesCount = 1;
+		
+		UString::OStringStream ss;
+		ss << o.date.month << "-" << o.date.day << "-" << o.date.year;
+		m.checklists.back().dateString = ss.str();
+	}
+}
+
+void EBirdDatasetInterface::ProcessObservationKMLFilter(const Observation& observation)
+{
+	KMLLibraryManager::GeometryInfo::Point p(observation.longitude, observation.latitude);
+	if (!KMLLibraryManager::PointIsWithinPolygons(p, *kmlFilterGeometry))
+		return;
+
+	std::lock_guard<std::mutex> lock(mutex);
+	allObservationsInRegion[observation.checklistID] = observation;
 }

@@ -97,7 +97,7 @@ cJSON* KMLToGeoJSONConverter::GetGeoJSON() const
 	auto geometry(cJSON_CreateObject());
 	if (!geometry)
 	{
-		std::cerr << "Faile to create geometry JSON object\n";
+		std::cerr << "Failed to create geometry JSON object\n";
 		return nullptr;
 	}
 
@@ -105,7 +105,7 @@ cJSON* KMLToGeoJSONConverter::GetGeoJSON() const
 	auto polygonArray(cJSON_CreateArray());
 	if (!polygonArray)
 	{
-		std::cerr << "Faile to create polygon array JSON object\n";
+		std::cerr << "Failed to create polygon array JSON object\n";
 		cJSON_Delete(geometry);
 		return nullptr;
 	}
@@ -117,7 +117,7 @@ cJSON* KMLToGeoJSONConverter::GetGeoJSON() const
 		auto linearRingArray(cJSON_CreateArray());
 		if (!linearRingArray)
 		{
-			std::cerr << "Faile to create polygon JSON object\n";
+			std::cerr << "Failed to create polygon JSON object\n";
 			cJSON_Delete(geometry);
 			return nullptr;
 		}
@@ -129,7 +129,7 @@ cJSON* KMLToGeoJSONConverter::GetGeoJSON() const
 			auto coordArray(cJSON_CreateArray());
 			if (!coordArray)
 			{
-				std::cerr << "Faile to create linear ring JSON object\n";
+				std::cerr << "Failed to create linear ring JSON object\n";
 				cJSON_Delete(geometry);
 				return nullptr;
 			}
@@ -141,7 +141,7 @@ cJSON* KMLToGeoJSONConverter::GetGeoJSON() const
 				auto coord(cJSON_CreateArray());
 				if (!coord)
 				{
-					std::cerr << "Faile to create coordinate JSON object\n";
+					std::cerr << "Failed to create coordinate JSON object\n";
 					cJSON_Delete(geometry);
 					return nullptr;
 				}
