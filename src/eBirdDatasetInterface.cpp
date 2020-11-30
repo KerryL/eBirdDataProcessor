@@ -406,6 +406,8 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 			if (!ParseInto(token, observation.completeChecklist))
 				return false;
 		}
+		else if (column == 39)
+			observation.groupID = token;
 		else if (column == 41)
 		{
 			if (!ParseInto(token, observation.approved))
@@ -927,27 +929,25 @@ std::vector<EBirdDatasetInterface::MapInfo> EBirdDatasetInterface::GetMapInfo() 
 
 void EBirdDatasetInterface::AddObservationToMapInfo(const Observation& o, MapInfo& m)
 {
-	bool found(false);
 	for (auto& c : m.checklists)
-	{
-		if (o.checklistID == c.id)
+	{	
+		if (o.checklistID == c.id)// Already have an entry for this checklist, just increment the species count
 		{
-			++c.speciesCount;
-			found = true;
-			break;
+			++c.speciesCount;// TODO:  Species count isn't working
+			return;
 		}
+		else if (!c.groupID.empty() && o.groupID == c.groupID)// Already included a checklist from this group; don't want to include any others
+			return;
 	}
 	
-	if (!found)
-	{
-		m.checklists.push_back(MapInfo::ChecklistInfo());
-		m.checklists.back().id = o.checklistID;
-		m.checklists.back().speciesCount = 1;
-		
-		UString::OStringStream ss;
-		ss << o.date.month << "-" << o.date.day << "-" << o.date.year;
-		m.checklists.back().dateString = ss.str();
-	}
+	m.checklists.push_back(MapInfo::ChecklistInfo());
+	m.checklists.back().id = o.checklistID;
+	m.checklists.back().speciesCount = 1;
+	m.checklists.back().groupID = o.groupID;
+	
+	UString::OStringStream ss;
+	ss << o.date.month << "-" << o.date.day << "-" << o.date.year;
+	m.checklists.back().dateString = ss.str();
 }
 
 void EBirdDatasetInterface::ProcessObservationKMLFilter(const Observation& observation)

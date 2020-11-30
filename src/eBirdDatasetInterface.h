@@ -43,6 +43,7 @@ public:
 		struct ChecklistInfo
 		{
 			UString::String id;
+			UString::String groupID;
 			UString::String dateString;
 			unsigned int speciesCount;
 		};
@@ -117,6 +118,7 @@ private:
 	{
 		UString::String commonName;
 		UString::String checklistID;
+		UString::String groupID;
 		UString::String regionCode;
 
 		Date date;
