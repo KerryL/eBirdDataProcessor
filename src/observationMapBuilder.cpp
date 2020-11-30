@@ -250,6 +250,210 @@ bool ObservationMapBuilder::BuildLocationJSON(const EBirdDatasetInterface::MapIn
 
 bool ObservationMapBuilder::WriteHTMLFile(const UString::String& fileName) const
 {
+	/*
+	 * <!DOCTYPE html>
+<html>
+  <head>
+    <title>CBC Area 12</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+      #mapid {
+        height: 95%;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+	  .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
+	  .info h4 { margin: 0 0 5px; color: #777; }
+      .legend { text-align: left; line-height: 18px; color: #555; }
+      .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+	  #speciesList { width:100%; }
+    </style>
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.4.0/dist/leaflet.css" integrity="sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA==" crossorigin=""/>
+	<script src="https://unpkg.com/leaflet@1.4.0/dist/leaflet.js" integrity="sha512-QVftwZFqvtRNi0ZyCtsznlKSWOStnDORoefr1enyq5mVL4tmKB3S/EnC3rRJcxCPavG10IcrVGSmPh6Qw5lwrg==" crossorigin=""></script>
+  </head>
+
+  <body>
+    <div id="mapid"></div>
+
+	<script type="text/javascript" src="cbcArea12.js"></script>
+	
+	<div style='font-family: sans-serif'>
+	<label>Start Date:</label>
+      <input type="text" id="startDate" name="startDate" onchange="updateMapDisplay()"></script>
+      <label>End Date:</label>
+      <input type="text" id="endDate" name="endDate" onchange="updateMapDisplay()"></input>
+    </div>
+
+    <script type="text/javascript">
+      var map = L.map('mapid').setView([40.2, -74.84], 13);
+
+      // Leaflet gray map imagery
+    //  L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {
+    //    maxZoom: 18,
+    //    attribution: 'Map data &copy; <a href="https://www.openstreetmap.org/">OpenStreetMap</a> contributors, ' +
+    //    '<a href="https://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>, ' +
+    //    'Imagery © <a href="https://www.mapbox.com/">Mapbox</a>',
+    //    id: 'mapbox.light'
+    //  }).addTo(map);
+      // Google maps hybrid imagery
+      L.tileLayer('http://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}',{
+        maxZoom: 20, subdomains:['mt0','mt1','mt2','mt3']}).addTo(map);
+
+      var info = L.control();
+
+      info.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info');
+        return this._div;
+      };
+
+      info.addTo(map);
+
+      var geoJson;
+      function buildBorderLayer() {
+        geoJson = L.geoJson(boundaryData, {
+          style: style,
+          onEachFeature: onEachFeature
+        }).addTo(map);
+      }
+      
+      function dateIsInRange(date, startYear, startMonth, startDay, endYear, endMonth, endDay) {
+        var testDateParsed = parseDate(date);
+        var testDate = new Date(testDateParsed[0], testDateParsed[1] - 1, testDateParsed[2], 12, 0, 0, 0);// Noon for test date
+        var startDate = new Date(startYear, startMonth - 1, startDay, 0, 0, 0, 0);// early
+        var endDate = new Date(endYear, endMonth - 1, endDay, 23, 59, 59, 0);// late
+        
+        if (startYear == 0 && endYear == 0) {// Make comparison without considering year
+          if (startMonth == 0 && endMonth == 0) {// No range specified
+			  return true;
+          }
+          
+          startDate.setFullYear(testDate.getFullYear());
+          endDate.setFullYear(testDate.getFullYear());
+          if (endDate < startDate) {
+            if (testDate < endDate) {
+              testDate.setFullYear(testDate.getFullYear() + 1);
+            }
+            endDate.setFullYear(endDate.getFullYear() + 1);
+          }
+        }
+        else {
+          if (startMonth == 0 && endMonth == 0) {// Only years were specified
+			  return testDate.getFullYear() >= startYear && testDate.getFullYear() <= endYear;
+          }
+          // Otherwise, we have fully specified dates
+        }
+
+        return testDate >= startDate && testDate <= endDate;
+      }
+      
+      // This should work with dates specified without years as well as dates specified with years or only years
+      function parseDate(date) {
+        var year = 0;
+        var month = 0;
+        var day = 0;
+        
+        var sep;
+        if ((date.match(/-/g) || []).length > (date.match('//g') || []).length) {
+          sep = '-';
+        }
+        else {
+			sep = '/';
+        }
+
+        if (date.length == 4 && date.indexOf(sep) == -1) {// Year only
+			year = date;
+        }
+        else if (date.length >= 3 && date.indexOf(sep) == date.lastIndexOf(sep)) {// No year
+          month = parseInt(date.substr(0, date.indexOf(sep)));
+          day = parseInt(date.slice(date.lastIndexOf(sep) + 1, date.length));
+        }
+        else if (date.length >= 8) {// Fully specified
+          month = parseInt(date.substr(0, date.indexOf(sep)));
+          day = parseInt(date.slice(date.indexOf(sep) + 1, date.lastIndexOf('-')));
+          year = parseInt(date.slice(date.lastIndexOf(sep) + 1, date.length));
+        }
+
+        return [year, month, day];
+      }
+      
+      var markerLayerGroup = L.layerGroup().addTo(map);
+      function buildPointLayer() {
+		  var startDate = parseDate(document.getElementById('startDate').value);
+		  var startDateYear = startDate[0];
+		  var startDateMonth = startDate[1];
+		  var startDateDay = startDate[2];
+		  
+		  var endDate = parseDate(document.getElementById('endDate').value);
+		  var endDateYear = endDate[0];
+		  var endDateMonth = endDate[1];
+		  var endDateDay = endDate[2];
+
+		  for (const location of mapInfo.features) {
+		    var marker = L.marker([location.latitude, location.longitude]);
+		    var popupText = "<h3>" + location.name + "</h3><p><table><tr><td>Checklist Link</td><td>Species Count</td></tr>";
+		    var checklistCount = 0;
+		    for (const checklist of location.checklists) {
+              if (dateIsInRange(checklist.date, startDateYear, startDateMonth, startDateDay, endDateYear, endDateMonth, endDateDay)) {
+                popupText += '<tr><td><a href="https://ebird.org/checklist/' + checklist.checklistID + '" target="_blank">' + checklist.date + '</a></td><td>' + checklist.speciesCount + '</td></tr>';
+                ++checklistCount;
+              }
+			}
+
+            // Don't add the marker if there aren't any checklists (within the specified date range)
+			if (checklistCount == 0)
+              continue;
+
+			popupText += '</table></p>';
+			// TODO:  Needs scrolling section (so title doesn't scroll)
+			marker.addTo(markerLayerGroup);
+		    marker.bindPopup(popupText, { maxHeight:300 });
+	    }
+	  }
+
+      function updateMapDisplay() {
+        geoJson.setStyle(style);
+        markerLayerGroup.clearLayers();
+        buildPointLayer();
+	  }
+
+      function style(feature) {
+        return {
+          weight: 2,
+          opacity: 1,
+          color: 'red',
+          dashArray: '1',
+          fillOpacity: 0.0,
+          fillColor: 'white'
+        };
+      }
+
+      function onClick(e) {
+        e.originalEvent.cancelBubble = true;
+	  }
+
+      map.on('click', function(e) {
+        if (e.originalEvent.cancelBubble)
+          return;
+      });
+
+      function onEachFeature(feature, layer) {
+        layer.on({
+          click: onClick
+        });
+      }
+
+      buildBorderLayer();
+      buildPointLayer();
+
+    </script>
+  </body>
+</html>
+
+*/
 	// TODO:  Implement
 	return false;
 }
