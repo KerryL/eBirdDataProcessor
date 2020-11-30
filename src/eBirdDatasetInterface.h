@@ -116,6 +116,7 @@ private:
 
 	struct Observation
 	{
+		UString::String uniqueID;
 		UString::String commonName;
 		UString::String checklistID;
 		UString::String groupID;
