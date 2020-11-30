@@ -353,7 +353,9 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 	UString::IStringStream ss(line);
 	while (std::getline(ss, token, UString::Char('\t')))
 	{
-		if (column == 4)
+		if (column == 0)
+			observation.uniqueID = token;
+		else if (column == 4)
 			observation.commonName = token;
 		else if (column == 8)
 		{
@@ -901,8 +903,11 @@ bool EBirdDatasetInterface::ExtractObservationsWithinGeometry(
 std::vector<EBirdDatasetInterface::MapInfo> EBirdDatasetInterface::GetMapInfo() const
 {
 	std::vector<EBirdDatasetInterface::MapInfo> mapInfo;// Each entry is a location, and includes a list of checklists at that location
+	unsigned int a(0);
 	for (const auto& o : allObservationsInRegion)
 	{
+		if (o.second.checklistID == _T("S73117658"))
+			a++;
 		bool found(false);
 		for (auto& m : mapInfo)
 		{
@@ -933,7 +938,7 @@ void EBirdDatasetInterface::AddObservationToMapInfo(const Observation& o, MapInf
 	{	
 		if (o.checklistID == c.id)// Already have an entry for this checklist, just increment the species count
 		{
-			++c.speciesCount;// TODO:  Species count isn't working
+			++c.speciesCount;
 			return;
 		}
 		else if (!c.groupID.empty() && o.groupID == c.groupID)// Already included a checklist from this group; don't want to include any others
@@ -957,5 +962,5 @@ void EBirdDatasetInterface::ProcessObservationKMLFilter(const Observation& obser
 		return;
 
 	std::lock_guard<std::mutex> lock(mutex);
-	allObservationsInRegion[observation.checklistID] = observation;
+	allObservationsInRegion[observation.uniqueID] = observation;// Don't use the checklist ID as the key for this case, or we'll end up with only one entry per checklist
 }
