@@ -12,7 +12,7 @@
 class SunCalculator : public JSONInterface
 {
 public:
-	SunCalculator() : JSONInterface("eBirdDataProcessor") {}
+	SunCalculator() : JSONInterface(_T("eBirdDataProcessor")) {}
 	
 	struct Date
 	{

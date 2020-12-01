@@ -979,7 +979,7 @@ KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::Ex
 
 			UString::IStringStream lineSS(line);
 			UString::String token;
-			while (std::getline(lineSS, token, ' '))
+			while (std::getline(lineSS, token, UString::Char(' ')))
 			{
 				if (ContainsOnlyWhitespace(token))
 					continue;

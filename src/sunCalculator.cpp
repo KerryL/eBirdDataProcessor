@@ -7,8 +7,8 @@
 #include "sunCalculator.h"
 
 #include <iostream>
-const UString::String SunCalculator::requestURLBase("http://api.geonames.org/timezoneJSON?");
-const UString::String SunCalculator::userName("kerryl");
+const UString::String SunCalculator::requestURLBase(_T("http://api.geonames.org/timezoneJSON?"));
+const UString::String SunCalculator::userName(_T("kerryl"));
 
 bool SunCalculator::GetSunriseSunset(const double& latitude, const double& longitude,
 	const Date& date, double& sunriseMinutes, double& sunsetMinutes) const

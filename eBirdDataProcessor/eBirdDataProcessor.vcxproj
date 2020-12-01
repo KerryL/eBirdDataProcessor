@@ -151,9 +151,11 @@
     <ClCompile Include="..\src\kmlToGeoJSONConverter.cpp" />
     <ClCompile Include="..\src\mapPageGenerator.cpp" />
     <ClCompile Include="..\src\mediaHTMLExtractor.cpp" />
+    <ClCompile Include="..\src\observationMapBuilder.cpp" />
     <ClCompile Include="..\src\processPipe.cpp" />
     <ClCompile Include="..\src\robotsParser.cpp" />
     <ClCompile Include="..\src\stringUtilities.cpp" />
+    <ClCompile Include="..\src\sunCalculator.cpp" />
     <ClCompile Include="..\src\threadPool.cpp" />
     <ClCompile Include="..\src\throttledSection.cpp" />
     <ClCompile Include="..\src\utilities.cpp" />
@@ -188,10 +190,12 @@
     <ClInclude Include="..\src\logging\combinedLogger.h" />
     <ClInclude Include="..\src\mapPageGenerator.h" />
     <ClInclude Include="..\src\mediaHTMLExtractor.h" />
+    <ClInclude Include="..\src\observationMapBuilder.h" />
     <ClInclude Include="..\src\point.h" />
     <ClInclude Include="..\src\processPipe.h" />
     <ClInclude Include="..\src\robotsParser.h" />
     <ClInclude Include="..\src\stringUtilities.h" />
+    <ClInclude Include="..\src\sunCalculator.h" />
     <ClInclude Include="..\src\threadPool.h" />
     <ClInclude Include="..\src\throttledSection.h" />
     <ClInclude Include="..\src\utilities.h" />
