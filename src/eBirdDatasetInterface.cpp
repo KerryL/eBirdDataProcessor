@@ -472,7 +472,7 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 		SunCalculator::Date date;
 		date.year = 2020;// Doesn't really matter
 		date.month = static_cast<unsigned short>(i * 12.0 / sunriseTimes.size() + 1.0);
-		date.dayOfMonth = static_cast<unsigned short>(30.0 * fmod(i * 12.0, sunriseTimes.size()));
+		date.dayOfMonth = static_cast<unsigned short>(12.0 / sunriseTimes.size() * 30.0 * fmod(i, sunriseTimes.size() / 12.0) + 1);
 		if (!sunCalculator.GetSunriseSunset(averageLatitude, averageLongitude, date, sunriseTimes[i], sunsetTimes[i]))
 		{
 			Cerr << "Failed to get sunrise/sunset time\n";// TODO:  Handle this case more gracefully
@@ -632,7 +632,7 @@ void EBirdDatasetInterface::ScaleTime(const SunTimeArray& sunriseTimes, const Su
 	jan1.day = 1;
 	const unsigned int dayOfYear(o.date.GetDayNumber() - Date::GetDayNumberFromDate(jan1));
 	const unsigned int daysPerPeriod(static_cast<unsigned int>(365 / sunriseTimes.size()));
-	const unsigned int startIndex(dayOfYear / daysPerPeriod);
+	const unsigned int startIndex(std::min(dayOfYear / daysPerPeriod, static_cast<unsigned int>(sunriseTimes.size() - 1)));
 	const unsigned int startDayOfYear(startIndex * daysPerPeriod);
 	const unsigned int endDayOfYear(startDayOfYear + daysPerPeriod);
 	
@@ -647,7 +647,7 @@ void EBirdDatasetInterface::ScaleTime(const SunTimeArray& sunriseTimes, const Su
 	const double startSetTime(sunsetTimes[startIndex]);
 	const double endSetTime(sunsetTimes[endIndex]);
 	
-	const double fraction((endDayOfYear - dayOfYear) / daysPerPeriod);
+	const double fraction((dayOfYear - startDayOfYear) / static_cast<double>(daysPerPeriod));
 	const double sunrise(fraction * (endRiseTime - startRiseTime) + startRiseTime);
 	const double sunset(fraction * (endSetTime - startSetTime) + startSetTime);
 
@@ -661,18 +661,24 @@ void EBirdDatasetInterface::ScaleTime(const SunTimeArray& sunriseTimes, const Su
 	{
 		const double sunsetToMidnight(24.0 * 60.0 - sunset);
 		const double minutesFromRef(observationMinutes + sunsetToMidnight);
-		interpolatedTime = minutesFromRef / halfDayMinutes - 0.5 * halfDayMinutes;
+		const double nightTimeLength(1440 - sunset + sunrise);
+		interpolatedTime = minutesFromRef / nightTimeLength * halfDayMinutes - 0.5 * halfDayMinutes;
 	}
 	else if (o.time.hour > sunset)// Nighttime interpolation
 	{
 		const double minutesFromRef(observationMinutes - sunset);
-		interpolatedTime = minutesFromRef / halfDayMinutes + 1.5 * halfDayMinutes;
+		const double nightTimeLength(1440 - sunset + sunrise);
+		interpolatedTime = minutesFromRef / nightTimeLength * halfDayMinutes + 1.5 * halfDayMinutes;
 	}
 	else// Daytime interpolation
 	{
 		const double minutesFromRef(observationMinutes - sunrise);
-		interpolatedTime = minutesFromRef / halfDayMinutes + 0.5 * halfDayMinutes;
+		const double dayTimeLength(sunset - sunrise);
+		interpolatedTime = minutesFromRef / dayTimeLength * halfDayMinutes + 0.5 * halfDayMinutes;
 	}
+
+	if (interpolatedTime < 0.0)
+		interpolatedTime += 1440.0;
 	
 	o.time.hour = static_cast<unsigned int>(floor(interpolatedTime / 60.0));
 	o.time.minute = static_cast<unsigned int>(fmod(interpolatedTime, 60.0));

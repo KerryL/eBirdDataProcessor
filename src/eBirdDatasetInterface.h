@@ -53,7 +53,7 @@ public:
 	
 	std::vector<MapInfo> GetMapInfo() const;
 
-private:
+//private:
 	static const UString::String nameIndexFileName;
 
 	struct Date
