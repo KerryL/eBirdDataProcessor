@@ -500,7 +500,7 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 
 	std::vector<EBirdInterface::ObservationInfo> allObsVector(allObservationsInRegion.size());
 	auto it(allObservationsInRegion.begin());
-	for (unsigned int i = 0; i < allObsVector.size(); ++it, ++i)
+	for (unsigned int i = 0; i < allObsVector.size(); ++i)
 	{
 		Observation o(it->second);
 		ScaleTime(sunriseTimes, sunsetTimes, o);
@@ -630,11 +630,11 @@ void EBirdDatasetInterface::ScaleTime(const SunTimeArray& sunriseTimes, const Su
 	jan1.year = o.date.year;
 	jan1.month = 1;
 	jan1.day = 1;
-	const unsigned int dayNumber(Date::GetDayNumberFromDate(jan1) - o.date.GetDayNumber());
+	const unsigned int dayOfYear(o.date.GetDayNumber() - Date::GetDayNumberFromDate(jan1));
 	const unsigned int daysPerPeriod(365 / sunriseTimes.size());
-	const unsigned int startIndex(dayNumber / daysPerPeriod);
-	const unsigned int startDayNumber(startIndex * daysPerPeriod);
-	const unsigned int endDayNumber(startDayNumber + daysPerPeriod);
+	const unsigned int startIndex(dayOfYear / daysPerPeriod);
+	const unsigned int startDayOfYear(startIndex * daysPerPeriod);
+	const unsigned int endDayOfYear(startDayOfYear + daysPerPeriod);
 	
 	const unsigned int endIndex([&startIndex, &sunsetTimes]()
 	{
@@ -647,7 +647,7 @@ void EBirdDatasetInterface::ScaleTime(const SunTimeArray& sunriseTimes, const Su
 	const double startSetTime(sunsetTimes[startIndex]);
 	const double endSetTime(sunsetTimes[endIndex]);
 	
-	const double fraction((endDayNumber - dayNumber) / daysPerPeriod);
+	const double fraction((endDayOfYear - dayOfYear) / daysPerPeriod);
 	const double sunrise(fraction * (endRiseTime - startRiseTime) + startRiseTime);
 	const double sunset(fraction * (endSetTime - startSetTime) + startSetTime);
 
@@ -682,7 +682,7 @@ unsigned int EBirdDatasetInterface::Date::GetDayNumberFromDate(const Date& date)
 {
 	const unsigned int m((date.month + 9) % 12);
 	const unsigned int y(date.year - m / 10);
-	return 365 * y + y / 4 - y / 100 + y / 400 + (m * 306 + 5) / 10 + (date.day - 1);
+	return 365 * y + y / 4 - y / 100 + y / 400 + (m * 306 + 5) / 10 + date.day - 1;
 }
 
 EBirdDatasetInterface::Date EBirdDatasetInterface::Date::GetDateFromDayNumber(const unsigned int& dayNumber)
