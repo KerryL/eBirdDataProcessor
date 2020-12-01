@@ -471,8 +471,8 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 	{
 		SunCalculator::Date date;
 		date.year = 2020;// Doesn't really matter
-		date.month = static_cast<unsigned int>(i * 12.0 / sunriseTimes.size() + 1.0);
-		date.dayOfMonth = static_cast<unsigned int>(30.0 * fmod(i * 12.0, sunriseTimes.size()));
+		date.month = static_cast<unsigned short>(i * 12.0 / sunriseTimes.size() + 1.0);
+		date.dayOfMonth = static_cast<unsigned short>(30.0 * fmod(i * 12.0, sunriseTimes.size()));
 		if (!sunCalculator.GetSunriseSunset(averageLatitude, averageLongitude, date, sunriseTimes[i], sunsetTimes[i]))
 		{
 			Cerr << "Failed to get sunrise/sunset time\n";// TODO:  Handle this case more gracefully
@@ -631,7 +631,7 @@ void EBirdDatasetInterface::ScaleTime(const SunTimeArray& sunriseTimes, const Su
 	jan1.month = 1;
 	jan1.day = 1;
 	const unsigned int dayOfYear(o.date.GetDayNumber() - Date::GetDayNumberFromDate(jan1));
-	const unsigned int daysPerPeriod(365 / sunriseTimes.size());
+	const unsigned int daysPerPeriod(static_cast<unsigned int>(365 / sunriseTimes.size()));
 	const unsigned int startIndex(dayOfYear / daysPerPeriod);
 	const unsigned int startDayOfYear(startIndex * daysPerPeriod);
 	const unsigned int endDayOfYear(startDayOfYear + daysPerPeriod);
