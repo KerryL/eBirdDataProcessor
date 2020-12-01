@@ -761,6 +761,12 @@ bool KMLLibraryManager::PointIsWithinPolygons(const GeometryInfo::Point& p, cons
 			if (SegmentsIntersect(p, outsidePoint, polygon[i], polygon[i - 1]))
 				++intersectionCount;
 		}
+		
+		if (polygon.front() != polygon.back())// Ensure we're testing a closed polygon
+		{
+			if (SegmentsIntersect(p, outsidePoint, polygon.front(), polygon.back()))
+				++intersectionCount;
+		}
 	}
 
 	return intersectionCount % 2 == 1;
@@ -1333,4 +1339,14 @@ std::vector<UString::String> KMLLibraryManager::GenerateWordLetterPairs(const US
 	}
 
 	return wordLetterPairs;
+}
+
+bool KMLLibraryManager::GeometryInfo::Point::operator==(const Point& p) const
+{
+	return p.latitude == latitude && p.longitude == longitude;
+}
+
+bool KMLLibraryManager::GeometryInfo::Point::operator!=(const Point& p) const
+{
+	return !(*this == p);
 }
