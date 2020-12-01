@@ -25,9 +25,25 @@ bool SunCalculator::GetSunriseSunset(const double& latitude, const double& longi
 		return false;
 	}
 	
+	cJSON* datesArray(cJSON_GetObjectItem(root, "dates"));
+	if (!datesArray)
+	{
+		Cerr << "Failed to read dates array from JSON response\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
+	cJSON* datesItem(cJSON_GetArrayItem(datesArray, 0));
+	if (!datesItem)
+	{
+		Cerr << "Failed to read dates item from JSON response\n";
+		cJSON_Delete(root);
+		return false;
+	}
+
 	std::tm sunrise, sunset;
-	if (!ReadJSON(root, _T("sunrise"), sunrise) ||
-		!ReadJSON(root, _T("sunset"), sunset))
+	if (!ReadJSON(datesItem, _T("sunrise"), sunrise) ||
+		!ReadJSON(datesItem, _T("sunset"), sunset))
 	{
 		Cerr << "Failed to read sunrise/sunset times from JSON response\n";
 		cJSON_Delete(root);
