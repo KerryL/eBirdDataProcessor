@@ -42,6 +42,9 @@ public:
 			
 			double longitude;// [deg]
 			double latitude;// [deg]
+			
+			bool operator==(const Point& p) const;
+			bool operator!=(const Point& p) const;
 		};
 
 		typedef std::vector<std::vector<Point>> PolygonList;
