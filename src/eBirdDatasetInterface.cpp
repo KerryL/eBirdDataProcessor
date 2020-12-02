@@ -515,6 +515,8 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileN
 
 	auto allObsPDF(BestObservationTimeEstimator::EstimateBestObservationTimePDF(allObsVector));
 	headerRow << "All Observations,";
+	for (unsigned int i = 0; i < allObsPDF.size(); ++i)
+		rows[i] << allObsPDF[i] << ',';
 	
 	const double excludeFactor(0.1);
 	const double excludeLimit(excludeFactor * *std::max_element(allObsPDF.begin(), allObsPDF.end()));
