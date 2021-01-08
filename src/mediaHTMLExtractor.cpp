@@ -46,7 +46,11 @@ bool MediaHTMLExtractor::LaunchBrowser()
 	// TODO:  Do something better with this (don't hardcode path)
 	std::ostringstream ss;
 	ss << remoteDebuggingPort;
+#ifdef _WIN32
 	const std::string command("\"\"C:\\Program Files (x86)\\Google\\Chrome\\Application\\chrome.exe\"\" --proxy-server='direct://' --proxy-bypass-list=* --headless --disable-gpu --remote-debugging-port=" + ss.str());
+#else
+const std::string command("google-chrome --proxy-server='direct://' --proxy-bypass-list=* --headless --disable-gpu --remote-debugging-port=" + ss.str());
+#endif
 	return browserPipe.Launch(command);
 }
 
@@ -76,10 +80,12 @@ void MediaHTMLExtractor::CloseBrowser()
 
 bool MediaHTMLExtractor::ExtractMediaHTML(const UString::String& htmlFileName)
 {
-	Cout << "Choose:\n1 - Automatic retireval\n2 - Use file at '" << htmlFileName << "'\n" << std::endl;
 	int selection(-1);
 	while (selection < 1 || selection > 2)
+	{
+		Cout << "Choose:\n1 - Automatic retireval\n2 - Use file at '" << htmlFileName << "'\n" << std::endl;
 		Cin >> selection;
+	}
 
 	if (selection == 2)
 		return true;
