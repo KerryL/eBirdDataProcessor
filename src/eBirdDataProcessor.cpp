@@ -834,7 +834,7 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(
 	for (const auto& h : hotspots)
 	{
 		infoFile << '\n' << h.second.name;
-		if (!calendarParameters.homeLocation.empty())
+		if (!calendarParameters.homeLocation.empty() && !calendarParameters.googleMapsAPIKey.empty())
 		{
 			GoogleMapsInterface gMaps(_T("eBirdDataProcessor"), calendarParameters.googleMapsAPIKey);
 			UString::OStringStream ss;
