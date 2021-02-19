@@ -909,12 +909,17 @@ bool EBirdInterface::NameMatchesRegion(const UString::String& name, const Region
 {
 	assert(name.length() > 0 && region.name.length() > 0 && region.code.length() > 0);
 
+	auto localToLower([](const UString::Char& c)
+	{
+		return static_cast<UString::Char>(::tolower(c));
+	});
+
 	UString::String lowerName(name);
-	std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), ::tolower);
+	std::transform(lowerName.begin(), lowerName.end(), lowerName.begin(), localToLower);
 	UString::String lowerRegion(region.name);
-	std::transform(lowerRegion.begin(), lowerRegion.end(), lowerRegion.begin(), ::tolower);
+	std::transform(lowerRegion.begin(), lowerRegion.end(), lowerRegion.begin(), localToLower);
 	UString::String lowerCode(region.code);
-	std::transform(lowerCode.begin(), lowerCode.end(), lowerCode.begin(), ::tolower);
+	std::transform(lowerCode.begin(), lowerCode.end(), lowerCode.begin(), localToLower);
 
 	if (lowerName.compare(lowerRegion) == 0)
 		return true;

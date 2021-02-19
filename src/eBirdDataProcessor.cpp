@@ -13,17 +13,6 @@
 #include "stringUtilities.h"
 #include "kernelDensityEstimation.h"
 
-// System headers (added from https://github.com/tronkko/dirent/ for Windows)
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable:4505)
-#endif
-#include <dirent.h>
-#ifdef _WIN32
-#pragma warning(pop)
-#endif
-#include <sys/stat.h>
-
 // Standard C++ headers
 #include <fstream>
 #include <iostream>
@@ -32,6 +21,7 @@
 #include <map>
 #include <chrono>
 #include <set>
+#include <filesystem>
 
 const UString::String EBirdDataProcessor::headerLine(_T("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,"
@@ -1424,37 +1414,18 @@ bool EBirdDataProcessor::ReadMediaList(const UString::String& mediaFileName)
 
 std::vector<UString::String> EBirdDataProcessor::ListFilesInDirectory(const UString::String& directory)
 {
-	DIR *dir(opendir(UString::ToNarrowString(directory).c_str()));
-	if (!dir)
+	if (!std::experimental::filesystem::exists(directory))
 	{
-		Cerr << "Failed to open directory '" << directory << "'\n";
+		Cerr << "Directory '" << directory << "' does not exist\n";
 		return std::vector<UString::String>();
 	}
 
 	std::vector<UString::String> fileNames;
-	struct dirent *ent;
-	while (ent = readdir(dir), ent)
+	for (const auto& e : std::experimental::filesystem::recursive_directory_iterator(directory))
 	{
-		if (std::string(ent->d_name).compare(".") == 0 ||
-			std::string(ent->d_name).compare("..") == 0)
-			continue;
-
-		assert(ent->d_type != DT_UNKNOWN && "Cannot properly iterate through this filesystem");
-		if (ent->d_type == DT_DIR)
-		{
-			const UString::String folder(UString::ToStringType(ent->d_name) + _T("/"));
-			const UString::String subPath(directory + folder);
-			auto subDirFiles(ListFilesInDirectory(subPath));
-			/*std::for_each(subDirFiles.begin(), subDirFiles.end(), [&folder](UString::String& s)
-			{
-				s = folder + s;
-			});*/
-			fileNames.insert(fileNames.end(), subDirFiles.begin(), subDirFiles.end());
-		}
-		else
-			fileNames.push_back(UString::ToStringType(ent->d_name));
+		if (std::experimental::filesystem::is_regular_file(e.status()))
+			fileNames.push_back(UString::ToStringType(e.path()));
 	}
-	closedir(dir);
 
 	return fileNames;
 }
