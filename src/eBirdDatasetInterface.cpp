@@ -14,19 +14,9 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 
-// Windows headers
+// Windows stuff
 #ifdef _WIN32
-#include <direct.h>
 #undef AddJob
-
-#pragma warning(push)
-#pragma warning(disable:4505)
-#endif
-
-#include <dirent.h>
-
-#ifdef _WIN32
-#pragma warning(pop)
 #endif
 
 // Standard C++ headers
@@ -287,27 +277,12 @@ bool EBirdDatasetInterface::EnsureFolderExists(const UString::String& dir)// Cre
 
 bool EBirdDatasetInterface::CreateFolder(const UString::String& dir)// Can only create one more level deep at a time
 {
-#ifdef _WIN32
-	const auto error(_mkdir(UString::ToNarrowString(dir).c_str()));
-#else
-	const mode_t mode(0733);
-	const auto error(mkdir(UString::ToNarrowString(dir).c_str(), mode));
-#endif// _WIN32
-	return error == 0;
+	return std::experimental::filesystem::create_directory(UString::ToNarrowString(dir));
 }
 
 bool EBirdDatasetInterface::FolderExists(const UString::String& dir)
 {
-	DIR* directory(opendir(UString::ToNarrowString(dir).c_str()));
-	if (directory)
-	{
-		closedir(directory);
-		return true;
-	}
-
-	// TODO:  Check to ensure ENOENT == errno; if not, opendir() failed for reasons other than directory doesn't exist
-
-	return false;
+	return std::experimental::filesystem::is_directory(dir);
 }
 
 UString::String EBirdDatasetInterface::GetPath(const UString::String& regionCode)

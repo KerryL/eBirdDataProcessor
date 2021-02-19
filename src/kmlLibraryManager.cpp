@@ -626,8 +626,12 @@ void KMLLibraryManager::ExpandSainteAbbr(UString::String& s)
 bool KMLLibraryManager::RegionNamesMatch(const UString::String& name1, const UString::String& name2)
 {
 	UString::String lower1(name1), lower2(name2);
-	std::transform(lower1.begin(), lower1.end(), lower1.begin(), ::tolower);
-	std::transform(lower2.begin(), lower2.end(), lower2.begin(), ::tolower);
+	auto localToLower([](const UString::Char& c)
+	{
+		return static_cast<UString::Char>(::tolower(c));
+	});
+	std::transform(lower1.begin(), lower1.end(), lower1.begin(), localToLower);
+	std::transform(lower2.begin(), lower2.end(), lower2.begin(), localToLower);
 
 	ExpandSaintAbbr(lower1);
 	ExpandSaintAbbr(lower2);

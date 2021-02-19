@@ -41,7 +41,7 @@ bool SunCalculator::GetSunriseSunset(const double& latitude, const double& longi
 		return false;
 	}
 
-	std::tm sunrise, sunset;
+	std::tm sunrise{}, sunset{};
 	if (!ReadJSON(datesItem, _T("sunrise"), sunrise) ||
 		!ReadJSON(datesItem, _T("sunset"), sunset))
 	{
