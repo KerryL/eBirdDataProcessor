@@ -29,12 +29,19 @@ struct TimeOfDayParameters
 	UString::String splitRegionDataFile;
 };
 
+struct TimeOfYearParameters
+{
+	UString::String outputFile;
+	std::vector<UString::String> commonNames;
+	double maxProbability;
+};
+
 struct LocationFindingParameters
 {
 	bool cleanupKMLLocationNames;
-	UString::String kmlLibraryPath;
 	double kmlReductionLimit;
 	int geoJSONPrecision;
+	UString::String baseOutputFileName;
 };
 
 struct CalendarParameters
@@ -43,7 +50,6 @@ struct CalendarParameters
 	unsigned int recentObservationPeriod;// [days]
 	UString::String targetInfoFileName;
 
-	UString::String googleMapsAPIKey;
 	UString::String homeLocation;
 };
 
@@ -62,9 +68,21 @@ struct SpeciesHunt
 	double radius;// [km]
 };
 
-struct EBDPConfig
+struct ApplicationConfiguration
 {
 	UString::String dataFileName;
+	UString::String mediaFileName;
+	UString::String frequencyFilePath;
+	UString::String eBirdApiKey;
+	UString::String kmlLibraryPath;
+	UString::String googleMapsAPIKey;
+};
+
+struct EBDPConfig
+{
+	ApplicationConfiguration appConfig;
+	UString::String eBirdDatasetPath;
+
 	UString::String outputFileName;
 
 	LocationFilters locationFilters;
@@ -97,6 +115,7 @@ struct EBDPConfig
 	bool includePartialIDs;
 
 	TimeOfDayParameters timeOfDayParameters;
+	TimeOfYearParameters timeOfYearParameters;
 
 	TimeFilters timeFilters;
 
@@ -127,14 +146,9 @@ struct EBDPConfig
 	bool generateTargetCalendar;
 	CalendarParameters calendarParameters;
 
-	UString::String frequencyFilePath;
-
 	int showOnlyPhotoNeeds;
 	int showOnlyAudioNeeds;
-	UString::String mediaFileName;
 	UString::String mediaListHTML;
-
-	UString::String eBirdApiKey;
 
 	bool findMaxNeedsLocations;
 	LocationFindingParameters locationFindingParameters;
@@ -143,7 +157,9 @@ struct EBDPConfig
 	bool findBestTripLocations;
 	BestTripParameters bestTripParameters;
 
-	UString::String eBirdDatasetPath;
+	UString::String kmlFilterFileName;
+	UString::String kmlFilteredOutputFileName;
+	UString::String observationMapFileName;
 	
 	UString::String commentGroupString;
 

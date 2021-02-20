@@ -10,6 +10,8 @@
 #include "utilities/uString.h"
 #include "threadPool.h"
 #include "eBirdInterface.h"
+#include "eBirdDataProcessor.h"
+#include "kmlLibraryManager.h"
 
 // Standard C++ headers
 #include <unordered_map>
@@ -17,6 +19,7 @@
 #include <vector>
 #include <map>
 #include <set>
+#include <memory>
 
 class EBirdDatasetInterface
 {
@@ -24,19 +27,33 @@ public:
 	bool ExtractGlobalFrequencyData(const UString::String& fileName, const UString::String& regionDataOutputFileName);
 	bool WriteFrequencyFiles(const UString::String& frequencyDataPath) const;
 
-	enum class TimeOfDayPeriod
-	{
-		Year,
-		Month,
-		Week
-	};
-
 	bool ExtractTimeOfDayInfo(const UString::String& fileName,
 		const std::vector<UString::String>& commonNames,
 		const UString::String& regionCode, const UString::String& regionDataOutputFileName);
-	bool WriteTimeOfDayFiles(const UString::String& dataFileName, const TimeOfDayPeriod& period) const;
+	bool WriteTimeOfDayFiles(const UString::String& dataFileName) const;
+	
+	bool ExtractObservationsWithinGeometry(const UString::String& globalFileName, const UString::String& kmlFileName, const UString::String& outputFileName);
+	
+	struct MapInfo
+	{
+		double latitude;// [deg]
+		double longitude;// [deg]
+		UString::String locationName;
+		
+		struct ChecklistInfo
+		{
+			UString::String id;
+			UString::String groupID;
+			UString::String dateString;
+			unsigned int speciesCount;
+		};
+		
+		std::vector<ChecklistInfo> checklists;
+	};
+	
+	std::vector<MapInfo> GetMapInfo() const;
 
-private:
+//private:
 	static const UString::String nameIndexFileName;
 
 	struct Date
@@ -53,6 +70,11 @@ private:
 		bool operator>(const Date& d) const;
 		int operator-(const Date& d) const;// Returns delta in approx. # of days
 		Date operator+(const int& days) const;
+		
+		unsigned int GetDayNumber() const { return GetDayNumberFromDate(*this); }
+		
+		static unsigned int GetDayNumberFromDate(const Date& date);
+		static Date GetDateFromDayNumber(const unsigned int& dayNumber);
 	};
 
 	struct Time
@@ -89,13 +111,15 @@ private:
 
 	std::unordered_map<UString::String, uint16_t> nameIndexMap;
 
-	typedef std::array<FrequencyData, 12> YearFrequencyData;
+	typedef std::array<FrequencyData, 48> YearFrequencyData;
 	std::unordered_map<UString::String, YearFrequencyData> frequencyMap;// Key is fully qualified eBird region name
 
 	struct Observation
 	{
+		UString::String uniqueID;
 		UString::String commonName;
 		UString::String checklistID;
+		UString::String groupID;
 		UString::String regionCode;
 
 		Date date;
@@ -114,6 +138,10 @@ private:
 
 		bool completeChecklist;
 		bool approved;
+		
+		double latitude;// [deg]
+		double longitude;// [deg]
+		UString::String locationName;
 	};
 
 	std::vector<UString::String> speciesNamesTimeOfDay;
@@ -123,23 +151,23 @@ private:
 	std::unordered_map<UString::String, Observation> allObservationsInRegion;// Key is checklist ID
 	bool RegionMatches(const UString::String& regionCode) const;
 
-	static UString::String GenerateMonthHeaderRow(const UString::String& species);
-	static UString::String GenerateWeekHeaderRow(const UString::String& species);
-
+	std::unique_ptr<KMLLibraryManager::GeometryInfo> kmlFilterGeometry;
+	
 	void ProcessObservationDataFrequency(const Observation& observation);
 	void ProcessObservationDataTimeOfDay(const Observation& observation);
+	void ProcessObservationKMLFilter(const Observation& observation);
 	typedef void (EBirdDatasetInterface::*ProcessFunction)(const Observation& observation);
 	void RemoveRarities();
 
 	static bool ParseLine(const UString::String& line, Observation& observation);
-	static unsigned int GetMonthIndex(const Date& date);
+	static unsigned int GetWeekIndex(const Date& date);
 	static bool HeaderMatchesExpectedFormat(const UString::String& line);
 	static Date ConvertStringToDate(const UString::String& s);
 	static bool IncludeInLikelihoodCalculation(const UString::String& commonName);
 
 	bool WriteNameIndexFile(const UString::String& frequencyDataPath) const;
 
-	static bool SerializeMonthData(std::ofstream& file, const FrequencyData& data);
+	static bool SerializeWeekData(std::ofstream& file, const FrequencyData& data);
 	template<typename T>
 	static bool Write(std::ofstream& file, const T& data);
 
@@ -171,12 +199,18 @@ private:
 		const UString::String& regionDataOutputFileName);
 
 	bool ProcessLine(const UString::String& line, ProcessFunction processFunction);
+	
+	typedef std::array<double, 24> SunTimeArray;
+	void GetAverageLocation(double& averageLatitude, double& averageLongitude) const;
+	static void ScaleTime(const SunTimeArray& sunriseTimes, const SunTimeArray& sunsetTimes, Observation& o);
 
 	std::mutex mutex;
 	std::mutex regionWriteMutex;
 
-	static std::vector<EBirdInterface::ObservationInfo> GetObservationsWithinDateRange(
-		const std::vector<Observation>& observations, const Date& beginRange, const Date& endRange);// inclusive of endpoints
+	static std::vector<EBirdInterface::ObservationInfo> GetObservationsOfSpecies(const UString::String& speciesName, std::vector<EBirdInterface::ObservationInfo>& obsSet);
+	static EBirdInterface::ObservationInfo ConvertToObservationInfo(const Observation& o);
+	
+	static void AddObservationToMapInfo(const Observation& o, MapInfo& m);
 };
 
 template<typename T>

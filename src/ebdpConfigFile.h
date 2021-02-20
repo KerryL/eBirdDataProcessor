@@ -20,6 +20,7 @@ public:
 	EBDPConfig& GetConfig() { return config; }
 
 private:
+	UString::String appConfigFileName;
 	EBDPConfig config;
 
 	void BuildConfigItems() override;
@@ -27,6 +28,7 @@ private:
 	bool ConfigIsOK() override;
 
 	bool TimeOfDayConfigIsOK();
+	bool TimeOfYearConfigIsOK();
 	bool FrequencyHarvestConfigIsOK();
 	bool TargetCalendarConfigIsOK();
 	bool FindMaxNeedsConfigIsOK();

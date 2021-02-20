@@ -8,24 +8,15 @@
 #include "bestObservationTimeEstimator.h"
 #include "utilities/memoryMappedFile.h"
 #include "stringUtilities.h"
+#include "sunCalculator.h"
 
 // POSIX headers
 #include <sys/types.h>
 #include <sys/stat.h>
 
-// Windows headers
+// Windows stuff
 #ifdef _WIN32
-#include <direct.h>
 #undef AddJob
-
-#pragma warning(push)
-#pragma warning(disable:4505)
-#endif
-
-#include <dirent.h>
-
-#ifdef _WIN32
-#pragma warning(pop)
 #endif
 
 // Standard C++ headers
@@ -34,6 +25,7 @@
 #include <algorithm>
 #include <numeric>
 #include <locale>
+#include <cmath>
 #include <chrono>// For benchmarking
 #if __GNUC_MINOR__ >= 8 || defined (WIN32)
 #include <filesystem>
@@ -149,12 +141,12 @@ void EBirdDatasetInterface::RemoveRarities()
 {
 	for (auto& entry : frequencyMap)
 	{
-		for (auto& month : entry.second)
+		for (auto& week : entry.second)
 		{
-			for (auto it = month.speciesList.begin(); it != month.speciesList.end(); )
+			for (auto it = week.speciesList.begin(); it != week.speciesList.end(); )
 			{
 				if (it->second.rarityGuess.mightBeRarity)
-					it = month.speciesList.erase(it);
+					it = week.speciesList.erase(it);
 				else
 					++it;
 			}
@@ -178,7 +170,7 @@ bool EBirdDatasetInterface::WriteNameIndexFile(const UString::String& frequencyD
 	return true;
 }
 
-bool EBirdDatasetInterface::SerializeMonthData(std::ofstream& file, const FrequencyData& data)
+bool EBirdDatasetInterface::SerializeWeekData(std::ofstream& file, const FrequencyData& data)
 {
 	if (!Write(file, static_cast<uint16_t>(data.checklistIDs.size())))
 		return false;
@@ -229,9 +221,9 @@ bool EBirdDatasetInterface::WriteFrequencyFiles(const UString::String& frequency
 			continue;
 		}
 
-		for (const auto& month : entry.second)
+		for (const auto& week : entry.second)
 		{
-			if (!SerializeMonthData(file, month))
+			if (!SerializeWeekData(file, week))
 			{
 				Cerr << "Failed to serialize data to '" << fullFileName << "'\n";
 				success = false;
@@ -285,27 +277,12 @@ bool EBirdDatasetInterface::EnsureFolderExists(const UString::String& dir)// Cre
 
 bool EBirdDatasetInterface::CreateFolder(const UString::String& dir)// Can only create one more level deep at a time
 {
-#ifdef _WIN32
-	const auto error(_mkdir(UString::ToNarrowString(dir).c_str()));
-#else
-	const mode_t mode(0733);
-	const auto error(mkdir(UString::ToNarrowString(dir).c_str(), mode));
-#endif// _WIN32
-	return error == 0;
+	return std::experimental::filesystem::create_directory(UString::ToNarrowString(dir));
 }
 
 bool EBirdDatasetInterface::FolderExists(const UString::String& dir)
 {
-	DIR* directory(opendir(UString::ToNarrowString(dir).c_str()));
-	if (directory)
-	{
-		closedir(directory);
-		return true;
-	}
-
-	// TODO:  Check to ensure ENOENT == errno; if not, opendir() failed for reasons other than directory doesn't exist
-
-	return false;
+	return std::experimental::filesystem::is_directory(dir);
 }
 
 UString::String EBirdDatasetInterface::GetPath(const UString::String& regionCode)
@@ -351,7 +328,9 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 	UString::IStringStream ss(line);
 	while (std::getline(ss, token, UString::Char('\t')))
 	{
-		if (column == 4)
+		if (column == 0)
+			observation.uniqueID = token;
+		else if (column == 4)
 			observation.commonName = token;
 		else if (column == 8)
 		{
@@ -365,6 +344,18 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 			stateCode = token;
 		else if (column == 17)
 			observation.regionCode = token;
+		else if (column == 22)
+			observation.locationName = token;
+		else if (column == 25)
+		{
+			if (!ParseInto(token, observation.latitude))
+				return false;
+		}
+		else if (column == 26)
+		{
+			if (!ParseInto(token, observation.longitude))
+				return false;
+		}
 		else if (column == 27)
 			observation.date = ConvertStringToDate(token);
 		else if (column == 28)
@@ -392,6 +383,8 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 			if (!ParseInto(token, observation.completeChecklist))
 				return false;
 		}
+		else if (column == 39)
+			observation.groupID = token;
 		else if (column == 41)
 		{
 			if (!ParseInto(token, observation.approved))
@@ -430,8 +423,7 @@ bool EBirdDatasetInterface::ExtractTimeOfDayInfo(const UString::String& fileName
 	return true;
 }
 
-bool EBirdDatasetInterface::WriteTimeOfDayFiles(
-	const UString::String& dataFileName, const TimeOfDayPeriod& period) const
+bool EBirdDatasetInterface::WriteTimeOfDayFiles(const UString::String& dataFileName) const
 {
 	UString::OFStream dataFile(dataFileName);
 	if (!dataFile.is_open() || !dataFile.good())
@@ -439,161 +431,98 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(
 		Cerr << "Failed to open '" << dataFileName << "' for output\n";
 		return false;
 	}
+	
+	// We base sunrise/sunset times on an average location for all observations in the set.
+	// We assume that there is no variation in these times year-to-year (not exactly true, but very close).
+	// Instead of getting a sunrise/sunset time for each day, we only request sunrise/sunset times every
+	// 2 weeks (approx.), then we interpolate based on the exact date (to avoid an unnecessary high volume of
+	// API calls which doesn't significantly improve the accuracy of our calculation).
+	
+	double averageLatitude, averageLongitude;
+	GetAverageLocation(averageLatitude, averageLongitude);
+	SunTimeArray sunriseTimes, sunsetTimes;// The first and 15th of each month
+	SunCalculator sunCalculator;
+	for (unsigned int i = 0; i < sunsetTimes.size(); ++i)
+	{
+		SunCalculator::Date date;
+		date.year = 2020;// Doesn't really matter
+		date.month = static_cast<unsigned short>(i * 12.0 / sunriseTimes.size() + 1.0);
+		date.dayOfMonth = static_cast<unsigned short>(12.0 / sunriseTimes.size() * 30.0 * fmod(i, sunriseTimes.size() / 12.0) + 1);
+		if (!sunCalculator.GetSunriseSunset(averageLatitude, averageLongitude, date, sunriseTimes[i], sunsetTimes[i]))
+		{
+			Cerr << "Failed to get sunrise/sunset time\n";// TODO:  Handle this case more gracefully
+			return false;
+		}
+	}
+
+	// For each observation, scale the time such that 0 = midnight, 6 = sunrise, 18 = sunset and 24 = midnight (again)
+	// Find PDF for scaled observation times (so each species gets a single PDF)
 
 	// Each row corresponds to a time of day
-	// Each column corresponds to a species-time of year (PDFs are columns)
+	// Each column corresponds to a species (each column is a PDF)
 
 	BestObservationTimeEstimator::PDFArray dummy;
 	UString::OStringStream headerRow;
 	std::vector<UString::OStringStream> rows(dummy.size());
-	const double increment(24.0 / dummy.size());// [hr]
+	const double increment(1.0 / dummy.size());
 	double t(0.0);
-	headerRow << "Time (hr),";
+	headerRow << "Time (-),";
 	for (auto& r : rows)
 	{
 		r << t << ',';
 		t += increment;
 	}
 
-	std::vector<Observation> allObsVector(allObservationsInRegion.size());
+	std::vector<EBirdInterface::ObservationInfo> allObsVector(allObservationsInRegion.size());
 	auto it(allObservationsInRegion.begin());
-	for (unsigned int i = 0; i < allObsVector.size(); ++it, ++i)
-		allObsVector[i] = it->second;
-
-	std::vector<BestObservationTimeEstimator::PDFArray> allObsPDF;
-
+	for (unsigned int i = 0; i < allObsVector.size(); ++i)
 	{
-		std::vector<std::vector<EBirdInterface::ObservationInfo>> allObservations;
-		// Group by time period, then for each time period generate PDF and write row to file
-		std::vector<std::vector<EBirdInterface::ObservationInfo>> observations;
-		Date beginDate;
-		beginDate.day = 1;
-		beginDate.month = 1;
-		const UString::String allObsString(_T("All Observations"));
-		if (period == TimeOfDayPeriod::Year)
-		{
-			headerRow << allObsString << ',';
-			allObservations.resize(1);
-			const Date endDate(beginDate + 365);
-			allObservations[0] = GetObservationsWithinDateRange(allObsVector, beginDate, endDate);
-		}
-		else if (period == TimeOfDayPeriod::Month)
-		{
-			headerRow << GenerateMonthHeaderRow(allObsString);
-			allObservations.resize(12);
-			for (auto& o : allObservations)
-			{
-				const Date endDate(beginDate + 30);
-				o = GetObservationsWithinDateRange(allObsVector, beginDate, endDate);
-				beginDate = endDate + 1;
-			}
-		}
-		else if (period == TimeOfDayPeriod::Week)
-		{
-			headerRow << GenerateWeekHeaderRow(allObsString);
-			allObservations.resize(52);
-			for (auto& o : allObservations)
-			{
-				const Date endDate(beginDate + 7);
-				o = GetObservationsWithinDateRange(allObsVector, beginDate, endDate);
-				beginDate = endDate + 1;
-			}
-		}
-
-		for (const auto& o : allObservations)
-		{
-			const auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
-			const double sum(std::accumulate(pdf.begin(), pdf.end(), 0.0));
-			if (sum > 0.0)
-			{
-				for (unsigned int i = 0; i < pdf.size(); ++i)
-					rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
-			}
-			else
-			{
-				for (auto& r : rows)
-					r << "0,";
-			}
-			allObsPDF.push_back(std::move(pdf));
-		}
+		Observation o(it->second);
+		ScaleTime(sunriseTimes, sunsetTimes, o);
+		allObsVector[i] = ConvertToObservationInfo(o);
+		++it;
 	}
+	
+	allObsVector.erase(std::remove_if(allObsVector.begin(), allObsVector.end(), [](const EBirdInterface::ObservationInfo& o)
+	{
+		return !o.dateIncludesTimeInfo;
+	}), allObsVector.end());
+
+	auto allObsPDF(BestObservationTimeEstimator::EstimateBestObservationTimePDF(allObsVector));
+	headerRow << "All Observations,";
+	for (unsigned int i = 0; i < allObsPDF.size(); ++i)
+		rows[i] << allObsPDF[i] << ',';
+	
+	const double excludeFactor(0.1);
+	const double excludeLimit(excludeFactor * *std::max_element(allObsPDF.begin(), allObsPDF.end()));
 
 	for (const auto& species : timeOfDayObservationMap)
 	{
-		// Group by time period, then for each time period generate PDF and write row to file
-		std::vector<std::vector<EBirdInterface::ObservationInfo>> observations;
-		Date beginDate;
-		beginDate.day = 1;
-		beginDate.month = 1;
-		if (period == TimeOfDayPeriod::Year)
-		{
-			headerRow << species.first << ',';
-			observations.resize(1);
-			const Date endDate(beginDate + 365);
-			observations[0] = GetObservationsWithinDateRange(species.second, beginDate, endDate);
-		}
-		else if (period == TimeOfDayPeriod::Month)
-		{
-			headerRow << GenerateMonthHeaderRow(species.first);
-			observations.resize(12);
-			for (auto& o : observations)
-			{
-				const Date endDate(beginDate + 30);
-				o = GetObservationsWithinDateRange(species.second, beginDate, endDate);
-				beginDate = endDate + 1;
-			}
-		}
-		else if (period == TimeOfDayPeriod::Week)
-		{
-			headerRow << GenerateWeekHeaderRow(species.first);
-			observations.resize(52);
-			for (auto& o : observations)
-			{
-				const Date endDate(beginDate + 7);
-				o = GetObservationsWithinDateRange(species.second, beginDate, endDate);
-				beginDate = endDate + 1;
-			}
-		}
+		headerRow << species.first << ',';
+		auto observations(GetObservationsOfSpecies(species.first, allObsVector));
 
-		for (auto& o : observations)
+		auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(observations));
+		for (unsigned int i = 0; i < pdf.size(); ++i)
 		{
-			o.erase(std::remove_if(o.begin(), o.end(), [](const EBirdInterface::ObservationInfo& o)
-			{
-				return !o.dateIncludesTimeInfo;
-			}), o.end());
-		}
-
-		unsigned int j(0);
-		for (const auto& o : observations)
-		{
-			const double excludeFactor(0.1);
-			const double excludeLimit(excludeFactor * *std::max_element(allObsPDF[j].begin(), allObsPDF[j].end()));
-
-			auto pdf(BestObservationTimeEstimator::EstimateBestObservationTimePDF(o));
-			for (unsigned int i = 0; i < pdf.size(); ++i)
-			{
-				// If we do this blindly, times when there are very few checklists submitted can
-				// have an overwhelming scale effect on the PDFs, so we automatically exclude
-				// times where there are very few observations
-				if (allObsPDF[j][i] < excludeLimit)
-					pdf[i] = 0.0;
-				else
-					pdf[i] /= allObsPDF[j][i];// Normalize based on total number of checklists per time period
-			}
-
-			const double sum(std::accumulate(pdf.begin(), pdf.end(), 0.0));
-			if (sum > 0.0)
-			{
-				for (unsigned int i = 0; i < pdf.size(); ++i)
-					rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
-			}
+			// If we do this blindly, times when there are very few checklists submitted can
+			// have an overwhelming scale effect on the PDFs, so we automatically exclude
+			// times where there are very few observations
+			if (allObsPDF[i] < excludeLimit)
+				pdf[i] = 0.0;
 			else
-			{
-				for (auto& r : rows)
-					r << "0,";
-			}
+				pdf[i] /= allObsPDF[i];// Normalize based on total number of checklists per time period
+		}
 
-			++j;
+		const double sum(std::accumulate(pdf.begin(), pdf.end(), 0.0));
+		if (sum > 0.0)
+		{
+			for (unsigned int i = 0; i < pdf.size(); ++i)
+				rows[i] << pdf[i] / sum / (24.0 / pdf.size()) << ',';
+		}
+		else
+		{
+			for (auto& r : rows)
+				r << "0,";
 		}
 	}
 
@@ -604,71 +533,176 @@ bool EBirdDatasetInterface::WriteTimeOfDayFiles(
 	return true;
 }
 
-std::vector<EBirdInterface::ObservationInfo> EBirdDatasetInterface::GetObservationsWithinDateRange(
-	const std::vector<Observation>& observations, const Date& beginRange, const Date& endRange)
+EBirdInterface::ObservationInfo EBirdDatasetInterface::ConvertToObservationInfo(const Observation& o)
 {
-	std::vector<EBirdInterface::ObservationInfo> relevantObservations;
-	for (const auto& o : observations)
-	{
-		if (o.date.month < beginRange.month || (o.date.month == beginRange.month && o.date.day < beginRange.day))
-			continue;
-		else if (o.date.month > endRange.month || (o.date.month == endRange.month && o.date.day > endRange.day))
-			continue;
+	EBirdInterface::ObservationInfo oi;
+	oi.commonName = o.commonName;
 
-		EBirdInterface::ObservationInfo observationToAdd;
-		observationToAdd.commonName = o.commonName;
-		observationToAdd.count = o.count;
-		if (o.includesDistance)
-			observationToAdd.distance = o.distance;
-		if (o.includesDuration)
-			observationToAdd.duration = o.duration;
-		observationToAdd.dateIncludesTimeInfo = o.includesTime;
-		observationToAdd.observationDate.tm_year = o.date.year - 1900;
-		observationToAdd.observationDate.tm_mon = o.date.month - 1;
-		observationToAdd.observationDate.tm_mday = o.date.day;
-		if (o.includesTime)
-		{
-			observationToAdd.observationDate.tm_hour = o.time.hour;
-			observationToAdd.observationDate.tm_min = o.time.minute;
-			observationToAdd.observationDate.tm_sec = 0;
-		}
-		observationToAdd.observationValid = o.approved;
-		relevantObservations.push_back(observationToAdd);
+	oi.dateIncludesTimeInfo = o.includesTime;
+	oi.observationDate.tm_hour = o.time.hour;
+	oi.observationDate.tm_min = o.time.hour;
+	oi.observationDate.tm_sec = 0;
+	oi.observationDate.tm_year = o.date.year;
+	oi.observationDate.tm_mon = o.date.month;
+	oi.observationDate.tm_mday = o.date.day;
+
+	if (o.includesCount)
+		oi.count = o.count;
+	else
+		oi.count = 0;
+
+	if (o.includesDistance)
+		oi.distance = o.distance;
+	else
+		oi.distance = 0.0;
+
+	if (o.includesDuration)
+		oi.duration = o.duration;
+	else
+		oi.duration = 0;
+
+	oi.observationValid = o.approved;
+	
+	oi.latitude = o.latitude;
+	oi.longitude = o.longitude;
+	
+	return oi;
+}
+
+void EBirdDatasetInterface::GetAverageLocation(double& averageLatitude, double& averageLongitude) const
+{
+	// We don't want to average by observation, because the result will be skewed toward more popular birding spots
+	double minLat(std::numeric_limits<double>::max());
+	double maxLat(std::numeric_limits<double>::min());
+	double minLon(std::numeric_limits<double>::max());
+	double maxLon(std::numeric_limits<double>::min());
+	for (const auto& o : allObservationsInRegion)
+	{
+		if (o.second.latitude < minLat)
+			minLat = o.second.latitude;
+		if (o.second.latitude > maxLat)
+			maxLat = o.second.latitude;
+		if (o.second.longitude < minLon)
+			minLon = o.second.longitude;
+		if (o.second.longitude > maxLon)
+			maxLon = o.second.longitude;
+	}
+	
+	averageLatitude = (maxLat - minLat) * 0.5;
+	averageLongitude = (maxLon - minLon) * 0.5;
+	
+	// Handle wrap-around for locations near longitude = +/- 180 deg
+	if (fabs(maxLon - 180.0 - averageLongitude) < fabs(maxLon - averageLongitude) &&
+		fabs(minLon + 180.0 - averageLongitude) < fabs(minLon - averageLongitude))
+		averageLongitude += 180.0;
+	if (averageLongitude > 180.0)
+		averageLongitude -= 360.0;
+	// Can't wind up with < -180, so no need to check
+}
+
+void EBirdDatasetInterface::ScaleTime(const SunTimeArray& sunriseTimes, const SunTimeArray& sunsetTimes, Observation& o)
+{
+	// Interpolate to find sunrise/sunset times for the date in question
+	Date jan1;
+	jan1.year = o.date.year;
+	jan1.month = 1;
+	jan1.day = 1;
+	const unsigned int dayOfYear(o.date.GetDayNumber() - Date::GetDayNumberFromDate(jan1));
+	const unsigned int daysPerPeriod(static_cast<unsigned int>(365 / sunriseTimes.size()));
+	const unsigned int startIndex(std::min(dayOfYear / daysPerPeriod, static_cast<unsigned int>(sunriseTimes.size() - 1)));
+	const unsigned int startDayOfYear(startIndex * daysPerPeriod);
+	const unsigned int endDayOfYear(startDayOfYear + daysPerPeriod);
+	
+	const unsigned int endIndex([&startIndex, &sunsetTimes]()
+	{
+		if (startIndex == sunsetTimes.size() - 1)
+			return 0U;
+		return startIndex + 1U;
+	}());
+	const double startRiseTime(sunriseTimes[startIndex]);
+	const double endRiseTime(sunriseTimes[endIndex]);
+	const double startSetTime(sunsetTimes[startIndex]);
+	const double endSetTime(sunsetTimes[endIndex]);
+	
+	const double fraction((dayOfYear - startDayOfYear) / static_cast<double>(daysPerPeriod));
+	const double sunrise(fraction * (endRiseTime - startRiseTime) + startRiseTime);
+	const double sunset(fraction * (endSetTime - startSetTime) + startSetTime);
+
+	const double observationMinutes(o.time.hour * 60 + o.time.minute);
+	const double halfDayMinutes(12.0 * 60.0);
+
+	double interpolatedTime;
+	
+	// When we scale the time, we make sunrise = 6 AM and sunset = 6 PM
+	if (o.time.hour < sunrise)// Nighttime interpolation
+	{
+		const double sunsetToMidnight(24.0 * 60.0 - sunset);
+		const double minutesFromRef(observationMinutes + sunsetToMidnight);
+		const double nightTimeLength(1440 - sunset + sunrise);
+		interpolatedTime = minutesFromRef / nightTimeLength * halfDayMinutes - 0.5 * halfDayMinutes;
+	}
+	else if (o.time.hour > sunset)// Nighttime interpolation
+	{
+		const double minutesFromRef(observationMinutes - sunset);
+		const double nightTimeLength(1440 - sunset + sunrise);
+		interpolatedTime = minutesFromRef / nightTimeLength * halfDayMinutes + 1.5 * halfDayMinutes;
+	}
+	else// Daytime interpolation
+	{
+		const double minutesFromRef(observationMinutes - sunrise);
+		const double dayTimeLength(sunset - sunrise);
+		interpolatedTime = minutesFromRef / dayTimeLength * halfDayMinutes + 0.5 * halfDayMinutes;
 	}
 
+	if (interpolatedTime < 0.0)
+		interpolatedTime += 1440.0;
+	
+	o.time.hour = static_cast<unsigned int>(floor(interpolatedTime / 60.0));
+	o.time.minute = static_cast<unsigned int>(fmod(interpolatedTime, 60.0));
+}
+
+unsigned int EBirdDatasetInterface::Date::GetDayNumberFromDate(const Date& date)
+{
+	const unsigned int m((date.month + 9) % 12);
+	const unsigned int y(date.year - m / 10);
+	return 365 * y + y / 4 - y / 100 + y / 400 + (m * 306 + 5) / 10 + date.day - 1;
+}
+
+EBirdDatasetInterface::Date EBirdDatasetInterface::Date::GetDateFromDayNumber(const unsigned int& dayNumber)
+{
+	unsigned int y((10000 * dayNumber + 14780) / 3652425);
+	int d(dayNumber - (365 * y / 4 - y / 100 + y / 400));
+	if (d < 0)
+	{
+		y = y - 1;
+		d = dayNumber - (365 * y + y / 4 - y / 100 + y / 400);
+	}
+	
+	Date date;
+	const unsigned int mi((100 * d + 52) / 3600);
+	date.month = (mi + 2) % 12 + 1;
+	date.year = y + (mi + 2) / 12;
+	date.day = d - (mi * 306 + 5) / 10 + 1;
+	
+	return date;
+}
+
+std::vector<EBirdInterface::ObservationInfo> EBirdDatasetInterface::GetObservationsOfSpecies(const UString::String& speciesName, std::vector<EBirdInterface::ObservationInfo>& obsSet)
+{
+	auto relevantObservations(obsSet);
+	relevantObservations.erase(std::remove_if(relevantObservations.begin(), relevantObservations.end(),
+		[&speciesName](const EBirdInterface::ObservationInfo& o)
+		{
+			return o.commonName != speciesName;
+		}), relevantObservations.end());
+
 	return relevantObservations;
-}
-
-UString::String EBirdDatasetInterface::GenerateMonthHeaderRow(const UString::String& species)
-{
-	UString::OStringStream ss;
-	ss << "January (" << species <<
-		"),February (" << species <<
-		"),March (" << species <<
-		"),April (" << species <<
-		"),May (" << species <<
-		"),June (" << species <<
-		"),July (" << species <<
-		"),August (" << species <<
-		"),September (" << species <<
-		"),October (" << species <<
-		"),November (" << species <<
-		"),December (" << species << "),";
-	return ss.str();
-}
-
-UString::String EBirdDatasetInterface::GenerateWeekHeaderRow(const UString::String& species)
-{
-	UString::OStringStream ss;
-	for (unsigned int i = 1; i <= 52; ++i)
-		ss << "Week " << i << " (" << species << "),";
-	return ss.str();
 }
 
 bool EBirdDatasetInterface::HeaderMatchesExpectedFormat(const UString::String& line)
 {
 	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING BIRD ATLAS CODE	BREEDING BIRD ATLAS CATEGORY	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS"));
-	return StringUtilities::Trim(line).compare(expectedHeader) == 0;
+	return StringUtilities::Trim(line) == expectedHeader;
 }
 
 EBirdDatasetInterface::Date EBirdDatasetInterface::ConvertStringToDate(const UString::String& s)
@@ -738,18 +772,18 @@ void EBirdDatasetInterface::ProcessObservationDataFrequency(const Observation& o
 	else if (!IncludeInLikelihoodCalculation(observation.commonName))
 		return;
 
-	const auto monthIndex(GetMonthIndex(observation.date));
+	const auto weekIndex(GetWeekIndex(observation.date));
 
 	std::lock_guard<std::mutex> lock(mutex);// TODO:  If there were a way to eliminate this lock, there could potentially be a big speed improvement (would need to verify by profiling to ensure read isn't bottleneck)
 
 	auto& entry(frequencyMap[observation.regionCode]);
 	nameIndexMap.insert(std::make_pair(observation.commonName, static_cast<uint16_t>(nameIndexMap.size())));
-	auto& speciesInfo(entry[monthIndex].speciesList[nameIndexMap[observation.commonName]]);
+	auto& speciesInfo(entry[weekIndex].speciesList[nameIndexMap[observation.commonName]]);
 	speciesInfo.rarityGuess.Update(observation.date);
 
 	if (observation.completeChecklist)
 	{
-		entry[monthIndex].checklistIDs.insert(observation.checklistID);
+		entry[weekIndex].checklistIDs.insert(observation.checklistID);
 		++speciesInfo.occurrenceCount;
 	}
 }
@@ -783,9 +817,11 @@ bool EBirdDatasetInterface::RegionMatches(const UString::String& regionCode) con
 	return regionCode.substr(0, regionCodeTimeOfDay.length()).compare(regionCodeTimeOfDay) == 0;
 }
 
-unsigned int EBirdDatasetInterface::GetMonthIndex(const Date& date)
+unsigned int EBirdDatasetInterface::GetWeekIndex(const Date& date)
 {
-	return date.month - 1;
+	const unsigned int monthIndex(date.month - 1);
+	const unsigned int monthWeekIndex((date.day - 1) / 7);
+	return 4 * monthIndex + std::min(monthWeekIndex, 3U);
 }
 
 void EBirdDatasetInterface::SpeciesData::Rarity::Update(const Date& date)
@@ -836,4 +872,78 @@ EBirdDatasetInterface::Date EBirdDatasetInterface::Date::operator+(const int& da
 	newDate.year = thisTime.tm_year + 1900;
 	newDate.month = thisTime.tm_mon + 1;
 	return newDate;
+}
+
+bool EBirdDatasetInterface::ExtractObservationsWithinGeometry(
+	const UString::String& globalFileName, const UString::String& kmlFileName, const UString::String& outputFileName)
+{
+	kmlFilterGeometry = KMLLibraryManager::ReadKML(kmlFileName); 
+	if (!kmlFilterGeometry)
+		return false;
+	return DoDatasetParsing(globalFileName, &EBirdDatasetInterface::ProcessObservationKMLFilter, outputFileName);
+}
+
+std::vector<EBirdDatasetInterface::MapInfo> EBirdDatasetInterface::GetMapInfo() const
+{
+	std::vector<EBirdDatasetInterface::MapInfo> mapInfo;// Each entry is a location, and includes a list of checklists at that location
+	unsigned int a(0);
+	for (const auto& o : allObservationsInRegion)
+	{
+		if (o.second.checklistID == _T("S73117658"))
+			a++;
+		bool found(false);
+		for (auto& m : mapInfo)
+		{
+			if (m.latitude == o.second.latitude && m.longitude == o.second.longitude)
+			{
+				AddObservationToMapInfo(o.second, m);
+				found = true;
+				break;
+			}
+		}
+		
+		if (!found)
+		{
+			mapInfo.push_back(MapInfo());
+			mapInfo.back().latitude = o.second.latitude;
+			mapInfo.back().longitude = o.second.longitude;
+			mapInfo.back().locationName = o.second.locationName;
+			AddObservationToMapInfo(o.second, mapInfo.back());
+		}
+	}
+	
+	return mapInfo;
+}
+
+void EBirdDatasetInterface::AddObservationToMapInfo(const Observation& o, MapInfo& m)
+{
+	for (auto& c : m.checklists)
+	{	
+		if (o.checklistID == c.id)// Already have an entry for this checklist, just increment the species count
+		{
+			++c.speciesCount;
+			return;
+		}
+		else if (!c.groupID.empty() && o.groupID == c.groupID)// Already included a checklist from this group; don't want to include any others
+			return;
+	}
+	
+	m.checklists.push_back(MapInfo::ChecklistInfo());
+	m.checklists.back().id = o.checklistID;
+	m.checklists.back().speciesCount = 1;
+	m.checklists.back().groupID = o.groupID;
+	
+	UString::OStringStream ss;
+	ss << o.date.month << "-" << o.date.day << "-" << o.date.year;
+	m.checklists.back().dateString = ss.str();
+}
+
+void EBirdDatasetInterface::ProcessObservationKMLFilter(const Observation& observation)
+{
+	KMLLibraryManager::GeometryInfo::Point p(observation.longitude, observation.latitude);
+	if (!KMLLibraryManager::PointIsWithinPolygons(p, *kmlFilterGeometry))
+		return;
+
+	std::lock_guard<std::mutex> lock(mutex);
+	allObservationsInRegion[observation.uniqueID] = observation;// Don't use the checklist ID as the key for this case, or we'll end up with only one entry per checklist
 }

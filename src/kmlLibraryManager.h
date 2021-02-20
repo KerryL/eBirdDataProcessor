@@ -18,6 +18,7 @@
 #include <unordered_map>
 #include <shared_mutex>
 #include <unordered_set>
+#include <memory>
 
 class KMLLibraryManager
 {
@@ -27,6 +28,43 @@ public:
 		const bool& cleanUpLocationNames, const int& geoJSONPrecision);
 
 	UString::String GetKML(const UString::String& country, const UString::String& subNational1, const UString::String& subNational2);
+	
+	struct GeometryInfo
+	{
+		GeometryInfo(const UString::String& kml);
+		GeometryInfo(const GeometryInfo& g);
+		GeometryInfo(GeometryInfo&& g);
+
+		struct Point
+		{
+			Point() = default;
+			Point(const double& longitude, const double& latitude) : longitude(longitude), latitude(latitude) {}
+			
+			double longitude;// [deg]
+			double latitude;// [deg]
+			
+			bool operator==(const Point& p) const;
+			bool operator!=(const Point& p) const;
+		};
+
+		typedef std::vector<std::vector<Point>> PolygonList;
+
+		const PolygonList polygons;
+
+		struct BoundingBox
+		{
+			Point northEast;
+			Point southWest;
+		};
+		const BoundingBox bbox;
+
+		static BoundingBox ComputeBoundingBox(const PolygonList& polygonList);
+		static PolygonList ExtractPolygons(const UString::String& kml);
+	};
+	
+	// To support working with custom KML shapes
+	static std::unique_ptr<GeometryInfo> ReadKML(const UString::String& kmlFileName);
+	static bool PointIsWithinPolygons(const GeometryInfo::Point& p, const GeometryInfo& geometry);
 
 private:
 	const UString::String libraryPath;
@@ -81,8 +119,6 @@ private:
 		std::string::size_type sourceTellP = 0;
 	};
 
-	struct GeometryInfo;// Forward declaration
-
 	struct ParentGeometryExtractionArguments : public AdditionalArguments
 	{
 		ParentGeometryExtractionArguments(const UString::String& countryName,
@@ -93,7 +129,7 @@ private:
 
 	typedef bool(*PlacemarkFunction)(const UString::String&, const std::string::size_type&, AdditionalArguments&);
 
-	bool ForEachPlacemarkTag(const UString::String& kmlData, PlacemarkFunction func, AdditionalArguments& args) const;
+	static bool ForEachPlacemarkTag(const UString::String& kmlData, PlacemarkFunction func, AdditionalArguments& args);
 	static bool ExtractRegionGeometry(const UString::String& kmlData, const std::string::size_type& offset, AdditionalArguments& args);
 	bool FixPlacemarkNames(const UString::String& kmlData, const std::string::size_type& offset, AdditionalArguments& args) const;
 	static bool ExtractParentRegionGeometry(const UString::String& kmlData, const std::string::size_type& offset, AdditionalArguments& args);
@@ -118,42 +154,11 @@ private:
 
 	static bool GetUserConfirmation();
 
-	struct GeometryInfo
-	{
-		GeometryInfo(const UString::String& kml);
-		GeometryInfo(const GeometryInfo& g);
-		GeometryInfo(GeometryInfo&& g);
-
-		struct Point
-		{
-			Point() = default;
-			Point(const double& longitude, const double& latitude) : longitude(longitude), latitude(latitude) {}
-			
-			double longitude;// [deg]
-			double latitude;// [deg]
-		};
-
-		typedef std::vector<std::vector<Point>> PolygonList;
-
-		const PolygonList polygons;
-
-		struct BoundingBox
-		{
-			Point northEast;
-			Point southWest;
-		};
-		const BoundingBox bbox;
-
-		static BoundingBox ComputeBoundingBox(const PolygonList& polygonList);
-		static PolygonList ExtractPolygons(const UString::String& kml);
-	};
-
 	bool GetParentGeometryInfo(const UString::String& country);
 
 	std::unordered_map<UString::String, GeometryInfo> geometryInfo;// key generated with BuildLocationIDString() (empty third argument)
 	GeometryInfo GetGeometryInfoByName(const UString::String& countryName, const UString::String& parentName);
 	static bool BoundingBoxWithinParentBox(const GeometryInfo::BoundingBox& parent, const GeometryInfo::BoundingBox& child);
-	static bool PointIsWithinPolygons(const GeometryInfo::Point& p, const GeometryInfo& geometry);
 	static bool SegmentsIntersect(const GeometryInfo::Point& segment1Point1, const GeometryInfo::Point& segment1Point2,
 		const GeometryInfo::Point& segment2Point1, const GeometryInfo::Point& segment2Point2);
 	static GeometryInfo::Point ChooseRobustPoint(const GeometryInfo& geometry);

@@ -23,15 +23,15 @@ class MapPageGenerator
 {
 public:
 	MapPageGenerator(const LocationFindingParameters& locationFindingParameters,
-		const std::vector<UString::String>& highDetailCountries, const UString::String& eBirdAPIKey);
+		const std::vector<UString::String>& highDetailCountries, const UString::String& eBirdApiKey, const UString::String& kmlLibraryPath);
 	typedef EBirdDataProcessor::YearFrequencyInfo ObservationInfo;
 
-	bool WriteBestLocationsViewerPage(const UString::String& outputPath,
+	bool WriteBestLocationsViewerPage(const UString::String& baseOutputFileName,
 		const std::vector<ObservationInfo>& observationInfo);
 
 private:
-	static const UString::String htmlFileName;
-	static const UString::String dataFileName;
+	static const UString::String htmlExtension;
+	static const UString::String dataExtension;
 
 	CombinedLogger<typename std::basic_ostream<UString::String::value_type>> log;
 
@@ -47,7 +47,7 @@ private:
 		UString::String longName;
 	};
 
-	static const std::array<NamePair, 12> monthNames;
+	static const std::array<NamePair, 48> weekNames;
 
 	struct Keys
 	{
@@ -66,11 +66,11 @@ private:
 	std::unordered_map<UString::String, UString::String> eBirdRegionCodeToNameMap;
 	void AddRegionCodesToMap(const UString::String& parentCode, const EBirdInterface::RegionType& regionType);
 
-	bool WriteHTML(const UString::String& outputPath) const;
-	bool WriteGeoJSONData(const UString::String& outputPath, std::vector<ObservationInfo> observationProbabilities);
+	bool WriteHTML(const UString::String& fileName, const UString::String& dataFileName) const;
+	bool WriteGeoJSONData(const UString::String& fileName, std::vector<ObservationInfo> observationProbabilities);
 
 	static void WriteHeadSection(UString::OStream& f);
-	static void WriteBody(UString::OStream& f);
+	static void WriteBody(UString::OStream& f, const UString::String& dataFileName);
 	static void WriteScripts(UString::OStream& f);
 
 	struct CountyInfo
@@ -83,18 +83,18 @@ private:
 
 		UString::String geometryKML;
 
-		struct MonthInfo
+		struct WeekInfo
 		{
 			double probability;
 			std::vector<EBirdDataProcessor::FrequencyInfo> frequencyInfo;
 		};
 
-		std::array<MonthInfo, 12> monthInfo;
+		std::array<WeekInfo, 48> weekInfo;
 	};
 
 	static bool CreateJSONData(const std::vector<CountyInfo>& observationData, const double& kmlReductionLimit, cJSON*& geoJSON);
 	static bool BuildObservationRecord(const CountyInfo& observation, const double& kmlReductionLimit, cJSON* json);
-	static bool BuildMonthInfo(CountyInfo::MonthInfo monthInfo, cJSON* json);
+	static bool BuildWeekInfo(CountyInfo::WeekInfo weekInfo, cJSON* json);
 
 	static UString::String ForceTrailingSlash(const UString::String& path);
 

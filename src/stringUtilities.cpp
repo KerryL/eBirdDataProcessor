@@ -26,7 +26,11 @@ UString::String StringUtilities::Trim(UString::String s)
 UString::String StringUtilities::ToLower(const UString::String& s)
 {
 	UString::String lower(s);
-	std::transform(lower.begin(), lower.end(), lower.begin(), ::tolower);
+	auto localToLower([](const UString::Char& c)
+	{
+		return static_cast<UString::Char>(::tolower(c));
+	});
+	std::transform(lower.begin(), lower.end(), lower.begin(), localToLower);
 	return lower;
 }
 
