@@ -16,6 +16,7 @@ namespace Utilities
 {
 UString::String ExtractCountryFromRegionCode(const UString::String& regionCode);
 UString::String ExtractStateFromRegionCode(const UString::String& regionCode);
+UString::String ExtractFileName(const UString::String& path);
 UString::String StripExtension(const UString::String& fileName);
 UString::String SanitizeCommas(const UString::String& s);
 UString::String Unsanitize(const UString::String& s);

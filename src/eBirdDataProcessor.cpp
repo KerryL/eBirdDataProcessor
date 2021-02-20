@@ -1510,7 +1510,7 @@ bool EBirdDataProcessor::GatherFrequencyData(const std::vector<UString::String>&
 	{
 		FrequencyDataYear occurrenceData;
 		DoubleYear checklistCounts;
-		const auto regionCode(Utilities::StripExtension(f));
+		const auto regionCode(Utilities::StripExtension(Utilities::ExtractFileName(f)));
 		if (!RegionCodeMatches(regionCode, targetRegionCodes))
 			continue;
 
