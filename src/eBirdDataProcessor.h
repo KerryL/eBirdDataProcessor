@@ -30,9 +30,11 @@ class FrequencyFileReader;
 class EBirdDataProcessor
 {
 public:
-	bool Parse(const UString::String& dataFile);
-	bool ReadMediaList(const UString::String& mediaFileName);
-	bool GenerateMediaList(const UString::String& mediaListHTML, const UString::String& mediaFileName);
+	explicit EBirdDataProcessor(const ApplicationConfiguration& appConfig) : appConfig(appConfig) {}
+
+	bool Parse();
+	bool ReadMediaList();
+	bool GenerateMediaList(const UString::String& mediaListHTML);
 
 	void FilterLocation(const std::vector<UString::String>& locations, const std::vector<UString::String>& counties,
 		const std::vector<UString::String>& states, const std::vector<UString::String>& countries);
@@ -53,27 +55,24 @@ public:
 	void SortData(const EBDPConfig::SortBy& primarySort, const EBDPConfig::SortBy& secondarySort);
 
 	void GenerateUniqueObservationsReport(const EBDPConfig::UniquenessType& type);
-	void GenerateRarityScores(const UString::String& frequencyFilePath,
-		const EBDPConfig::ListType& listType, const UString::String& eBirdAPIKey,
+	void GenerateRarityScores(const EBDPConfig::ListType& listType,
 		const UString::String& country, const UString::String& state, const UString::String& county);
 	UString::String GenerateList(const EBDPConfig::ListType& type, const int& minPhotoScore, const int& minAudioScore) const;
 
 	bool GenerateTargetCalendar(const CalendarParameters& calendarParameters,
-		const UString::String& outputFileName, const UString::String& frequencyFilePath,
-		const UString::String& country, const UString::String& state, const UString::String& county,
-		const UString::String& eBirdApiKey) const;
+		const UString::String& outputFileName, const UString::String& country, const UString::String& state,
+		const UString::String& county) const;
 
-	bool GenerateTimeOfYearData(const TimeOfYearParameters& toyParameters, const UString::String& frequencyFilePath, const std::vector<UString::String>& regionCodes) const;
+	bool GenerateTimeOfYearData(const TimeOfYearParameters& toyParameters, const std::vector<UString::String>& regionCodes) const;
 
-	bool FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-		const LocationFindingParameters& locationFindingParameters, const std::vector<UString::String>& highDetailCountries,
-		const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes) const;
+	bool FindBestLocationsForNeededSpecies(const LocationFindingParameters& locationFindingParameters,
+		const std::vector<UString::String>& highDetailCountries,
+		const std::vector<UString::String>& targetRegionCodes) const;
 
-	bool FindBestTripLocations(const UString::String& frequencyFilePath,
-		const BestTripParameters& bestTripParameters, const std::vector<UString::String>& highDetailCountries,
-		const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName, const UString::String& eBirdApiKey) const;
+	bool FindBestTripLocations(const BestTripParameters& bestTripParameters, const std::vector<UString::String>& highDetailCountries,
+		const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName) const;
 
-	bool HuntSpecies(const SpeciesHunt& speciesHunt, const UString::String& eBirdApiKey) const;
+	bool HuntSpecies(const SpeciesHunt& speciesHunt) const;
 		
 	static UString::String PrepareForComparison(const UString::String& commonName);
 
@@ -140,6 +139,8 @@ private:
 		UString::String compareString;// Huge boost in efficiency if we pre-compute this
 	};
 
+	const ApplicationConfiguration appConfig;
+
 	std::vector<Entry> data;
 
 	void FilterYear(const unsigned int& year, std::vector<Entry>& dataToFilter) const;
@@ -186,9 +187,9 @@ private:
 
 	void RecommendHotspots(const std::set<UString::String>& consolidatedSpeciesList,
 		const UString::String& country, const UString::String& state, const UString::String& county,
-		const CalendarParameters& calendarParameters, const UString::String& eBirdApiKey) const;
+		const CalendarParameters& calendarParameters) const;
 	void GenerateHotspotInfoFile(const std::vector<std::pair<std::vector<UString::String>, EBirdInterface::LocationInfo>>& hotspots,
-		const CalendarParameters& calendarParameters, const UString::String& regionCode, const UString::String& eBirdApiKey) const;
+		const CalendarParameters& calendarParameters, const UString::String& regionCode) const;
 
 	struct HotspotInfoComparer
 	{
@@ -201,7 +202,7 @@ private:
 
 	static bool WriteBestLocationsViewerPage(const LocationFindingParameters& locationFindingParameters,
 		const std::vector<UString::String>& highDetailCountries,
-		const UString::String& eBirdAPIKey, const std::vector<YearFrequencyInfo>& observationProbabilities);
+		const UString::String& eBirdAPIKey, const UString::String& kmlLibraryPath, const std::vector<YearFrequencyInfo>& observationProbabilities);
 
 	class CalculateProbabilityJob : public ThreadPool::JobInfoBase
 	{
@@ -307,8 +308,7 @@ private:
 	static void ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 48>& counts);
 	static void ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 48>& counts);
 
-	bool GatherFrequencyData(const UString::String& frequencyFilePath,
-		const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
+	bool GatherFrequencyData(const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
 		const double& minLikilihood, const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const;
 
 	static bool TimesMatch(const EBirdInterface::ObservationInfo& o1, const EBirdInterface::ObservationInfo& o2);

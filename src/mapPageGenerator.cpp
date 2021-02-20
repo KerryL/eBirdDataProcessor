@@ -40,8 +40,8 @@ const std::array<MapPageGenerator::NamePair, 48> MapPageGenerator::weekNames = {
 
 MapPageGenerator::MapPageGenerator(const LocationFindingParameters& locationFindingParameters,
 	const std::vector<UString::String>& highDetailCountries,
-	const UString::String& eBirdAPIKey) : highDetailCountries(highDetailCountries),
-	ebi(eBirdAPIKey), kmlLibrary(locationFindingParameters.kmlLibraryPath, eBirdAPIKey, UString::String()/*Google maps key?*/,
+	const UString::String& eBirdApiKey, const UString::String& kmlLibraryPath) : highDetailCountries(highDetailCountries),
+	ebi(eBirdApiKey), kmlLibrary(kmlLibraryPath, eBirdApiKey, UString::String()/*Google maps key?*/,
 		log, locationFindingParameters.cleanupKMLLocationNames, locationFindingParameters.geoJSONPrecision),
 	kmlReductionLimit(locationFindingParameters.kmlReductionLimit)
 {

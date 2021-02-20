@@ -20,6 +20,7 @@ public:
 	EBDPConfig& GetConfig() { return config; }
 
 private:
+	UString::String appConfigFileName;
 	EBDPConfig config;
 
 	void BuildConfigItems() override;
