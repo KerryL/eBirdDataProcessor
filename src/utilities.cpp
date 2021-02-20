@@ -8,6 +8,7 @@
 
 // Standard C++ headers
 #include <cassert>
+#include <filesystem>
 
 namespace Utilities
 {
@@ -28,6 +29,11 @@ UString::String ExtractStateFromRegionCode(const UString::String& regionCode)
 	const std::string::size_type length(regionCode.find('-', start) - start);
 	assert(length != std::string::npos);
 	return regionCode.substr(start, length);
+}
+
+UString::String ExtractFileName(const UString::String& path)
+{
+	return std::experimental::filesystem::path(path).filename();
 }
 
 UString::String StripExtension(const UString::String& fileName)

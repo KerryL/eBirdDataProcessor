@@ -16,7 +16,7 @@
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>../../../configs/debugFrequencyUpdate</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>D:\data/configs/debugFrequencyUpdate</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)/x64/Debug</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
