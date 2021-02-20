@@ -165,8 +165,7 @@ BestObservationTimeEstimator::PDFArray BestObservationTimeEstimator::EstimateBes
 		std::max(1.0, KernelDensityEstimation::EstimateOptimalBandwidth(inputTimes))));
 
 	assert(pdfEstimate.size() == pdfArray.size());
-	for (unsigned int i = 0; i < pdfArray.size(); ++i)
-		pdfArray[i] = pdfEstimate[i];
+	std::copy(pdfEstimate.begin(), pdfEstimate.end(), pdfArray.begin());
 
 	return pdfArray;
 }

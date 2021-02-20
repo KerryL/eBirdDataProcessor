@@ -5,10 +5,13 @@
 
 // Local headers
 #include "ebdpConfigFile.h"
+#include "ebdpAppConfigFile.h"
 
 void EBDPConfigFile::BuildConfigItems()
 {
-	AddConfigItem(_T("OBS_DATA_FILE"), config.dataFileName);
+	AddConfigItem(_T("APP_CONFIG_FILE"), appConfigFileName);
+	AddConfigItem(_T("DATASET"), config.eBirdDatasetPath);
+
 	AddConfigItem(_T("OUTPUT_FILE"), config.outputFileName);
 
 	AddConfigItem(_T("COUNTRY"), config.locationFilters.country);
@@ -26,8 +29,11 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("TOD_OUTPUT_FILE"), config.timeOfDayParameters.outputFile);
 	AddConfigItem(_T("REGION_DATA_OUTPUT_FILE"), config.timeOfDayParameters.splitRegionDataFile);
 
+	AddConfigItem(_T("PROB_VS_TIME_OUTPUT_FILE"), config.timeOfYearParameters.outputFile);
+	AddConfigItem(_T("PROB_VS_TIME_MAX_PROB"), config.timeOfYearParameters.maxProbability);
+	AddConfigItem(_T("PROB_VS_TIME_SPECIES"), config.timeOfYearParameters.commonNames);
+
 	AddConfigItem(_T("MEDIA_LIST_HTML"), config.mediaListHTML);
-	AddConfigItem(_T("MEDIA_FILE"), config.mediaFileName);
 	AddConfigItem(_T("SHOW_PHOTO_NEEDS"), config.showOnlyPhotoNeeds);
 	AddConfigItem(_T("SHOW_AUDIO_NEEDS"), config.showOnlyAudioNeeds);
 
@@ -47,16 +53,13 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("TOP_COUNT"), config.calendarParameters.topBirdCount);
 	AddConfigItem(_T("TARGET_INFO_FILE_NAME"), config.calendarParameters.targetInfoFileName);
 	AddConfigItem(_T("RECENT_PERIOD"), config.calendarParameters.recentObservationPeriod);
-	AddConfigItem(_T("GOOGLE_MAPS_KEY"), config.calendarParameters.googleMapsAPIKey);
 	AddConfigItem(_T("HOME_LOCATION"), config.calendarParameters.homeLocation);
-
-	AddConfigItem(_T("FREQUENCY_FILES"), config.frequencyFilePath);
 
 	AddConfigItem(_T("FIND_MAX_NEEDS"), config.findMaxNeedsLocations);
 	AddConfigItem(_T("CLEANUP_KML_NAMES"), config.locationFindingParameters.cleanupKMLLocationNames);
 	AddConfigItem(_T("KML_REDUCTION_LIMIT"), config.locationFindingParameters.kmlReductionLimit);
 	AddConfigItem(_T("GEO_JSON_PRECISION"), config.locationFindingParameters.geoJSONPrecision);
-	AddConfigItem(_T("KML_LIBRARY"), config.locationFindingParameters.kmlLibraryPath);
+	AddConfigItem(_T("OUTPUT_BASE_FILE_NAME"), config.locationFindingParameters.baseOutputFileName);
 
 	AddConfigItem(_T("HIGH_DETAIL"), config.highDetailCountries);
 
@@ -65,9 +68,9 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("MIN_OBS_COUNT"), config.bestTripParameters.minimumObservationCount);
 	AddConfigItem(_T("MIN_LIKLIHOOD"), config.bestTripParameters.minimumLiklihood);
 
-	AddConfigItem(_T("EBIRD_API_KEY"), config.eBirdApiKey);
-	
-	AddConfigItem(_T("DATASET"), config.eBirdDatasetPath);
+	AddConfigItem(_T("DATASET_KML_FILTER"), config.kmlFilterFileName);
+	AddConfigItem(_T("DATASET_KML_FILTER_OUTPUT"), config.kmlFilteredOutputFileName);
+	AddConfigItem(_T("OBSERVATION_MAP"), config.observationMapFileName);
 
 	AddConfigItem(_T("COMPARE"), config.doComparison);
 	
@@ -112,6 +115,7 @@ void EBDPConfigFile::AssignDefaults()
 	config.locationFindingParameters.kmlReductionLimit = 0.0;
 	config.locationFindingParameters.cleanupKMLLocationNames = false;
 	config.locationFindingParameters.geoJSONPrecision = -1;
+	config.locationFindingParameters.baseOutputFileName = _T("bestLocations");
 
 	config.findBestTripLocations = false;
 	config.bestTripParameters.minimumLiklihood = 5.0;
@@ -123,18 +127,37 @@ void EBDPConfigFile::AssignDefaults()
 	config.speciesHunt.latitude = 0.0;
 	config.speciesHunt.longitude = 0.0;
 	config.speciesHunt.radius = 0.0;
-	
+
 	config.buildChecklistLinks = false;
+
+	config.timeOfYearParameters.maxProbability = 0.0;
 }
 
 bool EBDPConfigFile::ConfigIsOK()
 {
 	bool configurationOK(true);
 
+	if (appConfigFileName.empty())
+	{
+		Cerr << GetKey(appConfigFileName) << " must be specified\n";
+		configurationOK = false;
+	}
+	else
+	{
+		EBDPAppConfigFile appConfigFile;
+		if (!appConfigFile.ReadConfiguration(appConfigFileName))
+			configurationOK = false;
+		else
+			config.appConfig = appConfigFile.GetConfig();
+	}
+
 	if (!GeneralConfigIsOK())
 		configurationOK = false;
 
 	if (!FrequencyHarvestConfigIsOK() && !TimeOfDayConfigIsOK())
+		configurationOK = false;
+
+	if (!TimeOfYearConfigIsOK())
 		configurationOK = false;
 
 	if (!TargetCalendarConfigIsOK())
@@ -159,10 +182,32 @@ bool EBDPConfigFile::TimeOfDayConfigIsOK()
 {
 	bool configurationOK(true);
 
-	if (!config.eBirdDatasetPath.empty() &&
+	if (!config.eBirdDatasetPath.empty() && config.kmlFilterFileName.empty() &&
 		(config.timeOfDayParameters.commonNames.empty() || config.timeOfDayParameters.outputFile.empty()))
 	{
 		Cerr << "Time-of-day analysis requires " << GetKey(config.timeOfDayParameters.outputFile) << " and at least one " << GetKey(config.timeOfDayParameters.commonNames) << '\n';
+		configurationOK = false;
+	}
+
+	return configurationOK;
+}
+
+bool EBDPConfigFile::TimeOfYearConfigIsOK()
+{
+	bool configurationOK(true);
+
+	if (config.timeOfYearParameters.commonNames.empty())
+		return true;
+
+	if (config.timeOfYearParameters.maxProbability > 0.0)
+	{
+		Cerr << "Cannot specify both " << GetKey(config.timeOfYearParameters.commonNames) << " and " << GetKey(config.timeOfYearParameters.maxProbability) << '\n';
+		configurationOK = false;
+	}
+
+	if (config.timeOfYearParameters.commonNames.empty() && config.timeOfYearParameters.maxProbability <= 0.0)
+	{
+		Cerr << "Time-of-year analysis requires that either " << GetKey(config.timeOfYearParameters.maxProbability) << " or at least one " << GetKey(config.timeOfYearParameters.commonNames) << " be specified\n";
 		configurationOK = false;
 	}
 
@@ -176,12 +221,6 @@ bool EBDPConfigFile::FrequencyHarvestConfigIsOK()
 	if (!config.timeOfDayParameters.commonNames.empty() || !config.timeOfDayParameters.outputFile.empty())
 		return true;
 
-	if (!config.eBirdDatasetPath.empty() && config.frequencyFilePath.empty())
-	{
-		Cerr << GetKey(config.eBirdDatasetPath) << " requires " << GetKey(config.frequencyFilePath) << '\n';
-		configurationOK = false;
-	}
-
 	return configurationOK;
 }
 
@@ -191,18 +230,6 @@ bool EBDPConfigFile::TargetCalendarConfigIsOK()
 		return true;
     
 	bool configurationOK(true);
-
-	if (config.frequencyFilePath.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.generateTargetCalendar) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.eBirdApiKey.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.generateTargetCalendar) << '\n';
-		configurationOK = false;
-	}
 
 	if (config.uniqueObservations != EBDPConfig::UniquenessType::None)
 	{
@@ -231,22 +258,10 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 		return true;
     
 	bool configurationOK(true);
-
-	if (config.locationFindingParameters.kmlLibraryPath.empty())
+	
+	if (config.locationFindingParameters.baseOutputFileName.empty())
 	{
-		Cerr << GetKey(config.findMaxNeedsLocations) << " requires " << GetKey(config.locationFindingParameters.kmlLibraryPath) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.eBirdApiKey.empty())
-	{
-		Cerr << GetKey(config.findMaxNeedsLocations) << " requires " << GetKey(config.eBirdApiKey) << '\n';
-		configurationOK = false;
-	}
-    
-    if (config.frequencyFilePath.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.findMaxNeedsLocations) << '\n';
+		Cerr << GetKey(config.locationFindingParameters.baseOutputFileName) << " must not be empty\n";
 		configurationOK = false;
 	}
 
@@ -266,12 +281,6 @@ bool EBDPConfigFile::FindMaxNeedsConfigIsOK()
 bool EBDPConfigFile::GeneralConfigIsOK()
 {
 	bool configurationOK(true);
-
-	if (config.dataFileName.empty())
-	{
-		Cerr << "Must specify '" << GetKey(config.dataFileName) << "'\n";
-		configurationOK = false;
-	}
 
 	if (!config.locationFilters.country.empty() &&
 		!config.locationFilters.state.empty())
@@ -327,9 +336,9 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 		configurationOK = false;
 	}
 
-	if (config.timeFilters.week > 53)
+	if (config.timeFilters.week > 52)
 	{
-		Cerr << "Week (" << GetKey(config.timeFilters.week) << ") must be in the range 0 - 53\n";
+		Cerr << "Week (" << GetKey(config.timeFilters.week) << ") must be in the range 0 - 52\n";
 		configurationOK = false;
 	}
 
@@ -344,22 +353,10 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 		Cerr << "Cannot specify both " << GetKey(config.locationFilters.country) << " and " << GetKey(config.uniqueObservations) << '\n';
 		configurationOK = false;
 	}
-
-	if (config.showOnlyPhotoNeeds > 0 && config.mediaFileName.empty())
+	
+	if (config.kmlFilteredOutputFileName.empty() && !config.kmlFilterFileName.empty())
 	{
-		Cerr << "Must specify " << GetKey(config.mediaFileName) << " when using " << GetKey(config.showOnlyPhotoNeeds) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.showOnlyAudioNeeds > 0 && config.mediaFileName.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.mediaFileName) << " when using " << GetKey(config.showOnlyAudioNeeds) << '\n';
-		configurationOK = false;
-	}
-
-	if (!config.mediaListHTML.empty() && config.mediaFileName.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.mediaFileName) << " when " << GetKey(config.mediaListHTML) << " is specified\n";
+		Cerr << "Must specify " << GetKey(config.kmlFilteredOutputFileName) << " when " << GetKey(config.kmlFilterFileName) << " is specified\n";
 		configurationOK = false;
 	}
 
@@ -372,18 +369,6 @@ bool EBDPConfigFile::RaritiesConfigIsOK()
 		return true;
     
 	bool configurationOK(true);
-
-	if (config.frequencyFilePath.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.generateRarityScores) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.eBirdApiKey.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.generateRarityScores) << '\n';
-		configurationOK = false;
-	}
 
 	if (config.generateTargetCalendar)
 	{
@@ -407,21 +392,9 @@ bool EBDPConfigFile::BestTripConfigIsOK()
 
 	bool configurationOK(true);
 
-	if (config.frequencyFilePath.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.frequencyFilePath) << " when using " << GetKey(config.findBestTripLocations) << '\n';
-		configurationOK = false;
-	}
-
 	if (config.outputFileName.empty())
 	{
 		Cerr << "Must specify " << GetKey(config.outputFileName) << " when using " << GetKey(config.findBestTripLocations) << '\n';
-		configurationOK = false;
-	}
-
-	if (config.eBirdApiKey.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.findBestTripLocations) << '\n';
 		configurationOK = false;
 	}
 
@@ -434,12 +407,6 @@ bool EBDPConfigFile::SpeciesHuntConfigIsOK()
 		return true;
 
 	bool configurationOK(true);
-
-	if (config.eBirdApiKey.empty())
-	{
-		Cerr << "Must specify " << GetKey(config.eBirdApiKey) << " when using " << GetKey(config.speciesHunt.commonName) << '\n';
-		configurationOK = false;
-	}
 
 	if (config.speciesHunt.radius <= 0.0)
 	{

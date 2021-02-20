@@ -11,17 +11,7 @@
 #include "frequencyFileReader.h"
 #include "utilities.h"
 #include "stringUtilities.h"
-
-// System headers (added from https://github.com/tronkko/dirent/ for Windows)
-#ifdef _WIN32
-#pragma warning(push)
-#pragma warning(disable:4505)
-#endif
-#include <dirent.h>
-#ifdef _WIN32
-#pragma warning(pop)
-#endif
-#include <sys/stat.h>
+#include "kernelDensityEstimation.h"
 
 // Standard C++ headers
 #include <fstream>
@@ -31,18 +21,19 @@
 #include <map>
 #include <chrono>
 #include <set>
+#include <filesystem>
 
 const UString::String EBirdDataProcessor::headerLine(_T("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,"
 	"Protocol,Duration (Min),All Obs Reported,Distance Traveled (km),Area Covered (ha),"
 	"Number of Observers,Breeding Code,Observation Details,Checklist Comments,ML Catalog Numbers"));
 
-bool EBirdDataProcessor::Parse(const UString::String& dataFile)
+bool EBirdDataProcessor::Parse()
 {
-	UString::IFStream file(dataFile.c_str());
+	UString::IFStream file(appConfig.dataFileName.c_str());
 	if (!file.is_open() || !file.good())
 	{
-		Cerr << "Failed to open '" << dataFile << "' for input\n";
+		Cerr << "Failed to open '" << appConfig.dataFileName << "' for input\n";
 		return false;
 	}
 
@@ -504,12 +495,11 @@ std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::ConsolidateByDay(cons
 }
 
 bool EBirdDataProcessor::GenerateTargetCalendar(const CalendarParameters& calendarParameters,
-	const UString::String& outputFileName, const UString::String& frequencyFilePath,
-	const UString::String& country, const UString::String& state, const UString::String& county,
-	const UString::String& eBirdApiKey) const
+	const UString::String& outputFileName, const UString::String& country,
+	const UString::String& state, const UString::String& county) const
 {
-	FrequencyFileReader frequencyFileReader(frequencyFilePath);
-	EBirdInterface ebi(eBirdApiKey);
+	FrequencyFileReader frequencyFileReader(appConfig.frequencyFilePath);
+	EBirdInterface ebi(appConfig.eBirdApiKey);
 	FrequencyDataYear frequencyData;
 	DoubleYear checklistCounts;
 	if (!frequencyFileReader.ReadRegionData(ebi.GetRegionCode(country, state, county), frequencyData, checklistCounts))
@@ -519,9 +509,9 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const CalendarParameters& calend
 
 	EliminateObservedSpecies(frequencyData);
 
-	for (auto& month : frequencyData)
+	for (auto& week : frequencyData)
 	{
-		std::sort(month.begin(), month.end(), [](const FrequencyInfo& a, const FrequencyInfo& b)
+		std::sort(week.begin(), week.end(), [](const FrequencyInfo& a, const FrequencyInfo& b)
 		{
 			if (a.frequency > b.frequency)// Most frequent birds first
 				return true;
@@ -538,27 +528,63 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const CalendarParameters& calend
 		return false;
 	}
 
-	outFile << "January (" << checklistCounts[0] << " checklists),"
-		<< "February (" << checklistCounts[1] << " checklists),"
-		<< "March (" << checklistCounts[2] << " checklists),"
-		<< "April (" << checklistCounts[3] << " checklists),"
-		<< "May (" << checklistCounts[4] << " checklists),"
-		<< "June (" << checklistCounts[5] << " checklists),"
-		<< "July (" << checklistCounts[6] << " checklists),"
-		<< "August (" << checklistCounts[7] << " checklists),"
-		<< "September (" << checklistCounts[8] << " checklists),"
-		<< "October (" << checklistCounts[9] << " checklists),"
-		<< "November (" << checklistCounts[10] << " checklists),"
-		<< "December (" << checklistCounts[11] << " checklists),";
+	outFile
+		<< "January 1 (" << checklistCounts[0] << " checklists),"
+		<< "January 8 (" << checklistCounts[1] << " checklists),"
+		<< "January 15 (" << checklistCounts[2] << " checklists),"
+		<< "January 22 (" << checklistCounts[3] << " checklists),"
+		<< "February 1 (" << checklistCounts[4] << " checklists),"
+		<< "February 8 (" << checklistCounts[5] << " checklists),"
+		<< "February 15 (" << checklistCounts[6] << " checklists),"
+		<< "February 22 (" << checklistCounts[7] << " checklists),"
+		<< "March 1 (" << checklistCounts[8] << " checklists),"
+		<< "March 8 (" << checklistCounts[9] << " checklists),"
+		<< "March 15 (" << checklistCounts[10] << " checklists),"
+		<< "March 22 (" << checklistCounts[11] << " checklists),"
+		<< "April 1 (" << checklistCounts[12] << " checklists),"
+		<< "April 8 (" << checklistCounts[13] << " checklists),"
+		<< "April 15 (" << checklistCounts[14] << " checklists),"
+		<< "April 22 (" << checklistCounts[15] << " checklists),"
+		<< "May 1 (" << checklistCounts[16] << " checklists),"
+		<< "May 8 (" << checklistCounts[17] << " checklists),"
+		<< "May 15 (" << checklistCounts[18] << " checklists),"
+		<< "May 22 (" << checklistCounts[19] << " checklists),"
+		<< "June 1 (" << checklistCounts[20] << " checklists),"
+		<< "June 8 (" << checklistCounts[21] << " checklists),"
+		<< "June 15 (" << checklistCounts[22] << " checklists),"
+		<< "June 22 (" << checklistCounts[23] << " checklists),"
+		<< "July 1 (" << checklistCounts[24] << " checklists),"
+		<< "July 8 (" << checklistCounts[25] << " checklists),"
+		<< "July 15 (" << checklistCounts[26] << " checklists),"
+		<< "July 22 (" << checklistCounts[27] << " checklists),"
+		<< "August 1 (" << checklistCounts[28] << " checklists),"
+		<< "August 8 (" << checklistCounts[29] << " checklists),"
+		<< "August 15 (" << checklistCounts[30] << " checklists),"
+		<< "August 22 (" << checklistCounts[31] << " checklists),"
+		<< "September 1 (" << checklistCounts[32] << " checklists),"
+		<< "September 8 (" << checklistCounts[33] << " checklists),"
+		<< "September 15 (" << checklistCounts[34] << " checklists),"
+		<< "September 22 (" << checklistCounts[35] << " checklists),"
+		<< "October 1 (" << checklistCounts[36] << " checklists),"
+		<< "October 8 (" << checklistCounts[37] << " checklists),"
+		<< "October 15 (" << checklistCounts[38] << " checklists),"
+		<< "October 22 (" << checklistCounts[39] << " checklists),"
+		<< "November 1 (" << checklistCounts[40] << " checklists),"
+		<< "November 8 (" << checklistCounts[41] << " checklists),"
+		<< "November 15 (" << checklistCounts[42] << " checklists),"
+		<< "November 22 (" << checklistCounts[43] << " checklists),"
+		<< "December 1 (" << checklistCounts[44] << " checklists),"
+		<< "December 8 (" << checklistCounts[45] << " checklists),"
+		<< "December 15 (" << checklistCounts[46] << " checklists),"
+		<< "December 22 (" << checklistCounts[47] << " checklists),";
 	outFile << std::endl;
 
-	unsigned int i;
-	for (i = 0; i < calendarParameters.topBirdCount; ++i)
+	for (unsigned int i = 0; i < calendarParameters.topBirdCount; ++i)
 	{
-		for (const auto& month : frequencyData)
+		for (const auto& week : frequencyData)
 		{
-			if (i < month.size())
-				outFile << month[i].species << " (" << month[i].frequency << " %)";
+			if (i < week.size())
+				outFile << week[i].species << " (" << week[i].frequency << " %)";
 
 			outFile << ',';
 		}
@@ -567,31 +593,68 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const CalendarParameters& calend
 
 	std::set<UString::String> consolidatedSpeciesList;
 	std::map<UString::String, double> speciesFrequencyMap;
-	for (i = 0; i < calendarParameters.topBirdCount; ++i)
+	for (unsigned int i = 0; i < calendarParameters.topBirdCount; ++i)
 	{
-		for (const auto& month : frequencyData)
+		for (const auto& week : frequencyData)
 		{
-			if (i >= month.size())
+			if (i >= week.size())
 				continue;
 
-			consolidatedSpeciesList.insert(month[i].species);
-			if (speciesFrequencyMap.find(month[i].species) == speciesFrequencyMap.end())
-				speciesFrequencyMap[month[i].species] = month[i].frequency;
+			consolidatedSpeciesList.insert(week[i].species);
+			if (speciesFrequencyMap.find(week[i].species) == speciesFrequencyMap.end())
+				speciesFrequencyMap[week[i].species] = week[i].frequency;
 			else
-				speciesFrequencyMap[month[i].species] = std::max(month[i].frequency, speciesFrequencyMap[month[i].species]);
+				speciesFrequencyMap[week[i].species] = std::max(week[i].frequency, speciesFrequencyMap[week[i].species]);
 		}
 	}
 
-	Cout << calendarParameters.topBirdCount << " most common species needed for each month of the year includes "
+	double maxFrequency(0.0);
+	for (const auto& s : speciesFrequencyMap)
+	{
+		if (s.second > maxFrequency)
+			maxFrequency = s.second;
+	}
+
+	Cout << calendarParameters.topBirdCount << " most common species needed for each week of the year includes "
 		<< consolidatedSpeciesList.size() << " species" << std::endl;
 
 	std::array<std::pair<double, unsigned int>, 6> bracketCounts;
-	bracketCounts[0] = std::make_pair(50.0, 0U);
-	bracketCounts[1] = std::make_pair(40.0, 0U);
-	bracketCounts[2] = std::make_pair(30.0, 0U);
-	bracketCounts[3] = std::make_pair(20.0, 0U);
-	bracketCounts[4] = std::make_pair(10.0, 0U);
-	bracketCounts[5] = std::make_pair(5.0, 0U);
+	if (maxFrequency < 10.0)
+	{
+		bracketCounts[0] = std::make_pair(8.0, 0U);
+		bracketCounts[1] = std::make_pair(5.0, 0U);
+		bracketCounts[2] = std::make_pair(3.0, 0U);
+		bracketCounts[3] = std::make_pair(2.0, 0U);
+		bracketCounts[4] = std::make_pair(1.0, 0U);
+		bracketCounts[5] = std::make_pair(0.5, 0U);
+	}
+	else if (maxFrequency < 5.0)
+	{
+		bracketCounts[0] = std::make_pair(4.0, 0U);
+		bracketCounts[1] = std::make_pair(3.0, 0U);
+		bracketCounts[2] = std::make_pair(2.0, 0U);
+		bracketCounts[3] = std::make_pair(1.0, 0U);
+		bracketCounts[4] = std::make_pair(0.5, 0U);
+		bracketCounts[5] = std::make_pair(0.2, 0U);
+	}
+	else if (maxFrequency < 2.0)
+	{
+		bracketCounts[0] = std::make_pair(1.0, 0U);
+		bracketCounts[1] = std::make_pair(0.8, 0U);
+		bracketCounts[2] = std::make_pair(0.5, 0U);
+		bracketCounts[3] = std::make_pair(0.3, 0U);
+		bracketCounts[4] = std::make_pair(0.2, 0U);
+		bracketCounts[5] = std::make_pair(0.1, 0U);
+	}
+	else
+	{
+		bracketCounts[0] = std::make_pair(50.0, 0U);
+		bracketCounts[1] = std::make_pair(40.0, 0U);
+		bracketCounts[2] = std::make_pair(30.0, 0U);
+		bracketCounts[3] = std::make_pair(20.0, 0U);
+		bracketCounts[4] = std::make_pair(10.0, 0U);
+		bracketCounts[5] = std::make_pair(5.0, 0U);
+	}
 
 	for (const auto& species : speciesFrequencyMap)
 	{
@@ -612,7 +675,7 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const CalendarParameters& calend
 	}
 	Cout << std::endl;
 
-	RecommendHotspots(consolidatedSpeciesList, country, state, county, calendarParameters, eBirdApiKey);
+	RecommendHotspots(consolidatedSpeciesList, country, state, county, calendarParameters);
 
 	return true;
 }
@@ -664,26 +727,26 @@ void EBirdDataProcessor::GuessChecklistCounts(const FrequencyDataYear& frequency
 
 void EBirdDataProcessor::EliminateObservedSpecies(FrequencyDataYear& frequencyData) const
 {
-	for (auto& month : frequencyData)
+	for (auto& week : frequencyData)
 	{
-		month.erase(std::remove_if(month.begin(), month.end(), [this](const FrequencyInfo& f)
+		week.erase(std::remove_if(week.begin(), week.end(), [this](const FrequencyInfo& f)
 		{
 			const auto& speciesIterator(std::find_if(data.begin(), data.end(), [f](const Entry& e)
 			{
 				return f.compareString.compare(e.compareString) == 0;
 			}));
 			return speciesIterator != data.end();
-		}), month.end());
+		}), week.end());
 	}
 }
 
 void EBirdDataProcessor::RecommendHotspots(const std::set<UString::String>& consolidatedSpeciesList,
 	const UString::String& country, const UString::String& state, const UString::String& county,
-	const CalendarParameters& calendarParameters, const UString::String& eBirdApiKey) const
+	const CalendarParameters& calendarParameters) const
 {
 	Cout << "Checking eBird for recent sightings..." << std::endl;
 
-	EBirdInterface e(eBirdApiKey);
+	EBirdInterface e(appConfig.eBirdApiKey);
 	const UString::String region(e.GetRegionCode(country, state, county));
 	std::set<UString::String> recentSpecies;
 
@@ -735,13 +798,13 @@ void EBirdDataProcessor::RecommendHotspots(const std::set<UString::String>& cons
 	Cout << std::endl;
 
 	if (!calendarParameters.targetInfoFileName.empty())
-		GenerateHotspotInfoFile(sortedHotspots, calendarParameters, region, eBirdApiKey);
+		GenerateHotspotInfoFile(sortedHotspots, calendarParameters, region);
 }
 
 void EBirdDataProcessor::GenerateHotspotInfoFile(
 	const std::vector<std::pair<std::vector<UString::String>, EBirdInterface::LocationInfo>>& hotspots,
 	const CalendarParameters& calendarParameters,
-	const UString::String& regionCode, const UString::String& eBirdApiKey) const
+	const UString::String& regionCode) const
 {
 	Cout << "Writing hotspot information to file..." << std::endl;
 
@@ -760,9 +823,9 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(
 	for (const auto& h : hotspots)
 	{
 		infoFile << '\n' << h.second.name;
-		if (!calendarParameters.homeLocation.empty())
+		if (!calendarParameters.homeLocation.empty() && !appConfig.googleMapsAPIKey.empty())
 		{
-			GoogleMapsInterface gMaps(_T("eBirdDataProcessor"), calendarParameters.googleMapsAPIKey);
+			GoogleMapsInterface gMaps(_T("eBirdDataProcessor"), appConfig.googleMapsAPIKey);
 			UString::OStringStream ss;
 			ss << h.second.latitude << ',' << h.second.longitude;
 			GoogleMapsInterface::Directions travelInfo(gMaps.GetDirections(calendarParameters.homeLocation, ss.str()));
@@ -791,7 +854,7 @@ void EBirdDataProcessor::GenerateHotspotInfoFile(
 			if (speciesToObservationTimeMap.find(s) == speciesToObservationTimeMap.end() ||
 				speciesToObservationTimeMap[s].empty())
 			{
-				EBirdInterface e(eBirdApiKey);
+				EBirdInterface e(appConfig.eBirdApiKey);
 				const unsigned int recentPeriod(30);
 				const bool includeProvisional(true);
 				const bool hotspotsOnly(false);
@@ -918,19 +981,18 @@ UString::String EBirdDataProcessor::PrepareForComparison(const UString::String& 
 	return StringUtilities::Trim(StripParentheses(commonName));
 }
 
-void EBirdDataProcessor::GenerateRarityScores(const UString::String& frequencyFilePath,
-	const EBDPConfig::ListType& listType, const UString::String& eBirdAPIKey,
+void EBirdDataProcessor::GenerateRarityScores(const EBDPConfig::ListType& listType,
 	const UString::String& country, const UString::String& state, const UString::String& county)
 {
-	EBirdInterface ebi(eBirdAPIKey);
-	FrequencyFileReader reader(frequencyFilePath);
-	FrequencyDataYear monthFrequencyData;
+	EBirdInterface ebi(appConfig.eBirdApiKey);
+	FrequencyFileReader reader(appConfig.frequencyFilePath);
+	FrequencyDataYear weekFrequencyData;
 	DoubleYear checklistCounts;
-	if (!reader.ReadRegionData(ebi.GetRegionCode(country, state, county), monthFrequencyData, checklistCounts))
+	if (!reader.ReadRegionData(ebi.GetRegionCode(country, state, county), weekFrequencyData, checklistCounts))
 		return;
 
 	std::vector<EBirdDataProcessor::FrequencyInfo> yearFrequencyData(
-		GenerateYearlyFrequencyData(monthFrequencyData, checklistCounts));
+		GenerateYearlyFrequencyData(weekFrequencyData, checklistCounts));
 
 	const auto consolidatedData(DoConsolidation(listType, data));
 	std::vector<EBirdDataProcessor::FrequencyInfo> rarityScoreData(consolidatedData.size());
@@ -974,12 +1036,12 @@ std::vector<EBirdDataProcessor::FrequencyInfo> EBirdDataProcessor::GenerateYearl
 	std::vector<EBirdDataProcessor::FrequencyInfo> yearFrequencyData;
 	double totalObservations(0.0);
 
-	auto monthCountIterator(checklistCounts.begin());
-	for (const auto& monthData : frequencyData)
+	auto weekCountIterator(checklistCounts.begin());
+	for (const auto& weekData : frequencyData)
 	{
-		for (const auto& species : monthData)
+		for (const auto& species : weekData)
 		{
-			const double observations(*monthCountIterator * species.frequency);
+			const double observations(*weekCountIterator * species.frequency);
 			bool found(false);
 			for (auto& countData : yearFrequencyData)
 			{
@@ -995,8 +1057,8 @@ std::vector<EBirdDataProcessor::FrequencyInfo> EBirdDataProcessor::GenerateYearl
 				yearFrequencyData.push_back(FrequencyInfo(species.species, observations));
 		}
 
-		totalObservations += *monthCountIterator;
-		++monthCountIterator;
+		totalObservations += *weekCountIterator;
+		++weekCountIterator;
 	}
 
 	for (auto& species : yearFrequencyData)
@@ -1209,7 +1271,7 @@ void EBirdDataProcessor::WriteNextMediaEntry(UString::OFStream& file, const Medi
 // 6.  In pane that appears, expand "<body>" tag down to "<div class="ResultsList js-ResultsContainer">" level
 // 7.  Right-click on that element and choose Copy->Copy Element
 // 8.  Paste into media list html file and save
-bool EBirdDataProcessor::GenerateMediaList(const UString::String& mediaListHTML, const UString::String& mediaFileName)
+bool EBirdDataProcessor::GenerateMediaList(const UString::String& mediaListHTML)
 {
 	std::ifstream htmlFile(mediaListHTML.c_str(), std::ios::binary | std::ios::ate);
 	if (!htmlFile.is_open() || !htmlFile.good())
@@ -1228,10 +1290,10 @@ bool EBirdDataProcessor::GenerateMediaList(const UString::String& mediaListHTML,
 	}
 	const UString::String html(UString::ToStringType(std::string(buffer.data(), fileSize)));
 
-	UString::OFStream mediaList(mediaFileName.c_str());
+	UString::OFStream mediaList(appConfig.mediaFileName.c_str());
 	if (!mediaList.is_open() || !mediaList.good())
 	{
-		Cerr << "Failed to open '" << mediaFileName << "' for output\n";
+		Cerr << "Failed to open '" << appConfig.mediaFileName << "' for output\n";
 		return false;
 	}
 
@@ -1304,12 +1366,12 @@ bool EBirdDataProcessor::ParseMediaEntry(const UString::String& line, MediaEntry
 	return true;
 }
 
-bool EBirdDataProcessor::ReadMediaList(const UString::String& mediaFileName)
+bool EBirdDataProcessor::ReadMediaList()
 {
-	UString::IFStream mediaFile(mediaFileName.c_str());
+	UString::IFStream mediaFile(appConfig.mediaFileName.c_str());
 	if (!mediaFile.is_open() || !mediaFile.good())
 	{
-		Cerr << "Failed to open '" << mediaFileName << "' for input" << std::endl;
+		Cerr << "Failed to open '" << appConfig.mediaFileName << "' for input" << std::endl;
 		return false;
 	}
 
@@ -1350,37 +1412,18 @@ bool EBirdDataProcessor::ReadMediaList(const UString::String& mediaFileName)
 
 std::vector<UString::String> EBirdDataProcessor::ListFilesInDirectory(const UString::String& directory)
 {
-	DIR *dir(opendir(UString::ToNarrowString(directory).c_str()));
-	if (!dir)
+	if (!std::experimental::filesystem::exists(directory))
 	{
-		Cerr << "Failed to open directory '" << directory << "'\n";
+		Cerr << "Directory '" << directory << "' does not exist\n";
 		return std::vector<UString::String>();
 	}
 
 	std::vector<UString::String> fileNames;
-	struct dirent *ent;
-	while (ent = readdir(dir), ent)
+	for (const auto& e : std::experimental::filesystem::recursive_directory_iterator(directory))
 	{
-		if (std::string(ent->d_name).compare(".") == 0 ||
-			std::string(ent->d_name).compare("..") == 0)
-			continue;
-
-		assert(ent->d_type != DT_UNKNOWN && "Cannot properly iterate through this filesystem");
-		if (ent->d_type == DT_DIR)
-		{
-			const UString::String folder(UString::ToStringType(ent->d_name) + _T("/"));
-			const UString::String subPath(directory + folder);
-			auto subDirFiles(ListFilesInDirectory(subPath));
-			/*std::for_each(subDirFiles.begin(), subDirFiles.end(), [&folder](UString::String& s)
-			{
-				s = folder + s;
-			});*/
-			fileNames.insert(fileNames.end(), subDirFiles.begin(), subDirFiles.end());
-		}
-		else
-			fileNames.push_back(UString::ToStringType(ent->d_name));
+		if (std::experimental::filesystem::is_regular_file(e.status()))
+			fileNames.push_back(UString::ToStringType(e.path()));
 	}
-	closedir(dir);
 
 	return fileNames;
 }
@@ -1445,11 +1488,11 @@ bool EBirdDataProcessor::RegionCodeMatches(const UString::String& regionCode, co
 	return false;
 }
 
-bool EBirdDataProcessor::GatherFrequencyData(const UString::String& frequencyFilePath,
-	const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
+bool EBirdDataProcessor::GatherFrequencyData(const std::vector<UString::String>& targetRegionCodes,
+	const std::vector<UString::String>& highDetailCountries,
 	const double& minLikilihood, const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const
 {
-	auto fileNames(ListFilesInDirectory(frequencyFilePath));
+	auto fileNames(ListFilesInDirectory(appConfig.frequencyFilePath));
 	if (fileNames.size() == 0)
 		return false;
 
@@ -1458,7 +1501,7 @@ bool EBirdDataProcessor::GatherFrequencyData(const UString::String& frequencyFil
 
 	frequencyInfo.resize(fileNames.size());
 	ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
-	FrequencyFileReader reader(frequencyFilePath);
+	FrequencyFileReader reader(appConfig.frequencyFilePath);
 
 	std::unordered_map<UString::String, ConsolidationData> consolidatationData;
 
@@ -1512,15 +1555,14 @@ bool EBirdDataProcessor::GatherFrequencyData(const UString::String& frequencyFil
 	return true;
 }
 
-bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String& frequencyFilePath,
-	const LocationFindingParameters& locationFindingParameters, const std::vector<UString::String>& highDetailCountries,
-	const UString::String& eBirdAPIKey, const std::vector<UString::String>& targetRegionCodes) const
+bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const LocationFindingParameters& locationFindingParameters,
+	const std::vector<UString::String>& highDetailCountries, const std::vector<UString::String>& targetRegionCodes) const
 {
 	std::vector<YearFrequencyInfo> newSightingProbability;
-	if (!GatherFrequencyData(frequencyFilePath, targetRegionCodes, highDetailCountries, 1.0, 30, newSightingProbability))// TODO:  Don't hardcode
+	if (!GatherFrequencyData(targetRegionCodes, highDetailCountries, 1.0, 30, newSightingProbability))// TODO:  Don't hardcode
 		return false;
 
-	if (!WriteBestLocationsViewerPage(locationFindingParameters, highDetailCountries, eBirdAPIKey, newSightingProbability))
+	if (!WriteBestLocationsViewerPage(locationFindingParameters, highDetailCountries, appConfig.eBirdApiKey, appConfig.kmlLibraryPath, newSightingProbability))
 	{
 		Cerr << "Faild to create best locations page\n";
 		return false;
@@ -1529,7 +1571,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const UString::String
 	return true;
 }
 
-void EBirdDataProcessor::ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 12>& counts)
+void EBirdDataProcessor::ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 48>& counts)
 {
 	for (unsigned int i = 0; i < counts.size(); ++i)
 	{
@@ -1538,7 +1580,7 @@ void EBirdDataProcessor::ConvertProbabilityToCounts(FrequencyDataYear& data, con
 	}
 }
 
-void EBirdDataProcessor::ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 12>& counts)
+void EBirdDataProcessor::ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 48>& counts)
 {
 	for (unsigned int i = 0; i < counts.size(); ++i)
 	{
@@ -1548,7 +1590,7 @@ void EBirdDataProcessor::ConvertCountsToProbability(FrequencyDataYear& data, con
 }
 
 void EBirdDataProcessor::AddConsolidationData(ConsolidationData& existingData,
-	FrequencyDataYear&& newData, std::array<double, 12>&& newCounts)
+	FrequencyDataYear&& newData, std::array<double, 48>&& newCounts)
 {
 	ConvertProbabilityToCounts(existingData.occurrenceData, existingData.checklistCounts);
 	ConvertProbabilityToCounts(newData, newCounts);
@@ -1581,7 +1623,7 @@ void EBirdDataProcessor::AddConsolidationData(ConsolidationData& existingData,
 
 bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
 	DoubleYear&& checklistCounts, const double& thresholdFrequency, const unsigned int& thresholdObservationCount,
-	std::array<double, 12>& probabilities, std::array<std::vector<FrequencyInfo>, 12>& species) const
+	std::array<double, 48>& probabilities, std::array<std::vector<FrequencyInfo>, 48>& species) const
 {
 	EliminateObservedSpecies(frequencyData);
 
@@ -1609,12 +1651,11 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 }
 
 bool EBirdDataProcessor::WriteBestLocationsViewerPage(const LocationFindingParameters& locationFindingParameters,
-	const std::vector<UString::String>& highDetailCountries, const UString::String& eBirdAPIKey,
+	const std::vector<UString::String>& highDetailCountries, const UString::String& eBirdAPIKey, const UString::String& kmlLibraryPath,
 	const std::vector<YearFrequencyInfo>& observationProbabilities)
 {
-	MapPageGenerator generator(locationFindingParameters, highDetailCountries, eBirdAPIKey);
-	const UString::String htmlOutputPath(_T("."));
-	return generator.WriteBestLocationsViewerPage(htmlOutputPath, observationProbabilities);
+	MapPageGenerator generator(locationFindingParameters, highDetailCountries, eBirdAPIKey, kmlLibraryPath);
+	return generator.WriteBestLocationsViewerPage(locationFindingParameters.baseOutputFileName, observationProbabilities);
 }
 
 // Assume we're comparing lists based on year
@@ -1747,18 +1788,17 @@ void EBirdDataProcessor::FilterYear(const unsigned int& year, std::vector<Entry>
 	}), dataToFilter.end());
 }
 
-bool EBirdDataProcessor::FindBestTripLocations(const UString::String& frequencyFilePath,
-	const BestTripParameters& bestTripParameters, const std::vector<UString::String>& highDetailCountries,
-	const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName, const UString::String& eBirdApiKey) const
+bool EBirdDataProcessor::FindBestTripLocations(const BestTripParameters& bestTripParameters, const std::vector<UString::String>& highDetailCountries,
+	const std::vector<UString::String>& targetRegionCodes, const UString::String& outputFileName) const
 {
 	std::vector<YearFrequencyInfo> newSightingProbability;
-	if (!GatherFrequencyData(frequencyFilePath, targetRegionCodes, highDetailCountries,
+	if (!GatherFrequencyData(targetRegionCodes, highDetailCountries,
 		bestTripParameters.minimumLiklihood, bestTripParameters.minimumObservationCount, newSightingProbability))
 		return false;
 
-	// Generate an index list for each month and sort it based on # of species for each location
-	std::array<std::vector<unsigned int>, 12> indexList;
-	for (unsigned int i = 0; i < 12; ++i)
+	// Generate an index list for each week and sort it based on # of species for each location
+	std::array<std::vector<unsigned int>, 48> indexList;
+	for (unsigned int i = 0; i < indexList.size(); ++i)
 	{
 		indexList[i].resize(newSightingProbability.size());
 		std::iota(indexList[i].begin(), indexList[i].end(), 0);
@@ -1776,25 +1816,61 @@ bool EBirdDataProcessor::FindBestTripLocations(const UString::String& frequencyF
 		return false;
 	}
 
-	outFile << "January,"
-		<< "February,"
-		<< "March,"
-		<< "April,"
-		<< "May,"
-		<< "June,"
-		<< "July,"
-		<< "August,"
-		<< "September,"
-		<< "October,"
-		<< "November,"
-		<< "December,";
+	outFile << "January 1,"
+		<< "January 8,"
+		<< "January 15,"
+		<< "January 22,"
+		<< "February 1,"
+		<< "February 8,"
+		<< "February 15,"
+		<< "February 22,"
+		<< "March 1,"
+		<< "March 8,"
+		<< "March 15,"
+		<< "March 22,"
+		<< "April 1,"
+		<< "April 8,"
+		<< "April 15,"
+		<< "April 22,"
+		<< "May 1,"
+		<< "May 8,"
+		<< "May 15,"
+		<< "May 22,"
+		<< "June 1,"
+		<< "June 8,"
+		<< "June 15,"
+		<< "June 22,"
+		<< "July 1,"
+		<< "July 8,"
+		<< "July 15,"
+		<< "July 22,"
+		<< "August 1,"
+		<< "August 8,"
+		<< "August 15,"
+		<< "August 22,"
+		<< "September 1,"
+		<< "September 8,"
+		<< "September 15,"
+		<< "September 22,"
+		<< "October 1,"
+		<< "October 8,"
+		<< "October 15,"
+		<< "October 22,"
+		<< "November 1,"
+		<< "November 8,"
+		<< "November 15,"
+		<< "November 22,"
+		<< "December 1,"
+		<< "December 8,"
+		<< "December 15,"
+		<< "December 22,";
 	outFile << std::endl;
 
-	EBirdInterface ebi(eBirdApiKey);
+	EBirdInterface ebi(appConfig.eBirdApiKey);
 
 	for (unsigned int i = 0; i < bestTripParameters.topLocationCount; ++i)
 	{
-		for (unsigned int j = 0; j < 12; ++j)
+		for (unsigned int j = 0; j < indexList.size(); ++j)
 			outFile << '"' << ebi.GetRegionName(newSightingProbability[indexList[j][i]].locationCode) << "\" (" << newSightingProbability[indexList[j][i]].frequencyInfo[j].size() << "),";
 		outFile << '\n';
 	}
@@ -1802,7 +1878,7 @@ bool EBirdDataProcessor::FindBestTripLocations(const UString::String& frequencyF
 	return true;
 }
 
-bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt, const UString::String& /*eBirdApiKey*/) const
+bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt) const
 {
 	Cout << "Checking for observations of " << speciesHunt.commonName << " within "
 		<< speciesHunt.radius << " km of " << speciesHunt.latitude << ',' << speciesHunt.longitude << '.' << std::endl;
@@ -1908,7 +1984,7 @@ bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt, const UStri
 	return true;
 }
 
- bool EBirdDataProcessor::TimesMatch(const EBirdInterface::ObservationInfo& o1, const EBirdInterface::ObservationInfo& o2)
+bool EBirdDataProcessor::TimesMatch(const EBirdInterface::ObservationInfo& o1, const EBirdInterface::ObservationInfo& o2)
 {
 	if (o1.observationDate.tm_year != o2.observationDate.tm_year ||
 		o1.observationDate.tm_mon != o2.observationDate.tm_mon ||
@@ -1924,34 +2000,258 @@ bool EBirdDataProcessor::HuntSpecies(const SpeciesHunt& speciesHunt, const UStri
 		o1.observationDate.tm_min == o2.observationDate.tm_min;
 }
 
- UString::String EBirdDataProcessor::StringifyDateTime(struct tm& dateTime)
- {
-	 UString::OStringStream ss;
-	 ss << dateTime.tm_mon + 1 << '/' << dateTime.tm_mday << '/' << dateTime.tm_year + 1900 << ' '
-		 << dateTime.tm_hour << ':' << std::setw(2) << std::setfill(UString::Char('0')) << dateTime.tm_min;
-	 return ss.str();
- }
+UString::String EBirdDataProcessor::StringifyDateTime(struct tm& dateTime)
+{
+	UString::OStringStream ss;
+	ss << dateTime.tm_mon + 1 << '/' << dateTime.tm_mday << '/' << dateTime.tm_year + 1900 << ' '
+		<< dateTime.tm_hour << ':' << std::setw(2) << std::setfill(UString::Char('0')) << dateTime.tm_min;
+	return ss.str();
+}
 
- unsigned int EBirdDataProcessor::CountConsecutiveLeadingQuotes(UString::IStringStream& ss)
- {
-	 unsigned int count(0);
-	 while (ss.peek() == UString::Char('"'))
-	 {
-		 ss.ignore();
-		 ++count;
-	 }
+unsigned int EBirdDataProcessor::CountConsecutiveLeadingQuotes(UString::IStringStream& ss)
+{
+	unsigned int count(0);
+	while (ss.peek() == UString::Char('"'))
+	{
+		ss.ignore();
+		++count;
+	}
 
-	 return count;
+	return count;
+}
+
+bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyParameters,
+	const std::vector<UString::String>& regionCodes) const
+{
+	FrequencyFileReader ffReader(appConfig.frequencyFilePath);
+	FrequencyDataYear frequencyData;
+	DoubleYear checklistCounts;
+	for (auto& c : checklistCounts)
+		c = 0.0;
+
+	for (const auto& rc : regionCodes)
+	{
+		FrequencyDataYear tempFrequencyData;
+		DoubleYear tempChecklistCounts;
+		if (!ffReader.ReadRegionData(rc, tempFrequencyData, tempChecklistCounts))
+			return false;
+
+		for (unsigned int i = 0; i < frequencyData.size(); ++i)
+		{
+			for (const auto& tfd : tempFrequencyData[i])
+			{
+				bool found(false);
+				for (auto& fd : frequencyData[i])
+				{
+					if (tfd.compareString == fd.compareString)
+					{
+						fd.frequency = floor(fd.frequency * checklistCounts[i] + tfd.frequency * 0.01 * tempChecklistCounts[i] + 0.5) / (checklistCounts[i] + tempChecklistCounts[i]);
+						found = true;
+					}
+				}
+
+				if (!found)
+				{
+					frequencyData[i].push_back(tfd);
+					frequencyData[i].back().frequency = floor(frequencyData[i].back().frequency * 0.01 * tempChecklistCounts[i] + 0.5) / (checklistCounts[i] + tempChecklistCounts[i]);
+				}
+			}
+			checklistCounts[i] += tempChecklistCounts[i];
+		}
+	}
+
+	const unsigned int totalObservations(static_cast<unsigned int>(std::accumulate(checklistCounts.begin(), checklistCounts.end(), 0.0)));
+
+	// Convert frequency data from list of species within each week to list of weeks within each species
+	std::map<UString::String, DoubleYear> speciesObservationsByWeek;
+	DoubleYear zeroYear;
+	std::fill(zeroYear.begin(), zeroYear.end(), 0.0);
+	for (unsigned int wk = 0; wk < frequencyData.size(); ++wk)
+	{
+		for (const auto& sp : frequencyData[wk])
+		{
+			if (speciesObservationsByWeek.find(sp.species) == speciesObservationsByWeek.end())
+				speciesObservationsByWeek[sp.species] = zeroYear;
+
+			speciesObservationsByWeek[sp.species][wk] += floor(checklistCounts[wk] * sp.frequency + 0.5);
+		}
+	}
+
+	std::vector<UString::String> speciesList;
+	if (toyParameters.maxProbability > 0.0)// Find all regularly occuring birds with total probability not to exceed maxProbability
+	{
+		const unsigned int minWeeksPerYear(3);// Used to define what constitutes a "rarity"
+		for (const auto& sp : speciesObservationsByWeek)
+		{
+			unsigned int weekCount(0);
+			unsigned int observationCount(0);
+
+			for (const auto& o : sp.second)
+			{
+				if (o > 0.0)
+				{
+					++weekCount;
+					observationCount += static_cast<unsigned int>(floor(o + 0.5));
+				}
+			}
+
+			if (weekCount > minWeeksPerYear && 100.0 * observationCount / totalObservations < toyParameters.maxProbability)
+				speciesList.push_back(sp.first);
+		}
+
+		Cout << "Found " << speciesList.size() << " species with overall probability < " << toyParameters.maxProbability << std::endl;
+	}
+	else// Only check specific species
+		speciesList = toyParameters.commonNames;
+
+	const auto pdfSize(frequencyData.size());
+	std::vector<std::vector<double>> pdfs(speciesList.size(), std::vector<double>(pdfSize));
+	for (unsigned int i = 0; i < speciesList.size(); ++i)
+	{
+		std::vector<double> values(frequencyData.size());
+		std::copy(speciesObservationsByWeek[speciesList[i]].begin(), speciesObservationsByWeek[speciesList[i]].end(), values.begin());
+		std::vector<double> range(pdfSize);
+		double temp(1.0);
+		const double step(12.0 / range.size());
+		std::generate(range.begin(), range.end(), [&temp, &step]()
+		{
+			double t(temp);
+			temp += step;
+			return t;
+		});
+
+		auto FindStartIndex([](const std::vector<double>& values)
+		{
+			struct Segment
+			{
+				size_t start;
+				size_t end;
+				size_t length;
+			};
+
+			std::vector<Segment> zeroSegments;
+			size_t next;
+			if (values.front() == 0.0)
+			{
+				Segment s;
+				for (s.start = values.size() - 1; s.start > 0; --s.start)
+				{
+					if (values[s.start - 1] > 0.0)
+						break;
+				}
+
+				for (s.end = 0; s.end < values.size() - 1; ++s.end)
+				{
+					if (values[s.end + 1] > 0.0)
+						break;
+				}
+				s.length = s.end + values.size() - s.start;
+				zeroSegments.push_back(s);
+				next = s.end + 1;
+			}
+			else
+				next = 1;
+
+			for (; next < values.size() - 2; ++next)
+			{
+				if (values[next + 1] == 0.0)
+				{
+					Segment s;
+					s.start = next + 1;
+
+					for (s.end = s.start + 1; s.end < values.size() - 2; ++s.end)
+					{
+						if (values[s.end] > 0.0)
+							break;
+					}
+
+					if (zeroSegments.size() > 0 && s.start == zeroSegments.front().start)
+						break;
+
+					s.length = s.end - s.start;
+					zeroSegments.push_back(s);
+					next = s.end + 1;
+				}
+			}
+
+			if (zeroSegments.empty())
+				return 0ULL;
+
+			Segment longest(zeroSegments.front());
+			for (const auto& s : zeroSegments)
+			{
+				if (s.length > longest.length)
+					longest = s;
+			}
+
+			return static_cast<unsigned long long>((longest.start + longest.length / 2) % values.size());
+		});
+
+		// Rotate input so the longest-duration 0-frequency portion gets split to become beginning/end of time frame, then rotate back after fitting PDF
+		// This avoids odd-shaped PDFs for birds that are here only in the winter, for example
+		const auto startIndex(FindStartIndex(values));
+		std::rotate(values.begin(), values.begin() + startIndex, values.end());
+		std::rotate(checklistCounts.begin(), checklistCounts.begin() + startIndex, checklistCounts.end());
+
+		std::vector<std::pair<double, double>> kdeInput(values.size());
+		double inputIntegral(0.0);
+		const auto indexToMonthFactor(frequencyData.size() / 12.0);
+		for (unsigned int j = 0; j < values.size(); ++j)
+		{
+			kdeInput[j].first = (j + indexToMonthFactor) / indexToMonthFactor;// convert index to floating point 1-based month value
+			kdeInput[j].second = values[j] / checklistCounts[j] * 100.0;
+			inputIntegral += kdeInput[j].second;
+			pdfs[i][j] = kdeInput[j].second;
+		}
+
+		KernelDensityEstimation kde;
+		pdfs[i] = kde.ComputePDF(kdeInput, range, 0.3);
+
+		// Restore correct order
+		std::rotate(pdfs[i].begin(), pdfs[i].begin() + pdfs[i].size() - startIndex, pdfs[i].end());
+		assert(pdfs[i].size() == values.size());
+
+		double outputIntegral(0.0);
+		for (const auto& p : pdfs[i])
+			outputIntegral += p;
+
+		const auto scaleFactor(inputIntegral / kdeInput.size() / outputIntegral * pdfs[i].size());
+		for (auto& p : pdfs[i])
+			p *= scaleFactor;
+	}
+
+	UString::OFStream outFile(UString::ToNarrowString(toyParameters.outputFile));
+	if (!outFile.good() || !outFile.is_open())
+	{
+		Cerr << "Failed to open '" << toyParameters.outputFile << "' for output\n";
+		return false;
+	}
+
+	outFile << "Month,";
+	for (const auto& sp : speciesList)
+		outFile << sp << ',';
+	outFile << '\n';
+
+	const double multiplier(frequencyData.size() / 12.0);
+	for (unsigned int i = 0; i < frequencyData.size(); ++i)
+	{
+		outFile << (i + multiplier) / multiplier << ',';// Shift to start at month 1.0
+		for (const auto& p : pdfs)
+			outFile << p[i] << ',';
+		outFile << '\n';
+	}
+
+	return true;
  }
  
  void EBirdDataProcessor::BuildChecklistLinks() const
  {
-	std::set<std::string> checklistIds;
+	std::set<UString::String> checklistIds;
 	for (const auto& o : data)
 		checklistIds.insert(o.submissionID);
 		
 	std::cout << "Generating URLs for " << checklistIds.size() << " checklists:\n";
 	for (const auto& c : checklistIds)
-		std::cout << "https://ebird.org/checklist/" << c << "\n";
-	std::cout << std::endl;
+		Cout << "https://ebird.org/checklist/" << c << "\n";
+	Cout << std::endl;
  }

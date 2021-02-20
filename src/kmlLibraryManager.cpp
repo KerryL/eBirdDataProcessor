@@ -28,6 +28,24 @@ KMLLibraryManager::KMLLibraryManager(const UString::String& libraryPath,
 {
 }
 
+std::unique_ptr<KMLLibraryManager::GeometryInfo> KMLLibraryManager::ReadKML(const UString::String& kmlFileName)
+{
+	// TODO:  Make this work with kmz files, too
+	UString::IFStream file(kmlFileName);
+	UString::OStringStream buffer;
+	buffer << file.rdbuf();
+	
+	std::unordered_map<UString::String, GeometryInfo> tempGeometryInfo;
+	ParentGeometryExtractionArguments args(UString::String(), tempGeometryInfo);
+	if (!ForEachPlacemarkTag(UString::ToStringType(buffer.str()), ExtractParentRegionGeometry, args))
+		return std::unique_ptr<GeometryInfo>();
+
+	if (tempGeometryInfo.size() != 1)
+		return std::unique_ptr<GeometryInfo>();
+
+	return std::make_unique<GeometryInfo>(tempGeometryInfo.begin()->second);
+}
+
 UString::String KMLLibraryManager::GetKML(const UString::String& country, const UString::String& subNational1, const UString::String& subNational2)
 {
 	assert(!country.empty());
@@ -281,7 +299,7 @@ UString::String KMLLibraryManager::ExtractName(const UString::String& kmlData, c
 }
 
 bool KMLLibraryManager::ForEachPlacemarkTag(const UString::String& kmlData,
-	PlacemarkFunction func, AdditionalArguments& args) const
+	PlacemarkFunction func, AdditionalArguments& args)
 {
 	const UString::String placemarkStartTag(_T("<Placemark>"));
 	std::string::size_type next(0);
@@ -291,7 +309,7 @@ bool KMLLibraryManager::ForEachPlacemarkTag(const UString::String& kmlData,
 		const std::string::size_type placemarkEnd(kmlData.find(placemarkEndTag, next));
 		if (placemarkEnd == std::string::npos)
 		{
-			log << "Failed to find expected placemark end tag" << std::endl;
+			//log << "Failed to find expected placemark end tag" << std::endl;// Removed to make this function static
 			return false;
 		}
 
@@ -608,8 +626,12 @@ void KMLLibraryManager::ExpandSainteAbbr(UString::String& s)
 bool KMLLibraryManager::RegionNamesMatch(const UString::String& name1, const UString::String& name2)
 {
 	UString::String lower1(name1), lower2(name2);
-	std::transform(lower1.begin(), lower1.end(), lower1.begin(), ::tolower);
-	std::transform(lower2.begin(), lower2.end(), lower2.begin(), ::tolower);
+	auto localToLower([](const UString::Char& c)
+	{
+		return static_cast<UString::Char>(::tolower(c));
+	});
+	std::transform(lower1.begin(), lower1.end(), lower1.begin(), localToLower);
+	std::transform(lower2.begin(), lower2.end(), lower2.begin(), localToLower);
 
 	ExpandSaintAbbr(lower1);
 	ExpandSaintAbbr(lower2);
@@ -733,14 +755,20 @@ KMLLibraryManager::GeometryInfo::Point KMLLibraryManager::ChooseRobustPoint(cons
 bool KMLLibraryManager::PointIsWithinPolygons(const GeometryInfo::Point& p, const GeometryInfo& geometry)
 {
 	GeometryInfo::Point outsidePoint(geometry.bbox.northEast);
+	outsidePoint.latitude += 1.0;// 1 deg is a fairly large step
 	outsidePoint.longitude += 1.0;// 1 deg is a fairly large step
 	unsigned int intersectionCount(0);
 	for (const auto& polygon : geometry.polygons)
 	{
-		unsigned int i;
-		for (i = 1; i < polygon.size(); ++i)
+		for (unsigned int i = 1; i < polygon.size(); ++i)
 		{
 			if (SegmentsIntersect(p, outsidePoint, polygon[i], polygon[i - 1]))
+				++intersectionCount;
+		}
+		
+		if (polygon.front() != polygon.back())// Ensure we're testing a closed polygon
+		{
+			if (SegmentsIntersect(p, outsidePoint, polygon.front(), polygon.back()))
 				++intersectionCount;
 		}
 	}
@@ -954,21 +982,29 @@ KMLLibraryManager::GeometryInfo::PolygonList KMLLibraryManager::GeometryInfo::Ex
 				continue;
 
 			UString::IStringStream lineSS(line);
-			Point p;
-			if ((lineSS >> p.longitude).fail())
+			UString::String token;
+			while (std::getline(lineSS, token, UString::Char(' ')))
 			{
-				Cerr << "Failed to parse longitude value\n";
-				return PolygonList();
-			}
+				if (ContainsOnlyWhitespace(token))
+					continue;
 
-			lineSS.ignore();
-			if ((lineSS >> p.latitude).fail())
-			{
-				Cerr << "Failed to parse latitude value\n";
-				return PolygonList();
+				UString::IStringStream tokenSS(token);
+				Point p;
+				if ((tokenSS >> p.longitude).fail())
+				{
+					Cerr << "Failed to parse longitude value\n";
+					return PolygonList();
+				}
+	
+				tokenSS.ignore();
+				if ((tokenSS >> p.latitude).fail())
+				{
+					Cerr << "Failed to parse latitude value\n";
+					return PolygonList();
+				}
+	
+				polygon.push_back(p);
 			}
-
-			polygon.push_back(p);
 		}
 
 		polygons.push_back(polygon);
@@ -1307,4 +1343,14 @@ std::vector<UString::String> KMLLibraryManager::GenerateWordLetterPairs(const US
 	}
 
 	return wordLetterPairs;
+}
+
+bool KMLLibraryManager::GeometryInfo::Point::operator==(const Point& p) const
+{
+	return p.latitude == latitude && p.longitude == longitude;
+}
+
+bool KMLLibraryManager::GeometryInfo::Point::operator!=(const Point& p) const
+{
+	return !(*this == p);
 }
