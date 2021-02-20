@@ -174,7 +174,7 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 		<< "      var map = L.map('mapid').setView([37.8, -96], 4);\n\n"
 		<< "      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {\n"
 		<< "        maxZoom: 18,\n"
-		<< "        attribution: ''&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors'\n"
+		<< "        attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors',\n"
 		<< "        id: 'mapbox.light'\n"
 		<< "      }).addTo(map);\n\n"
 		<< "      var info = L.control();\n\n"
