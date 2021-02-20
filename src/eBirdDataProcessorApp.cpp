@@ -67,7 +67,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 				return 1;
 			}
 
-			EBirdInterface ebi(config.eBirdApiKey);
+			EBirdInterface ebi(config.appConfig.eBirdApiKey);
 			const auto regionCode(ebi.GetRegionCode(config.locationFilters.country.front(),
 				config.locationFilters.state.empty() ? UString::String() : config.locationFilters.state.front(),
 				config.locationFilters.county.empty() ? UString::String() : config.locationFilters.county.front()));
@@ -81,15 +81,15 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		{
 			if (!dataset.ExtractGlobalFrequencyData(config.eBirdDatasetPath, config.timeOfDayParameters.splitRegionDataFile))
 				return 1;
-			if (dataset.WriteFrequencyFiles(config.frequencyFilePath))
+			if (dataset.WriteFrequencyFiles(config.appConfig.frequencyFilePath))
 				return 1;
 		}
 		
 		return 0;
 	}
 
-	EBirdDataProcessor processor;
-	if (!processor.Parse(config.dataFileName))
+	EBirdDataProcessor processor(config.appConfig);
+	if (!processor.Parse())// TODO:  Don't do this depending on the function being performed
 		return 1;
 
 	if (config.uniqueObservations != EBDPConfig::UniquenessType::None)
@@ -133,11 +133,11 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		MediaHTMLExtractor htmlExtractor;
 		if (!htmlExtractor.ExtractMediaHTML(config.mediaListHTML))
 			Cout << "Failed to download current media list HTML; continuing with existing HTML file" << std::endl;
-		processor.GenerateMediaList(config.mediaListHTML, config.mediaFileName);
+		processor.GenerateMediaList(config.mediaListHTML);
 		return 0;
 	}
-	else if (!config.mediaFileName.empty())
-		processor.ReadMediaList(config.mediaFileName);
+	else //if (!config.mediaFileName.empty())// TODO:  Need some criteria to determine if we need to do this
+		processor.ReadMediaList();
 
 	// TODO:  species count only?
 
@@ -149,18 +149,17 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			return 1;
 		}
 
-		processor.GenerateRarityScores(config.frequencyFilePath,
-			config.listType, config.eBirdApiKey,
+		processor.GenerateRarityScores(config.listType,
 			config.locationFilters.country.front(), config.locationFilters.state.empty() ? UString::String() : config.locationFilters.state.front(),
 			config.locationFilters.county.empty() ? UString::String() : config.locationFilters.county.front());
 	}
 	else if (config.findMaxNeedsLocations)
 	{
-		EBirdInterface ebi(config.eBirdApiKey);
+		EBirdInterface ebi(config.appConfig.eBirdApiKey);
 		const auto regionCodes(ebi.GetRegionCodes(config.locationFilters.country,
 			config.locationFilters.state, config.locationFilters.county));
 		if (!processor.FindBestLocationsForNeededSpecies(
-			config.frequencyFilePath, config.locationFindingParameters, config.highDetailCountries, config.eBirdApiKey, regionCodes))
+			config.locationFindingParameters, config.highDetailCountries, regionCodes))
 			return 1;
 	}
     else if (config.generateTargetCalendar)
@@ -172,30 +171,30 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		}
 
 		processor.GenerateTargetCalendar(config.calendarParameters,
-			config.outputFileName, config.frequencyFilePath,
+			config.outputFileName,
 			config.locationFilters.country.front(), config.locationFilters.state.empty() ? UString::String() : config.locationFilters.state.front(),
-			config.locationFilters.county.empty() ? UString::String() : config.locationFilters.county.front(), config.eBirdApiKey);
+			config.locationFilters.county.empty() ? UString::String() : config.locationFilters.county.front());
 	}
 	else if (config.findBestTripLocations)
 	{
-		EBirdInterface ebi(config.eBirdApiKey);
+		EBirdInterface ebi(config.appConfig.eBirdApiKey);
 		const auto regionCodes(ebi.GetRegionCodes(config.locationFilters.country,
 			config.locationFilters.state, config.locationFilters.county));
-		if (!processor.FindBestTripLocations(config.frequencyFilePath, config.bestTripParameters,
-			config.highDetailCountries, regionCodes, config.outputFileName, config.eBirdApiKey))
+		if (!processor.FindBestTripLocations(config.bestTripParameters,
+			config.highDetailCountries, regionCodes, config.outputFileName))
 			return 1;
 	}
 	else if (!config.speciesHunt.commonName.empty())
 	{
-		if (!processor.HuntSpecies(config.speciesHunt, config.eBirdApiKey))
+		if (!processor.HuntSpecies(config.speciesHunt))
 			return 1;
 	}
 	else if (!config.timeOfYearParameters.outputFile.empty())
 	{
-		EBirdInterface ebi(config.eBirdApiKey);
+		EBirdInterface ebi(config.appConfig.eBirdApiKey);
 		const auto regionCodes(ebi.GetRegionCodes(config.locationFilters.country,
 			config.locationFilters.state, config.locationFilters.county));
-		if (!processor.GenerateTimeOfYearData(config.timeOfYearParameters, config.frequencyFilePath, regionCodes))
+		if (!processor.GenerateTimeOfYearData(config.timeOfYearParameters, regionCodes))
 			return 1;
 	}
 	else if (config.doComparison)
