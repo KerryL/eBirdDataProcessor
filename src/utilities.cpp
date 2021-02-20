@@ -10,6 +10,12 @@
 #include <cassert>
 #include <filesystem>
 
+#ifdef _WIN32
+	namespace fs = std::experimental::filesystem;
+#else
+	namespace fs = std::filesystem;
+#endif// _WIN32
+
 namespace Utilities
 {
 
@@ -33,7 +39,7 @@ UString::String ExtractStateFromRegionCode(const UString::String& regionCode)
 
 UString::String ExtractFileName(const UString::String& path)
 {
-	return std::experimental::filesystem::path(path).filename();
+	return fs::path(path).filename();
 }
 
 UString::String StripExtension(const UString::String& fileName)
