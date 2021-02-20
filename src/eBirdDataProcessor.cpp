@@ -23,6 +23,12 @@
 #include <set>
 #include <filesystem>
 
+#ifdef _WIN32
+	namespace fs = std::experimental::filesystem;
+#else
+	namespace fs = std::filesystem;
+#endif// _WIN32
+
 const UString::String EBirdDataProcessor::headerLine(_T("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,"
 	"Protocol,Duration (Min),All Obs Reported,Distance Traveled (km),Area Covered (ha),"
@@ -1412,16 +1418,16 @@ bool EBirdDataProcessor::ReadMediaList()
 
 std::vector<UString::String> EBirdDataProcessor::ListFilesInDirectory(const UString::String& directory)
 {
-	if (!std::experimental::filesystem::exists(directory))
+	if (!fs::exists(directory))
 	{
 		Cerr << "Directory '" << directory << "' does not exist\n";
 		return std::vector<UString::String>();
 	}
 
 	std::vector<UString::String> fileNames;
-	for (const auto& e : std::experimental::filesystem::recursive_directory_iterator(directory))
+	for (const auto& e : fs::recursive_directory_iterator(directory))
 	{
-		if (std::experimental::filesystem::is_regular_file(e.status()))
+		if (fs::is_regular_file(e.status()))
 			fileNames.push_back(UString::ToStringType(e.path()));
 	}
 

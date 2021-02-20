@@ -611,7 +611,6 @@ void EBirdDatasetInterface::ScaleTime(const SunTimeArray& sunriseTimes, const Su
 	const unsigned int daysPerPeriod(static_cast<unsigned int>(365 / sunriseTimes.size()));
 	const unsigned int startIndex(std::min(dayOfYear / daysPerPeriod, static_cast<unsigned int>(sunriseTimes.size() - 1)));
 	const unsigned int startDayOfYear(startIndex * daysPerPeriod);
-	const unsigned int endDayOfYear(startDayOfYear + daysPerPeriod);
 	
 	const unsigned int endIndex([&startIndex, &sunsetTimes]()
 	{

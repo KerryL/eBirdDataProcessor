@@ -35,14 +35,14 @@ LIBS = $(addprefix -l,$(LIBS_TEMP))
 PSLIB = 
 
 # Compiler to use
-CC = g++-7
+CC = g++
 
 # Archiver to use
 AR = ar rcs
 RANLIB = ranlib
 
 # Compiler flags
-CFLAGS = -Wall -Wextra -std=c++17 $(INCDIRS) `pkg-config --cflags libzip`
+CFLAGS = -Wall -Wextra -std=c++17 -lstdc++fs $(INCDIRS) `pkg-config --cflags libzip`
 CFLAGS_RELEASE = $(CFLAGS) -O2
 CFLAGS_DEBUG = $(CFLAGS) -g
 
