@@ -325,15 +325,12 @@ void EBirdDataProcessor::SortData(const EBDPConfig::SortBy& primarySort, const E
 std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::RemoveHighMediaScores(
 	const int& minPhotoScore, const int& minAudioScore, const std::vector<Entry>& data)
 {
-	assert(minPhotoScore >= 0 || minAudioScore >= 0);
-
 	std::vector<Entry> sublist(data);
 	std::set<UString::String> haveMediaSet;
 	std::for_each(sublist.begin(), sublist.end(), [&minPhotoScore, &minAudioScore, &haveMediaSet](const Entry& entry)
 	{
-		// This simple check works because calling methods gaurantee that we don't get here if minPhotoScore and minAudioScore are both -1
-		if ((!entry.photoRating.empty() && *std::max_element(entry.photoRating.begin(), entry.photoRating.end()) >= minPhotoScore) ||
-			(!entry.audioRating.empty() && *std::max_element(entry.audioRating.begin(), entry.audioRating.end()) >= minAudioScore))
+		if ((!entry.photoRating.empty() && *std::max_element(entry.photoRating.begin(), entry.photoRating.end()) >= minPhotoScore && minPhotoScore >= 0) ||
+			(!entry.audioRating.empty() && *std::max_element(entry.audioRating.begin(), entry.audioRating.end()) >= minAudioScore && minAudioScore >= 0))
 			haveMediaSet.insert(entry.compareString);
 	});
 	sublist.erase(std::remove_if(sublist.begin(), sublist.end(), [&haveMediaSet](const Entry& entry)
