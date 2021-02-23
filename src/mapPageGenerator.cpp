@@ -100,8 +100,8 @@ void MapPageGenerator::WriteHeadSection(UString::OStream& f)
 		<< "      .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }\n"
 		<< "	  #speciesList { width:100%; }\n"
 		<< "    </style>\n"
-		<< "	<link rel=\"stylesheet\" href=\"https://unpkg.com/leaflet@1.4.0/dist/leaflet.css\" integrity=\"sha512-puBpdR0798OZvTTbP4A8Ix/l+A4dHDD0DGqYW6RQ+9jxkRFclaxxQb/SJAWZfWAkuyeQUytO7+7N4QKrDh+drA==\" crossorigin=\"\"/>\n"
-		<< "	<script src=\"https://unpkg.com/leaflet@1.4.0/dist/leaflet.js\" integrity=\"sha512-QVftwZFqvtRNi0ZyCtsznlKSWOStnDORoefr1enyq5mVL4tmKB3S/EnC3rRJcxCPavG10IcrVGSmPh6Qw5lwrg==\" crossorigin=\"\"></script>\n"
+		<< "    <link rel=\"stylesheet\" href=\"https://unpkg.com/leaflet@1.7.1/dist/leaflet.css\" integrity=\"sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A==\" crossorigin=\"\"/>\n"
+		<< "    <script src=\"https://unpkg.com/leaflet@1.7.1/dist/leaflet.js\" integrity=\"sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA==\" crossorigin=\"\"></script>\n"
 		<< "  </head>\n\n";
 }
 
@@ -172,12 +172,9 @@ void MapPageGenerator::WriteScripts(UString::OStream& f)
 {
 	f << "    <script type=\"text/javascript\">\n"
 		<< "      var map = L.map('mapid').setView([37.8, -96], 4);\n\n"
-		// TODO:  Get our own access token
-		<< "      L.tileLayer('https://api.tiles.mapbox.com/v4/{id}/{z}/{x}/{y}.png?access_token=pk.eyJ1IjoibWFwYm94IiwiYSI6ImNpejY4NXVycTA2emYycXBndHRqcmZ3N3gifQ.rJcFIG214AriISLbB6B5aw', {\n"
+		<< "      L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {\n"
 		<< "        maxZoom: 18,\n"
-		<< "        attribution: 'Map data &copy; <a href=\"https://www.openstreetmap.org/\">OpenStreetMap</a> contributors, ' +\n"
-		<< "        '<a href=\"https://creativecommons.org/licenses/by-sa/2.0/\">CC-BY-SA</a>, ' +\n"
-		<< "        'Imagery © <a href=\"https://www.mapbox.com/\">Mapbox</a>',\n"// TODO:  Update all attributions
+		<< "        attribution: '&copy; <a href=\"https://www.openstreetmap.org/copyright\">OpenStreetMap</a> contributors',\n"
 		<< "        id: 'mapbox.light'\n"
 		<< "      }).addTo(map);\n\n"
 		<< "      var info = L.control();\n\n"
