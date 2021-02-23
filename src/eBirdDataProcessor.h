@@ -135,8 +135,8 @@ private:
 		UString::String checklistComments;
 		UString::String mlCatalogNumbers;
 
-		int photoRating = -1;
-		int audioRating = -1;
+		std::vector<int> photoRating;
+		std::vector<int> audioRating;
 
 		UString::String compareString;// Huge boost in efficiency if we pre-compute this
 	};
