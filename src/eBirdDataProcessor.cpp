@@ -319,11 +319,15 @@ void EBirdDataProcessor::SortData(const EBDPConfig::SortBy& primarySort, const E
 std::vector<EBirdDataProcessor::Entry> EBirdDataProcessor::RemoveHighMediaScores(
 	const int& minPhotoScore, const int& minAudioScore, const std::vector<Entry>& data)
 {
+	assert(minPhotoScore >= 0 || minAudioScore >= 0);
+
 	std::vector<Entry> sublist(data);
 	std::set<UString::String> haveMediaSet;
 	std::for_each(sublist.begin(), sublist.end(), [&minPhotoScore, &minAudioScore, &haveMediaSet](const Entry& entry)
 	{
-		if (entry.photoRating >= minPhotoScore && entry.audioRating >= minAudioScore)
+		// This simple check works because calling methods gaurantee that we don't get here if minPhotoScore and minAudioScore are both -1
+		if ((!entry.photoRating.empty() && *std::max_element(entry.photoRating.begin(), entry.photoRating.end()) >= minPhotoScore) ||
+			(!entry.audioRating.empty() && *std::max_element(entry.audioRating.begin(), entry.audioRating.end()) >= minAudioScore))
 			haveMediaSet.insert(entry.compareString);
 	});
 	sublist.erase(std::remove_if(sublist.begin(), sublist.end(), [&haveMediaSet](const Entry& entry)
@@ -384,10 +388,10 @@ UString::String EBirdDataProcessor::GenerateList(const EBDPConfig::ListType& typ
 		ss << count++ << ", " << std::put_time(&entry.dateTime, _T("%D")) << ", "
 			<< entry.commonName << ", '" << entry.location << "', " << entry.count;
 
-		if (entry.photoRating >= 0)
-			ss << " (photo rating = " << entry.photoRating << ')';
-		if (entry.audioRating >= 0)
-			ss << " (audio rating = " << entry.audioRating << ')';
+		if (!entry.photoRating.empty())
+			ss << " (photo rating = " << *std::max_element(entry.photoRating.begin(), entry.photoRating.end()) << ')';
+		if (!entry.audioRating.empty())
+			ss << " (audio rating = " << *std::max_element(entry.audioRating.begin(), entry.audioRating.end()) << ')';
 
 		ss << '\n';
 	}
@@ -1399,9 +1403,9 @@ bool EBirdDataProcessor::ReadMediaList()
 				CommonNamesMatch(entry.commonName, m.commonName))
 			{
 				if (m.type == MediaEntry::Type::Photo)
-					entry.photoRating = m.rating;
+					entry.photoRating.push_back(m.rating);
 				else// if (m.type == MediaEntry::Type::Audio)
-					entry.audioRating = m.rating;
+					entry.audioRating.push_back(m.rating);
 				//break;// Efficiency gain if we break, but if an entry has both audio and photo media, only one of them will be assigned.  In practice, efficiency gain here is not needed.
 			}
 		}
