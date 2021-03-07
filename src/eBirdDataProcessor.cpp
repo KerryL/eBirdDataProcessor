@@ -2313,15 +2313,23 @@ void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 std::array<double, 48> EBirdDataProcessor::ComputeFrequency(const UString::String& compareString) const
 {
 	std::array<std::set<UString::String>, 48> checklists = {};
-	std::array<unsigned int, 48> hits = {};
+	std::array<int, 48> hits = {};
 	
 	for (const auto& o : data)
 	{
 		const auto i(GetWeekIndex(o.dateTime));
-		checklists[i].insert(o.submissionID);
+		if (o.allObsReported)
+			checklists[i].insert(o.submissionID);
 		
 		if (o.compareString == compareString)
-			++hits[i];
+		{
+			if (!o.allObsReported && hits[i] == 0)
+				hits[i] = -1;
+			else if (o.allObsReported && hits[i] == -1)
+				hits[i] = 1;
+			else if (o.allObsReported)
+				++hits[i];
+		}
 	}
 	
 	std::array<double, 48> frequency;
