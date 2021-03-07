@@ -130,6 +130,9 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		
 	if (config.buildChecklistLinks)
 		processor.BuildChecklistLinks();
+		
+	if (!config.jsDataFileName.empty())
+		processor.BuildJSData(config.jsDataFileName);
 
 	if (!config.mediaListHTML.empty())
 	{

@@ -166,6 +166,7 @@ struct EBDPConfig
 	SpeciesHunt speciesHunt;
 	
 	bool buildChecklistLinks;
+	UString::String jsDataFileName;
 };
 
 #endif// EBDP_CONFIG_H_
