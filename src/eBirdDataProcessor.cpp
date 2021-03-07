@@ -2249,10 +2249,10 @@ bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyP
 	}
 
 	return true;
- }
- 
- void EBirdDataProcessor::BuildChecklistLinks() const
- {
+}
+
+void EBirdDataProcessor::BuildChecklistLinks() const
+{
 	std::set<UString::String> checklistIds;
 	for (const auto& o : data)
 		checklistIds.insert(o.submissionID);
@@ -2261,4 +2261,85 @@ bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyP
 	for (const auto& c : checklistIds)
 		Cout << "https://ebird.org/checklist/" << c << "\n";
 	Cout << std::endl;
- }
+}
+
+void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
+{
+	cJSON* root(cJSON_CreateArray());
+
+	struct SpeciesOrder
+	{
+		UString::String commonName;
+		UString::String compareString;
+		unsigned int order;
+		
+		bool operator==(const UString::String& test) { return test == compareString; }
+	};
+	
+	std::vector<SpeciesOrder> species;
+	for (const auto& o : data)
+	{
+		if (std::find(species.begin(), species.end(), o.compareString) != species.end())
+			continue;
+			
+		SpeciesOrder so;
+		so.commonName = o.commonName;
+		so.compareString = o.compareString;
+		so.order = o.taxonomicOrder;
+		species.push_back(so);
+	}
+	
+	std::sort(species.begin(), species.end(), [](const SpeciesOrder& a, const SpeciesOrder& b)
+	{
+		return a.order < b.order;
+	});
+		
+	for (const auto& s : species)
+	{
+		cJSON* item(cJSON_CreateObject());
+		cJSON_AddItemToObject(item, "species", cJSON_CreateString(s.commonName.c_str()));
+		const auto frequency(ComputeFrequency(s.compareString));
+		cJSON_AddItemToObject(item, "frequency", cJSON_CreateDoubleArray(frequency.data(), frequency.size()));
+		
+		cJSON_AddItemToArray(root, item);
+	}
+	 
+	UString::OFStream file(fileName);
+	file << "var yardBirds = " << cJSON_PrintUnformatted(root) << ";\n";
+	 
+	cJSON_free(root);
+}
+ 
+std::array<double, 48> EBirdDataProcessor::ComputeFrequency(const UString::String& compareString) const
+{
+	std::array<std::set<UString::String>, 48> checklists = {};
+	std::array<unsigned int, 48> hits = {};
+	
+	for (const auto& o : data)
+	{
+		const auto i(GetWeekIndex(o.dateTime));
+		checklists[i].insert(o.submissionID);
+		
+		if (o.compareString == compareString)
+			++hits[i];
+	}
+	
+	std::array<double, 48> frequency;
+	for (unsigned int i = 0; i < frequency.size(); ++i)
+		frequency[i] = static_cast<double>(hits[i]) / checklists[i].size();
+	return frequency;
+}
+
+unsigned int EBirdDataProcessor::GetWeekIndex(const std::tm& date)
+{
+	unsigned int weekOfMonth;
+	if (date.tm_mday < 8)
+		weekOfMonth = 0;
+	else if (date.tm_mday < 15)
+		weekOfMonth = 1;
+	else if (date.tm_mday < 22)
+		weekOfMonth = 2;
+	else
+		weekOfMonth = 3;
+	return date.tm_mon * 4 + weekOfMonth;
+}

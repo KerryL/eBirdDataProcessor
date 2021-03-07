@@ -103,6 +103,7 @@ public:
 	static bool ParseToken(UString::IStringStream& lineStream, const UString::String& fieldName, T& target);
 	
 	void BuildChecklistLinks() const;
+	void BuildJSData(const UString::String& fileName) const;
 
 	typedef std::array<std::vector<FrequencyInfo>, 48> FrequencyDataYear;
 	typedef std::array<double, 48> DoubleYear;
@@ -317,6 +318,10 @@ private:
 	static UString::String StringifyDateTime(struct tm& dateTime);
 
 	static unsigned int CountConsecutiveLeadingQuotes(UString::IStringStream& ss);
+	
+	std::array<double, 48> ComputeFrequency(const UString::String& compareString) const;
+	
+	static unsigned int GetWeekIndex(const std::tm& date);
 };
 
 template<typename T>

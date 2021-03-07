@@ -82,6 +82,7 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("HUNT_RADIUS"), config.speciesHunt.radius);
 	
 	AddConfigItem(_T("BUILD_CHECKLIST_LINKS"), config.buildChecklistLinks);
+	AddConfigItem(_T("JS_DATA_FILE_NAME"), config.jsDataFileName);
 }
 
 void EBDPConfigFile::AssignDefaults()
