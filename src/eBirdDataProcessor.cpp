@@ -2337,6 +2337,8 @@ std::array<double, 48> EBirdDataProcessor::ComputeFrequency(const UString::Strin
 	{
 		if (frequency[i] > 0)
 			frequency[i] = static_cast<double>(hits[i]) / checklists[i].size();
+		else
+			frequency[i] = -1;
 	}
 	return frequency;
 }
