@@ -116,7 +116,7 @@ private:
 		UString::String submissionID;
 		UString::String commonName;
 		UString::String scientificName;
-		double taxonomicOrder;
+		unsigned int taxonomicOrder;
 		int count;
 		UString::String stateProvidence;
 		UString::String county;

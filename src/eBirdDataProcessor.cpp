@@ -2297,9 +2297,9 @@ void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 	for (const auto& s : species)
 	{
 		cJSON* item(cJSON_CreateObject());
-		cJSON_AddItemToObject(item, "species", cJSON_CreateString(s.commonName.c_str()));
+		cJSON_AddItemToObject(item, "species", cJSON_CreateString(UString::ToNarrowString(s.commonName).c_str()));
 		const auto frequency(ComputeFrequency(s.compareString));
-		cJSON_AddItemToObject(item, "frequency", cJSON_CreateDoubleArray(frequency.data(), frequency.size()));
+		cJSON_AddItemToObject(item, "frequency", cJSON_CreateDoubleArray(frequency.data(), static_cast<int>(frequency.size())));
 		
 		cJSON_AddItemToArray(root, item);
 	}
