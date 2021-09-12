@@ -11,12 +11,12 @@
     <LocalDebuggerWorkingDirectory>$(ProjectDir)/Release</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
-    <LocalDebuggerCommandArguments>../../../configs/debugFrequencyUpdate</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>../../../configs/debug</LocalDebuggerCommandArguments>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)/x64/Release</LocalDebuggerWorkingDirectory>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Debug|x64'">
-    <LocalDebuggerCommandArguments>D:\data/configs/debugFrequencyUpdate</LocalDebuggerCommandArguments>
+    <LocalDebuggerCommandArguments>D:\data/configs/debug</LocalDebuggerCommandArguments>
     <DebuggerFlavor>WindowsLocalDebugger</DebuggerFlavor>
     <LocalDebuggerWorkingDirectory>$(ProjectDir)/x64/Debug</LocalDebuggerWorkingDirectory>
   </PropertyGroup>
