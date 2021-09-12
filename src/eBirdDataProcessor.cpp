@@ -2272,6 +2272,7 @@ void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 		UString::String commonName;
 		UString::String compareString;
 		unsigned int order;
+		UString::String firstObservedDate;
 		
 		bool operator==(const UString::String& test) { return test == compareString; }
 	};
@@ -2286,6 +2287,10 @@ void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 		so.commonName = o.commonName;
 		so.compareString = o.compareString;
 		so.order = o.taxonomicOrder;
+		
+		UString::OStringStream ss;
+		ss << 1900 + o.dateTime.tm_year << '-' << std::setw(2) << std::setfill('0') << 1 + o.dateTime.tm_mon << '-' << std::setw(2) << std::setfill('0') << o.dateTime.tm_mday;
+		so.firstObservedDate = ss.str();
 		species.push_back(so);
 	}
 	
@@ -2298,6 +2303,7 @@ void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 	{
 		cJSON* item(cJSON_CreateObject());
 		cJSON_AddItemToObject(item, "species", cJSON_CreateString(s.commonName.c_str()));
+		cJSON_AddItemToObject(item, "firstObservedDate", cJSON_CreateString(s.firstObservedDate.c_str()));
 		const auto frequency(ComputeFrequency(s.compareString));
 		cJSON_AddItemToObject(item, "frequency", cJSON_CreateDoubleArray(frequency.data(), frequency.size()));
 		
