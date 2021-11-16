@@ -338,54 +338,54 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 			if (observation.includesCount && !ParseInto(token, observation.count))
 				return false;
 		}
-		else if (column == 13)
+		else if (column == 14)
 			countryCode = token;
-		else if (column == 15)
+		else if (column == 16)
 			stateCode = token;
-		else if (column == 17)
+		else if (column == 18)
 			observation.regionCode = token;
-		else if (column == 22)
+		else if (column == 23)
 			observation.locationName = token;
-		else if (column == 25)
+		else if (column == 26)
 		{
 			if (!ParseInto(token, observation.latitude))
 				return false;
 		}
-		else if (column == 26)
+		else if (column == 27)
 		{
 			if (!ParseInto(token, observation.longitude))
 				return false;
 		}
-		else if (column == 27)
-			observation.date = ConvertStringToDate(token);
 		else if (column == 28)
+			observation.date = ConvertStringToDate(token);
+		else if (column == 29)
 		{
 			observation.includesTime = !token.empty();
 			if (observation.includesTime && !ParseInto(token, observation.time))
 				return false;
 		}
-		else if (column == 30)
+		else if (column == 31)
 			observation.checklistID = token;
-		else if (column == 34)
+		else if (column == 35)
 		{
 			observation.includesDuration = !token.empty();
 			if (observation.includesDuration && !ParseInto(token, observation.duration))
 				return false;
 		}
-		else if (column == 35)
+		else if (column == 36)
 		{
 			observation.includesDistance = !token.empty();
 			if (observation.includesDistance && !ParseInto(token, observation.distance))
 				return false;
 		}
-		else if (column == 38)
+		else if (column == 39)
 		{
 			if (!ParseInto(token, observation.completeChecklist))
 				return false;
 		}
-		else if (column == 39)
+		else if (column == 40)
 			observation.groupID = token;
-		else if (column == 41)
+		else if (column == 42)
 		{
 			if (!ParseInto(token, observation.approved))
 				return false;
@@ -700,7 +700,7 @@ std::vector<EBirdInterface::ObservationInfo> EBirdDatasetInterface::GetObservati
 
 bool EBirdDatasetInterface::HeaderMatchesExpectedFormat(const UString::String& line)
 {
-	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING BIRD ATLAS CODE	BREEDING BIRD ATLAS CATEGORY	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS"));
+	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING CODE	BREEDING CATEGORY	BEHAVIOR CODE	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS"));
 	return StringUtilities::Trim(line) == expectedHeader;
 }
 
