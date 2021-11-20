@@ -106,6 +106,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		processor.FilterState(config.locationFilters.state, config.locationFilters.country);
 	else if (!config.locationFilters.country.empty() && config.targetNeedArea <= EBDPConfig::TargetNeedArea::Country)
 		processor.FilterCountry(config.locationFilters.country);
+	else if (config.locationFilters.radius > 0.0)
+		processor.FilterByRadius(config.locationFilters.latitude, config.locationFilters.longitude, config.locationFilters.radius);
 
 	// Remove entries that don't fall within the specified dates
 	if (config.timeFilters.year > 0)

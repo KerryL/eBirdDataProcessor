@@ -22,6 +22,7 @@ UString::String SanitizeCommas(const UString::String& s);
 UString::String Unsanitize(const UString::String& s);
 void ReplaceAll(const UString::String& pattern, const UString::String& replaceWith, UString::String& s);
 bool ItemIsInVector(const UString::String& s, const std::vector<UString::String>& v);
+double ComputeWGS84Distance(const double& latitude1, const double& longitude1, const double& latitude2, const double& longitude2);
 }
 
 #endif// UTILITES_H_

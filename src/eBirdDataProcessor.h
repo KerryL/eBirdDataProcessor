@@ -42,6 +42,7 @@ public:
 		const std::vector<UString::String>& countries);
 	void FilterState(const std::vector<UString::String>& states, const std::vector<UString::String>& countries);
 	void FilterCountry(const std::vector<UString::String>& countries);
+	void FilterByRadius(const double& latitude, const double& longitude, const double& radius);
 
 	void FilterYear(const unsigned int& year);
 	void FilterMonth(const unsigned int& month);

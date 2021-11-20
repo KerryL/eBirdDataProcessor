@@ -9,6 +9,7 @@
 // Standard C++ headers
 #include <cassert>
 #include <filesystem>
+#include <cmath>
 
 #ifdef _WIN32
 	namespace fs = std::experimental::filesystem;
@@ -80,6 +81,19 @@ void ReplaceAll(const UString::String& pattern, const UString::String& replaceWi
 bool ItemIsInVector(const UString::String& s, const std::vector<UString::String>& v)
 {
 	return std::find(v.begin(), v.end(), s) != v.end();
+}
+
+// This uses the haversine formula, which assumes the Earth is a sphere (less accurate than a Geodesic ellipsoid-based calculation)
+double ComputeWGS84Distance(const double& latitude1, const double& longitude1, const double& latitude2, const double& longitude2)
+{
+	const double earthRadius(6371.0);// [km]
+	const double deltaLatitude((latitude2 - latitude1) * M_PI / 180.0);// [rad]
+	const double deltaLongitude((longitude2 - longitude1) * M_PI / 180.0);// [rad]
+	
+	const double a(sin(0.5 * deltaLatitude) * sin(0.5 * deltaLatitude) +
+		cos(latitude1 * M_PI / 180.0) * cos(latitude2 * M_PI / 180.0) * sin(0.5 * deltaLongitude) * sin(0.5 * deltaLongitude));
+
+	return earthRadius * 2.0 * atan2(sqrt(a), sqrt(1.0 - a));
 }
 
 }// namespace Utilities
