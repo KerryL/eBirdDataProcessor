@@ -18,6 +18,9 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("STATE"), config.locationFilters.state);
 	AddConfigItem(_T("COUNTY"), config.locationFilters.county);
 	AddConfigItem(_T("LOCATION"), config.locationFilters.location);
+	AddConfigItem(_T("LATITUDE"), config.locationFilters.latitude);
+	AddConfigItem(_T("LONGITUDE"), config.locationFilters.longitude);
+	AddConfigItem(_T("RADIUS_KM"), config.locationFilters.radius);
 
 	AddConfigItem(_T("LIST_TYPE"), config.listType);
 
@@ -95,6 +98,8 @@ void EBDPConfigFile::AssignDefaults()
 	config.timeFilters.month = 0;
 	config.timeFilters.week = 0;
 	config.timeFilters.day = 0;
+	
+	config.locationFilters.radius = 0.0;
 
 	config.primarySort = EBDPConfig::SortBy::None;
 	config.secondarySort = EBDPConfig::SortBy::None;
@@ -174,6 +179,9 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 
 	if (!SpeciesHuntConfigIsOK())
+		configurationOK = false;
+		
+	if (!LocationFilterConfigIsOK())
 		configurationOK = false;
 
 	return configurationOK;
@@ -415,5 +423,27 @@ bool EBDPConfigFile::SpeciesHuntConfigIsOK()
 		configurationOK = false;
 	}
 
+	return configurationOK;
+}
+
+bool EBDPConfigFile::LocationFilterConfigIsOK()
+{
+	if (config.locationFilters.radius <= 0.0)
+		return true;
+		
+	bool configurationOK(true);
+	
+	if (config.locationFilters.latitude < -90.0 || config.locationFilters.latitude > 90.0)
+	{
+		Cerr << GetKey(config.locationFilters.latitude) << "must be between -90 and +90\n";
+		configurationOK = false;
+	}
+	
+	if (config.locationFilters.longitude < -180.0 || config.locationFilters.latitude > 180.0)
+	{
+		Cerr << GetKey(config.locationFilters.longitude) << "must be between -180 and +180\n";
+		configurationOK = false;
+	}
+	
 	return configurationOK;
 }

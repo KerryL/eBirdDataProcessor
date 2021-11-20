@@ -12,6 +12,10 @@ struct LocationFilters
 	std::vector<UString::String> state;
 	std::vector<UString::String> county;
 	std::vector<UString::String> location;
+	
+	double radius;
+	double latitude;
+	double longitude;
 };
 
 struct TimeFilters

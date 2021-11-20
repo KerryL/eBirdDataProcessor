@@ -226,6 +226,23 @@ void EBirdDataProcessor::FilterCountry(const std::vector<UString::String>& count
 	}), data.end());
 }
 
+void EBirdDataProcessor::FilterByRadius(const double& latitude, const double& longitude, const double& radius)
+{
+	data.erase(std::remove_if(data.begin(), data.end(), [&latitude, &longitude, &radius](const Entry& entry)
+	{
+		return Utilities::ComputeWGS84Distance(latitude, longitude, entry.latitude, entry.longitude) > radius;
+	}), data.end());
+	
+	std::set<std::string> locations;
+	for (const auto& entry : data)
+		locations.insert(entry.location);
+	
+	Cout << "Locations within the specified circule include:\n";
+	for (const auto& l : locations)
+		Cout << l << '\n';
+	Cout << std::endl;
+}
+
 void EBirdDataProcessor::FilterYear(const unsigned int& year)
 {
 	FilterYear(year, data);
