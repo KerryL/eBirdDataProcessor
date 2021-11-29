@@ -777,7 +777,7 @@ std::vector<EBirdInterface::RegionInfo> EBirdInterface::GetSubRegions(
 			return _T("subnational2");
 	}());
 	UString::OStringStream request;
-	request << apiRoot << regionReferenceEndpoint << regionTypeString << '/' << regionCode << ".json";
+	request << apiRoot << regionReferenceEndpoint << regionTypeString << '/' << regionCode << "?fmt=json";
 
 	std::string response;
 	if (!DoCURLGet(URLEncode(request.str()), response, AddTokenToCurlHeader, &tokenData))
