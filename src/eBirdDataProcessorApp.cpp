@@ -135,6 +135,9 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 		
 	if (!config.jsDataFileName.empty())
 		processor.BuildJSData(config.jsDataFileName);
+		
+	if (config.showGaps)
+		processor.ShowGaps();
 
 	if (!config.mediaListHTML.empty())
 	{

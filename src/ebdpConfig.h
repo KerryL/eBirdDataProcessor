@@ -153,6 +153,7 @@ struct EBDPConfig
 	int showOnlyPhotoNeeds;
 	int showOnlyAudioNeeds;
 	UString::String mediaListHTML;
+	bool showGaps;
 
 	bool findMaxNeedsLocations;
 	LocationFindingParameters locationFindingParameters;
