@@ -233,11 +233,11 @@ void EBirdDataProcessor::FilterByRadius(const double& latitude, const double& lo
 		return Utilities::ComputeWGS84Distance(latitude, longitude, entry.latitude, entry.longitude) > radius;
 	}), data.end());
 	
-	std::set<std::string> locations;
+	std::set<UString::String> locations;
 	for (const auto& entry : data)
 		locations.insert(entry.location);
 	
-	Cout << "Locations within the specified circule include:\n";
+	Cout << "Locations within the specified circle include:\n";
 	for (const auto& l : locations)
 		Cout << l << '\n';
 	Cout << std::endl;
@@ -2337,7 +2337,7 @@ void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 		so.order = o.taxonomicOrder;
 		
 		UString::OStringStream ss;
-		ss << 1900 + o.dateTime.tm_year << '-' << std::setw(2) << std::setfill('0') << 1 + o.dateTime.tm_mon << '-' << std::setw(2) << std::setfill('0') << o.dateTime.tm_mday;
+		ss << 1900 + o.dateTime.tm_year << '-' << std::setw(2) << std::setfill(UString::Char('0')) << 1 + o.dateTime.tm_mon << '-' << std::setw(2) << std::setfill(UString::Char('0')) << o.dateTime.tm_mday;
 		so.firstObservedDate = ss.str();
 		species.push_back(so);
 	}
