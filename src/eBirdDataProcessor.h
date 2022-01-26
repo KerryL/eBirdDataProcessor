@@ -105,6 +105,7 @@ public:
 	
 	void BuildChecklistLinks() const;
 	void BuildJSData(const UString::String& fileName) const;
+	void ShowGaps() const;
 
 	typedef std::array<std::vector<FrequencyInfo>, 48> FrequencyDataYear;
 	typedef std::array<double, 48> DoubleYear;

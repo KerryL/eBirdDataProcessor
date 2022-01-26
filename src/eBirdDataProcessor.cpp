@@ -2280,6 +2280,37 @@ void EBirdDataProcessor::BuildChecklistLinks() const
 	Cout << std::endl;
 }
 
+// TODO:  Make parameter for gap size?
+void EBirdDataProcessor::ShowGaps() const
+{
+	// Implementation only supports weekly gaps, for now
+	constexpr unsigned int periodCount(48);
+	std::map<std::string, std::array<bool, periodCount>> hits;
+	
+	for (const auto& o : data)
+	{
+		auto it(hits.find(o.compareString));
+		const auto i(GetWeekIndex(o.dateTime));
+		if (it == hits.end())
+		{
+			hits[o.compareString] = {false};
+			hits[o.compareString][i] = true;
+		}
+		else
+			it->second[i] = true;
+	}
+	
+	auto it(hits.begin());
+	for (; it != hits.end(); ++it)
+	{
+		for (unsigned int i = 0; i < periodCount; ++i)
+		{
+			if (!it->second[i] && it->second[(i - 1) % periodCount] && it->second[(i + 1) % periodCount])
+				std::cout << "Gap for " << it->first << " in month " << i / 4 + 1 << ", week " << i % 4 + 1  << std::endl;
+		}
+	}
+}
+
 void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 {
 	cJSON* root(cJSON_CreateArray());
