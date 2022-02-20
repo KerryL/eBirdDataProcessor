@@ -2285,7 +2285,7 @@ void EBirdDataProcessor::ShowGaps() const
 {
 	// Implementation only supports weekly gaps, for now
 	constexpr unsigned int periodCount(48);
-	std::map<std::string, std::array<bool, periodCount>> hits;
+	std::map<UString::String, std::array<bool, periodCount>> hits;
 	
 	for (const auto& o : data)
 	{
@@ -2306,7 +2306,7 @@ void EBirdDataProcessor::ShowGaps() const
 		for (unsigned int i = 0; i < periodCount; ++i)
 		{
 			if (!it->second[i] && it->second[(i - 1) % periodCount] && it->second[(i + 1) % periodCount])
-				std::cout << "Gap for " << it->first << " in month " << i / 4 + 1 << ", week " << i % 4 + 1  << std::endl;
+				Cout << "Gap for " << it->first << " in month " << i / 4 + 1 << ", week " << i % 4 + 1  << std::endl;
 		}
 	}
 }
