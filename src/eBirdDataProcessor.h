@@ -83,6 +83,7 @@ public:
 	{
 		UString::String species;
 		double frequency = 0.0;
+		bool isRarity = false;
 		UString::String compareString;// Huge boost in efficiency if we pre-compute this
 
 		FrequencyInfo() = default;
@@ -202,8 +203,8 @@ private:
 	};
 
 	bool ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData, DoubleYear&& checklistCounts,
-		const double& thresholdFrequency, const unsigned int& thresholdObservationCount,
-		std::array<double, 48>& probabilities, std::array<std::vector<FrequencyInfo>, 48>& species) const;
+		const unsigned int& thresholdObservationCount, std::array<double, 48>& probabilities,
+		std::array<std::vector<FrequencyInfo>, 48>& species) const;
 
 	static bool WriteBestLocationsViewerPage(const LocationFindingParameters& locationFindingParameters,
 		const std::vector<UString::String>& highDetailCountries,
@@ -213,16 +214,15 @@ private:
 	{
 	public:
 		CalculateProbabilityJob(YearFrequencyInfo& frequencyInfo, FrequencyDataYear&& occurrenceData,
-			DoubleYear&& checklistCounts, const double& thresholdFrequency,
-			const unsigned int& thresholdObservationCount,const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo),
+			DoubleYear&& checklistCounts, const unsigned int& thresholdObservationCount,
+			const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo),
 			occurrenceData(occurrenceData), checklistCounts(checklistCounts),
-			thresholdFrequency(thresholdFrequency), thresholdObservationCount(thresholdObservationCount), ebdp(ebdp) {}
+			thresholdObservationCount(thresholdObservationCount), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
 		FrequencyDataYear occurrenceData;
 		DoubleYear checklistCounts;
 
-		const double thresholdFrequency;
 		const unsigned int thresholdObservationCount;
 
 		const EBirdDataProcessor& ebdp;
@@ -230,8 +230,7 @@ private:
 		void DoJob() override
 		{
 			ebdp.ComputeNewSpeciesProbability(std::move(occurrenceData), std::move(checklistCounts),
-				thresholdFrequency, thresholdObservationCount,
-				frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
+				thresholdObservationCount, frequencyInfo.probabilities, frequencyInfo.frequencyInfo);
 		}
 	};
 
@@ -314,7 +313,7 @@ private:
 	static void ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 48>& counts);
 
 	bool GatherFrequencyData(const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
-		const double& minLikilihood, const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const;
+		const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const;
 
 	static bool TimesMatch(const EBirdInterface::ObservationInfo& o1, const EBirdInterface::ObservationInfo& o2);
 	static UString::String StringifyDateTime(struct tm& dateTime);
