@@ -1514,7 +1514,7 @@ bool EBirdDataProcessor::RegionCodeMatches(const UString::String& regionCode, co
 
 bool EBirdDataProcessor::GatherFrequencyData(const std::vector<UString::String>& targetRegionCodes,
 	const std::vector<UString::String>& highDetailCountries,
-	const double& minLikilihood, const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const
+	const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const
 {
 	auto fileNames(ListFilesInDirectory(appConfig.frequencyFilePath));
 	if (fileNames.size() == 0)
@@ -1549,7 +1549,7 @@ bool EBirdDataProcessor::GatherFrequencyData(const std::vector<UString::String>&
 		{
 			probEntryIt->locationCode = RemoveTrailingDash(regionCode);
 			pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(occurrenceData),
-				std::move(checklistCounts), minLikilihood, minObservationCount, *this));
+				std::move(checklistCounts), minObservationCount, *this));
 			++probEntryIt;
 		}
 		else
@@ -1569,7 +1569,7 @@ bool EBirdDataProcessor::GatherFrequencyData(const std::vector<UString::String>&
 	{
 		probEntryIt->locationCode = f.first;
 		pool.AddJob(std::make_unique<CalculateProbabilityJob>(*probEntryIt, std::move(f.second.occurrenceData),
-			std::move(f.second.checklistCounts), minLikilihood, minObservationCount, *this));
+			std::move(f.second.checklistCounts), minObservationCount, *this));
 		++probEntryIt;
 	}
 
@@ -1583,7 +1583,8 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const LocationFinding
 	const std::vector<UString::String>& highDetailCountries, const std::vector<UString::String>& targetRegionCodes) const
 {
 	std::vector<YearFrequencyInfo> newSightingProbability;
-	if (!GatherFrequencyData(targetRegionCodes, highDetailCountries, 1.0, 30, newSightingProbability))// TODO:  Don't hardcode
+	const unsigned int minimumObservationCount(30);// TODO:  Don't hardcode
+	if (!GatherFrequencyData(targetRegionCodes, highDetailCountries, minimumObservationCount, newSightingProbability))
 		return false;
 
 	if (!WriteBestLocationsViewerPage(locationFindingParameters, highDetailCountries, appConfig.eBirdApiKey, appConfig.kmlLibraryPath, newSightingProbability))
@@ -1646,7 +1647,7 @@ void EBirdDataProcessor::AddConsolidationData(ConsolidationData& existingData,
 }
 
 bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
-	DoubleYear&& checklistCounts, const double& thresholdFrequency, const unsigned int& thresholdObservationCount,
+	DoubleYear&& checklistCounts, const unsigned int& thresholdObservationCount,
 	std::array<double, 48>& probabilities, std::array<std::vector<FrequencyInfo>, 48>& species) const
 {
 	EliminateObservedSpecies(frequencyData);
@@ -1662,8 +1663,9 @@ bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& freque
 		double product(1.0);
 		for (const auto& entry : frequencyData[i])
 		{
-			if (entry.frequency < thresholdFrequency)// Ignore rarities
+			if (entry.isRarity)
 				continue;
+
 			product *= (1.0 - entry.frequency / 100.0);
 			species[i].push_back(FrequencyInfo(entry.species, entry.frequency));
 		}
@@ -1817,7 +1819,7 @@ bool EBirdDataProcessor::FindBestTripLocations(const BestTripParameters& bestTri
 {
 	std::vector<YearFrequencyInfo> newSightingProbability;
 	if (!GatherFrequencyData(targetRegionCodes, highDetailCountries,
-		bestTripParameters.minimumLiklihood, bestTripParameters.minimumObservationCount, newSightingProbability))
+		bestTripParameters.minimumObservationCount, newSightingProbability))
 		return false;
 
 	// Generate an index list for each week and sort it based on # of species for each location

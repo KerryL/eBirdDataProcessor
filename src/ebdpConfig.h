@@ -60,7 +60,6 @@ struct CalendarParameters
 struct BestTripParameters
 {
 	unsigned int topLocationCount;
-	double minimumLiklihood;
 	unsigned int minimumObservationCount;
 };
 

@@ -26,7 +26,7 @@
 #include <numeric>
 #include <locale>
 #include <cmath>
-#include <chrono>// For benchmarking
+#include <chrono>
 #if __GNUC_MINOR__ >= 8 || defined (WIN32)
 #include <filesystem>
 #else
@@ -34,6 +34,18 @@
 #endif
 
 const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
+
+const unsigned int EBirdDatasetInterface::SpeciesData::Rarity::yearsToCheck(5);
+const double EBirdDatasetInterface::SpeciesData::Rarity::minHitFraction(0.8);// To not be considered a rarity
+
+unsigned int EBirdDatasetInterface::SpeciesData::Rarity::referenceYear;
+
+EBirdDatasetInterface::EBirdDatasetInterface()
+{
+	const std::time_t t(std::time(nullptr));
+	std::tm* const tm(std::localtime(&t));
+	SpeciesData::Rarity::referenceYear = 1900 + tm->tm_year - 1;// TODO:  Instead of current year, use most recent full year in data set
+}
 
 bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fileName,
 	const UString::String& regionDataOutputFileName)
@@ -77,14 +89,7 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 			return false;
 		}
 
-		if (!HeaderMatchesExpectedFormat(UString::ToStringType(line)))
-		{
-			const std::string headerFileName("header.txt");
-			std::ofstream headerFile(headerFileName);
-			headerFile << line << std::endl;
-			Cerr << "Header line has unexpected format; wrote header to '" << UString::ToStringType(headerFileName) << "'\n";
-			return false;
-		}
+		const auto columnMap(BuildColumnMapFromHeaderLine(UString::ToStringType(line)));
 
 		regionDataOutputFile.open(regionDataOutputFileName);
 		if (regionDataOutputFile.is_open() && regionDataOutputFile.good())
@@ -100,7 +105,7 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 			if (lineCount % 1000000 == 0)
 				Cout << "  " << lineCount << " records read (" << static_cast<double>(dataset.GetCurrentOffset()) / fileSize * 100.0 << "%)" << std::endl;
 
-			pool.AddJob(std::make_unique<LineProcessJobInfo>(UString::ToStringType(line), *this, processFunction));
+			pool.AddJob(std::make_unique<LineProcessJobInfo>(UString::ToStringType(line), *this, processFunction, columnMap));
 			++lineCount;
 		}
 
@@ -115,10 +120,10 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 	return true;
 }
 
-bool EBirdDatasetInterface::ProcessLine(const UString::String& line, ProcessFunction processFunction)
+bool EBirdDatasetInterface::ProcessLine(const UString::String& line, const ColumnMap& columnMap, ProcessFunction processFunction)
 {
 	Observation observation;
-	if (!ParseLine(line, observation))
+	if (!ParseLine(line, columnMap, observation))
 	{
 		Cerr << "Failure parsing data line\n";
 		return false;
@@ -190,6 +195,9 @@ bool EBirdDatasetInterface::SerializeWeekData(std::ofstream& file, const Frequen
 		}());
 
 		if (!Write(file, frequency))
+			return false;
+
+		if (!Write(file, species.second.rarityGuess.mightBeRarity))
 			return false;
 	}
 
@@ -318,8 +326,67 @@ bool EBirdDatasetInterface::ParseInto(const UString::String& s, Time& value)
 	return true;
 }
 
+EBirdDatasetInterface::ColumnMap EBirdDatasetInterface::BuildColumnMapFromHeaderLine(const UString::String& headerLine)
+{
+	UString::String token;
+	UString::IStringStream ss(headerLine);
+	unsigned int column(0);
+	ColumnMap columnMap;
+	std::fill(columnMap.begin(), columnMap.end(), std::numeric_limits<size_t>::max());
+
+	while (std::getline(ss, token, UString::Char('\t')))
+	{
+		if (token == _T("GLOBAL UNIQUE IDENTIFIER"))
+			columnMap[static_cast<size_t>(Columns::GlobalUniqueId)] = column;
+		else if (token == _T("COMMON NAME"))
+			columnMap[static_cast<size_t>(Columns::CommonName)] = column;
+		else if (token == _T("OBSERVATION COUNT"))
+			columnMap[static_cast<size_t>(Columns::Count)] = column;
+		else if (token == _T("COUNTRY CODE"))
+			columnMap[static_cast<size_t>(Columns::CountryCode)] = column;
+		else if (token == _T("STATE CODE"))
+			columnMap[static_cast<size_t>(Columns::StateCode)] = column;
+		else if (token == _T("COUNTY CODE"))
+			columnMap[static_cast<size_t>(Columns::RegionCode)] = column;
+		else if (token == _T("LOCALITY"))
+			columnMap[static_cast<size_t>(Columns::LocationName)] = column;
+		else if (token == _T("LATITUDE"))
+			columnMap[static_cast<size_t>(Columns::Latitude)] = column;
+		else if (token == _T("LONGITUDE"))
+			columnMap[static_cast<size_t>(Columns::Longitude)] = column;
+		else if (token == _T("OBSERVATION DATE"))
+			columnMap[static_cast<size_t>(Columns::Date)] = column;
+		else if (token == _T("TIME OBSERVATIONS STARTED"))
+			columnMap[static_cast<size_t>(Columns::Time)] = column;
+		else if (token == _T("SAMPLING EVENT IDENTIFIER"))
+			columnMap[static_cast<size_t>(Columns::ChecklistId)] = column;
+		else if (token == _T("DURATION MINUTES"))
+			columnMap[static_cast<size_t>(Columns::Duration)] = column;
+		else if (token == _T("EFFORT DISTANCE KM"))
+			columnMap[static_cast<size_t>(Columns::Distance)] = column;
+		else if (token == _T("ALL SPECIES REPORTED"))
+			columnMap[static_cast<size_t>(Columns::CompleteChecklist)] = column;
+		else if (token == _T("GROUP IDENTIFIER"))
+			columnMap[static_cast<size_t>(Columns::GroupId)] = column;
+		else if (token == _T("APPROVED"))
+			columnMap[static_cast<size_t>(Columns::Approved)] = column;
+		++column;
+	}
+
+	for (const auto& c : columnMap)
+	{
+		if (c == std::numeric_limits<size_t>::max())
+		{
+			Cerr << "Failed to map column\n";
+			assert(false);
+		}
+	}
+
+	return columnMap;
+}
+
 // TODO:  The below method is where the bulk of the time is spent - need to improve this somehow
-bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& observation)
+bool EBirdDatasetInterface::ParseLine(const UString::String& line, const ColumnMap& columnMap, Observation& observation)
 {
 	unsigned int column(0);
 	UString::String countryCode, stateCode;
@@ -328,64 +395,64 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, Observation& 
 	UString::IStringStream ss(line);
 	while (std::getline(ss, token, UString::Char('\t')))
 	{
-		if (column == 0)
+		if (column == columnMap[static_cast<size_t>(Columns::GlobalUniqueId)])
 			observation.uniqueID = token;
-		else if (column == 4)
+		else if (column == columnMap[static_cast<size_t>(Columns::CommonName)])
 			observation.commonName = token;
-		else if (column == 8)
+		else if (column == columnMap[static_cast<size_t>(Columns::Count)])
 		{
 			observation.includesCount = token.compare(_T("X")) != 0;
 			if (observation.includesCount && !ParseInto(token, observation.count))
 				return false;
 		}
-		else if (column == 14)
+		else if (column == columnMap[static_cast<size_t>(Columns::CountryCode)])
 			countryCode = token;
-		else if (column == 16)
+		else if (column == columnMap[static_cast<size_t>(Columns::StateCode)])
 			stateCode = token;
-		else if (column == 18)
+		else if (column == columnMap[static_cast<size_t>(Columns::RegionCode)])
 			observation.regionCode = token;
-		else if (column == 23)
+		else if (column == columnMap[static_cast<size_t>(Columns::LocationName)])
 			observation.locationName = token;
-		else if (column == 26)
+		else if (column == columnMap[static_cast<size_t>(Columns::Latitude)])
 		{
 			if (!ParseInto(token, observation.latitude))
 				return false;
 		}
-		else if (column == 27)
+		else if (column == columnMap[static_cast<size_t>(Columns::Longitude)])
 		{
 			if (!ParseInto(token, observation.longitude))
 				return false;
 		}
-		else if (column == 28)
+		else if (column == columnMap[static_cast<size_t>(Columns::Date)])
 			observation.date = ConvertStringToDate(token);
-		else if (column == 29)
+		else if (column == columnMap[static_cast<size_t>(Columns::Time)])
 		{
 			observation.includesTime = !token.empty();
 			if (observation.includesTime && !ParseInto(token, observation.time))
 				return false;
 		}
-		else if (column == 31)
+		else if (column == columnMap[static_cast<size_t>(Columns::ChecklistId)])
 			observation.checklistID = token;
-		else if (column == 35)
+		else if (column == columnMap[static_cast<size_t>(Columns::Duration)])
 		{
 			observation.includesDuration = !token.empty();
 			if (observation.includesDuration && !ParseInto(token, observation.duration))
 				return false;
 		}
-		else if (column == 36)
+		else if (column == columnMap[static_cast<size_t>(Columns::Distance)])
 		{
 			observation.includesDistance = !token.empty();
 			if (observation.includesDistance && !ParseInto(token, observation.distance))
 				return false;
 		}
-		else if (column == 39)
+		else if (column == columnMap[static_cast<size_t>(Columns::CompleteChecklist)])
 		{
 			if (!ParseInto(token, observation.completeChecklist))
 				return false;
 		}
-		else if (column == 40)
+		else if (column == columnMap[static_cast<size_t>(Columns::GroupId)])
 			observation.groupID = token;
-		else if (column == 42)
+		else if (column == columnMap[static_cast<size_t>(Columns::Approved)])
 		{
 			if (!ParseInto(token, observation.approved))
 				return false;
@@ -698,12 +765,6 @@ std::vector<EBirdInterface::ObservationInfo> EBirdDatasetInterface::GetObservati
 	return relevantObservations;
 }
 
-bool EBirdDatasetInterface::HeaderMatchesExpectedFormat(const UString::String& line)
-{
-	const UString::String expectedHeader(_T("GLOBAL UNIQUE IDENTIFIER	LAST EDITED DATE	TAXONOMIC ORDER	CATEGORY	COMMON NAME	SCIENTIFIC NAME	SUBSPECIES COMMON NAME	SUBSPECIES SCIENTIFIC NAME	OBSERVATION COUNT	BREEDING CODE	BREEDING CATEGORY	BEHAVIOR CODE	AGE/SEX	COUNTRY	COUNTRY CODE	STATE	STATE CODE	COUNTY	COUNTY CODE	IBA CODE	BCR CODE	USFWS CODE	ATLAS BLOCK	LOCALITY	LOCALITY ID	LOCALITY TYPE	LATITUDE	LONGITUDE	OBSERVATION DATE	TIME OBSERVATIONS STARTED	OBSERVER ID	SAMPLING EVENT IDENTIFIER	PROTOCOL TYPE	PROTOCOL CODE	PROJECT CODE	DURATION MINUTES	EFFORT DISTANCE KM	EFFORT AREA HA	NUMBER OBSERVERS	ALL SPECIES REPORTED	GROUP IDENTIFIER	HAS MEDIA	APPROVED	REVIEWED	REASON	TRIP COMMENTS	SPECIES COMMENTS"));
-	return StringUtilities::Trim(line) == expectedHeader;
-}
-
 EBirdDatasetInterface::Date EBirdDatasetInterface::ConvertStringToDate(const UString::String& s)
 {
 	assert(s.length() == 10);
@@ -823,24 +884,30 @@ unsigned int EBirdDatasetInterface::GetWeekIndex(const Date& date)
 	return 4 * monthIndex + std::min(monthWeekIndex, 3U);
 }
 
+EBirdDatasetInterface::SpeciesData::Rarity::Rarity() : hitInYearNMinusI(yearsToCheck, false)
+{
+	assert(!hitInYearNMinusI.empty());
+}
+
 void EBirdDatasetInterface::SpeciesData::Rarity::Update(const Date& date)
 {
 	if (!mightBeRarity)// No need to continue with updates if we've already determined that it's not a rarity
 		return;
 
-	if (date < earliestObservationDate)
-		earliestObservationDate = date;
-	if (date > latestObservationDate)
-		latestObservationDate = date;
+	const int index(referenceYear - date.year);
+	if (index >= 0 && index < hitInYearNMinusI.size())
+	{
+		hitInYearNMinusI[index] = true;
+		double hitRate(0.0);
+		for (unsigned int i = 0; i < hitInYearNMinusI.size(); ++i)
+		{
+			if (hitInYearNMinusI[i])
+				hitRate += 1.0 / hitInYearNMinusI.size();
+		}
 
-	if (!ObservationsIndicateRarity())
-		mightBeRarity = false;
-}
-
-bool EBirdDatasetInterface::SpeciesData::Rarity::ObservationsIndicateRarity() const
-{
-	const int minimumTimeDelta(365);
-	return latestObservationDate - earliestObservationDate < minimumTimeDelta;
+		if (hitRate > minHitFraction)
+			mightBeRarity = false;
+	}
 }
 
 // Returns delta in approx. # of days

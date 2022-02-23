@@ -24,6 +24,8 @@
 class EBirdDatasetInterface
 {
 public:
+	EBirdDatasetInterface();
+
 	bool ExtractGlobalFrequencyData(const UString::String& fileName, const UString::String& regionDataOutputFileName);
 	bool WriteFrequencyFiles(const UString::String& frequencyDataPath) const;
 
@@ -53,7 +55,7 @@ public:
 	
 	std::vector<MapInfo> GetMapInfo() const;
 
-//private:
+private:
 	static const UString::String nameIndexFileName;
 
 	struct Date
@@ -90,14 +92,18 @@ public:
 		struct Rarity
 		{
 		public:
+			Rarity();
+
 			bool mightBeRarity = true;
 			void Update(const Date& date);
 
-		private:
-			Date earliestObservationDate = Date::GetMax();
-			Date latestObservationDate = Date::GetMin();
+			static unsigned int referenceYear;
 
-			bool ObservationsIndicateRarity() const;
+		private:
+			static const unsigned int yearsToCheck;
+			static const double minHitFraction;
+
+			std::vector<bool> hitInYearNMinusI;
 		};
 
 		Rarity rarityGuess;
@@ -159,9 +165,33 @@ public:
 	typedef void (EBirdDatasetInterface::*ProcessFunction)(const Observation& observation);
 	void RemoveRarities();
 
-	static bool ParseLine(const UString::String& line, Observation& observation);
+	enum class Columns
+	{
+		GlobalUniqueId,
+		CommonName,
+		Count,
+		CountryCode,
+		StateCode,
+		RegionCode,
+		LocationName,
+		Latitude,
+		Longitude,
+		Date,
+		Time,
+		ChecklistId,
+		Duration,
+		Distance,
+		CompleteChecklist,
+		GroupId,
+		Approved,
+		NumberOfColumns
+	};
+
+	typedef std::array<size_t, static_cast<size_t>(Columns::NumberOfColumns)> ColumnMap;
+	static ColumnMap BuildColumnMapFromHeaderLine(const UString::String& headerLine);
+
+	static bool ParseLine(const UString::String& line, const ColumnMap& columnMap, Observation& observation);
 	static unsigned int GetWeekIndex(const Date& date);
-	static bool HeaderMatchesExpectedFormat(const UString::String& line);
 	static Date ConvertStringToDate(const UString::String& s);
 	static bool IncludeInLikelihoodCalculation(const UString::String& commonName);
 
@@ -183,22 +213,23 @@ public:
 	struct LineProcessJobInfo : public ThreadPool::JobInfoBase
 	{
 		LineProcessJobInfo(const UString::String& line, EBirdDatasetInterface &ebdi,
-			ProcessFunction processFunction) : line(line), ebdi(ebdi), processFunction(processFunction) {}
+			ProcessFunction processFunction, const ColumnMap& columnMap) : line(line), ebdi(ebdi), processFunction(processFunction), columnMap(columnMap) {}
 
 		const UString::String line;
 		EBirdDatasetInterface& ebdi;
 		ProcessFunction processFunction;
+		const ColumnMap& columnMap;
 
 		void DoJob() override
 		{
-			ebdi.ProcessLine(line, processFunction);
+			ebdi.ProcessLine(line, columnMap, processFunction);
 		}
 	};
 
 	bool DoDatasetParsing(const UString::String& fileName, ProcessFunction processFunction,
 		const UString::String& regionDataOutputFileName);
 
-	bool ProcessLine(const UString::String& line, ProcessFunction processFunction);
+	bool ProcessLine(const UString::String& line, const ColumnMap& columnMap, ProcessFunction processFunction);
 	
 	typedef std::array<double, 24> SunTimeArray;
 	void GetAverageLocation(double& averageLatitude, double& averageLongitude) const;

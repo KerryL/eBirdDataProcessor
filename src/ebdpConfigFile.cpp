@@ -70,7 +70,6 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("FIND_BEST_TRIPS"), config.findBestTripLocations);
 	AddConfigItem(_T("TOP_LOCATION_COUNT"), config.bestTripParameters.topLocationCount);
 	AddConfigItem(_T("MIN_OBS_COUNT"), config.bestTripParameters.minimumObservationCount);
-	AddConfigItem(_T("MIN_LIKLIHOOD"), config.bestTripParameters.minimumLiklihood);
 
 	AddConfigItem(_T("DATASET_KML_FILTER"), config.kmlFilterFileName);
 	AddConfigItem(_T("DATASET_KML_FILTER_OUTPUT"), config.kmlFilteredOutputFileName);
@@ -125,7 +124,6 @@ void EBDPConfigFile::AssignDefaults()
 	config.locationFindingParameters.baseOutputFileName = _T("bestLocations");
 
 	config.findBestTripLocations = false;
-	config.bestTripParameters.minimumLiklihood = 5.0;
 	config.bestTripParameters.minimumObservationCount = 2000;
 	config.bestTripParameters.topLocationCount = 10;
 

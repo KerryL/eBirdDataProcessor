@@ -116,6 +116,9 @@ bool FrequencyFileReader::DeserializeWeekData(std::ifstream& file,
 		
 		assert(!species.species.empty());
 		assert(species.frequency >= 0.0);
+
+		if (!Read(file, species.isRarity))
+			return false;
 	}
 	
 	return true;
