@@ -116,6 +116,7 @@ void EBDPConfigFile::AssignDefaults()
 
 	config.showOnlyPhotoNeeds = -1;
 	config.showOnlyAudioNeeds = -1;
+	config.showGaps = false;
 
 	config.findMaxNeedsLocations = false;
 	config.locationFindingParameters.kmlReductionLimit = 0.0;
