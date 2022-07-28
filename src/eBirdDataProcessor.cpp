@@ -1099,7 +1099,7 @@ bool EBirdDataProcessor::HotspotInfoComparer::operator()(const EBirdInterface::L
 
 bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std::string::size_type& position, MediaEntry& entry)
 {
-	const UString::String resultStart(_T("<div class=\"ResultsList-cell\">"));
+	const UString::String resultStart(_T("<li>"));//_T("<div class=\"ResultsList-header\">"));
 	const auto resultStartPosition(html.find(resultStart, position));
 	if (resultStartPosition == std::string::npos)
 		return false;
@@ -1110,7 +1110,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 
 	position = resultStartPosition + mediaEntryString.length();
 
-	const UString::String playButtonStart(_T("<div class=\"Button--play\">"));
+	const UString::String playButtonStart(_T("<span class=\"playButton\">"));
 	const auto playButtonStartPosition(mediaEntryString.find(playButtonStart));
 
 	if (playButtonStartPosition != std::string::npos)
@@ -1118,15 +1118,11 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	else
 		entry.type = MediaEntry::Type::Photo;
 
-	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<a href=\"https://ebird.org/species/"), entry.commonName))
-	{
-		// Can happen when there is no link around the common name (like for sputs)
-		if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<h3 class=\"SpecimenHeader-commonName"), entry.commonName))
-			return false;
-		entry.commonName = StringUtilities::Trim(entry.commonName);
-	}
+	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<span class=\"Species-common"), entry.commonName))
+		return false;
+	entry.commonName = StringUtilities::Trim(entry.commonName);
 
-	const UString::String ratingStart(_T("<div class=\"RatingStars RatingStars-"));
+	const UString::String ratingStart(_T("<div class=\"RatingStars-stars RatingStars-stars-"));
 	const auto ratingStartPosition(mediaEntryString.find(ratingStart));
 	if (ratingStartPosition != std::string::npos)
 	{
@@ -1137,20 +1133,23 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	else
 		entry.rating = 0;
 
-	const UString::String calendarLine(_T("<svg class=\"Icon Icon-calendar\" role=\"img\"><use xlink:href=\"#Icon--date\"></use></svg>"));
-	if (!GetValueFromLITag(mediaEntryString, calendarLine, entry.date))
+	const UString::String calendarLine(_T("<time"));
+	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, calendarLine, entry.date))
+		entry.date = _T("Unknown");// Can happen for sensitive species
+
+	const UString::String locationLine(_T("<use xlink:href=\"#Icon--locationGeneric\"></use></svg>"));
+	const auto locationStart(mediaEntryString.find(locationLine));
+	if (locationStart == std::string::npos)
+		return false;
+	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString.substr(locationStart), _T("<span"), entry.location))
 		return false;
 
-	const UString::String locationLine(_T("<svg class=\"Icon Icon-location\" role=\"img\"><use xlink:href=\"#Icon--locationGeneric\"></use></svg>"));
-	if (!GetValueFromLITag(mediaEntryString, locationLine, entry.location))
-		return false;
-
-	UString::String specimenExtra;
-	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<dl class=\"SpecimenExtra\""), specimenExtra))
-		return false;
+	/*UString::String observationTags;
+	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<div class=\"ResultsList-tags\""), observationTags))
+		return false;*/
 
 	UString::String temp;
-	if (GetDTDDValue(specimenExtra, _T("Sounds"), temp))
+	/*if (GetDTDDValue(specimenExtra, _T("Sounds"), temp))
 	{
 		if (temp.compare(_T("Song")) == 0)
 			entry.sound = MediaEntry::Sound::Song;
@@ -1186,14 +1185,14 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	
 	UString::String specimenLinks;
 	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<ul class=\"SpecimenLinks\""), specimenLinks))
-		return false;
+		return false;*/
 
-	if (!StringUtilities::ExtractTextContainedInTag(specimenLinks, _T("<a href=\"https://ebird.org/view/checklist/"), temp))
+	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<a href=\"https://ebird.org/checklist/"), temp))
 		//return false;
-		temp.clear();// This can happen for hidden checklists!  Don't fail!
+		temp.clear();// This can happen for hidden checklists or sensitive species!  Don't fail!
 	entry.checklistId = GetLastWord(temp);
 
-	if (!StringUtilities::ExtractTextContainedInTag(specimenLinks, _T("<a href=\"https://macaulaylibrary.org/asset/"), temp))
+	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<a href=\"https://macaulaylibrary.org/asset/"), temp))
 		return false;
 	entry.macaulayId = GetLastWord(temp);
 
@@ -1202,10 +1201,11 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 
 UString::String EBirdDataProcessor::GetLastWord(const UString::String& s)
 {
-	const auto lastSpace(s.find_last_of(UString::Char(' ')));
+	const auto lastNotSpace(s.find_last_not_of(UString::String(" \t\r\n")));
+	const auto lastSpace(s.substr(0,lastNotSpace).find_last_of(UString::String(" \t\r\n")));
 	if (lastSpace == std::string::npos)
 		return s;
-	return s.substr(lastSpace + 1);
+	return s.substr(lastSpace + 1, lastNotSpace - lastSpace);
 }
 
 bool EBirdDataProcessor::GetValueFromLITag(const UString::String& html, const UString::String& svgString, UString::String& value)
