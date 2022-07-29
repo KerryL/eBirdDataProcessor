@@ -1144,9 +1144,55 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString.substr(locationStart), _T("<span"), entry.location))
 		return false;
 
-	/*UString::String observationTags;
-	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<div class=\"ResultsList-tags\""), observationTags))
-		return false;*/
+	const UString::String tagsDivStart(_T("<div class=\"ResultsList-tags\""));
+	const auto tagsStartPosition(mediaEntryString.find(tagsDivStart));
+	if (tagsStartPosition != std::string::npos)
+	{
+		auto nextTagPos(tagsStartPosition + tagsDivStart.length());
+		UString::String tagsToEnd(mediaEntryString.substr(nextTagPos));
+		const auto tagDataStart(_T("<span class=\"ResultsList-label"));
+		UString::String tagName;
+		while (StringUtilities::ExtractTextContainedInTag(tagsToEnd, tagDataStart, tagName))
+		{
+			UString::String temp;
+			const UString::String secondTag(_T("<span"));
+			if (!ExtractBetweenTagAfterTag(tagsToEnd, tagDataStart, secondTag, temp))
+				return false;
+				
+			// TODO:  The data allows multiple specifications (i.e. 2 adult males + 1 immature unknown sex, etc.) but our data structure doens't support storing this info
+			// Same for behaviors and sounds
+			if (tagName == _T("Age and sex"))
+			{
+				if (temp.find(_T("Adult")) != std::string::npos)
+					entry.age = MediaEntry::Age::Adult;
+				else if (temp.find(_T("Immature")) != std::string::npos)
+					entry.age = MediaEntry::Age::Immature;
+				else if (temp.find(_T("Juvenile")) != std::string::npos)
+					entry.age = MediaEntry::Age::Juvenile;
+				else
+					entry.age = MediaEntry::Age::Unknown;
+					
+				if (temp.find(_T("Male")) != std::string::npos)
+					entry.sex = MediaEntry::Sex::Male;
+				else if (temp.find(_T("Female")) != std::string::npos)
+					entry.sex = MediaEntry::Sex::Female;
+				else
+					entry.sex = MediaEntry::Sex::Unknown;
+			}
+			//else if (tagName == _T("Behaviors")) {}
+			else if (tagName == _T("Sounds"))
+			{
+				if (temp.find(_T("Song")) != std::string::npos)
+					entry.sound = MediaEntry::Sound::Song;
+				else if (temp.find(_T("Call")) != std::string::npos)
+					entry.sound = MediaEntry::Sound::Call;
+				else
+					entry.sound = MediaEntry::Sound::Other;
+			}
+			const auto nextStartPos(tagsToEnd.find(temp));
+			tagsToEnd = tagsToEnd.substr(nextStartPos);
+		}
+	}
 
 	UString::String temp;
 	/*if (GetDTDDValue(specimenExtra, _T("Sounds"), temp))
@@ -1228,6 +1274,18 @@ bool EBirdDataProcessor::GetDTDDValue(const UString::String& html, const UString
 		return false;
 
 	return StringUtilities::ExtractTextContainedInTag(html.substr(labelLocation), _T("<dd"), value);
+}
+
+// Example: <a stuff="something">b</a><c>d</c>
+// This can be used to extract the "d" given that tag <c> follows tag <a>
+bool EBirdDataProcessor::ExtractBetweenTagAfterTag(const UString::String& html,
+	const UString::String& firstTag, const UString::String& secondTag, UString::String& value)
+{
+	const auto firstTagStart(html.find(firstTag));
+	if (firstTagStart == std::string::npos)
+		return false;
+	
+	return StringUtilities::ExtractTextContainedInTag(html.substr(firstTagStart + firstTag.length()), secondTag, value);
 }
 
 UString::String EBirdDataProcessor::GetMediaTypeString(const MediaEntry::Type& type)

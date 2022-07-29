@@ -302,6 +302,7 @@ private:
 	static UString::String GetMediaSexString(const MediaEntry::Sex& sex);
 	static UString::String GetMediaSoundString(const MediaEntry::Sound& sound);
 	static bool ParseMediaEntry(const UString::String& line, MediaEntry& entry);
+	static bool ExtractBetweenTagAfterTag(const UString::String& html, const UString::String& firstTag, const UString::String& secondTag, UString::String& value);
 
 	struct ConsolidationData
 	{
