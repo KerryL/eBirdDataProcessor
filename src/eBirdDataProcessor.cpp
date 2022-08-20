@@ -1247,8 +1247,8 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 
 UString::String EBirdDataProcessor::GetLastWord(const UString::String& s)
 {
-	const auto lastNotSpace(s.find_last_not_of(UString::String(" \t\r\n")));
-	const auto lastSpace(s.substr(0,lastNotSpace).find_last_of(UString::String(" \t\r\n")));
+	const auto lastNotSpace(s.find_last_not_of(UString::String(_T(" \t\r\n"))));
+	const auto lastSpace(s.substr(0,lastNotSpace).find_last_of(UString::String(_T(" \t\r\n"))));
 	if (lastSpace == std::string::npos)
 		return s;
 	return s.substr(lastSpace + 1, lastNotSpace - lastSpace);
