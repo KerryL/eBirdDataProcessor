@@ -525,8 +525,9 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const CalendarParameters& calend
 	FrequencyFileReader frequencyFileReader(appConfig.frequencyFilePath);
 	EBirdInterface ebi(appConfig.eBirdApiKey);
 	FrequencyDataYear frequencyData;
-	DoubleYear checklistCounts;
-	if (!frequencyFileReader.ReadRegionData(ebi.GetRegionCode(country, state, county), frequencyData, checklistCounts))
+	UIntYear checklistCounts;
+	unsigned int rarityYearRange;
+	if (!frequencyFileReader.ReadRegionData(ebi.GetRegionCode(country, state, county), frequencyData, checklistCounts, rarityYearRange))
 		return false;
 
 	//GuessChecklistCounts(frequencyData, checklistCounts);
@@ -608,7 +609,11 @@ bool EBirdDataProcessor::GenerateTargetCalendar(const CalendarParameters& calend
 		for (const auto& week : frequencyData)
 		{
 			if (i < week.size())
+			{
 				outFile << week[i].species << " (" << week[i].frequency << " %)";
+				if (week[i].isRarity)
+					outFile << " (observed " << week[i].yearsObservedInLastNYears << " of last " << rarityYearRange << " years)";
+			}
 
 			outFile << ',';
 		}
@@ -1011,8 +1016,9 @@ void EBirdDataProcessor::GenerateRarityScores(const EBDPConfig::ListType& listTy
 	EBirdInterface ebi(appConfig.eBirdApiKey);
 	FrequencyFileReader reader(appConfig.frequencyFilePath);
 	FrequencyDataYear weekFrequencyData;
-	DoubleYear checklistCounts;
-	if (!reader.ReadRegionData(ebi.GetRegionCode(country, state, county), weekFrequencyData, checklistCounts))
+	UIntYear checklistCounts;
+	unsigned int rarityYearRange;
+	if (!reader.ReadRegionData(ebi.GetRegionCode(country, state, county), weekFrequencyData, checklistCounts, rarityYearRange))
 		return;
 
 	std::vector<EBirdDataProcessor::FrequencyInfo> yearFrequencyData(
@@ -1050,12 +1056,13 @@ void EBirdDataProcessor::GenerateRarityScores(const EBDPConfig::ListType& listTy
 	}
 
 	for (const auto& entry : rarityScoreData)
-		Cout << std::left << std::setw(longestName + minSpace) << std::setfill(UString::Char(' ')) << entry.species << entry.frequency << "%\n";
+		Cout << std::left << std::setw(longestName + minSpace) << std::setfill(UString::Char(' ')) << entry.species << entry.frequency << "%";
+	// Would be nice to add "observed in x of last n years" here, but that data is weekly
 	Cout << std::endl;
 }
 
 std::vector<EBirdDataProcessor::FrequencyInfo> EBirdDataProcessor::GenerateYearlyFrequencyData(
-	const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts)
+	const FrequencyDataYear& frequencyData, const UIntYear& checklistCounts)
 {
 	std::vector<EBirdDataProcessor::FrequencyInfo> yearFrequencyData;
 	double totalObservations(0.0);
@@ -1591,12 +1598,13 @@ bool EBirdDataProcessor::GatherFrequencyData(const std::vector<UString::String>&
 	for (const auto& f : fileNames)
 	{
 		FrequencyDataYear occurrenceData;
-		DoubleYear checklistCounts;
+		UIntYear checklistCounts;
 		const auto regionCode(Utilities::StripExtension(Utilities::ExtractFileName(f)));
 		if (!RegionCodeMatches(regionCode, targetRegionCodes))
 			continue;
 
-		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts))
+		unsigned int rarityYearRange;
+		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts, rarityYearRange))
 			return false;
 
 		const auto countryCode(Utilities::ExtractCountryFromRegionCode(regionCode));
@@ -1615,7 +1623,7 @@ bool EBirdDataProcessor::GatherFrequencyData(const std::vector<UString::String>&
 			if (consolidatationData.find(countryCode) == consolidatationData.end())
 			{
 				for (auto& c : consolidatationData[countryCode].checklistCounts)
-					c = 0.0;
+					c = 0;
 			}
 			AddConsolidationData(consolidatationData[countryCode], std::move(occurrenceData), std::move(checklistCounts));
 		}
@@ -1654,7 +1662,7 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const LocationFinding
 	return true;
 }
 
-void EBirdDataProcessor::ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 48>& counts)
+void EBirdDataProcessor::ConvertProbabilityToCounts(FrequencyDataYear& data, UIntYear& counts)
 {
 	for (unsigned int i = 0; i < counts.size(); ++i)
 	{
@@ -1663,7 +1671,7 @@ void EBirdDataProcessor::ConvertProbabilityToCounts(FrequencyDataYear& data, con
 	}
 }
 
-void EBirdDataProcessor::ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 48>& counts)
+void EBirdDataProcessor::ConvertCountsToProbability(FrequencyDataYear& data, UIntYear& counts)
 {
 	for (unsigned int i = 0; i < counts.size(); ++i)
 	{
@@ -1673,7 +1681,7 @@ void EBirdDataProcessor::ConvertCountsToProbability(FrequencyDataYear& data, con
 }
 
 void EBirdDataProcessor::AddConsolidationData(ConsolidationData& existingData,
-	FrequencyDataYear&& newData, std::array<double, 48>&& newCounts)
+	FrequencyDataYear&& newData, UIntYear&& newCounts)
 {
 	ConvertProbabilityToCounts(existingData.occurrenceData, existingData.checklistCounts);
 	ConvertProbabilityToCounts(newData, newCounts);
@@ -1705,7 +1713,7 @@ void EBirdDataProcessor::AddConsolidationData(ConsolidationData& existingData,
 }
 
 bool EBirdDataProcessor::ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData,
-	DoubleYear&& checklistCounts, const unsigned int& thresholdObservationCount,
+	UIntYear&& checklistCounts, const unsigned int& thresholdObservationCount,
 	std::array<double, 48>& probabilities, std::array<std::vector<FrequencyInfo>, 48>& species) const
 {
 	EliminateObservedSpecies(frequencyData);
@@ -2109,15 +2117,16 @@ bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyP
 {
 	FrequencyFileReader ffReader(appConfig.frequencyFilePath);
 	FrequencyDataYear frequencyData;
-	DoubleYear checklistCounts;
+	UIntYear checklistCounts;
 	for (auto& c : checklistCounts)
-		c = 0.0;
+		c = 0;
 
 	for (const auto& rc : regionCodes)
 	{
 		FrequencyDataYear tempFrequencyData;
-		DoubleYear tempChecklistCounts;
-		if (!ffReader.ReadRegionData(rc, tempFrequencyData, tempChecklistCounts))
+		UIntYear tempChecklistCounts;
+		unsigned int rarityYearRange;
+		if (!ffReader.ReadRegionData(rc, tempFrequencyData, tempChecklistCounts, rarityYearRange))
 			return false;
 
 		for (unsigned int i = 0; i < frequencyData.size(); ++i)
@@ -2144,7 +2153,7 @@ bool EBirdDataProcessor::GenerateTimeOfYearData(const TimeOfYearParameters& toyP
 		}
 	}
 
-	const unsigned int totalObservations(static_cast<unsigned int>(std::accumulate(checklistCounts.begin(), checklistCounts.end(), 0.0)));
+	const unsigned int totalObservations(static_cast<unsigned int>(std::accumulate(checklistCounts.begin(), checklistCounts.end(), 0)));
 
 	// Convert frequency data from list of species within each week to list of weeks within each species
 	std::map<UString::String, DoubleYear> speciesObservationsByWeek;

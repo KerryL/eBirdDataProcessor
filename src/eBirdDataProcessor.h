@@ -84,6 +84,7 @@ public:
 		UString::String species;
 		double frequency = 0.0;
 		bool isRarity = false;
+		unsigned int yearsObservedInLastNYears = 0;
 		UString::String compareString;// Huge boost in efficiency if we pre-compute this
 
 		FrequencyInfo() = default;
@@ -110,6 +111,7 @@ public:
 
 	typedef std::array<std::vector<FrequencyInfo>, 48> FrequencyDataYear;
 	typedef std::array<double, 48> DoubleYear;
+	typedef std::array<unsigned int, 48> UIntYear;
 
 private:
 	static const UString::String headerLine;
@@ -186,7 +188,7 @@ private:
 	static UString::String StripParentheses(UString::String s);
 
 	void EliminateObservedSpecies(FrequencyDataYear& frequencyData) const;
-	std::vector<FrequencyInfo> GenerateYearlyFrequencyData(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
+	std::vector<FrequencyInfo> GenerateYearlyFrequencyData(const FrequencyDataYear& frequencyData, const UIntYear& checklistCounts);
 
 	static bool RegionCodeMatches(const UString::String& regionCode, const std::vector<UString::String>& codeList);
 	static void GuessChecklistCounts(const FrequencyDataYear& frequencyData, const DoubleYear& checklistCounts);
@@ -202,7 +204,7 @@ private:
 		bool operator()(const EBirdInterface::LocationInfo& a, const EBirdInterface::LocationInfo& b) const;
 	};
 
-	bool ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData, DoubleYear&& checklistCounts,
+	bool ComputeNewSpeciesProbability(FrequencyDataYear&& frequencyData, UIntYear&& checklistCounts,
 		const unsigned int& thresholdObservationCount, std::array<double, 48>& probabilities,
 		std::array<std::vector<FrequencyInfo>, 48>& species) const;
 
@@ -214,14 +216,14 @@ private:
 	{
 	public:
 		CalculateProbabilityJob(YearFrequencyInfo& frequencyInfo, FrequencyDataYear&& occurrenceData,
-			DoubleYear&& checklistCounts, const unsigned int& thresholdObservationCount,
+			UIntYear&& checklistCounts, const unsigned int& thresholdObservationCount,
 			const EBirdDataProcessor& ebdp) : frequencyInfo(frequencyInfo),
 			occurrenceData(occurrenceData), checklistCounts(checklistCounts),
 			thresholdObservationCount(thresholdObservationCount), ebdp(ebdp) {}
 
 		YearFrequencyInfo& frequencyInfo;
 		FrequencyDataYear occurrenceData;
-		DoubleYear checklistCounts;
+		UIntYear checklistCounts;
 
 		const unsigned int thresholdObservationCount;
 
@@ -307,11 +309,11 @@ private:
 	struct ConsolidationData
 	{
 		FrequencyDataYear occurrenceData;
-		std::array<double, 48> checklistCounts;
+		std::array<unsigned int, 48> checklistCounts;
 	};
-	static void AddConsolidationData(ConsolidationData& existingData, FrequencyDataYear&& newData, std::array<double, 48>&& newCounts);
-	static void ConvertProbabilityToCounts(FrequencyDataYear& data, const std::array<double, 48>& counts);
-	static void ConvertCountsToProbability(FrequencyDataYear& data, const std::array<double, 48>& counts);
+	static void AddConsolidationData(ConsolidationData& existingData, FrequencyDataYear&& newData, UIntYear&& newCounts);
+	static void ConvertProbabilityToCounts(FrequencyDataYear& data, UIntYear& counts);
+	static void ConvertCountsToProbability(FrequencyDataYear& data, UIntYear& counts);
 
 	bool GatherFrequencyData(const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
 		const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const;

@@ -98,8 +98,6 @@ private:
 			void Update(const Date& date);
 
 			static unsigned int referenceYear;
-
-		private:
 			static const unsigned int yearsToCheck;
 			static const double minHitFraction;
 

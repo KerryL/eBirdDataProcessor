@@ -19,8 +19,8 @@ class FrequencyFileReader
 public:
 	FrequencyFileReader(const UString::String& rootPath);
 	
-	bool ReadRegionData(const UString::String& regionCode,
-		EBirdDataProcessor::FrequencyDataYear& frequencyData, EBirdDataProcessor::DoubleYear& checklistCounts);
+	bool ReadRegionData(const UString::String& regionCode, EBirdDataProcessor::FrequencyDataYear& frequencyData,
+		EBirdDataProcessor::UIntYear& checklistCounts, unsigned int& rarityYearRange);
 	
 private:
 	static const UString::String nameIndexFileName;
@@ -32,7 +32,8 @@ private:
 	std::map<uint16_t, UString::String> indexToNameMap;
 	bool ReadNameIndexData();
 	
-	bool DeserializeWeekData(std::ifstream& file, std::vector<EBirdDataProcessor::FrequencyInfo>& weekData, double& checklistCount) const;
+	bool DeserializeWeekData(std::ifstream& file, std::vector<EBirdDataProcessor::FrequencyInfo>& weekData,
+		unsigned int& checklistCount, unsigned int& rarityYearRange) const;
 	template<typename T>
 	static bool Read(std::ifstream& file, T& data);
 };
