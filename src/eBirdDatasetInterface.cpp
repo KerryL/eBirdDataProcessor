@@ -36,17 +36,9 @@
 const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
 
 const unsigned int EBirdDatasetInterface::SpeciesData::Rarity::yearsToCheck(5);
-const double EBirdDatasetInterface::SpeciesData::Rarity::minHitFraction(0.8);// To not be considered a rarity
-
-unsigned int EBirdDatasetInterface::SpeciesData::Rarity::referenceYear;
-
-EBirdDatasetInterface::EBirdDatasetInterface()
-{
-	const std::time_t t(std::time(nullptr));
-	std::tm* const tm(std::localtime(&t));
-	
-SpeciesData::Rarity::referenceYear = 1900 + tm->tm_year - 1;// TODO:  Instead of current year, use most recent full year in data set
-}
+const unsigned int EBirdDatasetInterface::SpeciesData::Rarity::minHitYears(4);// To not be considered a rarity
+std::mutex EBirdDatasetInterface::SpeciesData::Rarity::referenceYearMutex;
+unsigned int EBirdDatasetInterface::SpeciesData::Rarity::referenceYear = 0;
 
 bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fileName,
 	const UString::String& regionDataOutputFileName)
@@ -54,6 +46,7 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fi
 	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataFrequency,
 		regionDataOutputFileName))
 		return false;
+	UpdateRarityAssessment();
 
 	return true;
 }
@@ -204,13 +197,7 @@ bool EBirdDatasetInterface::SerializeWeekData(std::ofstream& file, const Frequen
 
 		if (species.second.rarityGuess.mightBeRarity)// For rarities, append the number of years observed within last n years
 		{
-			uint8_t observationsInNYears(0);
-			for (unsigned int i = 0; i < species.second.rarityGuess.hitInYearNMinusI.size(); ++i)
-			{
-				if (species.second.rarityGuess.hitInYearNMinusI[i])
-					++observationsInNYears;
-			}
-			if (!Write(file, observationsInNYears))
+			if (!Write(file, static_cast<uint8_t>(species.second.rarityGuess.yearsObservedInLastNYears)))
 				return false;
 		}
 	}
@@ -898,29 +885,59 @@ unsigned int EBirdDatasetInterface::GetWeekIndex(const Date& date)
 	return 4 * monthIndex + std::min(monthWeekIndex, 3U);
 }
 
-EBirdDatasetInterface::SpeciesData::Rarity::Rarity() : hitInYearNMinusI(yearsToCheck, false)
+EBirdDatasetInterface::SpeciesData::Rarity::Rarity() : recentObservationYears(yearsToCheck, 0)
 {
-	assert(!hitInYearNMinusI.empty());
+	assert(!recentObservationYears.empty());
+	static_assert(yearsToCheck >= minHitYears, "yearsToCheck must be greater than or equal to minHitYears");
 }
 
 void EBirdDatasetInterface::SpeciesData::Rarity::Update(const Date& date)
 {
-	if (!mightBeRarity)// No need to continue with updates if we've already determined that it's not a rarity
-		return;
-
-	const int index(referenceYear - date.year);
-	if (index >= 0 && index < hitInYearNMinusI.size())
+	// The part below here will always work
+	auto minYear(std::min_element(recentObservationYears.begin(), recentObservationYears.end()));
+	if (date.year > *minYear)
 	{
-		hitInYearNMinusI[index] = true;
-		double hitRate(0.0);
-		for (unsigned int i = 0; i < hitInYearNMinusI.size(); ++i)
+		bool add(true);
+		for (auto &y : recentObservationYears)
 		{
-			if (hitInYearNMinusI[i])
-				hitRate += 1.0 / hitInYearNMinusI.size();
+			if (y == date.year)
+			{
+				add = false;
+				break;
+			}
 		}
 
-		if (hitRate > minHitFraction)
-			mightBeRarity = false;
+		if (add)
+			*minYear = date.year;
+	}
+
+	// We assume that there is enough data that we'll always have observations on 12/31 if the dataset goes through that date
+	if (date.month == 12 && date.day == 31)
+	{
+		std::lock_guard<std::mutex> lock(referenceYearMutex);
+		if (date.year > referenceYear)
+			referenceYear = date.year;// dataset goes through at least this year
+	}
+}
+
+void EBirdDatasetInterface::UpdateRarityAssessment()
+{
+	for (auto& f : frequencyMap)
+	{
+		for (auto& week : f.second)
+		{
+			for (auto& species : week.speciesList)
+			{
+				unsigned int recentYearCount(0);
+				for (auto& y : species.second.rarityGuess.recentObservationYears)
+				{
+					if (y > SpeciesData::Rarity::referenceYear - SpeciesData::Rarity::yearsToCheck)
+						++recentYearCount;
+				}
+
+				species.second.rarityGuess.mightBeRarity = recentYearCount <= SpeciesData::Rarity::minHitYears;
+			}
+		}
 	}
 }
 
