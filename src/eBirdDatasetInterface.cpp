@@ -44,7 +44,8 @@ EBirdDatasetInterface::EBirdDatasetInterface()
 {
 	const std::time_t t(std::time(nullptr));
 	std::tm* const tm(std::localtime(&t));
-	SpeciesData::Rarity::referenceYear = 1900 + tm->tm_year - 1;// TODO:  Instead of current year, use most recent full year in data set
+	
+SpeciesData::Rarity::referenceYear = 1900 + tm->tm_year - 1;// TODO:  Instead of current year, use most recent full year in data set
 }
 
 bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fileName,
@@ -53,7 +54,6 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fi
 	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataFrequency,
 		regionDataOutputFileName))
 		return false;
-	RemoveRarities();
 
 	return true;
 }
@@ -181,6 +181,8 @@ bool EBirdDatasetInterface::SerializeWeekData(std::ofstream& file, const Frequen
 		return false;
 	if (!Write(file, static_cast<uint16_t>(data.speciesList.size())))
 		return false;
+	if (!Write(file, static_cast<uint8_t>(SpeciesData::Rarity::yearsToCheck)))
+		return false;
 
 	for (const auto& species : data.speciesList)
 	{
@@ -199,6 +201,18 @@ bool EBirdDatasetInterface::SerializeWeekData(std::ofstream& file, const Frequen
 
 		if (!Write(file, species.second.rarityGuess.mightBeRarity))
 			return false;
+
+		if (species.second.rarityGuess.mightBeRarity)// For rarities, append the number of years observed within last n years
+		{
+			uint8_t observationsInNYears(0);
+			for (unsigned int i = 0; i < species.second.rarityGuess.hitInYearNMinusI.size(); ++i)
+			{
+				if (species.second.rarityGuess.hitInYearNMinusI[i])
+					++observationsInNYears;
+			}
+			if (!Write(file, observationsInNYears))
+				return false;
+		}
 	}
 
 	return true;
