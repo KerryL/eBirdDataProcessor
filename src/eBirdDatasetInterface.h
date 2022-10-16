@@ -20,11 +20,12 @@
 #include <map>
 #include <set>
 #include <memory>
+#include <mutex>
 
 class EBirdDatasetInterface
 {
 public:
-	EBirdDatasetInterface();
+	EBirdDatasetInterface() = default;
 
 	bool ExtractGlobalFrequencyData(const UString::String& fileName, const UString::String& regionDataOutputFileName);
 	bool WriteFrequencyFiles(const UString::String& frequencyDataPath) const;
@@ -97,13 +98,14 @@ private:
 			bool mightBeRarity = true;
 			void Update(const Date& date);
 
-			static unsigned int referenceYear;
-
-		private:
 			static const unsigned int yearsToCheck;
-			static const double minHitFraction;
+			static const unsigned int minHitYears;
 
-			std::vector<bool> hitInYearNMinusI;
+			unsigned int yearsObservedInLastNYears = 0;
+			std::vector<unsigned int> recentObservationYears;
+
+			static unsigned int referenceYear;
+			static std::mutex referenceYearMutex;
 		};
 
 		Rarity rarityGuess;
@@ -163,6 +165,7 @@ private:
 	void ProcessObservationDataTimeOfDay(const Observation& observation);
 	void ProcessObservationKMLFilter(const Observation& observation);
 	typedef void (EBirdDatasetInterface::*ProcessFunction)(const Observation& observation);
+	void UpdateRarityAssessment();
 	void RemoveRarities();
 
 	enum class Columns
