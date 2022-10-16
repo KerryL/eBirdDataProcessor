@@ -23,7 +23,7 @@ UString::String FrequencyFileReader::GenerateFileName(const UString::String& reg
 }
 	
 bool FrequencyFileReader::ReadRegionData(const UString::String& regionCode,
-	EBirdDataProcessor::FrequencyDataYear& frequencyData, EBirdDataProcessor::DoubleYear& checklistCounts)
+	EBirdDataProcessor::FrequencyDataYear& frequencyData, EBirdDataProcessor::UIntYear& checklistCounts, unsigned int& rarityYearRange)
 {
 	if (indexToNameMap.empty())
 	{
@@ -39,11 +39,14 @@ bool FrequencyFileReader::ReadRegionData(const UString::String& regionCode,
 		return false;
 	}
 	
-	unsigned int i;
-	for (i = 0; i < frequencyData.size(); ++i)
+	for (unsigned int i = 0; i < frequencyData.size(); ++i)
 	{
-		if (!DeserializeWeekData(file, frequencyData[i], checklistCounts[i]))
+		unsigned int tempRarityYearRange;
+		if (!DeserializeWeekData(file, frequencyData[i], checklistCounts[i], rarityYearRange))
 			return false;
+		if (i > 0 && rarityYearRange != tempRarityYearRange)
+			Cerr << "Warning:  Detected different rarity year ranges while reading frequency data (frequency files generated at different times?)\n";
+		tempRarityYearRange = rarityYearRange;
 	}
 	
 	return true;
@@ -90,7 +93,7 @@ bool FrequencyFileReader::ReadNameIndexData()
 }
 
 bool FrequencyFileReader::DeserializeWeekData(std::ifstream& file,
-	std::vector<EBirdDataProcessor::FrequencyInfo>& weekData, double& checklistCount) const
+	std::vector<EBirdDataProcessor::FrequencyInfo>& weekData, unsigned int& checklistCount, unsigned int& rarityYearRange) const
 {
 	uint16_t temp;
 	if (!Read(file, temp))
@@ -100,6 +103,11 @@ bool FrequencyFileReader::DeserializeWeekData(std::ifstream& file,
 	if (!Read(file, temp))
 		return false;
 	weekData.resize(temp);
+
+	uint8_t tempYears;
+	if (!Read(file, tempYears))
+		return false;
+	rarityYearRange = tempYears;
 	
 	for (auto& species : weekData)
 	{
@@ -119,6 +127,14 @@ bool FrequencyFileReader::DeserializeWeekData(std::ifstream& file,
 
 		if (!Read(file, species.isRarity))
 			return false;
+
+		if (species.isRarity)
+		{
+			uint8_t tempCount;
+			if (!Read(file, tempCount))
+				return false;
+			species.yearsObservedInLastNYears = tempCount;
+		}
 	}
 	
 	return true;
