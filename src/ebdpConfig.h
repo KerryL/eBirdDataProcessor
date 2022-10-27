@@ -171,6 +171,8 @@ struct EBDPConfig
 	
 	bool buildChecklistLinks;
 	UString::String jsDataFileName;
+
+	std::vector<UString::String> bigYear;
 };
 
 #endif// EBDP_CONFIG_H_

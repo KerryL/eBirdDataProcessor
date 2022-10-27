@@ -71,6 +71,8 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("TOP_LOCATION_COUNT"), config.bestTripParameters.topLocationCount);
 	AddConfigItem(_T("MIN_OBS_COUNT"), config.bestTripParameters.minimumObservationCount);
 
+	AddConfigItem(_T("BIG_YEAR"), config.bigYear);
+
 	AddConfigItem(_T("DATASET_KML_FILTER"), config.kmlFilterFileName);
 	AddConfigItem(_T("DATASET_KML_FILTER_OUTPUT"), config.kmlFilteredOutputFileName);
 	AddConfigItem(_T("OBSERVATION_MAP"), config.observationMapFileName);
@@ -123,6 +125,8 @@ void EBDPConfigFile::AssignDefaults()
 	config.locationFindingParameters.cleanupKMLLocationNames = false;
 	config.locationFindingParameters.geoJSONPrecision = -1;
 	config.locationFindingParameters.baseOutputFileName = _T("bestLocations");
+
+	config.bigYear.clear();
 
 	config.findBestTripLocations = false;
 	config.bestTripParameters.minimumObservationCount = 2000;

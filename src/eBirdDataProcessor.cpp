@@ -1577,6 +1577,42 @@ bool EBirdDataProcessor::RegionCodeMatches(const UString::String& regionCode, co
 	return false;
 }
 
+bool EBirdDataProcessor::GatherFrequencyData(const std::vector<UString::String>& targetParentRegionCodes,
+	std::vector<YearFrequencyInfo>& frequencyInfo, unsigned int& rarityYearRange) const
+{
+	auto fileNames(ListFilesInDirectory(appConfig.frequencyFilePath));
+	if (fileNames.size() == 0)
+		return false;
+
+	fileNames.erase(std::remove_if(fileNames.begin(), fileNames.end(), IsNotBinFile), fileNames.end());
+	RemoveHighLevelFiles(fileNames);
+
+	frequencyInfo.resize(fileNames.size());
+	FrequencyFileReader reader(appConfig.frequencyFilePath);
+
+	unsigned int i(0);
+	for (const auto& f : fileNames)
+	{
+		FrequencyDataYear occurrenceData;
+		UIntYear checklistCounts;
+		const auto regionCode(Utilities::StripExtension(Utilities::ExtractFileName(f)));
+		if (!RegionCodeMatches(regionCode, targetParentRegionCodes))
+			continue;
+
+		if (!reader.ReadRegionData(regionCode, occurrenceData, checklistCounts, rarityYearRange))
+			return false;
+
+		frequencyInfo[i].frequencyInfo = std::move(occurrenceData);
+		frequencyInfo[i].locationCode = regionCode;
+		++i;
+	}
+
+	// In case of failures, frequencyInfo may not have been fully populated
+	frequencyInfo.erase(frequencyInfo.begin() + i, frequencyInfo.end());
+
+	return true;
+}
+
 bool EBirdDataProcessor::GatherFrequencyData(const std::vector<UString::String>& targetRegionCodes,
 	const std::vector<UString::String>& highDetailCountries,
 	const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const
@@ -1657,6 +1693,67 @@ bool EBirdDataProcessor::FindBestLocationsForNeededSpecies(const LocationFinding
 	{
 		Cerr << "Faild to create best locations page\n";
 		return false;
+	}
+
+	return true;
+}
+
+bool EBirdDataProcessor::BigYear(const std::vector<UString::String>& region) const
+{
+	std::vector<YearFrequencyInfo> sightingProbability;
+	unsigned int rarityYearRange;
+	if (!GatherFrequencyData(region, sightingProbability, rarityYearRange))
+		return false;
+
+	std::map<UString::String, double> speciesMaxProbability;// maximum for any county for each species
+	std::cout << "Location count = " << sightingProbability.size() << std::endl;
+	for (const auto& y : sightingProbability)
+	{
+		// Exclude AK and HI
+		const auto state(Utilities::ExtractStateFromRegionCode(y.locationCode));
+		if (state == _T("AK") || state == _T("HI"))
+			continue;
+
+		for (const auto& wk : y.frequencyInfo)
+		{
+			for (const auto& species : wk)
+			{
+				if (species.isRarity && species.yearsObservedInLastNYears < rarityYearRange)
+					continue;
+
+				auto it = speciesMaxProbability.find(species.compareString);
+				if (it == speciesMaxProbability.end())
+					speciesMaxProbability[species.compareString] = species.frequency;
+				else if (species.frequency > it->second)
+					it->second = species.frequency;
+			}
+		}
+	}
+
+	std::cout << "Total number of non-rare species = " << speciesMaxProbability.size() << std::endl;
+
+	const std::array<double, 7> thresholds = { 25.0, 20.0, 15.0, 10.0, 7.0, 5.0, 3.0 };// [%] must be listed in descending order
+	std::array<unsigned int, 7> counts;
+	for (auto& c : counts)
+		c = 0;
+
+	for (const auto& s : speciesMaxProbability)
+	{
+		for (size_t i = 0; i < thresholds.size(); ++i)
+		{
+			if (s.second >= thresholds[i])
+			{
+				++counts[i];
+				break;
+			}
+		}
+	}
+
+	unsigned int runningTotal(0);
+	for (size_t i = 0; i < thresholds.size(); ++i)
+	{
+		runningTotal += counts[i];
+		std::cout << "Count with max county frequency > " << thresholds[i] << "% = " << runningTotal << std::endl;
 	}
 
 	return true;

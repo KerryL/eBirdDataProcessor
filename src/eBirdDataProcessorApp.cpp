@@ -195,6 +195,11 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			config.highDetailCountries, regionCodes, config.outputFileName))
 			return 1;
 	}
+	else if (!config.bigYear.empty())
+	{
+		if (!processor.BigYear(config.bigYear))
+			return 1;
+	}
 	else if (!config.speciesHunt.commonName.empty())
 	{
 		if (!processor.HuntSpecies(config.speciesHunt))
