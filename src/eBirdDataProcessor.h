@@ -113,6 +113,8 @@ public:
 	typedef std::array<double, 48> DoubleYear;
 	typedef std::array<unsigned int, 48> UIntYear;
 
+	bool BigYear(const std::vector<UString::String>& region) const;
+
 private:
 	static const UString::String headerLine;
 
@@ -317,6 +319,8 @@ private:
 
 	bool GatherFrequencyData(const std::vector<UString::String>& targetRegionCodes, const std::vector<UString::String>& highDetailCountries,
 		const unsigned int& minObservationCount, std::vector<YearFrequencyInfo>& frequencyInfo) const;
+	bool GatherFrequencyData(const std::vector<UString::String>& targetParentRegionCodes,
+		std::vector<YearFrequencyInfo>& frequencyInfo, unsigned int& rarityYearRange) const;
 
 	static bool TimesMatch(const EBirdInterface::ObservationInfo& o1, const EBirdInterface::ObservationInfo& o2);
 	static UString::String StringifyDateTime(struct tm& dateTime);

@@ -39,9 +39,9 @@ bool FrequencyFileReader::ReadRegionData(const UString::String& regionCode,
 		return false;
 	}
 	
+	unsigned int tempRarityYearRange(0);
 	for (unsigned int i = 0; i < frequencyData.size(); ++i)
 	{
-		unsigned int tempRarityYearRange;
 		if (!DeserializeWeekData(file, frequencyData[i], checklistCounts[i], rarityYearRange))
 			return false;
 		if (i > 0 && rarityYearRange != tempRarityYearRange)
