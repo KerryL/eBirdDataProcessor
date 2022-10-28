@@ -1705,7 +1705,15 @@ bool EBirdDataProcessor::BigYear(const std::vector<UString::String>& region) con
 	if (!GatherFrequencyData(region, sightingProbability, rarityYearRange))
 		return false;
 
-	std::map<UString::String, double> speciesMaxProbability;// maximum for any county for each species
+	struct FrequencyWeek
+	{
+		FrequencyWeek() = default;
+		FrequencyWeek(const double& frequency, const unsigned int& week) : frequency(frequency), week(week) {}
+		double frequency;// [%]
+		unsigned int week;
+	};
+
+	std::map<UString::String, FrequencyWeek> speciesMaxFrequency;// maximum for any county for each species
 	std::cout << "Location count = " << sightingProbability.size() << std::endl;
 	for (const auto& y : sightingProbability)
 	{
@@ -1714,34 +1722,46 @@ bool EBirdDataProcessor::BigYear(const std::vector<UString::String>& region) con
 		if (state == _T("AK") || state == _T("HI"))
 			continue;
 
-		for (const auto& wk : y.frequencyInfo)
+		for (unsigned int i = 0; i < y.frequencyInfo.size(); ++i)
 		{
-			for (const auto& species : wk)
+			for (const auto& species : y.frequencyInfo[i])
 			{
 				if (species.isRarity && species.yearsObservedInLastNYears < rarityYearRange)
 					continue;
 
-				auto it = speciesMaxProbability.find(species.compareString);
-				if (it == speciesMaxProbability.end())
-					speciesMaxProbability[species.compareString] = species.frequency;
-				else if (species.frequency > it->second)
-					it->second = species.frequency;
+				auto it = speciesMaxFrequency.find(species.compareString);
+				if (it == speciesMaxFrequency.end())
+					speciesMaxFrequency[species.compareString] = FrequencyWeek(species.frequency, i);
+				else if (species.frequency > it->second.frequency)
+					it->second = FrequencyWeek(species.frequency, i);
 			}
 		}
 	}
 
-	std::cout << "Total number of non-rare species = " << speciesMaxProbability.size() << std::endl;
+	std::cout << "Total number of non-rare species = " << speciesMaxFrequency.size() << std::endl;
 
 	const std::array<double, 7> thresholds = { 25.0, 20.0, 15.0, 10.0, 7.0, 5.0, 3.0 };// [%] must be listed in descending order
 	std::array<unsigned int, 7> counts;
 	for (auto& c : counts)
 		c = 0;
 
-	for (const auto& s : speciesMaxProbability)
+	// TODO:  Don't hardcode output file name
+	const UString::String outputFileName(_T("bigYear.csv"));
+	UString::OFStream outFile(outputFileName);
+	if (!outFile.is_open())
 	{
+		Cerr << "Failed to open '" << outputFileName << "' for output\n";
+		return false;
+	
+	}
+	outFile << "Species,Frequency (%),Week\n";
+
+	for (const auto& s : speciesMaxFrequency)
+	{
+		outFile << s.first << ',' << s.second.frequency << ',' << s.second.week << '\n';
 		for (size_t i = 0; i < thresholds.size(); ++i)
 		{
-			if (s.second >= thresholds[i])
+			if (s.second.frequency >= thresholds[i])
 			{
 				++counts[i];
 				break;
