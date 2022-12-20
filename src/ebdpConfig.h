@@ -81,6 +81,15 @@ struct ApplicationConfiguration
 	UString::String googleMapsAPIKey;
 };
 
+struct RegionDetails
+{
+	unsigned int timePeriodYears;
+	unsigned int startMonth;
+	unsigned int startDay;
+	unsigned int endMonth;
+	unsigned int endDay;
+};
+
 struct EBDPConfig
 {
 	ApplicationConfiguration appConfig;
@@ -168,6 +177,8 @@ struct EBDPConfig
 	UString::String commentGroupString;
 
 	SpeciesHunt speciesHunt;
+
+	RegionDetails regionDetails;
 	
 	bool buildChecklistLinks;
 	UString::String jsDataFileName;

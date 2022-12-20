@@ -37,6 +37,7 @@ private:
 	bool BestTripConfigIsOK();
 	bool SpeciesHuntConfigIsOK();
 	bool LocationFilterConfigIsOK();
+	bool RegionDetailsConfigIsOK();
 };
 
 #endif// EBDP_CONFIG_FILE_H_

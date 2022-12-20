@@ -58,6 +58,11 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 				if (!mapBuilder.Build(config.observationMapFileName, config.kmlFilterFileName, dataset.GetMapInfo()))
 					return 1;
 			}
+			else if (config.regionDetails.timePeriodYears > 0)
+			{
+				dataset.ExtractSpeciesWithinTimePeriod(config.regionDetails.startMonth, config.regionDetails.startDay,
+					config.regionDetails.endMonth, config.regionDetails.endDay, config.regionDetails.timePeriodYears);
+			}
 		}
 		else if (!config.timeOfDayParameters.outputFile.empty())
 		{
