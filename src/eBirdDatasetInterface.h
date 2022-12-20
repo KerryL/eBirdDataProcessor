@@ -36,6 +36,9 @@ public:
 	bool WriteTimeOfDayFiles(const UString::String& dataFileName) const;
 	
 	bool ExtractObservationsWithinGeometry(const UString::String& globalFileName, const UString::String& kmlFileName, const UString::String& outputFileName);
+
+	bool ExtractSpeciesWithinTimePeriod(const unsigned int& startMonth, const unsigned int& startDay,
+		const unsigned int& endMonth, const unsigned int& endDay, const unsigned int& timePeriodYears) const;
 	
 	struct MapInfo
 	{

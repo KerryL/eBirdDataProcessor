@@ -81,6 +81,12 @@ void EBDPConfigFile::BuildConfigItems()
 	
 	AddConfigItem(_T("COMMENT_GROUP"), config.commentGroupString);
 
+	AddConfigItem(_T("REGION_YEAR_COUNT"), config.regionDetails.timePeriodYears);
+	AddConfigItem(_T("REGION_START_MONTH"), config.regionDetails.startMonth);
+	AddConfigItem(_T("REGION_START_DAY"), config.regionDetails.startDay);
+	AddConfigItem(_T("REGION_END_MONTH"), config.regionDetails.endMonth);
+	AddConfigItem(_T("REGION_END_DAY"), config.regionDetails.endDay);
+
 	AddConfigItem(_T("HUNT_SPECIES"), config.speciesHunt.commonName);
 	AddConfigItem(_T("HUNT_LATITUDE"), config.speciesHunt.latitude);
 	AddConfigItem(_T("HUNT_LONGITUDE"), config.speciesHunt.longitude);
@@ -134,6 +140,12 @@ void EBDPConfigFile::AssignDefaults()
 
 	config.doComparison = false;
 
+	config.regionDetails.timePeriodYears - 0;
+	config.regionDetails.startMonth = 0;
+	config.regionDetails.startDay = 0;
+	config.regionDetails.endMonth = 0;
+	config.regionDetails.endDay = 0;
+
 	config.speciesHunt.latitude = 0.0;
 	config.speciesHunt.longitude = 0.0;
 	config.speciesHunt.radius = 0.0;
@@ -186,6 +198,9 @@ bool EBDPConfigFile::ConfigIsOK()
 		configurationOK = false;
 		
 	if (!LocationFilterConfigIsOK())
+		configurationOK = false;
+
+	if (!RegionDetailsConfigIsOK())
 		configurationOK = false;
 
 	return configurationOK;
@@ -423,7 +438,7 @@ bool EBDPConfigFile::SpeciesHuntConfigIsOK()
 
 	if (config.speciesHunt.radius <= 0.0)
 	{
-		Cerr << GetKey(config.speciesHunt.radius) << "must be strictly positive\n";
+		Cerr << GetKey(config.speciesHunt.radius) << " must be strictly positive\n";
 		configurationOK = false;
 	}
 
@@ -439,15 +454,61 @@ bool EBDPConfigFile::LocationFilterConfigIsOK()
 	
 	if (config.locationFilters.latitude < -90.0 || config.locationFilters.latitude > 90.0)
 	{
-		Cerr << GetKey(config.locationFilters.latitude) << "must be between -90 and +90\n";
+		Cerr << GetKey(config.locationFilters.latitude) << " must be between -90 and +90\n";
 		configurationOK = false;
 	}
 	
 	if (config.locationFilters.longitude < -180.0 || config.locationFilters.latitude > 180.0)
 	{
-		Cerr << GetKey(config.locationFilters.longitude) << "must be between -180 and +180\n";
+		Cerr << GetKey(config.locationFilters.longitude) << " must be between -180 and +180\n";
 		configurationOK = false;
 	}
 	
+	return configurationOK;
+}
+
+bool EBDPConfigFile::RegionDetailsConfigIsOK()
+{
+	if (config.regionDetails.timePeriodYears == 0)
+		return true;
+
+	bool configurationOK(true);
+
+	if (config.regionDetails.startDay == 0)
+	{
+		Cerr << GetKey(config.regionDetails.startMonth) << " must be specified when " << GetKey(config.regionDetails.timePeriodYears) << " is specified\n";
+		configurationOK = false;
+	}
+
+	if (config.regionDetails.startDay == 0)
+	{
+		Cerr << GetKey(config.regionDetails.startDay) << " must be specified when " << GetKey(config.regionDetails.timePeriodYears) << " is specified\n";
+		configurationOK = false;
+	}
+
+	if (config.regionDetails.startDay == 0)
+	{
+		Cerr << GetKey(config.regionDetails.endMonth) << " must be specified when " << GetKey(config.regionDetails.timePeriodYears) << " is specified\n";
+		configurationOK = false;
+	}
+
+	if (config.regionDetails.startDay == 0)
+	{
+		Cerr << GetKey(config.regionDetails.endDay) << " must be specified when " << GetKey(config.regionDetails.timePeriodYears) << " is specified\n";
+		configurationOK = false;
+	}
+
+	if (config.kmlFilterFileName.empty())
+	{
+		Cerr << GetKey(config.kmlFilterFileName) << " must be specified when " << GetKey(config.regionDetails.timePeriodYears) << " is specified\n";
+		configurationOK = false;
+	}
+
+	if (config.eBirdDatasetPath.empty())
+	{
+		Cerr << GetKey(config.eBirdDatasetPath) << " must be specified when " << GetKey(config.regionDetails.timePeriodYears) << " is specified\n";
+		configurationOK = false;
+	}
+
 	return configurationOK;
 }

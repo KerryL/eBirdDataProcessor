@@ -1044,3 +1044,56 @@ void EBirdDatasetInterface::ProcessObservationKMLFilter(const Observation& obser
 	std::lock_guard<std::mutex> lock(mutex);
 	allObservationsInRegion[observation.uniqueID] = observation;// Don't use the checklist ID as the key for this case, or we'll end up with only one entry per checklist
 }
+
+bool EBirdDatasetInterface::ExtractSpeciesWithinTimePeriod(const unsigned int& startMonth, const unsigned int& startDay,
+	const unsigned int& endMonth, const unsigned int& endDay, const unsigned int& timePeriodYears) const
+{
+	const auto now(std::chrono::system_clock::now());
+	const unsigned int discardBeforeYear(1970 - timePeriodYears + std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() / 31537970UL);
+
+	const auto DateIsBetween([](const unsigned int& startMonth, const unsigned int& startDay,
+		const unsigned int& endMonth, const unsigned int& endDay, const unsigned int& month, const unsigned int& day)
+	{
+		if (startMonth == endMonth && month == startMonth)
+		{
+			if (startDay < endDay && day >= startDay && day <= endDay)
+				return true;
+			else if (startDay > endDay && (day <= endDay || day >= startDay))// Essentially, excluding a small range of dates
+				return true;
+		}
+		else if (month == startMonth)
+			return day >= startDay;
+		else if (month == endMonth)
+			return day <= endDay;
+		else if (startMonth < endMonth && month >= startMonth && month <= endMonth)
+			return true;
+		else if (startMonth > endMonth && (month <= endMonth || month >= startMonth))
+			return true;
+
+		return false;
+	});
+
+	std::unordered_map<UString::String, unsigned int> observedSpecies;
+	std::set<UString::String> checklistIDs;
+	for (const auto& o : allObservationsInRegion)
+	{
+		if (o.second.date.year < discardBeforeYear ||
+			!DateIsBetween(startMonth, startDay, endMonth, endDay, o.second.date.month, o.second.date.day))
+			continue;
+
+		checklistIDs.insert(o.second.checklistID);
+		if (observedSpecies.find(o.first) == observedSpecies.end())
+			observedSpecies[o.first] = 1;
+		else
+			++observedSpecies[o.first];
+	}
+
+	Cout << "Observed species in the region include:\n";
+	const auto coutState(Cout.flags());
+	Cout.precision(2);
+	Cout << std::fixed;
+	for (const auto& s : observedSpecies)
+		Cout << s.first << ' ' << 100.0 * s.second / checklistIDs.size() << '\n';
+	Cout << std::endl;
+	Cout.flags(coutState);
+}
