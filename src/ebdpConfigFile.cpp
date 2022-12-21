@@ -140,7 +140,7 @@ void EBDPConfigFile::AssignDefaults()
 
 	config.doComparison = false;
 
-	config.regionDetails.timePeriodYears - 0;
+	config.regionDetails.timePeriodYears = 0;
 	config.regionDetails.startMonth = 0;
 	config.regionDetails.startDay = 0;
 	config.regionDetails.endMonth = 0;
@@ -382,7 +382,7 @@ bool EBDPConfigFile::GeneralConfigIsOK()
 		configurationOK = false;
 	}
 	
-	if (config.kmlFilteredOutputFileName.empty() && !config.kmlFilterFileName.empty())
+	if (config.kmlFilteredOutputFileName.empty() && !config.kmlFilterFileName.empty() && config.regionDetails.timePeriodYears == 0)
 	{
 		Cerr << "Must specify " << GetKey(config.kmlFilteredOutputFileName) << " when " << GetKey(config.kmlFilterFileName) << " is specified\n";
 		configurationOK = false;

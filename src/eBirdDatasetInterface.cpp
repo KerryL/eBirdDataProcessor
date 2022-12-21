@@ -1081,19 +1081,27 @@ bool EBirdDatasetInterface::ExtractSpeciesWithinTimePeriod(const unsigned int& s
 			!DateIsBetween(startMonth, startDay, endMonth, endDay, o.second.date.month, o.second.date.day))
 			continue;
 
-		checklistIDs.insert(o.second.checklistID);
-		if (observedSpecies.find(o.first) == observedSpecies.end())
-			observedSpecies[o.first] = 1;
-		else
-			++observedSpecies[o.first];
+		if (o.second.completeChecklist)
+			checklistIDs.insert(o.second.checklistID);
+
+		const UString::String name(o.second.commonName.substr(0, o.second.commonName.find(_T(" ("))));
+		if (name.find(UString::Char('/')) != std::string::npos || name.find(_T("sp.")) != std::string::npos)
+			continue;
+			
+		if (observedSpecies.find(name) == observedSpecies.end())
+			observedSpecies[name] = 1;
+		else if (o.second.completeChecklist)
+			++observedSpecies[name];
 	}
 
-	Cout << "Observed species in the region include:\n";
+	Cout << "\nObserved species (" << observedSpecies.size() << ") in the region (since " << discardBeforeYear << ") include:\n";
 	const auto coutState(Cout.flags());
 	Cout.precision(2);
 	Cout << std::fixed;
 	for (const auto& s : observedSpecies)
-		Cout << s.first << ' ' << 100.0 * s.second / checklistIDs.size() << '\n';
-	Cout << std::endl;
+		Cout << s.first << ' ' << 100.0 * s.second / checklistIDs.size() << "\%\n";
+	Cout << "\nObservation frequency based on " << checklistIDs.size() << " checklists" << std::endl;
 	Cout.flags(coutState);
+	
+	return true;
 }
