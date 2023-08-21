@@ -1115,7 +1115,7 @@ bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std:
 	if (!StringUtilities::ExtractTextContainedInTag(html.substr(position), resultStart, mediaEntryString))
 		return false;
 
-	position = resultStartPosition + mediaEntryString.length();
+	position = resultStartPosition + mediaEntryString.length();// Tell caller where processing by this routine finished
 
 	const UString::String playButtonStart(_T("<span class=\"playButton\">"));
 	const auto playButtonStartPosition(mediaEntryString.find(playButtonStart));

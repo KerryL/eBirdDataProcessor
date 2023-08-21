@@ -119,7 +119,7 @@ private:
 		MapJobInfo() = default;
 		MapJobInfo(CountyInfo& info, const ObservationInfo& frequencyInfo,
 			const std::vector<EBirdInterface::RegionInfo>& regionNames, MapPageGenerator& mpg)
-			: info(info), frequencyInfo(frequencyInfo), regionNames(regionNames), mpg(mpg){}
+			: info(info), frequencyInfo(frequencyInfo), regionNames(regionNames), mpg(mpg) {}
 
 		CountyInfo& info;
 		const ObservationInfo& frequencyInfo;

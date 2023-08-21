@@ -813,8 +813,11 @@ void MapPageGenerator::MapJobInfo::DoJob()
 			break;
 		}
 	}
-
-	assert(!info.country.empty() && !info.name.empty() && !info.code.empty());
+	if (info.name.empty())
+	{
+		mpg.log << "No name found for region " << frequencyInfo.locationCode << std::endl;
+		//assert(!info.country.empty() && !info.name.empty() && !info.code.empty());
+	}
 	mpg.LookupAndAssignKML(info);
 }
 
