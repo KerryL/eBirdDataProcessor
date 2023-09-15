@@ -144,6 +144,9 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (config.showGaps)
 		processor.ShowGaps();
 
+	if (!config.birdingSpotBubbleDataFileName.empty())
+		processor.GenerateBirdingSpotBubbleData(config.birdingSpotBubbleDataFileName);
+
 	if (!config.mediaListHTML.empty())
 	{
 		MediaHTMLExtractor htmlExtractor;

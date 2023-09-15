@@ -2596,3 +2596,64 @@ unsigned int EBirdDataProcessor::GetWeekIndex(const std::tm& date)
 		weekOfMonth = 3;
 	return date.tm_mon * 4 + weekOfMonth;
 }
+
+bool EBirdDataProcessor::GenerateBirdingSpotBubbleData(const UString::String& fileName) const
+{
+	cJSON* root(cJSON_CreateArray());
+
+	struct LocationData
+	{
+		UString::String locationID;
+		double latitude;
+		double longitude;
+		std::set<UString::String> observationEventIDs;
+	};
+
+	std::vector<LocationData> locations;
+	for (const auto& o : data)
+	{
+		bool found(false);
+		for (auto& location : locations)
+		{
+			if (location.locationID == o.locationID)
+			{
+				location.observationEventIDs.insert(o.submissionID);
+				found = true;
+				break;
+			}
+		}
+
+		if (found)
+			continue;
+
+		LocationData newLocation;
+		newLocation.locationID = o.locationID;
+		newLocation.observationEventIDs.insert(o.submissionID);
+		newLocation.latitude = o.latitude;
+		newLocation.longitude = o.longitude;
+
+		locations.push_back(newLocation);
+	}
+
+	for (const auto& l : locations)
+	{
+		cJSON* item(cJSON_CreateObject());
+		cJSON_AddItemToObject(item, "latitude", cJSON_CreateNumber(l.latitude));
+		cJSON_AddItemToObject(item, "longitude", cJSON_CreateNumber(l.longitude));
+		cJSON_AddItemToObject(item, "count", cJSON_CreateNumber(static_cast<double>(l.observationEventIDs.size())));
+
+		cJSON_AddItemToArray(root, item);
+	}
+
+	UString::OFStream file(fileName);
+	if (!file.is_open())
+	{
+		Cerr << "Failed to open '" << fileName << "' for output\n";
+		return false;
+	}
+	file << "var observationLocations = " << cJSON_PrintUnformatted(root) << ";\n";
+
+	cJSON_free(root);
+
+	return true;
+}

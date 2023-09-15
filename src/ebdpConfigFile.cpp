@@ -65,6 +65,8 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("GEO_JSON_PRECISION"), config.locationFindingParameters.geoJSONPrecision);
 	AddConfigItem(_T("OUTPUT_BASE_FILE_NAME"), config.locationFindingParameters.baseOutputFileName);
 
+	AddConfigItem(_T("BUBBLE_DATA_FILE_NAME"), config.birdingSpotBubbleDataFileName);
+
 	AddConfigItem(_T("HIGH_DETAIL"), config.highDetailCountries);
 
 	AddConfigItem(_T("FIND_BEST_TRIPS"), config.findBestTripLocations);

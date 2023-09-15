@@ -79,6 +79,8 @@ public:
 
 	void DoListComparison() const;
 
+	bool GenerateBirdingSpotBubbleData(const UString::String& fileName) const;
+
 	struct FrequencyInfo
 	{
 		UString::String species;

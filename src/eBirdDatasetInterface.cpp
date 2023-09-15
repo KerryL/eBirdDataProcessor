@@ -1099,7 +1099,7 @@ bool EBirdDatasetInterface::ExtractSpeciesWithinTimePeriod(const unsigned int& s
 	Cout.precision(2);
 	Cout << std::fixed;
 	for (const auto& s : observedSpecies)
-		Cout << s.first << ' ' << 100.0 * s.second / checklistIDs.size() << "\%\n";
+		Cout << s.first << ' ' << 100.0 * s.second / checklistIDs.size() << "%\n";
 	Cout << "\nObservation frequency based on " << checklistIDs.size() << " checklists" << std::endl;
 	Cout.flags(coutState);
 	
