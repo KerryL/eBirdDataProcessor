@@ -170,6 +170,8 @@ struct EBDPConfig
 	bool findBestTripLocations;
 	BestTripParameters bestTripParameters;
 
+	UString::String birdingSpotBubbleDataFileName;
+
 	UString::String kmlFilterFileName;
 	UString::String kmlFilteredOutputFileName;
 	UString::String observationMapFileName;
