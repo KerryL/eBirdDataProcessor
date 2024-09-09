@@ -18,7 +18,7 @@
 class EBirdInterface : public JSONInterface
 {
 public:
-	EBirdInterface(const UString::String& apiKey) : tokenData(apiKey) {}
+	EBirdInterface(const UString::String& apiKey) : JSONInterface(), tokenData(apiKey) { SetVerboseOutput(true); }
 
 	struct LocationInfo
 	{

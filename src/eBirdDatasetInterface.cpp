@@ -893,7 +893,9 @@ EBirdDatasetInterface::SpeciesData::Rarity::Rarity() : recentObservationYears(ye
 
 void EBirdDatasetInterface::SpeciesData::Rarity::Update(const Date& date)
 {
-	// The part below here will always work
+	// The part below here will always work; when Rarity() is called, recentObservationYears is initialized to a vector of zeros with size = yearsToCheck.
+	// Here, we get a pointer to the smallest year (i.e. the initial zero or the "longest ago" year).
+	// Then we replace that minimum with date.year (unless date.year was already in the list).
 	auto minYear(std::min_element(recentObservationYears.begin(), recentObservationYears.end()));
 	if (date.year > *minYear)
 	{
@@ -911,7 +913,7 @@ void EBirdDatasetInterface::SpeciesData::Rarity::Update(const Date& date)
 			*minYear = date.year;
 	}
 
-	// We assume that there is enough data that we'll always have observations on 12/31 if the dataset goes through that date
+	// We assume that there is enough data that we'll always have some observations (not of any particular species) on 12/31 if the dataset includes data for an entire year
 	if (date.month == 12 && date.day == 31)
 	{
 		std::lock_guard<std::mutex> lock(referenceYearMutex);
@@ -936,6 +938,8 @@ void EBirdDatasetInterface::UpdateRarityAssessment()
 				}
 
 				species.second.rarityGuess.mightBeRarity = recentYearCount <= SpeciesData::Rarity::minHitYears;
+				if (species.second.rarityGuess.mightBeRarity)
+					species.second.rarityGuess.yearsObservedInLastNYears = recentYearCount;
 			}
 		}
 	}
@@ -1049,7 +1053,7 @@ bool EBirdDatasetInterface::ExtractSpeciesWithinTimePeriod(const unsigned int& s
 	const unsigned int& endMonth, const unsigned int& endDay, const unsigned int& timePeriodYears) const
 {
 	const auto now(std::chrono::system_clock::now());
-	const unsigned int discardBeforeYear(1970 - timePeriodYears + std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() / 31537970UL);
+	const unsigned int discardBeforeYear(1970 - timePeriodYears + static_cast<unsigned int>(std::chrono::duration_cast<std::chrono::seconds>(now.time_since_epoch()).count() / 31537970UL));
 
 	const auto DateIsBetween([](const unsigned int& startMonth, const unsigned int& startDay,
 		const unsigned int& endMonth, const unsigned int& endDay, const unsigned int& month, const unsigned int& day)
