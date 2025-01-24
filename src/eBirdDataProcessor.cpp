@@ -23,11 +23,7 @@
 #include <set>
 #include <filesystem>
 
-#ifdef _WIN32
-	namespace fs = std::experimental::filesystem;
-#else
-	namespace fs = std::filesystem;
-#endif// _WIN32
+namespace fs = std::filesystem;
 
 const UString::String EBirdDataProcessor::headerLine(_T("Submission ID,Common Name,Scientific Name,"
 	"Taxonomic Order,Count,State/Province,County,Location ID,Location,Latitude,Longitude,Date,Time,"

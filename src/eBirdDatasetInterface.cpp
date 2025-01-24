@@ -27,11 +27,7 @@
 #include <locale>
 #include <cmath>
 #include <chrono>
-#if __GNUC_MINOR__ >= 8 || defined (WIN32)
 #include <filesystem>
-#else
-#include <experimental/filesystem>
-#endif
 
 const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
 
@@ -51,18 +47,64 @@ bool EBirdDatasetInterface::ExtractGlobalFrequencyData(const UString::String& fi
 	return true;
 }
 
+bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fileName, const unsigned int& month,
+	const double& latitude, const double& longitude, const double& radius, const UString::String& outputFileName)
+{
+	tripPlanningData.month = month;
+	tripPlanningData.latitude = latitude;
+	tripPlanningData.longitude = longitude;
+	tripPlanningData.radius = radius;
+
+	// Many locations could be personal locations with very few (or just one) checklist; can't assume enough data exists to do per-location probability estimates.
+	// Let's do probabilities based on all lists in the region (and without considering weekly variation)
+
+	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataTripPlanning, outputFileName))
+		return false;
+
+	UpdateRarityAssessment();
+	RemoveRarities();
+
+	const auto localData(frequencyMap[_T("ALL")][0]);
+	std::vector<std::pair<double, UString::String>> sortedSpecies;
+	for (const auto& s : localData.speciesList)
+	{
+		auto nameIt(std::find_if(nameIndexMap.begin(), nameIndexMap.end(), [&s](auto&& i) { return s.first == i.second; }));
+		sortedSpecies.push_back(std::make_pair(static_cast<double>(s.second.occurrenceCount) / localData.checklistIDs.size(), nameIt->first));
+	}
+	std::sort(sortedSpecies.rbegin(), sortedSpecies.rend());
+
+	Cout << "\n\nObserved species sorted by liklihood:\n";
+
+	unsigned int i(0);
+	for (const auto& s : sortedSpecies)
+		Cout << ++i << "\t" << s.second << " (" << s.first * 100.0 << "%)\n";
+
+	// Need to collect data with location (name/lat/lon/ID?) as key?
+
+	// Web page:
+	// - Select species; show pins for all locations; indicate number of observations in last x years for each pin
+	// - Select location; list species for selected location
+	// - Allow selecting multiple locations and cutoff "gimmie" species threshold (%); compile list of expected species from selected locations and identify "must gets" list for species not likely to be seen at other selected locations
+
+	// TODO:
+	// - Filter out species I've observed already?
+	// - Identify locations required to maximize species coverage
+
+	return true;
+}
+
 bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 	ProcessFunction processFunction, const UString::String& regionDataOutputFileName)
 {
 	assert(frequencyMap.empty());
 
-	if (!std::experimental::filesystem::exists(fileName))
+	if (!std::filesystem::exists(fileName))
 	{
 		Cerr << "File '" << fileName << "' does not exist\n";
 		return false;
 	}
 
-	const double fileSize(static_cast<double>(std::experimental::filesystem::file_size(fileName)));
+	const double fileSize(static_cast<double>(std::filesystem::file_size(fileName)));
 
 	try
 	{
@@ -286,12 +328,12 @@ bool EBirdDatasetInterface::EnsureFolderExists(const UString::String& dir)// Cre
 
 bool EBirdDatasetInterface::CreateFolder(const UString::String& dir)// Can only create one more level deep at a time
 {
-	return std::experimental::filesystem::create_directory(UString::ToNarrowString(dir));
+	return std::filesystem::create_directory(UString::ToNarrowString(dir));
 }
 
 bool EBirdDatasetInterface::FolderExists(const UString::String& dir)
 {
-	return std::experimental::filesystem::is_directory(dir);
+	return std::filesystem::is_directory(dir);
 }
 
 UString::String EBirdDatasetInterface::GetPath(const UString::String& regionCode)
@@ -304,7 +346,7 @@ UString::String EBirdDatasetInterface::GetPath(const UString::String& regionCode
 #endif// _WIN32
 
 	if (firstDash != std::string::npos)
-		regionCode + slash;
+		regionCode + slash;// TODO:  What was I trying to do here?
 	return regionCode.substr(0, firstDash) + slash;
 }
 
@@ -849,6 +891,45 @@ void EBirdDatasetInterface::ProcessObservationDataFrequency(const Observation& o
 	}
 }
 
+void EBirdDatasetInterface::ProcessObservationDataTripPlanning(const Observation& observation)
+{
+	if (observation.date.month != tripPlanningData.month)
+		return;
+	else if (!observation.approved)
+		return;
+	else if (!IncludeInLikelihoodCalculation(observation.commonName))
+		return;
+	else if (ComputeDistance(tripPlanningData.latitude * M_PI / 180.0, tripPlanningData.longitude * M_PI / 180.0,
+		observation.latitude * M_PI / 180.0, observation.longitude * M_PI / 180.0) > tripPlanningData.radius)
+		return;
+
+	{
+		std::lock_guard<std::mutex> lock(mutex);
+		allObservationsInRegion[observation.checklistID] = observation;
+	}
+
+	std::lock_guard<std::mutex> lock(mutex);// TODO:  If there were a way to eliminate this lock, there could potentially be a big speed improvement (would need to verify by profiling to ensure read isn't bottleneck)
+
+	auto& entry(frequencyMap[_T("ALL")][0]);
+	nameIndexMap.insert(std::make_pair(observation.commonName, static_cast<uint16_t>(nameIndexMap.size())));
+	auto& speciesInfo(entry.speciesList[nameIndexMap[observation.commonName]]);
+	speciesInfo.rarityGuess.Update(observation.date);
+
+	if (observation.completeChecklist)
+	{
+		entry.checklistIDs.insert(observation.checklistID);
+		++speciesInfo.occurrenceCount;
+	}
+}
+
+// Inputs in radians
+double EBirdDatasetInterface::ComputeDistance(const double latitude1, const double longitude1, const double latitude2, const double longitude2)
+{
+	const double earthRadius(6371.0);// [km]
+	const double averageLatitude(0.5 * (latitude1 + latitude2));// [rad] TODO:  Handle cases where we roll over +/-180 deg?
+	return earthRadius * sqrt((latitude2 - latitude1) * (latitude2 - latitude1) + cos(averageLatitude) * cos(averageLatitude) * (longitude2 - longitude1) * (longitude2 - longitude1));
+}
+
 void EBirdDatasetInterface::ProcessObservationDataTimeOfDay(const Observation& observation)
 {
 	if (!observation.approved)
@@ -924,6 +1005,21 @@ void EBirdDatasetInterface::SpeciesData::Rarity::Update(const Date& date)
 
 void EBirdDatasetInterface::UpdateRarityAssessment()
 {
+	// If our method of determining our reference year didn't work (i.e. if we're doing trip planning and only have data from a certain month), fix that now
+	if (SpeciesData::Rarity::referenceYear == 0)
+	{
+		// TODO:  This assumes that we're here because we're doing trip planning; may not always be true
+		for (const auto& s : frequencyMap[_T("ALL")][0].speciesList)
+		{
+			for (const auto& y : s.second.rarityGuess.recentObservationYears)
+			{
+				if (y > SpeciesData::Rarity::referenceYear)
+					SpeciesData::Rarity::referenceYear = y;
+			}
+		}
+		--SpeciesData::Rarity::referenceYear;
+	}
+
 	for (auto& f : frequencyMap)
 	{
 		for (auto& week : f.second)
