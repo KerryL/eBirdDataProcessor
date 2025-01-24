@@ -82,6 +82,13 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 			if (!dataset.WriteTimeOfDayFiles(config.timeOfDayParameters.outputFile))
 				return 1;
 		}
+		else if (config.tripPlanner)
+		{
+			if (!dataset.ExtractLocalFrequencyData(config.eBirdDatasetPath, config.timeFilters.month,
+					config.locationFilters.latitude, config.locationFilters.longitude, config.locationFilters.radius,
+					config.timeOfDayParameters.splitRegionDataFile))
+				return 1;
+		}
 		else// Ignore all other options and generate global frequency data
 		{
 			if (!dataset.ExtractGlobalFrequencyData(config.eBirdDatasetPath, config.timeOfDayParameters.splitRegionDataFile))

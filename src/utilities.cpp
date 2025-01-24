@@ -11,11 +11,7 @@
 #include <filesystem>
 #include <cmath>
 
-#ifdef _WIN32
-	namespace fs = std::experimental::filesystem;
-#else
-	namespace fs = std::filesystem;
-#endif// _WIN32
+namespace fs = std::filesystem;
 
 namespace Utilities
 {

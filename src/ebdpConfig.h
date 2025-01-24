@@ -186,6 +186,8 @@ struct EBDPConfig
 	UString::String jsDataFileName;
 
 	std::vector<UString::String> bigYear;
+
+	bool tripPlanner;
 };
 
 #endif// EBDP_CONFIG_H_

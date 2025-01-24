@@ -14,13 +14,10 @@
 
 UString::String StringUtilities::Trim(UString::String s)
 {
-	s.erase(s.begin(), std::find_if(s.begin(), s.end(),
-		std::not1(std::ptr_fun<int, int>(std::isspace))));
+	auto begin = std::find_if_not(s.begin(), s.end(), static_cast<int(*)(int)>(std::isspace));
+	auto end = std::find_if_not(s.rbegin(), s.rend(), static_cast<int(*)(int)>(std::isspace)).base();
 
-    s.erase(std::find_if(s.rbegin(), s.rend(),
-		std::not1(std::ptr_fun<int, int>(std::isspace))).base(), s.end());
-
-	return s;
+	return (begin >= end) ? UString::String() : UString::String(begin, end);
 }
 
 UString::String StringUtilities::ToLower(const UString::String& s)

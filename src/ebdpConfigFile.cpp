@@ -96,6 +96,8 @@ void EBDPConfigFile::BuildConfigItems()
 	
 	AddConfigItem(_T("BUILD_CHECKLIST_LINKS"), config.buildChecklistLinks);
 	AddConfigItem(_T("JS_DATA_FILE_NAME"), config.jsDataFileName);
+
+	AddConfigItem(_T("TRIP_PLANNER"), config.tripPlanner);
 }
 
 void EBDPConfigFile::AssignDefaults()

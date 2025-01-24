@@ -28,6 +28,8 @@ public:
 	EBirdDatasetInterface() = default;
 
 	bool ExtractGlobalFrequencyData(const UString::String& fileName, const UString::String& regionDataOutputFileName);
+	bool ExtractLocalFrequencyData(const UString::String& fileName, const unsigned int& month,
+		const double& latitude, const double& longitude, const double& radius, const UString::String& outputFileName);
 	bool WriteFrequencyFiles(const UString::String& frequencyDataPath) const;
 
 	bool ExtractTimeOfDayInfo(const UString::String& fileName,
@@ -170,6 +172,17 @@ private:
 	typedef void (EBirdDatasetInterface::*ProcessFunction)(const Observation& observation);
 	void UpdateRarityAssessment();
 	void RemoveRarities();
+	void ProcessObservationDataTripPlanning(const Observation& observation);
+
+	struct TripPlanningData
+	{
+		unsigned int month;
+		double latitude;
+		double longitude;
+		double radius;
+	} tripPlanningData;
+
+	static double ComputeDistance(const double latitude1, const double longitude1, const double latitude2, const double longitude2);
 
 	enum class Columns
 	{
