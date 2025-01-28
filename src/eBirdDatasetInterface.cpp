@@ -79,7 +79,61 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 	for (const auto& s : sortedSpecies)
 		Cout << ++i << "\t" << s.second << " (" << s.first * 100.0 << "%)\n";
 
-	// Need to collect data with location (name/lat/lon/ID?) as key?
+	// Organize data with location ID as key and exclude species below our probability threshold
+	const double probabilityThreshold(0.02);// [%]
+	std::unordered_map<UString::String, LocationData> locationData;
+	double minLatitude(500.0);
+	double maxLatitude(-500.0);
+	double minLongitude(500.0);
+	double maxLongitude(-500.0);
+
+	for (const auto& checklist : allObservationsbyChecklist)
+	{
+		for (const auto& o : checklist.second)
+		{
+			auto speciesIt(std::find_if(sortedSpecies.begin(), sortedSpecies.end(), [&o](auto&& s) { return o.commonName == s.second; }));
+			if (speciesIt == sortedSpecies.end())
+				continue;// Rarities already removed from sortedSpecies list, so this will happen for rarities
+			/*else if (speciesIt->first < probabilityThreshold)
+			{
+				// If we exclude anything here, also need to remove it from sortedSpecies
+				continue;
+			}*/
+
+			auto locIt(locationData.find(o.locationID));
+			if (locIt == locationData.end())
+			{
+				LocationData newLocationData;
+				newLocationData.name = o.locationName;
+				newLocationData.latitude = o.latitude;
+				newLocationData.longitude = o.longitude;
+
+				newLocationData.speciesList[o.commonName] = 1U;
+
+				if (o.latitude > maxLatitude)
+					maxLatitude = o.latitude;
+				if (o.latitude < minLatitude)
+					minLatitude = o.latitude;
+				if (o.longitude > maxLongitude)
+					maxLongitude = o.longitude;
+				if (o.longitude < minLongitude)
+					minLongitude = o.longitude;
+
+				locationData[o.locationID] = newLocationData;
+			}
+			else
+			{
+				auto locSpeciesIt(locIt->second.speciesList.find(o.commonName));
+				if (locSpeciesIt == locIt->second.speciesList.end())
+					locIt->second.speciesList[o.commonName] = 1U;
+				else
+					++(locSpeciesIt->second);
+			}
+		}
+	}
+
+	if (!WriteSpeciesAtLocationJSON(locationData, sortedSpecies, minLatitude, minLongitude, maxLatitude, maxLongitude, "tripPlanner.js"))
+		return false;
 
 	// Web page:
 	// - Select species; show pins for all locations; indicate number of observations in last x years for each pin
@@ -89,6 +143,219 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 	// TODO:
 	// - Filter out species I've observed already?
 	// - Identify locations required to maximize species coverage
+
+	return true;
+}
+
+bool EBirdDatasetInterface::WriteSpeciesAtLocationJSON(const std::unordered_map<UString::String, LocationData>& locationData,
+	const std::vector<std::pair<double, UString::String>>& sortedSpecies, const double& minLat, const double& minLon,
+	const double& maxLat, const double& maxLon, const std::string& fileName)
+{
+	cJSON* locationJSON;
+	if (!CreateLocationJSONData(locationData, sortedSpecies, locationJSON))
+		return false;
+
+	cJSON* speciesJSON;
+	if (!CreateSpeciesJSONData(locationData, sortedSpecies, speciesJSON))
+	{
+		cJSON_Delete(locationJSON);
+		return false;
+	}
+
+	std::ofstream file(fileName);
+	if (!file.is_open() || !file.good())
+	{
+		Cerr << "Failed to open '" << UString::ToStringType(fileName) << "' for output\n";
+		cJSON_Delete(locationJSON);
+		cJSON_Delete(speciesJSON);
+		return false;
+	}
+
+	const auto locationJSONString(cJSON_PrintUnformatted(locationJSON));
+	if (!locationJSONString)
+	{
+		Cerr << "Failed to generate location JSON string\n";
+		cJSON_Delete(locationJSON);
+		cJSON_Delete(speciesJSON);
+		return false;
+	}
+
+	const auto speciesJSONString(cJSON_PrintUnformatted(speciesJSON));
+	if (!speciesJSONString)
+	{
+		Cerr << "Failed to generate species JSON string\n";
+		free(locationJSONString);
+		cJSON_Delete(locationJSON);
+		cJSON_Delete(speciesJSON);
+		return false;
+	}
+
+	const double borderFactor(0.05);
+	const double latMargin((maxLat - minLat) * borderFactor);
+	const double lonMargin((maxLon - minLon) * borderFactor);
+	file << "var minCoord = [" << minLat - latMargin << ", " << minLon - lonMargin << "];\n"
+		<< "var maxCoord = [" << maxLat + latMargin << ", " << maxLon + lonMargin << "];\n"
+		<< "var observationLocations = " << locationJSONString << ";\n"
+		<< "var species = " << speciesJSONString << ";\n";
+	free(locationJSONString);
+	free(speciesJSONString);
+	cJSON_Delete(locationJSON);
+	cJSON_Delete(speciesJSON);
+
+	return true;
+}
+
+bool EBirdDatasetInterface::CreateLocationJSONData(const std::unordered_map<UString::String, LocationData>& locationData,
+	const std::vector<std::pair<double, UString::String>>& sortedSpecies, cJSON*& json)
+{
+	json = cJSON_CreateArray();
+	if (!json)
+	{
+		Cerr << "Failed to create root location JSON object for writing\n";
+		return false;
+	}
+
+	for (const auto& l : locationData)
+	{
+		if (!BuildLocationRecord(l, sortedSpecies, json))
+			return false;
+	}
+
+	return true;
+}
+
+bool EBirdDatasetInterface::CreateSpeciesJSONData(const std::unordered_map<UString::String, LocationData>& locationData,
+	const std::vector<std::pair<double, UString::String>>& sortedSpecies, cJSON*& json)
+{
+	json = cJSON_CreateArray();
+	if (!json)
+	{
+		Cerr << "Failed to create root species JSON object for writing\n";
+		return false;
+	}
+
+	for (const auto& s : sortedSpecies)
+	{
+		if (!BuildSpeciesRecord(s, locationData, json))
+			return false;
+	}
+
+	return true;
+}
+
+bool EBirdDatasetInterface::BuildSpeciesRecord(const std::pair<double, UString::String>& species,
+	const std::unordered_map<UString::String, LocationData>& locationData, cJSON*& json)
+{
+	auto speciesData(cJSON_CreateObject());
+	if (!speciesData)
+	{
+		Cerr << "Failed to create species data JSON object\n";
+		return false;
+	}
+
+	cJSON_AddItemToArray(json, speciesData);
+
+	cJSON_AddStringToObject(speciesData, "name", UString::ToNarrowString(species.second).c_str());
+	cJSON_AddNumberToObject(speciesData, "p", species.first);
+
+	auto locationArray(cJSON_CreateArray());
+	if (!locationArray)
+	{
+		Cerr << "Failed to create locations for species JSON array\n";
+		return false;
+	}
+
+	cJSON_AddItemToObject(speciesData, "locations", locationArray);
+
+	if (!BuildLocationsList(locationData, species.second, locationArray))
+		return false;
+
+	return true;
+}
+
+bool EBirdDatasetInterface::BuildLocationsList(const std::unordered_map<UString::String, LocationData>& locationData,
+	const UString::String& speciesName, cJSON*& json)
+{
+	for (const auto& loc : locationData)
+	{
+		auto sIt(loc.second.speciesList.find(speciesName));
+		if (sIt == loc.second.speciesList.end())
+			continue;
+
+		auto locationObject(cJSON_CreateObject());
+		if (!locationObject)
+		{
+			Cerr << "Failed to create location data JSON object\n";
+			return false;
+		}
+
+		cJSON_AddItemToArray(json, locationObject);
+
+		cJSON_AddStringToObject(locationObject, "id", UString::ToNarrowString(loc.first).c_str());
+		cJSON_AddStringToObject(locationObject, "name", UString::ToNarrowString(loc.second.name).c_str());
+		cJSON_AddNumberToObject(locationObject, "count", sIt->second);// Count of checklists with this species at this location
+	}
+
+	return true;
+}
+
+bool EBirdDatasetInterface::BuildLocationRecord(const std::pair<UString::String, LocationData>& location,
+	const std::vector<std::pair<double, UString::String>>& sortedSpecies, cJSON*& json)
+{
+	auto locationData(cJSON_CreateObject());
+	if (!locationData)
+	{
+		Cerr << "Failed to create location data JSON object\n";
+		return false;
+	}
+
+	cJSON_AddItemToArray(json, locationData);
+
+	cJSON_AddStringToObject(locationData, "id", UString::ToNarrowString(location.first).c_str());
+	cJSON_AddStringToObject(locationData, "name", UString::ToNarrowString(location.second.name).c_str());
+	cJSON_AddNumberToObject(locationData, "latitude", location.second.latitude);
+	cJSON_AddNumberToObject(locationData, "longitude", location.second.longitude);
+
+	auto speciesData(cJSON_CreateArray());
+	if (!speciesData)
+	{
+		Cerr << "Failed to create species at location JSON array\n";
+		return false;
+	}
+
+	cJSON_AddItemToObject(locationData, "speciesList", speciesData);
+
+	if (!BuildSpeciesList(location.second.speciesList, sortedSpecies, speciesData))
+		return false;
+
+	return true;
+}
+
+bool EBirdDatasetInterface::BuildSpeciesList(const std::unordered_map<UString::String, unsigned int>& speciesList,
+	const std::vector<std::pair<double, UString::String>>& sortedSpecies, cJSON*& json)
+{
+	for (const auto& s : speciesList)
+	{
+		auto speciesObject(cJSON_CreateObject());
+		if (!speciesObject)
+		{
+			Cerr << "Failed to create species data JSON object\n";
+			return false;
+		}
+
+		cJSON_AddItemToArray(json, speciesObject);
+
+		for (const auto& sorted : sortedSpecies)
+		{
+			if (s.first == sorted.second)
+			{
+				cJSON_AddStringToObject(speciesObject, "name", UString::ToNarrowString(s.first).c_str());
+				//cJSON_AddNumberToObject(speciesObject, "p", sorted.first);// "Probability" as % for entire circle
+				cJSON_AddNumberToObject(speciesObject, "count", s.second);// Count of occurrences at this location
+				break;
+			}
+		}
+	}
 
 	return true;
 }
@@ -397,6 +664,8 @@ EBirdDatasetInterface::ColumnMap EBirdDatasetInterface::BuildColumnMapFromHeader
 			columnMap[static_cast<size_t>(Columns::Latitude)] = column;
 		else if (token == _T("LONGITUDE"))
 			columnMap[static_cast<size_t>(Columns::Longitude)] = column;
+		else if (token == _T("LOCALITY ID"))
+			columnMap[static_cast<size_t>(Columns::LocationId)] = column;
 		else if (token == _T("OBSERVATION DATE"))
 			columnMap[static_cast<size_t>(Columns::Date)] = column;
 		else if (token == _T("TIME OBSERVATIONS STARTED"))
@@ -456,6 +725,8 @@ bool EBirdDatasetInterface::ParseLine(const UString::String& line, const ColumnM
 			observation.regionCode = token;
 		else if (column == columnMap[static_cast<size_t>(Columns::LocationName)])
 			observation.locationName = token;
+		else if (column == columnMap[static_cast<size_t>(Columns::LocationId)])
+			observation.locationID = token;
 		else if (column == columnMap[static_cast<size_t>(Columns::Latitude)])
 		{
 			if (!ParseInto(token, observation.latitude))
@@ -903,15 +1174,14 @@ void EBirdDatasetInterface::ProcessObservationDataTripPlanning(const Observation
 		observation.latitude * M_PI / 180.0, observation.longitude * M_PI / 180.0) > tripPlanningData.radius)
 		return;
 
-	{
-		std::lock_guard<std::mutex> lock(mutex);
-		allObservationsInRegion[observation.checklistID] = observation;
-	}
-
 	std::lock_guard<std::mutex> lock(mutex);// TODO:  If there were a way to eliminate this lock, there could potentially be a big speed improvement (would need to verify by profiling to ensure read isn't bottleneck)
 
+	allObservationsbyChecklist[observation.checklistID].push_back(observation);
+
 	auto& entry(frequencyMap[_T("ALL")][0]);
-	nameIndexMap.insert(std::make_pair(observation.commonName, static_cast<uint16_t>(nameIndexMap.size())));
+	auto nameMapIt(nameIndexMap.find(observation.commonName));
+	if (nameMapIt == nameIndexMap.end())
+		nameIndexMap.insert(std::make_pair(observation.commonName, static_cast<uint16_t>(nameIndexMap.size())));
 	auto& speciesInfo(entry.speciesList[nameIndexMap[observation.commonName]]);
 	speciesInfo.rarityGuess.Update(observation.date);
 
@@ -1086,7 +1356,7 @@ std::vector<EBirdDatasetInterface::MapInfo> EBirdDatasetInterface::GetMapInfo() 
 	unsigned int a(0);
 	for (const auto& o : allObservationsInRegion)
 	{
-		if (o.second.checklistID == _T("S73117658"))
+		if (o.second.checklistID == _T("S73117658"))// TODO:  Sure looks like some leftover debug code?
 			a++;
 		bool found(false);
 		for (auto& m : mapInfo)

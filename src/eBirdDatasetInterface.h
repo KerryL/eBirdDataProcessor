@@ -155,6 +155,7 @@ private:
 		double latitude;// [deg]
 		double longitude;// [deg]
 		UString::String locationName;
+		UString::String locationID;
 	};
 
 	std::vector<UString::String> speciesNamesTimeOfDay;
@@ -162,6 +163,7 @@ private:
 	UString::OFStream regionDataOutputFile;
 	std::unordered_map<UString::String, std::vector<Observation>> timeOfDayObservationMap;// Key is species common name
 	std::unordered_map<UString::String, Observation> allObservationsInRegion;// Key is checklist ID
+	std::unordered_map<UString::String, std::vector<Observation>> allObservationsbyChecklist;// Key is checklist ID
 	bool RegionMatches(const UString::String& regionCode) const;
 
 	std::unique_ptr<KMLLibraryManager::GeometryInfo> kmlFilterGeometry;
@@ -195,6 +197,7 @@ private:
 		LocationName,
 		Latitude,
 		Longitude,
+		LocationId,
 		Date,
 		Time,
 		ChecklistId,
@@ -261,6 +264,30 @@ private:
 	static EBirdInterface::ObservationInfo ConvertToObservationInfo(const Observation& o);
 	
 	static void AddObservationToMapInfo(const Observation& o, MapInfo& m);
+
+	struct LocationData
+	{
+		UString::String name;
+		double latitude;
+		double longitude;
+		std::unordered_map<UString::String, unsigned int> speciesList;
+	};
+
+	static bool WriteSpeciesAtLocationJSON(const std::unordered_map<UString::String, LocationData>& locationData,
+		const std::vector<std::pair<double, UString::String>>& sortedSpecies, const double& minLat, const double& minLon,
+		const double& maxLat, const double& maxLon, const std::string& fileName);
+	static bool CreateLocationJSONData(const std::unordered_map<UString::String, LocationData>& locationData,
+		const std::vector<std::pair<double, UString::String>>& sortedSpecies, cJSON*& json);
+	static bool CreateSpeciesJSONData(const std::unordered_map<UString::String, LocationData>& locationData,
+		const std::vector<std::pair<double, UString::String>>& sortedSpecies, cJSON*& json);
+	static bool BuildLocationRecord(const std::pair<UString::String, LocationData>& location,
+		const std::vector<std::pair<double, UString::String>>& sortedSpecies, cJSON*& json);
+	static bool BuildSpeciesRecord(const std::pair<double, UString::String>& species,
+		const std::unordered_map<UString::String, LocationData>& locationData, cJSON*& json);
+	static bool BuildSpeciesList(const std::unordered_map<UString::String, unsigned int>& speciesList,
+		const std::vector<std::pair<double, UString::String>>& sortedSpecies, cJSON*& json);
+	static bool BuildLocationsList(const std::unordered_map<UString::String, LocationData>& locationData,
+		const UString::String& speciesName, cJSON*& json);
 };
 
 template<typename T>
