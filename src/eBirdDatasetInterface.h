@@ -271,6 +271,7 @@ private:
 		double latitude;
 		double longitude;
 		std::unordered_map<UString::String, unsigned int> speciesList;
+		std::set<UString::String> completeChecklistIds;
 	};
 
 	static bool WriteSpeciesAtLocationJSON(const std::unordered_map<UString::String, LocationData>& locationData,

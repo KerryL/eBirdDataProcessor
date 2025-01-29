@@ -109,6 +109,8 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 				newLocationData.longitude = o.longitude;
 
 				newLocationData.speciesList[o.commonName] = 1U;
+				if (o.completeChecklist)
+					newLocationData.completeChecklistIds.insert(o.checklistID);
 
 				if (o.latitude > maxLatitude)
 					maxLatitude = o.latitude;
@@ -123,6 +125,9 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 			}
 			else
 			{
+				if (o.completeChecklist)
+					locIt->second.completeChecklistIds.insert(o.checklistID);
+
 				auto locSpeciesIt(locIt->second.speciesList.find(o.commonName));
 				if (locSpeciesIt == locIt->second.speciesList.end())
 					locIt->second.speciesList[o.commonName] = 1U;
@@ -315,6 +320,7 @@ bool EBirdDatasetInterface::BuildLocationRecord(const std::pair<UString::String,
 	cJSON_AddStringToObject(locationData, "name", UString::ToNarrowString(location.second.name).c_str());
 	cJSON_AddNumberToObject(locationData, "latitude", location.second.latitude);
 	cJSON_AddNumberToObject(locationData, "longitude", location.second.longitude);
+	cJSON_AddNumberToObject(locationData, "checklists", static_cast<unsigned int>(location.second.completeChecklistIds.size()));
 
 	auto speciesData(cJSON_CreateArray());
 	if (!speciesData)
