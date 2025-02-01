@@ -108,9 +108,13 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 				newLocationData.latitude = o.latitude;
 				newLocationData.longitude = o.longitude;
 
-				newLocationData.speciesList[o.commonName] = 1U;
 				if (o.completeChecklist)
+				{
 					newLocationData.completeChecklistIds.insert(o.checklistID);
+					newLocationData.speciesList[o.commonName] = 1U;
+				}
+				else
+					newLocationData.speciesList[o.commonName] = 0U;
 
 				if (o.latitude > maxLatitude)
 					maxLatitude = o.latitude;
@@ -125,8 +129,10 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 			}
 			else
 			{
-				if (o.completeChecklist)
-					locIt->second.completeChecklistIds.insert(o.checklistID);
+				if (!o.completeChecklist)
+					continue;
+				
+				locIt->second.completeChecklistIds.insert(o.checklistID);
 
 				auto locSpeciesIt(locIt->second.speciesList.find(o.commonName));
 				if (locSpeciesIt == locIt->second.speciesList.end())
@@ -140,14 +146,8 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 	if (!WriteSpeciesAtLocationJSON(locationData, sortedSpecies, minLatitude, minLongitude, maxLatitude, maxLongitude, "tripPlanner.js"))
 		return false;
 
-	// Web page:
-	// - Select species; show pins for all locations; indicate number of observations in last x years for each pin
-	// - Select location; list species for selected location
-	// - Allow selecting multiple locations and cutoff "gimmie" species threshold (%); compile list of expected species from selected locations and identify "must gets" list for species not likely to be seen at other selected locations
-
 	// TODO:
-	// - Filter out species I've observed already?
-	// - Identify locations required to maximize species coverage
+	// - List of species to filter out
 
 	return true;
 }

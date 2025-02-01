@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>Trip Planner</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <meta charset="utf-8">
+    <style>
+      #mapid {
+        height: calc(100% - 150px);
+		//z-index: -1;
+      }
+      html, body {
+        height: 100%;
+        margin: 0;
+        padding: 0;
+      }
+	  div {
+	    font-family: sans-serif;
+	  }
+	  .column {
+	    width: 30%;
+		float: left;
+	  }
+	  .row {
+	  }
+	  .scrollableWithBorder {
+	    border: 1px solid #ccc;
+		height: 150px;
+		overflow-y: scroll;
+	  }
+	  .backdrop {
+        display: none;
+        position: fixed;
+        width: 100vw;
+        height: 100vh;
+        cursor: pointer;
+        background: #00000088;
+        top: 0;
+		z-index: -1;
+      }
+      .backdrop.active {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+		z-index: 1000;
+      }
+      .modal {
+        background: #ffffff;
+        width: 80%;
+        height: 80%;
+        cursor: initial;
+		overflow-y: scroll;
+		z-index: 1000;
+      }
+	  /*@media print {
+	    .modal { overflow:visible; }
+	  }*/
+	  .info { padding: 6px 8px; font: 14px/16px Arial, Helvetica, sans-serif; background: white; background: rgba(255,255,255,0.8); box-shadow: 0 0 15px rgba(0,0,0,0.2); border-radius: 5px; }
+	  .info h4 { margin: 0 0 5px; color: #777; }
+      .legend { text-align: left; line-height: 18px; color: #555; }
+      .legend i { width: 18px; height: 18px; float: left; margin-right: 8px; opacity: 0.7; }
+	  //#speciesList { width:100%; }
+    </style>
+	
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.7.1/dist/leaflet.css"
+      integrity="sha512-xodZBNTC5n17Xt2atTPuE1HxjVMSvLVW9ocqUKLsCC5CXdbqCmblAshOMAS6/keqq/sMZMZ19scR4PsZChSR7A=="
+      crossorigin=""/>
+    <script src="https://unpkg.com/leaflet@1.7.1/dist/leaflet.js"
+      integrity="sha512-XQoYMqMTK8LvdxXYG3nZ448hOEQiglfqkJs1NOQV44cWnUrBc8PkAOcXy20w0vlaXaVUearIOBhiXZ5V3ynxwA=="
+      crossorigin=""></script>
+	<script src="leaflet-plugins/layer/tile/Bing.js"></script>
+  </head>
+
+  <body onload='LoadLocationsFromQueryParameters()'>
+    <div class='backdrop' tabindex='-1'>
+      <div id='modalReport' class='modal'></div>
+    </div>
+	
+    <div id="mapid"></div>
+
+	<script type="text/javascript" src="tripPlanner.js"></script>
+	
+	<div class='row'>
+	  <div class='column'>
+	    <div>
+	      <span>
+            <label>Select Species:</label>
+            <input type="text" id="speciesSelect" onChange="UpdateMap()" list="speciesSelectList">
+			<datalist id="speciesSelectList">
+			</datalist>
+	      <span>
+	      
+	      <span id='liklihoodDiv'></span>
+        </div>
+	    
+	    <div>
+	      <input type="radio" id="showSpecies" name="modeSelection" onChange="HandleModeChange(0)" checked="checked">
+	      <label for="showSpecies">Show Locations by Selected Species</label><br>
+	      
+	      <input type="radio" id="showAllLocations" name="modeSelection" onChange="HandleModeChange(1)">
+	      <label for="showAllLocations">Show All Locations</label><br>
+	      
+	      <input type="radio" id="showSelectedLocations" name="modeSelection" onChange="HandleModeChange(2)">
+	      <label for="showSelectedLocations">Show Selected Locations Only</label><br>
+		  
+		  <input type="radio" id="showHelpfulLocations" name="modeSelection" onChange="HandleModeChange(3)">
+	      <label for="showHelpfulLocations">Show Helpful Locations Only</label><br>
+	    </div>
+		
+		<div id="totalSpecies">Total Species At Selected Locations: </div>
+		<button type="button" onClick="GenerateReport()">Generate Report</button>
+		<button type="button" onClick="SaveLocations()">Save</button>
+	  </div>
+	
+	  <div class='column scrollableWithBorder' id="locationList">
+	  </div>
+	
+	  <div class='column scrollableWithBorder' id="speciesList">
+	  </div>
+	</div>
+
+    <script type="text/javascript">
+	  var map = L.map('mapid').fitBounds([minCoord, maxCoord]);
+
+      L.bingLayer('AkRofTSEOhqkoyS1t8HdLpnthLDeYLgphG_neLIDs69KmsLmdfzdDteu1R8obdkJ', { 'imagerySet' : 'AerialWithLabelsOnDemand' }).addTo(map);
+	  
+	  const radius = 5;// [px]
+	  var maxSpecies = 0;
+	  const speciesMode = 0;
+	  const allLocationsMode = 1;
+	  const selectedLocationsMode = 2;
+	  const helpfulLocationsMode = 3;
+	  var mode = speciesMode;
+	  const locationCountForLiklihoodCalc = 10;
+	  
+	  function UpdateMaxSpecies(location) {
+		if (location.speciesList.length > maxSpecies)
+		  maxSpecies = location.speciesList.length;
+	  }
+	  observationLocations.forEach(UpdateMaxSpecies);
+	  
+	  //const regionalThresholdForSpecialty = 0.3;// Anything in region with liklihood higher than this won't be considered to be listed as a "specialty" of a location
+	  //const specialtyLocalToRegionalFactor = 3;// If ratio between local liklihood and regional liklihood is higher than this, it may be considered a specialty
+	  function GetSpecialtiesForLocation(locId, ) {
+	    var location = GetLocationFromId(locId);
+		var specialties = [];
+
+		Object.keys(bestLocationsForSpecies).forEach((s) => {
+		  if (bestLocationsForSpecies[s].id != locId)
+		    return;
+		  specialties.push({ 'name' : s, 'regionP' : GetSpeciesLiklihood(s) * 100, 'localP' : bestLocationsForSpecies[s].p });
+		});
+		
+		/*if (location.checklists < locationCountForLiklihoodCalc)
+		  return specialties;
+		console.log(bestLocationsForSpecies);
+		location.speciesList.forEach((s) => {
+		  if (s.p > regionalThresholdForSpecialty)
+		    return;
+		  else if (!bestLocationsForSpecies.includes(s.name))
+		    return;
+          var regionalLiklihood = GetSpeciesLiklihood(s.name);
+          /*var localLiklihood = parseFloat(s.count) / location.checklists;
+          if (localLiklihood > specialtyLocalToRegionalFactor * regionalLiklihood)*/
+		   /* specialties.push({ 'name' : s.name, 'regionP' : regionalLiklihood * 100, 'localP' : localLiklihood * 100 });
+		});*/
+		
+		return specialties;
+	  }
+	  
+	  function GenerateReport() {
+	    var completeSpeciesList = '';
+		species.forEach((s) => {
+		  var found = false;
+		  for (let i = 0; i < speciesAtSelectedLocations.length; ++i) {
+		    if (speciesAtSelectedLocations[i].name == s.name) {
+			  found = true;
+			  break;
+			}
+		  }
+		  
+		  var preMark = found ? '' : '<mark>';
+		  var postMark = found ? '' : '</mark>';
+			
+		  completeSpeciesList += preMark + s.name + ' (' + (GetSpeciesLiklihood(s.name) * 100).toFixed(1) + '%)' + postMark + '<br>';
+		});
+		
+		var selectedLocationLinks = '';
+		selectedLocations.forEach((locId) => {
+		  var location = GetLocationFromId(locId);
+		  var link = 'https://ebird.org/hotspot/' + locId;
+		  var specialties = GetSpecialtiesForLocation(locId);
+  		  
+		  selectedLocationLinks += location.name + ' -- <a href="' + link + '"  target="_blank" rel="noopener noreferrer">' + link + '</a> (' + location.checklists + ' checklists)<br>';
+		  if (specialties.length > 0)
+		    selectedLocationLinks += '<ul>';
+		  specialties.forEach((spec) => {
+		    var locationCountForSpecies = GetSelectedLocationSpecies(spec.name).locations;
+		    var preMark = locationCountForSpecies > 1 ? '' : '<mark>';
+		    var postMark = locationCountForSpecies > 1 ? '' : '</mark>';
+		    selectedLocationLinks += '<li>' + preMark + spec.name + ' (' + spec.regionP.toFixed(1) + '% / ' + spec.localP.toFixed(1) + '%)' + postMark + '</li`>';
+		  });
+		  if (specialties.length > 0)
+		    selectedLocationLinks += '</ul>';
+		});
+		
+		var observationsAtSelectedLocations = '';
+		speciesAtSelectedLocations.forEach((s) => {
+		  observationsAtSelectedLocations += s.name + ' (' + (s.p * 100).toFixed(1) + '%; ' + s.count + ' at ' + s.locations + ' locations)<br>';
+		});
+		
+	    var modalDiv = document.getElementById('modalReport');
+		modalDiv.innerHTML = '<h3>Observed Species (' + species.length + ' species)</h3>' + completeSpeciesList
+		  + '<h3>Selected Locations</h3>' + selectedLocationLinks
+		  + '<h3>Observations at Selected Locations (' + speciesAtSelectedLocations.length + ' species)</h3>' + observationsAtSelectedLocations;
+
+		toggleModal();
+	  }
+	  
+	  function GetSelectedLocationSpecies(s) {
+	    for (let i = 0; i < speciesAtSelectedLocations.length; ++i) {
+		  if (speciesAtSelectedLocations[i].name == s)
+		    return speciesAtSelectedLocations[i];
+		}
+		return null;
+	  }
+	  
+	  var availableLocations = [];
+	  observationLocations.forEach((loc) => { availableLocations.push(loc) });
+	  
+	  // TODO:  Would be cool to:
+	  // - subtract from count for listed locations based on species that can be observed at already selected locations, or separately indicate "(x additional)"
+	  // - show list of remaining species from all locations (i.e. is there an easy one I'm missing?)
+	  // Can brute-force to answer:
+	  // - Minimum number of locations to see all Species
+	  // - Maximum number of species if visitin x locations
+	  // But a perfect answer would be more nuanced - some species are easy to find at some locations and harder at others, etc.
+	  function PopulateLocationsList() {
+	    availableLocations.sort((a,b) => {
+		  if (a.speciesList.length > b.speciesList.length)
+		    return -1;
+		  else if (a.speciesList.length < b.speciesList.length)
+		    return 1;
+	      return 0;
+		});
+	    var locationsCheckboxList = document.getElementById('locationList');
+		availableLocations.forEach((loc) => {
+		  var checkbox = document.createElement('input');
+		  checkbox.type = 'checkbox';
+		  checkbox.onchange = ProcessSelectedLocationsChange;
+		  checkbox.id = loc.id;
+		  
+		  var label = document.createElement('label');
+		  label.innerHTML = loc.name + ' (' + loc.speciesList.length + ' species)';
+		  label.htmlFor = loc.id;
+		  
+		  locationsCheckboxList.appendChild(checkbox);
+		  locationsCheckboxList.appendChild(label);
+		  locationsCheckboxList.appendChild(document.createElement('br'));
+		});
+	  }
+	  PopulateLocationsList();
+	  
+	  var speciesCount = 0;
+	  function PopulateSpeciesChoices(s) {
+	    select = document.getElementById('speciesSelectList');
+		var opt = document.createElement('option');
+		speciesCount++;
+        opt.value = s.name;
+        select.appendChild(opt);
+	  }
+	  species.forEach(PopulateSpeciesChoices);
+	  if (document.getElementById('speciesSelect').value == '')
+	    document.getElementById('speciesSelect').value = species[0].name;
+	  
+	  function HandleModeChange(newMode) {
+	    mode = newMode;
+	    UpdateMap();
+	  }
+	  
+	  function ComputeColor(count, minCount, maxCount) {
+	    x = parseFloat(count - minCount) / (maxCount - minCount);
+	    if (x > 0.8)
+		  return '#e10000';
+		else if (x > 0.6)
+		  return '#f05137';
+		else if (x > 0.4)
+		  return '#fa7d65';
+		else if (x > 0.2)
+		  return '#ffa592';
+		else
+			return '#ffcbc1';
+	  }
+	  
+	  function LocationIsSelected(locId) {
+	    return selectedLocations.includes(locId);
+	  }
+	  
+	  function ComputeStroke(loc) {
+	    return LocationIsSelected(loc);
+	  }
+	  
+	  var circleLayer = L.layerGroup().addTo(map);
+	  
+	  function GetSpeciesLiklihood(speciesName) {
+	    for (const s of species) {
+		  if (s.name == speciesName)
+		    return s.p;
+		}
+	  }
+	  
+	  function GetLocationFromId(id) {
+	    for (let i = 0; i < observationLocations.length; ++i) {
+		  if (observationLocations[i].id == id)
+		    return observationLocations[i];
+		}
+	  }
+	  
+	  // Gather all species listed at selected Locations
+	  // List with regional liklihood and total count from selected locations and number of selected locations observed
+	  var selectedLocations = [];
+	  var speciesAtSelectedLocations = [];
+	  var missingSpeciesInRegion = [];
+	  var bestLocationsForSpecies = [];// Key is species name; value is array of {'id', 'p'}
+	  function ProcessSelectedLocationsChange() {
+	    selectedLocations = [];
+		speciesAtSelectedLocations = [];
+		bestLocationsForSpecies = [];
+		var locationsListDiv = document.getElementById('locationList');
+		for (let i = 0; i < locationsListDiv.children.length; ++i) {
+		  if (locationsListDiv.children[i].nodeName != 'INPUT')
+		    continue;
+		  if (!locationsListDiv.children[i].checked)
+		    continue;
+		  selectedLocations.push(locationsListDiv.children[i].id);
+		  
+		  var thisLocation = GetLocationFromId(locationsListDiv.children[i].id);
+		  var speciesList = thisLocation.speciesList;
+		  speciesList.forEach((s) => {
+		    var found = false;
+		    for (let j = 0; j < speciesAtSelectedLocations.length; ++j) {
+		      if (s.name == speciesAtSelectedLocations[j].name) {
+			    speciesAtSelectedLocations[j].count += s.count;
+				speciesAtSelectedLocations[j].locations++;
+				found = true;
+				break;
+			  }
+			}
+			
+			var localLiklihood = 0;
+		    if (thisLocation.checklists > locationCountForLiklihoodCalc) {
+		      localLiklihood = parseFloat(s.count) / thisLocation.checklists * 100;
+		    }
+		    
+		    if (s.name in bestLocationsForSpecies) {
+		      if (localLiklihood > bestLocationsForSpecies[s.name].p) {
+		        bestLocationsForSpecies[s.name] = {'id' : thisLocation.id, 'p' : localLiklihood};
+		      }
+		    } else
+		      bestLocationsForSpecies[s.name] = {'id' : thisLocation.id, 'p' : localLiklihood};
+			  
+			if (!found) {
+			  speciesAtSelectedLocations.push({ 'name' : s.name, 'count' : s.count, 'p' : GetSpeciesLiklihood(s.name), 'locations' : 1 });
+			}
+		  });
+		};
+		
+		speciesAtSelectedLocations.sort((a,b) => {
+		  if (a.count < b.count)
+		    return 1;
+		  else if (a.count > b.count)
+		    return -1;
+		  return 0;
+		});
+		
+		missingSpeciesInRegion = [];
+		species.forEach((s) => {
+		  found = false;
+		  for (let i = 0; i < speciesAtSelectedLocations.length; ++i) {
+		    if (speciesAtSelectedLocations[i].name == s.name) {
+			  found = true;
+			  break;
+			}
+		  }
+		  
+		  if (!found)
+		    missingSpeciesInRegion.push(s);
+		});
+		
+		var speciesAtSelectedLocationsNode = document.getElementById('speciesList');
+		speciesAtSelectedLocationsNode.innerHTML = '';
+		  
+		speciesAtSelectedLocations.forEach((s) => {
+		  speciesAtSelectedLocationsNode.appendChild(document.createTextNode(s.name + ' (' + (s.p * 100).toFixed(1) + '% / ' + s.count + ' at ' + s.locations + ' locations)'));
+		  speciesAtSelectedLocationsNode.appendChild(document.createElement('br'));
+		});
+		
+		var totalNode = document.getElementById('totalSpecies');
+		totalNode.innerHTML = 'Total Species At Selected Locations: ' + speciesAtSelectedLocations.length + ' at ' + selectedLocations.length + ' locations';
+		
+		UpdateMap();
+	  }
+	  
+	  function ListIncludesSpecies(list, species) {
+	    var found = false;
+		for (const s of list) {
+		  if (s.name == species) {
+		    return s;
+		  }
+		}
+		
+		return null;
+	  }
+	  
+	  function LocationIsHelpful(locationSpecies) {
+	  if (speciesAtSelectedLocations.length == 0)// No locations selected yet; everything is helpful
+	    return true;
+		
+	  for (let i = 0; i < missingSpeciesInRegion.length; ++i) {
+		for (let j = 0; j < locationSpecies.length; ++j) {
+		    if (locationSpecies[j].name == missingSpeciesInRegion[i].name)
+			  return true;
+		  }
+		}
+	    return false;
+	  }
+	  
+	  var minCountOfSelectedSpecies;
+	  var maxCountOfSelectedSpecies;
+	  function UpdateSpeciesCountRange(s) {
+	    minCountOfSelectedSpecies = 99999999999;
+	    maxCountOfSelectedSpecies = 0;
+	    observationLocations.forEach((loc) => {
+		  var speciesInfo = ListIncludesSpecies(loc.speciesList, s);
+		  if (!speciesInfo)
+		    return;
+
+          // Only update min/max if this location has species of interest; so we'll never have min == 0
+          if (speciesInfo.count < minCountOfSelectedSpecies)
+		    minCountOfSelectedSpecies = speciesInfo.count;
+		  if (speciesInfo.count > maxCountOfSelectedSpecies)
+		    maxCountOfSelectedSpecies = speciesInfo.count;
+		});
+	  }
+	  
+	  function UpdateMap() {
+		var speciesSelect = document.getElementById('speciesSelect');
+        var speciesName = speciesSelect.value;
+		if (speciesName == '')
+		  return;
+		UpdateSpeciesCountRange(speciesName);
+		
+		var liklihoodDiv = document.getElementById('liklihoodDiv');
+		liklihoodDiv.innerHTML = (GetSpeciesLiklihood(speciesName) * 100).toFixed(1) + '%';
+		
+		circleLayer.clearLayers();
+		observationLocations.forEach((loc) => AddCircle(loc, speciesName));
+	  }
+	  
+	  function AddCircleSpeciesMode(locationData, selectedSpecies) {
+	    var speciesInfo = ListIncludesSpecies(locationData.speciesList, selectedSpecies);
+	    if (!speciesInfo)
+		  return false;
+		  
+	    var loc = L.latLng(locationData.latitude, locationData.longitude);
+	    L.circleMarker(loc, {
+		    'id' : locationData.id,
+		    'stroke' : ComputeStroke(locationData.id),
+			'color' : "rgb(0,0,0)",
+			'weight' : 3,
+		    'radius' : radius,
+		    'fillOpacity' : 1.0,
+		    'fillColor' : ComputeColor(speciesInfo.count, minCountOfSelectedSpecies, maxCountOfSelectedSpecies)}
+		  ).addTo(circleLayer).on('click', OnClickMarker);
+		  
+		  return true;
+	  }
+	  
+	  function AddCircleAllLocations(locationData, selectedSpecies) {
+	    var loc = L.latLng(locationData.latitude, locationData.longitude);
+	    L.circleMarker(loc, {
+		    'id' : locationData.id,
+		    'stroke' : ComputeStroke(locationData.id),
+		    'radius' : radius,
+		    'fillOpacity' : 1.0,
+		    'fillColor' : ComputeColor(locationData.speciesList.length, 1, maxSpecies)}
+		  ).addTo(circleLayer).on('click', OnClickMarker);
+	  }
+	  
+	  function AddCircleSelectedLocations(locationData, selectedSpecies) {
+	    if (!LocationIsSelected(locationData.id))
+		  return;
+		  
+	    var loc = L.latLng(locationData.latitude, locationData.longitude);
+	    L.circleMarker(loc, {
+		    'id' : locationData.id,
+		    'stroke' : true,
+		    'radius' : radius,
+		    'fillOpacity' : 1.0,
+		    'fillColor' : ComputeColor(locationData.speciesList.length, 1, maxSpecies)}
+		  ).addTo(circleLayer).on('click', OnClickMarker);
+	  }
+	  
+	  function AddCircleHelpfulLocations(locationData, selectedSpecies) {
+	    if (!selectedLocations.includes(locationData.id) &&
+			!LocationIsHelpful(locationData.speciesList))
+		  return;
+		  
+	    var loc = L.latLng(locationData.latitude, locationData.longitude);
+	    L.circleMarker(loc, {
+		    'id' : locationData.id,
+		    'stroke' : ComputeStroke(locationData.id),
+		    'radius' : radius,
+		    'fillOpacity' : 1.0,
+		    'fillColor' : ComputeColor(locationData.speciesList.length, 1, maxSpecies)}
+		  ).addTo(circleLayer).on('click', OnClickMarker);
+	  }
+	  
+	  function OnClickMarker(e) {
+	    e.originalEvent.cancelBubble = true;
+		  
+	    var loc;
+	    for (let i = 0; i < observationLocations.length; ++i) {
+		  if (observationLocations[i].id == this.options['id']) {
+		    loc = observationLocations[i];
+		    break;
+		  }
+		}
+		
+		info.update(loc);
+	  }
+	  
+	  function AddCircle(locationData, selectedSpecies) {
+		if (mode == speciesMode)
+		  AddCircleSpeciesMode(locationData, selectedSpecies);
+	    else if (mode == allLocationsMode)
+		  AddCircleAllLocations(locationData, selectedSpecies);
+		else if (mode == selectedLocationsMode)
+		  AddCircleSelectedLocations(locationData, selectedSpecies);
+		else if (mode == helpfulLocationsMode)
+		  AddCircleHelpfulLocations(locationData, selectedSpecies);
+	  }
+	  
+	  UpdateMap();
+	  
+	  var info = L.control();
+
+      info.onAdd = function (map) {
+        this._div = L.DomUtil.create('div', 'info');
+        this.update();
+        return this._div;
+      };
+
+      info.update = function (location) {
+        this._div.innerHTML = '<h4>Location Details</h4>'
+          + (location ?
+            '<b><a href="https://ebird.org/hotspot/' + location.id + '"  target="_blank" rel="noopener noreferrer">' + location.name + '</a></b><br />'
+			+ location.speciesList.length + ' Species<br />'
+			+ location.checklists + ' Complete Checklists<br />' +
+            '<select name="Potential Species" size="10" id="speciesList">' +
+            '</select>'
+          : 'Select a location');
+
+        if (location) {
+          var fragment = document.createDocumentFragment();
+          location.speciesList.forEach(function(s) {
+            var opt = document.createElement('option');
+			var localOccurrence = location.checklists > locationCountForLiklihoodCalc ? parseFloat(s.count) / location.checklists * 100 : 0;
+			var regionalOccurrence = GetSpeciesLiklihood(s.name) * 100;
+			var occurrenceString;
+			if (location.checklists > 10)
+			  occurrenceString = ' (' + regionalOccurrence.toFixed(1) + '% / ' + localOccurrence.toFixed(1) + '%)';
+			else
+			  occurrenceString = ' (' + regionalOccurrence.toFixed(1) + '%)';
+            opt.text = s.name + occurrenceString;
+            opt.value = s.name;
+			if (ListIncludesSpecies(missingSpeciesInRegion, s.name))
+			  opt.style = 'background:yellow';
+			else if (localOccurrence > 0)
+			{
+			  var goodnessMeasure = localOccurrence / regionalOccurrence;
+			  if (goodnessMeasure > 10)
+			    opt.style = 'background:#018301';
+			  else if (goodnessMeasure > 5)
+			    opt.style = 'background:#59bf4c';
+			  else if (goodnessMeasure > 2)
+			    opt.style = 'background:#99ff8a';
+			  else if (goodnessMeasure > 1)
+			    opt.style = 'background:white';
+			  else if (goodnessMeasure < 0.5)
+			    opt.style = 'background:#ff9785';
+			  else if (goodnessMeasure < 0.2)
+			    opt.style = 'background:#f66048';
+			  else if (goodnessMeasure < 0.1)
+			    opt.style = 'background:#e40101';
+				
+			}
+            fragment.appendChild(opt);
+            });
+          document.getElementById('speciesList').appendChild(fragment);
+        }
+      };
+	  
+	  info.addTo(map);
+	  
+	  map.on('click', function(e) {
+        if (e.originalEvent.cancelBubble)
+          return;
+		  
+        info.update();
+      });
+	  
+	  function toggleModal() {
+        backdrop.classList.toggle("active")
+      }
+	  
+	  function OnKeyPress(e) {
+	    if (e.key == "Escape")
+		  toggleModal();
+	  }
+	  
+      const backdrop = document.querySelector(".backdrop");
+	  backdrop.addEventListener("keydown", OnKeyPress);
+	  
+	  function SaveLocations() {
+	    var currentURL = window.location.href.split("?")[0];
+
+		var query;
+		selectedLocations.forEach((loc) => {
+		  if (!query)
+		    query = '?locations=' + loc;
+	      else
+			query += ',' + loc;
+		});
+
+	    window.location.href = currentURL + query;
+	  }
+	  
+	  function LoadLocationsFromQueryParameters() {
+	    const queryParams = new URLSearchParams(window.location.search);
+		if (!queryParams.has('locations'))
+		  return;
+		
+		const queryLocations = queryParams.get('locations').split(',');
+	    
+		var locationsListDiv = document.getElementById('locationList');
+		for (let i = 0; i < locationsListDiv.children.length; ++i) {
+		  if (locationsListDiv.children[i].nodeName != 'INPUT')
+		    continue;
+			
+		  found = false;
+		  for (let j = 0; j < queryLocations.length; ++j) {
+		    if (locationsListDiv.children[i].id == queryLocations[j]) {
+			  found = true;
+			  break;
+			}
+		  }
+		  locationsListDiv.children[i].checked = found;
+		}
+		
+		ProcessSelectedLocationsChange();
+	  }
+	  
+	  /*
+		- Update "additional species counts" as locations are selected (maybe also re-color circles) to show next best places?
+	  */
+
+    </script>
+  </body>
+</html>
