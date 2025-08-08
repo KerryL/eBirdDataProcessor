@@ -58,7 +58,7 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 	// Many locations could be personal locations with very few (or just one) checklist; can't assume enough data exists to do per-location probability estimates.
 	// Let's do probabilities based on all lists in the region (and without considering weekly variation)
 
-	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataTripPlanning, outputFileName))
+	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataTripPlanning, UString::String()))
 		return false;
 
 	UpdateRarityAssessment();
@@ -143,11 +143,11 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 		}
 	}
 
-	if (!WriteSpeciesAtLocationJSON(locationData, sortedSpecies, minLatitude, minLongitude, maxLatitude, maxLongitude, "tripPlanner.js"))
+	if (!WriteSpeciesAtLocationJSON(locationData, sortedSpecies, minLatitude, minLongitude, maxLatitude, maxLongitude, UString::ToNarrowString(outputFileName)))
 		return false;
 
 	// TODO:
-	// - List of species to filter out
+	// - List of species to filter out (e.g. based on needs for life list)
 
 	return true;
 }
@@ -399,9 +399,12 @@ bool EBirdDatasetInterface::DoDatasetParsing(const UString::String& fileName,
 
 		const auto columnMap(BuildColumnMapFromHeaderLine(UString::ToStringType(line)));
 
-		regionDataOutputFile.open(regionDataOutputFileName);
-		if (regionDataOutputFile.is_open() && regionDataOutputFile.good())
-			regionDataOutputFile << UString::ToStringType(line) << '\n';
+		if (!regionDataOutputFileName.empty())
+		{
+			regionDataOutputFile.open(regionDataOutputFileName);
+			if (regionDataOutputFile.is_open() && regionDataOutputFile.good())
+				regionDataOutputFile << UString::ToStringType(line) << '\n';
+		}
 
 		ThreadPool pool(std::thread::hardware_concurrency() * 2, 0);
 		constexpr unsigned int maxQueueSize(1000000);
