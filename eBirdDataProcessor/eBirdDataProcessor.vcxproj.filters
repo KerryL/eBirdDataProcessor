@@ -123,9 +123,6 @@
     <ClCompile Include="..\src\geometryReducer.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
-    <ClCompile Include="..\src\mediaHTMLExtractor.cpp">
-      <Filter>Source Files</Filter>
-    </ClCompile>
     <ClCompile Include="..\src\robotsParser.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
@@ -240,9 +237,6 @@
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\point.h">
-      <Filter>Header Files</Filter>
-    </ClInclude>
-    <ClInclude Include="..\src\mediaHTMLExtractor.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="..\src\robotsParser.h">

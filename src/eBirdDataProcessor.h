@@ -34,7 +34,6 @@ public:
 
 	bool Parse();
 	bool ReadMediaList();
-	bool GenerateMediaList(const UString::String& mediaListHTML);
 
 	void FilterLocation(const std::vector<UString::String>& locations, const std::vector<UString::String>& counties,
 		const std::vector<UString::String>& states, const std::vector<UString::String>& countries);
@@ -106,6 +105,8 @@ public:
 
 	template<typename T>
 	static bool ParseToken(UString::IStringStream& lineStream, const UString::String& fieldName, T& target);
+
+	static bool SkipFields(UString::IStringStream& lineStream, const unsigned int& count);
 	
 	void BuildChecklistLinks() const;
 	void BuildJSData(const UString::String& fileName) const;
@@ -145,8 +146,9 @@ private:
 		UString::String checklistComments;
 		UString::String mlCatalogNumbers;
 
-		std::vector<int> photoRating;
-		std::vector<int> audioRating;
+		std::vector<double> photoRating;
+		std::vector<double> audioRating;
+		std::vector<double> videoRating;
 
 		UString::String compareString;// Huge boost in efficiency if we pre-compute this
 	};
@@ -257,16 +259,18 @@ private:
 		enum class Type
 		{
 			Photo,
-			Audio
+			Audio,
+			Video
 		};
 
 		Type type;
 
-		int rating;
+		double rating;
 		UString::String date;
 		UString::String location;
 
-		enum class Age
+		// Need to handle multiple ages/sexes in a single media file
+		/*enum class Age
 		{
 			Unknown,
 			Juvenile,
@@ -283,7 +287,7 @@ private:
 			Female
 		};
 
-		Sex sex = Sex::Unknown;
+		Sex sex = Sex::Unknown;*/
 
 		enum class Sound
 		{
@@ -298,15 +302,9 @@ private:
 		UString::String checklistId;
 	};
 
-	static bool ExtractNextMediaEntry(const UString::String& html, std::string::size_type& position, MediaEntry& entry);
-	static void WriteNextMediaEntry(UString::OFStream& file, const MediaEntry& entry);
 	static bool GetValueFromLITag(const UString::String& html, const UString::String& svgString, UString::String& value);
 	static UString::String GetLastWord(const UString::String& s);
 	static bool GetDTDDValue(const UString::String& html, const UString::String& label, UString::String& value);
-	static UString::String GetMediaTypeString(const MediaEntry::Type& type);
-	static UString::String GetMediaAgeString(const MediaEntry::Age& age);
-	static UString::String GetMediaSexString(const MediaEntry::Sex& sex);
-	static UString::String GetMediaSoundString(const MediaEntry::Sound& sound);
 	static bool ParseMediaEntry(const UString::String& line, MediaEntry& entry);
 	static bool ExtractBetweenTagAfterTag(const UString::String& html, const UString::String& firstTag, const UString::String& secondTag, UString::String& value);
 
@@ -341,7 +339,7 @@ bool EBirdDataProcessor::ParseToken(UString::IStringStream& lineStream, const US
 	UString::IStringStream tokenStream;
 
 	auto leadingQuoteCount(CountConsecutiveLeadingQuotes(lineStream));
-	if (leadingQuoteCount > 0)// target UString::String may contain commas or escaped double-quotes
+	if (leadingQuoteCount > 0 && leadingQuoteCount != 2)// target UString::String may contain commas or escaped double-quotes; == 2 can happen in media list if entry is blank (sometimes it's just consecutive commas, sometimes pair of quotes inside commas)
 	{
 		if (leadingQuoteCount % 2 == 0)// Impossible scenario - if the string starts with a double-quote, then the string must be enclosed in quotes - always expect odd number of quotes
 			return false;

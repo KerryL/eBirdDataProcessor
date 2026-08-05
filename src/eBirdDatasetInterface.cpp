@@ -30,6 +30,7 @@
 #include <filesystem>
 
 const UString::String EBirdDatasetInterface::nameIndexFileName(_T("nameIndexMap.csv"));
+unsigned int EBirdDatasetInterface::currentYear(0);
 
 const unsigned int EBirdDatasetInterface::SpeciesData::Rarity::yearsToCheck(5);
 const unsigned int EBirdDatasetInterface::SpeciesData::Rarity::minHitYears(4);// To not be considered a rarity
@@ -55,93 +56,113 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 	tripPlanningData.longitude = longitude;
 	tripPlanningData.radius = radius;
 
+	std::time_t t(std::time(nullptr));
+	std::tm* const pTInfo(std::localtime(&t));
+	currentYear = 1900 + pTInfo->tm_year;
+
 	// Many locations could be personal locations with very few (or just one) checklist; can't assume enough data exists to do per-location probability estimates.
 	// Let's do probabilities based on all lists in the region (and without considering weekly variation)
 
 	if (!DoDatasetParsing(fileName, &EBirdDatasetInterface::ProcessObservationDataTripPlanning, UString::String()))
 		return false;
 
-	UpdateRarityAssessment();
+	UpdateRarityAssessmentTripPlanning();
 	RemoveRarities();
 
-	const auto localData(frequencyMap[_T("ALL")][0]);
-	std::vector<std::pair<double, UString::String>> sortedSpecies;
-	for (const auto& s : localData.speciesList)
-	{
-		auto nameIt(std::find_if(nameIndexMap.begin(), nameIndexMap.end(), [&s](auto&& i) { return s.first == i.second; }));
-		sortedSpecies.push_back(std::make_pair(static_cast<double>(s.second.occurrenceCount) / localData.checklistIDs.size(), nameIt->first));
-	}
-	std::sort(sortedSpecies.rbegin(), sortedSpecies.rend());
+	// TODO:  To keep file sizes down, could limit locations to those with x number of observations, or only hotspots, or only > x number of contributors (so no private yards), but maybe only if there are many many location options?
+	// Why does Egypt have no observations last few weeks?
+	// Why can Rock Pigeon (Turkey) have % > 100?
 
-	Cout << "\n\nObserved species sorted by liklihood:\n";
-
-	unsigned int i(0);
-	for (const auto& s : sortedSpecies)
-		Cout << ++i << "\t" << s.second << " (" << s.first * 100.0 << "%)\n";
-
-	// Organize data with location ID as key and exclude species below our probability threshold
-	const double probabilityThreshold(0.02);// [%]
-	std::unordered_map<UString::String, LocationData> locationData;
 	double minLatitude(500.0);
 	double maxLatitude(-500.0);
 	double minLongitude(500.0);
 	double maxLongitude(-500.0);
+	std::array<std::vector<std::pair<double, UString::String>>, 48> sortedSpecies;
+	std::array<std::unordered_map<UString::String, LocationData>, 48> locationData;
 
-	for (const auto& checklist : allObservationsbyChecklist)
+	for (unsigned int week = 0; week < 48; ++week)
 	{
-		for (const auto& o : checklist.second)
+		const auto localData(frequencyMap[_T("ALL")][week]);
+		for (const auto& s : localData.speciesList)
 		{
-			auto speciesIt(std::find_if(sortedSpecies.begin(), sortedSpecies.end(), [&o](auto&& s) { return o.commonName == s.second; }));
-			if (speciesIt == sortedSpecies.end())
-				continue;// Rarities already removed from sortedSpecies list, so this will happen for rarities
-			/*else if (speciesIt->first < probabilityThreshold)
-			{
-				// If we exclude anything here, also need to remove it from sortedSpecies
-				continue;
-			}*/
+			auto nameIt(std::find_if(nameIndexMap.begin(), nameIndexMap.end(), [&s](auto&& i) { return s.first == i.second; }));
+			sortedSpecies[week].push_back(std::make_pair(static_cast<double>(s.second.occurrenceCount) / localData.checklistIDs.size(), nameIt->first));
+		}
+		std::sort(sortedSpecies.rbegin(), sortedSpecies.rend());
 
-			auto locIt(locationData.find(o.locationID));
-			if (locIt == locationData.end())
-			{
-				LocationData newLocationData;
-				newLocationData.name = o.locationName;
-				newLocationData.latitude = o.latitude;
-				newLocationData.longitude = o.longitude;
+		Cout << "\n\nObserved species sorted by liklihood for week " << week + 1 << ":\n";
 
-				if (o.completeChecklist)
+		unsigned int i(0);
+		for (const auto& s : sortedSpecies[week])
+			Cout << ++i << "\t" << s.second << " (" << s.first * 100.0 << "%)\n";
+
+		// Organize data with location ID as key and exclude species below our probability threshold
+		//const double probabilityThreshold(0.02);// [%]
+		for (const auto& checklist : allObservationsbyChecklist)
+		{
+			for (const auto& o : checklist.second)
+			{
+				auto speciesIt(std::find_if(sortedSpecies[week].begin(), sortedSpecies[week].end(), [&o](auto&& s) { return o.commonName == s.second; }));
+				if (speciesIt == sortedSpecies[week].end())
+					continue;// Rarities already removed from sortedSpecies list, so this will happen for rarities
+				/*else if (speciesIt->first < probabilityThreshold)
 				{
-					newLocationData.completeChecklistIds.insert(o.checklistID);
-					newLocationData.speciesList[o.commonName] = 1U;
+					// If we exclude anything here, also need to remove it from sortedSpecies
+					continue;
+				}*/
+
+				auto locIt(locationData[week].find(o.locationID));
+				if (locIt == locationData[week].end())
+				{
+					LocationData newLocationData;
+					newLocationData.name = o.locationName;
+					newLocationData.latitude = o.latitude;
+					newLocationData.longitude = o.longitude;
+
+					if (o.completeChecklist)
+					{
+						newLocationData.completeChecklistIds.insert(o.checklistID);
+						newLocationData.speciesList[o.commonName] = 1U;
+					}
+					else
+						newLocationData.speciesList[o.commonName] = 0U;
+
+					if (o.latitude > maxLatitude)
+						maxLatitude = o.latitude;
+					if (o.latitude < minLatitude)
+						minLatitude = o.latitude;
+					if (o.longitude > maxLongitude)
+						maxLongitude = o.longitude;
+					if (o.longitude < minLongitude)
+						minLongitude = o.longitude;
+
+					locationData[week][o.locationID] = newLocationData;
 				}
 				else
-					newLocationData.speciesList[o.commonName] = 0U;
+				{
+					if (!o.completeChecklist)
+						continue;
 
-				if (o.latitude > maxLatitude)
-					maxLatitude = o.latitude;
-				if (o.latitude < minLatitude)
-					minLatitude = o.latitude;
-				if (o.longitude > maxLongitude)
-					maxLongitude = o.longitude;
-				if (o.longitude < minLongitude)
-					minLongitude = o.longitude;
+					locIt->second.completeChecklistIds.insert(o.checklistID);
 
-				locationData[o.locationID] = newLocationData;
-			}
-			else
-			{
-				if (!o.completeChecklist)
-					continue;
-				
-				locIt->second.completeChecklistIds.insert(o.checklistID);
-
-				auto locSpeciesIt(locIt->second.speciesList.find(o.commonName));
-				if (locSpeciesIt == locIt->second.speciesList.end())
-					locIt->second.speciesList[o.commonName] = 1U;
-				else
-					++(locSpeciesIt->second);
+					auto locSpeciesIt(locIt->second.speciesList.find(o.commonName));
+					if (locSpeciesIt == locIt->second.speciesList.end())
+						locIt->second.speciesList[o.commonName] = 1U;
+					else
+						++(locSpeciesIt->second);
+				}
 			}
 		}
 	}
+
+	// TODO:  Make below compile
+	/*
+	for (unsigned int i = 0; i < 48; ++i)
+		locationData[i].erase(std::remove_if(locationData[i].begin(), locationData[i].end(), [](const std::pair<UString::String, LocationData>& locDat)
+			{
+				const size_t mustHaveAtLeastThisManyChecklistsToKeep(15);
+				return locDat.second.completeChecklistIds.size() < mustHaveAtLeastThisManyChecklistsToKeep;// TODO:  Better if we can do this based on number of contributors
+			}), locationData[i].end());*/
 
 	if (!WriteSpeciesAtLocationJSON(locationData, sortedSpecies, minLatitude, minLongitude, maxLatitude, maxLongitude, UString::ToNarrowString(outputFileName)))
 		return false;
@@ -152,46 +173,14 @@ bool EBirdDatasetInterface::ExtractLocalFrequencyData(const UString::String& fil
 	return true;
 }
 
-bool EBirdDatasetInterface::WriteSpeciesAtLocationJSON(const std::unordered_map<UString::String, LocationData>& locationData,
-	const std::vector<std::pair<double, UString::String>>& sortedSpecies, const double& minLat, const double& minLon,
+bool EBirdDatasetInterface::WriteSpeciesAtLocationJSON(const std::array<std::unordered_map<UString::String, LocationData>, 48>& locationData,
+	const std::array<std::vector<std::pair<double, UString::String>>, 48>& sortedSpecies, const double& minLat, const double& minLon,
 	const double& maxLat, const double& maxLon, const std::string& fileName)
 {
-	cJSON* locationJSON;
-	if (!CreateLocationJSONData(locationData, sortedSpecies, locationJSON))
-		return false;
-
-	cJSON* speciesJSON;
-	if (!CreateSpeciesJSONData(locationData, sortedSpecies, speciesJSON))
-	{
-		cJSON_Delete(locationJSON);
-		return false;
-	}
-
 	std::ofstream file(fileName);
 	if (!file.is_open() || !file.good())
 	{
 		Cerr << "Failed to open '" << UString::ToStringType(fileName) << "' for output\n";
-		cJSON_Delete(locationJSON);
-		cJSON_Delete(speciesJSON);
-		return false;
-	}
-
-	const auto locationJSONString(cJSON_PrintUnformatted(locationJSON));
-	if (!locationJSONString)
-	{
-		Cerr << "Failed to generate location JSON string\n";
-		cJSON_Delete(locationJSON);
-		cJSON_Delete(speciesJSON);
-		return false;
-	}
-
-	const auto speciesJSONString(cJSON_PrintUnformatted(speciesJSON));
-	if (!speciesJSONString)
-	{
-		Cerr << "Failed to generate species JSON string\n";
-		free(locationJSONString);
-		cJSON_Delete(locationJSON);
-		cJSON_Delete(speciesJSON);
 		return false;
 	}
 
@@ -199,13 +188,47 @@ bool EBirdDatasetInterface::WriteSpeciesAtLocationJSON(const std::unordered_map<
 	const double latMargin((maxLat - minLat) * borderFactor);
 	const double lonMargin((maxLon - minLon) * borderFactor);
 	file << "var minCoord = [" << minLat - latMargin << ", " << minLon - lonMargin << "];\n"
-		<< "var maxCoord = [" << maxLat + latMargin << ", " << maxLon + lonMargin << "];\n"
-		<< "var observationLocations = " << locationJSONString << ";\n"
-		<< "var species = " << speciesJSONString << ";\n";
-	free(locationJSONString);
-	free(speciesJSONString);
-	cJSON_Delete(locationJSON);
-	cJSON_Delete(speciesJSON);
+		<< "var maxCoord = [" << maxLat + latMargin << ", " << maxLon + lonMargin << "];\n";
+
+	for (unsigned int i = 0; i < 48; ++i)
+	{
+		cJSON* locationJSON;
+		if (!CreateLocationJSONData(locationData[i], sortedSpecies[i], locationJSON))
+			return false;
+
+		cJSON* speciesJSON;
+		if (!CreateSpeciesJSONData(locationData[i], sortedSpecies[i], speciesJSON))
+		{
+			cJSON_Delete(locationJSON);
+			return false;
+		}
+
+		const auto locationJSONString(cJSON_PrintUnformatted(locationJSON));
+		if (!locationJSONString)
+		{
+			Cerr << "Failed to generate location JSON string\n";
+			cJSON_Delete(locationJSON);
+			cJSON_Delete(speciesJSON);
+			return false;
+		}
+
+		const auto speciesJSONString(cJSON_PrintUnformatted(speciesJSON));
+		if (!speciesJSONString)
+		{
+			Cerr << "Failed to generate species JSON string\n";
+			free(locationJSONString);
+			cJSON_Delete(locationJSON);
+			cJSON_Delete(speciesJSON);
+			return false;
+		}
+
+		file << "var observationLocations" << i + 1 << " = " << locationJSONString << ";\n"
+			<< "var species" << i + 1 << " = " << speciesJSONString << ";\n";
+		free(locationJSONString);
+		free(speciesJSONString);
+		cJSON_Delete(locationJSON);
+		cJSON_Delete(speciesJSON);
+	}
 
 	return true;
 }
@@ -621,8 +644,8 @@ UString::String EBirdDatasetInterface::GetPath(const UString::String& regionCode
 	const UString::Char slash('/');
 #endif// _WIN32
 
-	if (firstDash != std::string::npos)
-		regionCode + slash;// TODO:  What was I trying to do here?
+	/*if (firstDash != std::string::npos)
+		regionCode + slash;*/// TODO:  What was I trying to do here?
 	return regionCode.substr(0, firstDash) + slash;
 }
 
@@ -1173,7 +1196,8 @@ void EBirdDatasetInterface::ProcessObservationDataFrequency(const Observation& o
 
 void EBirdDatasetInterface::ProcessObservationDataTripPlanning(const Observation& observation)
 {
-	if (observation.date.month != tripPlanningData.month)
+	const unsigned int yearsBack(6);
+	if (observation.date.year < currentYear - yearsBack)
 		return;
 	else if (!observation.approved)
 		return;
@@ -1187,7 +1211,7 @@ void EBirdDatasetInterface::ProcessObservationDataTripPlanning(const Observation
 
 	allObservationsbyChecklist[observation.checklistID].push_back(observation);
 
-	auto& entry(frequencyMap[_T("ALL")][0]);
+	auto& entry(frequencyMap[_T("ALL")][GetWeekIndex(observation.date)]);
 	auto nameMapIt(nameIndexMap.find(observation.commonName));
 	if (nameMapIt == nameIndexMap.end())
 		nameIndexMap.insert(std::make_pair(observation.commonName, static_cast<uint16_t>(nameIndexMap.size())));
@@ -1279,6 +1303,52 @@ void EBirdDatasetInterface::SpeciesData::Rarity::Update(const Date& date)
 		std::lock_guard<std::mutex> lock(referenceYearMutex);
 		if (date.year > referenceYear)
 			referenceYear = date.year;// dataset goes through at least this year
+	}
+}
+
+// Instead of week-by-week rarity determination, do analysis for all weeks of a year and all weeks get the same assessement
+void EBirdDatasetInterface::UpdateRarityAssessmentTripPlanning()
+{
+	// If our method of determining our reference year didn't work (i.e. if we're doing trip planning and only have data from a certain month), fix that now
+	if (SpeciesData::Rarity::referenceYear == 0)
+	{
+		// TODO:  This assumes that we're here because we're doing trip planning; may not always be true
+		for (const auto& s : frequencyMap[_T("ALL")][0].speciesList)
+		{
+			for (const auto& y : s.second.rarityGuess.recentObservationYears)
+			{
+				if (y > SpeciesData::Rarity::referenceYear)
+					SpeciesData::Rarity::referenceYear = y;
+			}
+		}
+		--SpeciesData::Rarity::referenceYear;
+	}
+
+	std::unordered_map<uint16_t, std::set<unsigned int>> allSpecies;
+	for (auto& week : frequencyMap[_T("ALL")])
+	{
+		for (auto& species : week.speciesList)
+		{
+			for (auto& y : species.second.rarityGuess.recentObservationYears)
+				allSpecies[species.first].insert(y);
+		}
+	}
+
+	for (auto& week : frequencyMap[_T("ALL")])
+	{
+		for (auto& species : week.speciesList)
+		{
+			unsigned int recentYearCount(0);
+			for (auto& y : allSpecies[species.first])
+			{
+				if (y > SpeciesData::Rarity::referenceYear - SpeciesData::Rarity::yearsToCheck)
+					++recentYearCount;
+			}
+
+			species.second.rarityGuess.mightBeRarity = recentYearCount <= SpeciesData::Rarity::minHitYears;
+			if (species.second.rarityGuess.mightBeRarity)
+				species.second.rarityGuess.yearsObservedInLastNYears = recentYearCount;
+		}
 	}
 }
 

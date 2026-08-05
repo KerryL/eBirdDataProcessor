@@ -154,7 +154,6 @@
     <ClCompile Include="..\src\kmlLibraryManager.cpp" />
     <ClCompile Include="..\src\kmlToGeoJSONConverter.cpp" />
     <ClCompile Include="..\src\mapPageGenerator.cpp" />
-    <ClCompile Include="..\src\mediaHTMLExtractor.cpp" />
     <ClCompile Include="..\src\observationMapBuilder.cpp" />
     <ClCompile Include="..\src\processPipe.cpp" />
     <ClCompile Include="..\src\robotsParser.cpp" />
@@ -194,7 +193,6 @@
     <ClInclude Include="..\src\kmlToGeoJSONConverter.h" />
     <ClInclude Include="..\src\logging\combinedLogger.h" />
     <ClInclude Include="..\src\mapPageGenerator.h" />
-    <ClInclude Include="..\src\mediaHTMLExtractor.h" />
     <ClInclude Include="..\src\observationMapBuilder.h" />
     <ClInclude Include="..\src\point.h" />
     <ClInclude Include="..\src\processPipe.h" />

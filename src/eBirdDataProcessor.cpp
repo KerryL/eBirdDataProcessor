@@ -1100,154 +1100,6 @@ bool EBirdDataProcessor::HotspotInfoComparer::operator()(const EBirdInterface::L
 	return a.name < b.name;
 }
 
-bool EBirdDataProcessor::ExtractNextMediaEntry(const UString::String& html, std::string::size_type& position, MediaEntry& entry)
-{
-	const UString::String resultStart(_T("<li>"));//_T("<div class=\"ResultsList-header\">"));
-	const auto resultStartPosition(html.find(resultStart, position));
-	if (resultStartPosition == std::string::npos)
-		return false;
-
-	UString::String mediaEntryString;
-	if (!StringUtilities::ExtractTextContainedInTag(html.substr(position), resultStart, mediaEntryString))
-		return false;
-
-	position = resultStartPosition + mediaEntryString.length();// Tell caller where processing by this routine finished
-
-	const UString::String playButtonStart(_T("<span class=\"playButton\">"));
-	const auto playButtonStartPosition(mediaEntryString.find(playButtonStart));
-
-	if (playButtonStartPosition != std::string::npos)
-		entry.type = MediaEntry::Type::Audio;
-	else
-		entry.type = MediaEntry::Type::Photo;
-
-	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<span class=\"Species-common"), entry.commonName))
-		return false;
-	entry.commonName = StringUtilities::Trim(entry.commonName);
-
-	const UString::String ratingStart(_T("<div class=\"RatingStars-stars RatingStars-stars-"));
-	const auto ratingStartPosition(mediaEntryString.find(ratingStart));
-	if (ratingStartPosition != std::string::npos)
-	{
-		UString::IStringStream ss(mediaEntryString.substr(ratingStartPosition + ratingStart.length(), 1));
-		if ((ss >> entry.rating).fail())
-			return false;
-	}
-	else
-		entry.rating = 0;
-
-	const UString::String calendarLine(_T("<time"));
-	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, calendarLine, entry.date))
-		entry.date = _T("Unknown");// Can happen for sensitive species
-
-	const UString::String locationLine(_T("<use xlink:href=\"#Icon--locationGeneric\"></use></svg>"));
-	const auto locationStart(mediaEntryString.find(locationLine));
-	if (locationStart == std::string::npos)
-		return false;
-	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString.substr(locationStart), _T("<span"), entry.location))
-		return false;
-
-	const UString::String tagsDivStart(_T("<div class=\"ResultsList-tags\""));
-	const auto tagsStartPosition(mediaEntryString.find(tagsDivStart));
-	if (tagsStartPosition != std::string::npos)
-	{
-		auto nextTagPos(tagsStartPosition + tagsDivStart.length());
-		UString::String tagsToEnd(mediaEntryString.substr(nextTagPos));
-		const auto tagDataStart(_T("<span class=\"ResultsList-label"));
-		UString::String tagName;
-		while (StringUtilities::ExtractTextContainedInTag(tagsToEnd, tagDataStart, tagName))
-		{
-			UString::String temp;
-			const UString::String secondTag(_T("<span"));
-			if (!ExtractBetweenTagAfterTag(tagsToEnd, tagDataStart, secondTag, temp))
-				return false;
-				
-			// TODO:  The data allows multiple specifications (i.e. 2 adult males + 1 immature unknown sex, etc.) but our data structure doens't support storing this info
-			// Same for behaviors and sounds
-			if (tagName == _T("Age and sex"))
-			{
-				if (temp.find(_T("Adult")) != std::string::npos)
-					entry.age = MediaEntry::Age::Adult;
-				else if (temp.find(_T("Immature")) != std::string::npos)
-					entry.age = MediaEntry::Age::Immature;
-				else if (temp.find(_T("Juvenile")) != std::string::npos)
-					entry.age = MediaEntry::Age::Juvenile;
-				else
-					entry.age = MediaEntry::Age::Unknown;
-					
-				if (temp.find(_T("Male")) != std::string::npos)
-					entry.sex = MediaEntry::Sex::Male;
-				else if (temp.find(_T("Female")) != std::string::npos)
-					entry.sex = MediaEntry::Sex::Female;
-				else
-					entry.sex = MediaEntry::Sex::Unknown;
-			}
-			//else if (tagName == _T("Behaviors")) {}
-			else if (tagName == _T("Sounds"))
-			{
-				if (temp.find(_T("Song")) != std::string::npos)
-					entry.sound = MediaEntry::Sound::Song;
-				else if (temp.find(_T("Call")) != std::string::npos)
-					entry.sound = MediaEntry::Sound::Call;
-				else
-					entry.sound = MediaEntry::Sound::Other;
-			}
-			const auto nextStartPos(tagsToEnd.find(temp));
-			tagsToEnd = tagsToEnd.substr(nextStartPos);
-		}
-	}
-
-	UString::String temp;
-	/*if (GetDTDDValue(specimenExtra, _T("Sounds"), temp))
-	{
-		if (temp.compare(_T("Song")) == 0)
-			entry.sound = MediaEntry::Sound::Song;
-		else if (temp.compare(_T("Call")) == 0)
-			entry.sound = MediaEntry::Sound::Call;
-		else if (temp.compare(_T("Unknown")) == 0)
-			entry.sound = MediaEntry::Sound::Unknown;
-		else
-			entry.sound = MediaEntry::Sound::Other;
-	}
-
-	if (GetDTDDValue(specimenExtra, _T("Age"), temp))
-	{
-		if (temp.compare(_T("Adult")) == 0)
-			entry.age = MediaEntry::Age::Adult;
-		else if (temp.compare(_T("Juvenile")) == 0)
-			entry.age = MediaEntry::Age::Juvenile;
-		else if (temp.compare(_T("Immature")) == 0)
-			entry.age = MediaEntry::Age::Immature;
-		else
-			entry.age = MediaEntry::Age::Unknown;
-	}
-
-	if (GetDTDDValue(specimenExtra, _T("Sex"), temp))
-	{
-		if (temp.compare(_T("Male")) == 0)
-			entry.sex = MediaEntry::Sex::Male;
-		else if (temp.compare(_T("Female")) == 0)
-			entry.sex = MediaEntry::Sex::Female;
-		else
-			entry.sex = MediaEntry::Sex::Unknown;
-	}
-	
-	UString::String specimenLinks;
-	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<ul class=\"SpecimenLinks\""), specimenLinks))
-		return false;*/
-
-	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<a href=\"https://ebird.org/checklist/"), temp))
-		//return false;
-		temp.clear();// This can happen for hidden checklists or sensitive species!  Don't fail!
-	entry.checklistId = GetLastWord(temp);
-
-	if (!StringUtilities::ExtractTextContainedInTag(mediaEntryString, _T("<a href=\"https://macaulaylibrary.org/asset/"), temp))
-		return false;
-	entry.macaulayId = GetLastWord(temp);
-
-	return true;
-}
-
 UString::String EBirdDataProcessor::GetLastWord(const UString::String& s)
 {
 	const auto lastNotSpace(s.find_last_not_of(UString::String(_T(" \t\r\n"))));
@@ -1291,138 +1143,62 @@ bool EBirdDataProcessor::ExtractBetweenTagAfterTag(const UString::String& html,
 	return StringUtilities::ExtractTextContainedInTag(html.substr(firstTagStart + firstTag.length()), secondTag, value);
 }
 
-UString::String EBirdDataProcessor::GetMediaTypeString(const MediaEntry::Type& type)
+bool EBirdDataProcessor::SkipFields(UString::IStringStream& lineStream, const unsigned int& count)
 {
-	if (type == MediaEntry::Type::Photo)
-		return _T("Photo");
-	//else
-		return _T("Audio");
-}
-
-UString::String EBirdDataProcessor::GetMediaAgeString(const MediaEntry::Age& age)
-{
-	if (age == MediaEntry::Age::Juvenile)
-		return _T("Juvenile");
-	else if (age == MediaEntry::Age::Immature)
-		return _T("Immature");
-	else if (age == MediaEntry::Age::Adult)
-		return _T("Adult");
-	//else
-		return _T("Unknown");
-}
-
-UString::String EBirdDataProcessor::GetMediaSexString(const MediaEntry::Sex& sex)
-{
-	if (sex == MediaEntry::Sex::Male)
-		return _T("Male");
-	else if (sex == MediaEntry::Sex::Female)
-		return _T("Female");
-	//else
-		return _T("Unknown");
-}
-
-UString::String EBirdDataProcessor::GetMediaSoundString(const MediaEntry::Sound& sound)
-{
-	if (sound == MediaEntry::Sound::Song)
-		return _T("Song");
-	else if (sound == MediaEntry::Sound::Call)
-		return _T("Call");
-	else if (sound == MediaEntry::Sound::Unknown)
-		return _T("Unknown");
-	//else
-		return _T("Other");
-}
-
-void EBirdDataProcessor::WriteNextMediaEntry(UString::OFStream& file, const MediaEntry& entry)
-{
-	file << entry.macaulayId << ','
-		<< entry.commonName << ','
-		<< GetMediaTypeString(entry.type) << ','
-		<< entry.rating << ','
-		<< entry.date << ','
-		<< Utilities::SanitizeCommas(entry.location) << ','
-		<< GetMediaAgeString(entry.age) << ','
-		<< GetMediaSexString(entry.sex) << ','
-		<< GetMediaSoundString(entry.sound) << ','
-		<< entry.checklistId << '\n';
-}
-
-// Directions for getting media list from Chrome:
-// 1.  Go to eBird profile page
-// 2.  At bottom, choose "View All" next to list of recent photos
-// 3.  At top of following page, remove filters for location and media type (i.e. "Photo")
-// 4.  At bottom of page, click "Show More" until all available media is shown
-// 5.  Right-click and choose "Inspect"
-// 6.  In pane that appears, expand "<body>" tag down to "<div class="ResultsList js-ResultsContainer">" level
-// 7.  Right-click on that element and choose Copy->Copy Element
-// 8.  Paste into media list html file and save
-bool EBirdDataProcessor::GenerateMediaList(const UString::String& mediaListHTML)
-{
-	std::ifstream htmlFile(mediaListHTML.c_str(), std::ios::binary | std::ios::ate);
-	if (!htmlFile.is_open() || !htmlFile.good())
+	for (unsigned int i = 0; i < count; ++i)
 	{
-		Cerr << "Failed to open '" << mediaListHTML << "' for input\n";
-		return false;
-	}
-	const unsigned int fileSize(static_cast<unsigned int>(htmlFile.tellg()));
-	htmlFile.seekg(0, std::ios::beg);
-
-	std::vector<char> buffer(fileSize);
-	if (!htmlFile.read(buffer.data(), fileSize))
-	{
-		Cerr << "Failed to read html data from file\n";
-		return false;
-	}
-	const UString::String html(UString::ToStringType(std::string(buffer.data(), fileSize)));
-
-	UString::OFStream mediaList(appConfig.mediaFileName.c_str());
-	if (!mediaList.is_open() || !mediaList.good())
-	{
-		Cerr << "Failed to open '" << appConfig.mediaFileName << "' for output\n";
-		return false;
-	}
-
-	mediaList << "Macaulay Library ID,Common Name,Media Type,Rating,Date,Location,Age,Sex,Extra,eBird Checklist ID\n";
-	std::string::size_type position(0);
-	while (true)
-	{
-		MediaEntry entry;
-		if (!ExtractNextMediaEntry(html, position, entry))
-			break;
-		WriteNextMediaEntry(mediaList, entry);
+		UString::String dummy;
+		if (!ParseToken(lineStream, _T("skip"), dummy))
+			return false;
 	}
 
 	return true;
 }
 
+/*
+ML Catalog Number,Format,Common Name,Scientific Name,Background Species,Caption,Recordist,Date,Year,Month,Day,Time,Country,Country-State-County,State,County,Locality,Latitude,Longitude,Age/Sex,Behaviors,Playback,Captive,Collected,Specimen ID,Home Archive Catalog Number,Recorder,Microphone,Accessory,Partner Institution,eBird Checklist ID,Unconfirmed,Air Temp(°C),Water Temp(°C),Media notes,Observation Details,Parent Species,eBird Species Code,Taxon Category,Taxonomic Sort,Recordist 2,Average Community Rating,Number of Ratings,Asset Tags,Original Image Height,Original Image Width
+*/
+
 bool EBirdDataProcessor::ParseMediaEntry(const UString::String& line, MediaEntry& entry)
 {
 	UString::IStringStream lineStream(line);
 
-	if (!ParseToken(lineStream, _T("Macaulay Library ID"), entry.macaulayId))
-		return false;
-	if (!ParseToken(lineStream, _T("Common Name"), entry.commonName))
+	if (!ParseToken(lineStream, _T("ML Catalog Number"), entry.macaulayId))
 		return false;
 	UString::String temp;
-	if (!ParseToken(lineStream, _T("Media Type"), temp))
+	if (!ParseToken(lineStream, _T("Format"), temp))
 		return false;
 
 	if (temp.compare(_T("Photo")) == 0)
 		entry.type = MediaEntry::Type::Photo;
-	else
+	else if (temp.compare(_T("Audio")) == 0)
 		entry.type = MediaEntry::Type::Audio;
+	else
+		entry.type = MediaEntry::Type::Video;
 
-	if (!ParseToken(lineStream, _T("Rating"), entry.rating))
+	if (!ParseToken(lineStream, _T("Common Name"), entry.commonName))
 		return false;
+
+	if (!SkipFields(lineStream, 4))
+		return false;
+
 	if (!ParseToken(lineStream, _T("Date"), entry.date))
 		return false;
-	if (!ParseToken(lineStream, _T("Location"), entry.location))
-		return false;
-	entry.location = Utilities::Unsanitize(entry.location);
-	if (!ParseToken(lineStream, _T("Age"), temp))
+
+	if (!SkipFields(lineStream, 8))
 		return false;
 
-	if (temp.compare(_T("Adult")) == 0)
+	if (!ParseToken(lineStream, _T("Locality"), entry.location))
+		return false;
+
+	if (!SkipFields(lineStream, 2))
+		return false;
+
+	entry.location = Utilities::Unsanitize(entry.location);
+	if (!ParseToken(lineStream, _T("Age/Sex"), temp))
+		return false;
+
+	/*if (temp.compare(_T("Adult")) == 0)
 		entry.age = MediaEntry::Age::Adult;
 	else if (temp.compare(_T("Juvenile")) == 0)
 		entry.age = MediaEntry::Age::Juvenile;
@@ -1432,8 +1208,9 @@ bool EBirdDataProcessor::ParseMediaEntry(const UString::String& line, MediaEntry
 		entry.age = MediaEntry::Age::Unknown;
 
 	if (!ParseToken(lineStream, _T("Sex"), temp))
-		return false;
-	if (!ParseToken(lineStream, _T("Sound"), temp))
+		return false;*/
+
+	if (!ParseToken(lineStream, _T("Behaviors"), temp))
 		return false;
 
 	if (temp.compare(_T("Song")) == 0)
@@ -1445,7 +1222,16 @@ bool EBirdDataProcessor::ParseMediaEntry(const UString::String& line, MediaEntry
 	else
 		entry.sound = MediaEntry::Sound::Unknown;
 
+	if (!SkipFields(lineStream, 9))
+		return false;
+
 	if (!ParseToken(lineStream, _T("eBird Checklist ID"), entry.checklistId))
+		return false;
+
+	if (!SkipFields(lineStream, 10))
+		return false;
+
+	if (!ParseToken(lineStream, _T("Average Community Rating"), entry.rating))
 		return false;
 
 	return true;
@@ -1485,8 +1271,10 @@ bool EBirdDataProcessor::ReadMediaList()
 			{
 				if (m.type == MediaEntry::Type::Photo)
 					entry.photoRating.push_back(m.rating);
-				else// if (m.type == MediaEntry::Type::Audio)
+				else if (m.type == MediaEntry::Type::Audio)
 					entry.audioRating.push_back(m.rating);
+				else// if (m.type == MediaEntry::Type::Video)
+					entry.videoRating.push_back(m.rating);
 				//break;// Efficiency gain if we break, but if an entry has both audio and photo media, only one of them will be assigned.  In practice, efficiency gain here is not needed.
 			}
 		}

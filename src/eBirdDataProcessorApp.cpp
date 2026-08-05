@@ -10,7 +10,6 @@
 #include "utilities/uString.h"
 #include "eBirdDatasetInterface.h"
 #include "utilities.h"
-#include "mediaHTMLExtractor.h"
 #include "observationMapBuilder.h"
 
 // Standard C++ headers
@@ -154,16 +153,8 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!config.birdingSpotBubbleDataFileName.empty())
 		processor.GenerateBirdingSpotBubbleData(config.birdingSpotBubbleDataFileName);
 
-	if (!config.mediaListHTML.empty())
-	{
-		MediaHTMLExtractor htmlExtractor;
-		if (!htmlExtractor.ExtractMediaHTML(config.mediaListHTML))
-			Cout << "Failed to download current media list HTML; continuing with existing HTML file" << std::endl;
-		processor.GenerateMediaList(config.mediaListHTML);
-		return 0;
-	}
-	else //if (!config.mediaFileName.empty())// TODO:  Need some criteria to determine if we need to do this
-		processor.ReadMediaList();
+	if (!processor.ReadMediaList())
+		return 1;
 
 	// TODO:  species count only?
 

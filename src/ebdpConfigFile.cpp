@@ -36,7 +36,6 @@ void EBDPConfigFile::BuildConfigItems()
 	AddConfigItem(_T("PROB_VS_TIME_MAX_PROB"), config.timeOfYearParameters.maxProbability);
 	AddConfigItem(_T("PROB_VS_TIME_SPECIES"), config.timeOfYearParameters.commonNames);
 
-	AddConfigItem(_T("MEDIA_LIST_HTML"), config.mediaListHTML);
 	AddConfigItem(_T("SHOW_PHOTO_NEEDS"), config.showOnlyPhotoNeeds);
 	AddConfigItem(_T("SHOW_AUDIO_NEEDS"), config.showOnlyAudioNeeds);
 	AddConfigItem(_T("SHOW_GAPS"), config.showGaps);

@@ -63,6 +63,7 @@ public:
 
 private:
 	static const UString::String nameIndexFileName;
+	static unsigned int currentYear;
 
 	struct Date
 	{
@@ -164,6 +165,7 @@ private:
 	std::unordered_map<UString::String, std::vector<Observation>> timeOfDayObservationMap;// Key is species common name
 	std::unordered_map<UString::String, Observation> allObservationsInRegion;// Key is checklist ID
 	std::unordered_map<UString::String, std::vector<Observation>> allObservationsbyChecklist;// Key is checklist ID
+	//std::unordered_map<unsigned int, std::unordered_map<UString::String, std::vector<Observation>>> temporalObservationsbyChecklist;// First key is month or week, next key (String) is checklist ID
 	bool RegionMatches(const UString::String& regionCode) const;
 
 	std::unique_ptr<KMLLibraryManager::GeometryInfo> kmlFilterGeometry;
@@ -173,6 +175,7 @@ private:
 	void ProcessObservationKMLFilter(const Observation& observation);
 	typedef void (EBirdDatasetInterface::*ProcessFunction)(const Observation& observation);
 	void UpdateRarityAssessment();
+	void UpdateRarityAssessmentTripPlanning();
 	void RemoveRarities();
 	void ProcessObservationDataTripPlanning(const Observation& observation);
 
@@ -274,8 +277,8 @@ private:
 		std::set<UString::String> completeChecklistIds;
 	};
 
-	static bool WriteSpeciesAtLocationJSON(const std::unordered_map<UString::String, LocationData>& locationData,
-		const std::vector<std::pair<double, UString::String>>& sortedSpecies, const double& minLat, const double& minLon,
+	static bool WriteSpeciesAtLocationJSON(const std::array<std::unordered_map<UString::String, LocationData>, 48>& locationData,
+		const std::array<std::vector<std::pair<double, UString::String>>, 48>& sortedSpecies, const double& minLat, const double& minLon,
 		const double& maxLat, const double& maxLon, const std::string& fileName);
 	static bool CreateLocationJSONData(const std::unordered_map<UString::String, LocationData>& locationData,
 		const std::vector<std::pair<double, UString::String>>& sortedSpecies, cJSON*& json);
