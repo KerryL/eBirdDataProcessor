@@ -153,7 +153,7 @@ int EBirdDataProcessorApp::Run(int argc, char *argv[])
 	if (!config.birdingSpotBubbleDataFileName.empty())
 		processor.GenerateBirdingSpotBubbleData(config.birdingSpotBubbleDataFileName);
 
-	if (!processor.ReadMediaList())
+	if (!processor.ReadMediaList(config.includePartialIDs))
 		return 1;
 
 	// TODO:  species count only?

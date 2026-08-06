@@ -285,11 +285,16 @@ void EBirdDataProcessor::FilterPartialIDs()
 {
 	data.erase(std::remove_if(data.begin(), data.end(), [](const Entry& entry)
 	{
-		return entry.commonName.find(_T(" sp.")) != std::string::npos ||// Eliminate Spuhs
-			entry.commonName.find(UString::Char('/')) != std::string::npos ||// Eliminate species1/species2 type entries
-			entry.commonName.find(_T("hybrid")) != std::string::npos ||// Eliminate hybrids
-			entry.commonName.find(_T("Domestic")) != std::string::npos;// Eliminate domestic birds
+		return IsPartialID(entry.commonName);
 	}), data.end());
+}
+
+bool EBirdDataProcessor::IsPartialID(const UString::String& commonName)
+{
+	return commonName.find(_T(" sp.")) != std::string::npos ||// Eliminate Spuhs
+		commonName.find(UString::Char('/')) != std::string::npos ||// Eliminate species1/species2 type entries
+		commonName.find(_T("hybrid")) != std::string::npos ||// Eliminate hybrids
+		commonName.find(_T("Domestic")) != std::string::npos;// Eliminate domestic birds
 }
 
 int EBirdDataProcessor::DoComparison(const Entry& a, const Entry& b, const EBDPConfig::SortBy& sortBy)
@@ -1237,7 +1242,7 @@ bool EBirdDataProcessor::ParseMediaEntry(const UString::String& line, MediaEntry
 	return true;
 }
 
-bool EBirdDataProcessor::ReadMediaList()
+bool EBirdDataProcessor::ReadMediaList(const bool& includePartialIds)
 {
 	UString::IFStream mediaFile(appConfig.mediaFileName.c_str());
 	if (!mediaFile.is_open() || !mediaFile.good())
@@ -1262,21 +1267,59 @@ bool EBirdDataProcessor::ReadMediaList()
 		mediaList.push_back(entry);
 	}
 
+	std::vector<bool> foundChecklist(mediaList.size(), false);
 	for (auto& entry : data)
 	{
-		for (auto& m : mediaList)
+		for (size_t i = 0; i < mediaList.size(); ++i)
 		{
-			if (m.checklistId.compare(entry.submissionID) == 0 &&
-				CommonNamesMatch(entry.commonName, m.commonName))
+			if (mediaList[i].checklistId.compare(entry.submissionID) == 0 &&
+				CommonNamesMatch(entry.commonName, mediaList[i].commonName))
 			{
-				if (m.type == MediaEntry::Type::Photo)
-					entry.photoRating.push_back(m.rating);
-				else if (m.type == MediaEntry::Type::Audio)
-					entry.audioRating.push_back(m.rating);
-				else// if (m.type == MediaEntry::Type::Video)
-					entry.videoRating.push_back(m.rating);
+				foundChecklist[i] = true;
+				if (mediaList[i].type == MediaEntry::Type::Photo)
+					entry.photoRating.push_back(mediaList[i].rating);
+				else if (mediaList[i].type == MediaEntry::Type::Audio)
+					entry.audioRating.push_back(mediaList[i].rating);
+				else// if (mediaList[i].type == MediaEntry::Type::Video)
+					entry.videoRating.push_back(mediaList[i].rating);
 				//break;// Efficiency gain if we break, but if an entry has both audio and photo media, only one of them will be assigned.  In practice, efficiency gain here is not needed.
 			}
+		}
+	}
+
+	// For sensitive species and hidden checklists, checklist info, date, etc. may not be included in the downloaded media list. For these cases, create a new entry that's not associated with a checklist.
+	// This can also occur for cases where the observation data is not in sync with the media data.
+	// Slashes and spuhs also end up in here
+	for (size_t i = 0; i < mediaList.size(); ++i)
+	{
+		if (!includePartialIds && IsPartialID(mediaList[i].commonName))
+			continue;
+
+		if (!foundChecklist[i])
+		{
+			Entry e;
+			e.commonName = mediaList[i].commonName;
+			e.taxonomicOrder = 0;
+			e.count = 0;
+			
+			e.protocol;
+			e.duration = 0;
+			e.allObsReported = false;
+			e.distanceTraveled = 0.0;
+			e.areaCovered = 0.0;
+			e.numberOfObservers = 0;
+			e.mlCatalogNumbers = mediaList[i].macaulayId;
+
+			if (mediaList[i].type == MediaEntry::Type::Photo)
+				e.photoRating.push_back(mediaList[i].rating);
+			else if (mediaList[i].type == MediaEntry::Type::Audio)
+				e.audioRating.push_back(mediaList[i].rating);
+			else// if (mediaList[i].type == MediaEntry::Type::Video)
+				e.videoRating.push_back(mediaList[i].rating);
+
+			e.compareString = PrepareForComparison(e.commonName);;
+
+			data.push_back(e);
 		}
 	}
 

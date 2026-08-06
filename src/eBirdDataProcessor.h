@@ -33,7 +33,7 @@ public:
 	explicit EBirdDataProcessor(const ApplicationConfiguration& appConfig) : appConfig(appConfig) {}
 
 	bool Parse();
-	bool ReadMediaList();
+	bool ReadMediaList(const bool& includePartialIds);
 
 	void FilterLocation(const std::vector<UString::String>& locations, const std::vector<UString::String>& counties,
 		const std::vector<UString::String>& states, const std::vector<UString::String>& countries);
@@ -171,6 +171,8 @@ private:
 	static bool ParseLine(const UString::String& line, Entry& entry);
 
 	static int DoComparison(const Entry& a, const Entry& b, const EBDPConfig::SortBy& sortBy);
+
+	static bool IsPartialID(const UString::String& commonName);
 
 	template<typename T>
 	static bool InterpretToken(UString::IStringStream& tokenStream, const UString::String& fieldName, T& target);
