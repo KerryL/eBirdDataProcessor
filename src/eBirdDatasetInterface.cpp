@@ -1465,9 +1465,9 @@ void EBirdDatasetInterface::AddObservationToMapInfo(const Observation& o, MapInf
 {
 	for (auto& c : m.checklists)
 	{	
-		if (o.checklistID == c.id)// Already have an entry for this checklist, just increment the species count
+		if (o.checklistID == c.id)// Already have an entry for this checklist, just add the species
 		{
-			++c.speciesCount;
+			c.speciesCommonNames.push_back(o.commonName);
 			return;
 		}
 		else if (!c.groupID.empty() && o.groupID == c.groupID)// Already included a checklist from this group; don't want to include any others
@@ -1476,7 +1476,7 @@ void EBirdDatasetInterface::AddObservationToMapInfo(const Observation& o, MapInf
 	
 	m.checklists.push_back(MapInfo::ChecklistInfo());
 	m.checklists.back().id = o.checklistID;
-	m.checklists.back().speciesCount = 1;
+	m.checklists.back().speciesCommonNames.push_back(o.commonName);
 	m.checklists.back().groupID = o.groupID;
 	
 	UString::OStringStream ss;

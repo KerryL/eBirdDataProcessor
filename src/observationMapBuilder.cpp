@@ -241,7 +241,27 @@ bool ObservationMapBuilder::BuildLocationJSON(const EBirdDatasetInterface::MapIn
 		
 		cJSON_AddStringToObject(checklistJSON, "checklistID", UString::ToNarrowString(c.id).c_str());
 		cJSON_AddStringToObject(checklistJSON, "date", UString::ToNarrowString(c.dateString).c_str());
-		cJSON_AddNumberToObject(checklistJSON, "speciesCount", c.speciesCount);
+		cJSON_AddNumberToObject(checklistJSON, "speciesCount", c.speciesCommonNames.size());
+		
+		auto speciesListJSON(cJSON_CreateArray());
+		if (!speciesListJSON)
+		{
+			Cerr << "Failed to create species list JSON object\n";
+			return false;
+		}
+		cJSON_AddItemToObject(checklistJSON, "speciesList", speciesListJSON);
+		
+		for (const auto& s : c.speciesCommonNames)
+		{
+			auto speciesJSON(cJSON_CreateString(UString::ToNarrowString(s).c_str()));
+			if (!speciesJSON)
+			{
+				Cerr << "Failed to create species string JSON object\n";
+				return false;
+			}
+			cJSON_AddItemToArray(speciesListJSON, speciesJSON);
+		}
+		
 		cJSON_AddItemToArray(checklistList, checklistJSON);
 	}
 

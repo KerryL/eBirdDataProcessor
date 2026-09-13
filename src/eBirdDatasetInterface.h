@@ -53,7 +53,7 @@ public:
 			UString::String id;
 			UString::String groupID;
 			UString::String dateString;
-			unsigned int speciesCount;
+			std::vector<UString::String> speciesCommonNames;
 		};
 		
 		std::vector<ChecklistInfo> checklists;
