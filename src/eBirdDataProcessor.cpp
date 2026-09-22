@@ -1302,7 +1302,7 @@ bool EBirdDataProcessor::ReadMediaList(const bool& includePartialIds)
 			e.taxonomicOrder = 0;
 			e.count = 0;
 			
-			e.protocol;
+			//e.protocol;
 			e.duration = 0;
 			e.allObsReported = false;
 			e.distanceTraveled = 0.0;
@@ -2326,7 +2326,8 @@ void EBirdDataProcessor::ShowGaps() const
 
 void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 {
-	cJSON* root(cJSON_CreateArray());
+	cJSON* observationsRoot(cJSON_CreateArray());
+	cJSON* yearListsRoot(cJSON_CreateArray());
 
 	struct SpeciesOrder
 	{
@@ -2338,9 +2339,71 @@ void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 		bool operator==(const UString::String& test) { return test == compareString; }
 	};
 	
+	struct YearData
+	{
+		unsigned short year;
+		struct YearDataSpecies
+		{
+			UString::String commonName;
+			bool incidentialOnly;
+		};
+		std::vector<YearDataSpecies> species;
+		double effortHours;
+		
+		double minEffortHours;// least amount of effort required to see all non-incidential species
+		unsigned int minEffortSpecies;// count of non-incidential species
+	};
+	
 	std::vector<SpeciesOrder> species;
+	std::vector<YearData> yearData;
+	std::set<UString::String> checklistsConsideredForEffort;
 	for (const auto& o : data)
 	{
+		const unsigned short observationYear(1900 + o.dateTime.tm_year);
+		auto thisYearData(std::find_if(yearData.begin(), yearData.end(), [observationYear](const YearData& y)
+		{
+			return y.year == observationYear;
+		}));
+		
+		if (thisYearData == yearData.end())
+		{
+			YearData newYear;
+			newYear.year = observationYear;
+			
+			YearData::YearDataSpecies s;
+			s.commonName = o.compareString;
+			s.incidentialOnly = !o.allObsReported;
+			
+			newYear.species.push_back(s);// Use compare string to ensure we don't include subspecies info
+			newYear.effortHours = o.duration;
+			yearData.push_back(newYear);
+			checklistsConsideredForEffort.insert(o.submissionID);
+		}
+		else
+		{
+			auto entry = std::find_if(thisYearData->species.begin(), thisYearData->species.end(), [o](const YearData::YearDataSpecies& s)
+			{
+				return o.compareString == s.commonName;
+			});
+			if (entry == thisYearData->species.end())
+			{
+				YearData::YearDataSpecies newSpecies;
+				newSpecies.commonName = o.compareString;
+				newSpecies.incidentialOnly = !o.allObsReported;
+				thisYearData->species.push_back(newSpecies);
+			}
+			else if (entry->incidentialOnly && o.allObsReported)
+				entry->incidentialOnly = false;
+
+			if (std::find(checklistsConsideredForEffort.begin(), checklistsConsideredForEffort.end(), o.submissionID) == checklistsConsideredForEffort.end())
+			{
+				thisYearData->effortHours += o.duration / 60.0;
+				checklistsConsideredForEffort.insert(o.submissionID);
+			}
+		}
+		
+		// Min effort to see non-incidental species?
+		
 		if (std::find(species.begin(), species.end(), o.compareString) != species.end())
 			continue;
 			
@@ -2368,13 +2431,43 @@ void EBirdDataProcessor::BuildJSData(const UString::String& fileName) const
 		const auto frequency(ComputeFrequency(s.compareString));
 		cJSON_AddItemToObject(item, "frequency", cJSON_CreateDoubleArray(frequency.data(), static_cast<int>(frequency.size())));
 		
-		cJSON_AddItemToArray(root, item);
+		cJSON_AddItemToArray(observationsRoot, item);
+	}
+	
+	std::sort(yearData.begin(), yearData.end(), [](const YearData& a, const YearData& b)
+	{
+		return a.year < b.year;
+	});
+	
+	for (const auto& y : yearData)
+	{
+		cJSON* item(cJSON_CreateObject());
+		UString::OStringStream yearStream;
+		yearStream << y.year;
+		cJSON_AddItemToObject(item, "year", cJSON_CreateString(UString::ToNarrowString(yearStream.str()).c_str()));
+		cJSON_AddItemToObject(item, "effort", cJSON_CreateNumber(y.effortHours));
+		//cJSON_AddItemToObject(item, "minEffort", cJSON_CreateNumber(y.effortHours));
+		//cJSON_AddItemToObject(item, "minEffortSpecies", cJSON_CreateNumber(y.effortHours));
+		
+		cJSON* yearSpecies(cJSON_CreateArray());
+		cJSON_AddItemToObject(item, "species", yearSpecies);
+		for (const auto& ys : y.species)
+		{
+			cJSON* speciesObject(cJSON_CreateObject());
+			cJSON_AddItemToArray(yearSpecies, speciesObject);
+			cJSON_AddItemToObject(speciesObject, "species", cJSON_CreateString(UString::ToNarrowString(ys.commonName).c_str()));
+			cJSON_AddBoolToObject(speciesObject, "incidentialOnly", ys.incidentialOnly);
+		}
+		
+		cJSON_AddItemToArray(yearListsRoot, item);
 	}
 	 
 	UString::OFStream file(fileName);
-	file << "var yardBirds = " << cJSON_PrintUnformatted(root) << ";\n";
-	 
-	cJSON_free(root);
+	file << "var yardBirds = " << cJSON_PrintUnformatted(observationsRoot) << ";\n"; 
+	cJSON_free(observationsRoot);
+	
+	file << "var yearLists = " << cJSON_PrintUnformatted(yearListsRoot) << ";\n";
+	cJSON_free(yearListsRoot);
 }
  
 std::array<double, 48> EBirdDataProcessor::ComputeFrequency(const UString::String& compareString) const
